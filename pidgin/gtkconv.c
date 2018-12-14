@@ -3598,9 +3598,7 @@ setup_menubar(PidginConvWindow *win)
 	GtkWidget *menuitem;
 
 	action_group = gtk_action_group_new("ConversationActions");
-#ifdef ENABLE_NLS
 	gtk_action_group_set_translation_domain(action_group, PACKAGE);
-#endif
 	gtk_action_group_add_actions(action_group,
 	                             menu_entries,
 	                             G_N_ELEMENTS(menu_entries),

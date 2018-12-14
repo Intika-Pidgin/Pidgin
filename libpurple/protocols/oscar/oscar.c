@@ -1689,7 +1689,8 @@ purple_icq_buddyadd(struct name_data *data)
 }
 
 static int
-incomingim_chan4(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo, struct aim_incomingim_ch4_args *args, time_t t)
+incomingim_chan4(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo,
+		struct aim_incomingim_ch4_args *args)
 {
 	PurpleConnection *gc = od->gc;
 	PurpleAccount *account = purple_connection_get_account(gc);
@@ -1734,24 +1735,8 @@ incomingim_chan4(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo, 
 				/* If the message came from an ICQ user then escape any HTML */
 				tmp = g_markup_escape_text(msg2[0], -1);
 
-				if (t) { /* This is an offline message */
-					/* The timestamp is UTC-ish, so we need to get the offset */
-#ifdef HAVE_TM_GMTOFF
-					time_t now;
-					struct tm *tm;
-					now = time(NULL);
-					tm = localtime(&now);
-					t += tm->tm_gmtoff;
-#else
-#	ifdef HAVE_TIMEZONE
-					tzset();
-					t -= timezone;
-#	endif
-#endif
-					purple_serv_got_im(gc, uin, tmp, 0, t);
-				} else { /* This is a message from MacICQ/Miranda */
-					purple_serv_got_im(gc, uin, tmp, 0, time(NULL));
-				}
+				purple_serv_got_im(gc, uin, tmp, 0, time(NULL));
+
 				g_free(uin);
 				g_free(tmp);
 			}
@@ -1982,7 +1967,7 @@ static int purple_parse_incoming_im(OscarData *od, FlapConnection *conn, FlapFra
 		case 4: { /* ICQ */
 			struct aim_incomingim_ch4_args *args;
 			args = va_arg(ap, struct aim_incomingim_ch4_args *);
-			ret = incomingim_chan4(od, conn, userinfo, args, 0);
+			ret = incomingim_chan4(od, conn, userinfo, args);
 		} break;
 
 		default: {
