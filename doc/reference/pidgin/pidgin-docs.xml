@@ -19,6 +19,7 @@
   <part id="API">
     <title>API Reference</title>
 
+      <xi:include href="xml/pidginabout.xml" />
       <xi:include href="xml/gtkaccount.xml" />
       <xi:include href="xml/gtkblist.xml" />
       <xi:include href="xml/gtkblist-theme.xml" />
@@ -58,6 +59,8 @@
       <xi:include href="xml/gtksound.xml" />
       <xi:include href="xml/gtkstatusbox.xml" />
       <xi:include href="xml/pidginstock.xml" />
+      <xi:include href="xml/gtkstyle.xml" />
+      <xi:include href="xml/pidgintalkatu.xml" />
       <xi:include href="xml/gtkmenutray.xml" />
       <xi:include href="xml/gtkutils.xml" />
       <xi:include href="xml/gtkwebview.xml" />
