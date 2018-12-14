@@ -3,10 +3,6 @@ DOC_MODULE = 'finch'
 # Header files or dirs to ignore when scanning. Use base file/dir names
 ignore_hfiles = [
     'plugins',
-    'test',
-    'libgnt/wms',
-    'gntinternal.h',
-    'gnt-skel.h'
 ]
 
 # Extra options to supply to gtkdoc-scan.
