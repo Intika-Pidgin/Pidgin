@@ -35,9 +35,6 @@
 #include "smiley-list.h"
 #include "util.h"
 
-#define PURPLE_CONVERSATION_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_CONVERSATION, PurpleConversationPrivate))
-
 typedef struct _PurpleConversationPrivate  PurpleConversationPrivate;
 
 /* General private data for a conversation */
@@ -77,15 +74,18 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE(PurpleConversation, purple_conversation,
+		G_TYPE_OBJECT);
 
 static void
 common_send(PurpleConversation *conv, const char *message, PurpleMessageFlags msgflags)
 {
 	PurpleAccount *account;
 	PurpleConnection *gc;
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 	PurpleMessage *msg;
 	char *displayed = NULL;
 	const char *sent;
@@ -195,7 +195,8 @@ common_send(PurpleConversation *conv, const char *message, PurpleMessageFlags ms
 static void
 open_log(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 	GDateTime *dt;
 
 	g_return_if_fail(priv != NULL);
@@ -212,7 +213,8 @@ open_log(PurpleConversation *conv)
 static void
 add_message_to_history(PurpleConversation *conv, PurpleMessage *msg)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 	g_return_if_fail(msg != NULL);
@@ -238,7 +240,8 @@ purple_conversation_present(PurpleConversation *conv) {
 void
 purple_conversation_set_features(PurpleConversation *conv, PurpleConnectionFlags features)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -252,7 +255,8 @@ purple_conversation_set_features(PurpleConversation *conv, PurpleConnectionFlags
 PurpleConnectionFlags
 purple_conversation_get_features(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -290,7 +294,8 @@ void
 purple_conversation_set_ui_ops(PurpleConversation *conv,
 							 PurpleConversationUiOps *ops)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -304,9 +309,10 @@ purple_conversation_set_ui_ops(PurpleConversation *conv,
 }
 
 PurpleConversationUiOps *
-purple_conversation_get_ui_ops(const PurpleConversation *conv)
+purple_conversation_get_ui_ops(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -316,7 +322,8 @@ purple_conversation_get_ui_ops(const PurpleConversation *conv)
 void
 purple_conversation_set_account(PurpleConversation *conv, PurpleAccount *account)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -332,9 +339,10 @@ purple_conversation_set_account(PurpleConversation *conv, PurpleAccount *account
 }
 
 PurpleAccount *
-purple_conversation_get_account(const PurpleConversation *conv)
+purple_conversation_get_account(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -342,7 +350,7 @@ purple_conversation_get_account(const PurpleConversation *conv)
 }
 
 PurpleConnection *
-purple_conversation_get_connection(const PurpleConversation *conv)
+purple_conversation_get_connection(PurpleConversation *conv)
 {
 	PurpleAccount *account;
 
@@ -359,7 +367,8 @@ purple_conversation_get_connection(const PurpleConversation *conv)
 void
 purple_conversation_set_title(PurpleConversation *conv, const char *title)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv  != NULL);
 	g_return_if_fail(title != NULL);
@@ -374,9 +383,10 @@ purple_conversation_set_title(PurpleConversation *conv, const char *title)
 }
 
 const char *
-purple_conversation_get_title(const PurpleConversation *conv)
+purple_conversation_get_title(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -413,7 +423,8 @@ purple_conversation_autoset_title(PurpleConversation *conv)
 void
 purple_conversation_set_name(PurpleConversation *conv, const char *name)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -429,9 +440,10 @@ purple_conversation_set_name(PurpleConversation *conv, const char *name)
 }
 
 const char *
-purple_conversation_get_name(const PurpleConversation *conv)
+purple_conversation_get_name(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -442,7 +454,8 @@ void
 purple_conversation_set_e2ee_state(PurpleConversation *conv,
 	PurpleE2eeState *state)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -469,7 +482,8 @@ purple_conversation_set_e2ee_state(PurpleConversation *conv,
 PurpleE2eeState *
 purple_conversation_get_e2ee_state(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 	PurpleE2eeProvider *provider;
 
 	g_return_val_if_fail(priv != NULL, NULL);
@@ -493,7 +507,8 @@ purple_conversation_get_e2ee_state(PurpleConversation *conv)
 void
 purple_conversation_set_logging(PurpleConversation *conv, gboolean log)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -510,9 +525,10 @@ purple_conversation_set_logging(PurpleConversation *conv, gboolean log)
 }
 
 gboolean
-purple_conversation_is_logging(const PurpleConversation *conv)
+purple_conversation_is_logging(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, FALSE);
 
@@ -522,7 +538,8 @@ purple_conversation_is_logging(const PurpleConversation *conv)
 void
 purple_conversation_close_logs(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -540,7 +557,8 @@ _purple_conversation_write_common(PurpleConversation *conv, PurpleMessage *pmsg)
 	PurpleConversationUiOps *ops;
 	PurpleBuddy *b;
 	int plugin_return;
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 	/* int logging_font_options = 0; */
 
 	g_return_if_fail(priv != NULL);
@@ -743,7 +761,8 @@ purple_conversation_send_confirm(PurpleConversation *conv, const char *message)
 {
 	char *text;
 	gpointer *data;
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 	g_return_if_fail(message != NULL);
@@ -781,7 +800,8 @@ purple_conversation_get_extended_menu(PurpleConversation *conv)
 void purple_conversation_clear_message_history(PurpleConversation *conv)
 {
 	GList *list;
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_if_fail(priv != NULL);
 
@@ -795,7 +815,8 @@ void purple_conversation_clear_message_history(PurpleConversation *conv)
 
 GList *purple_conversation_get_message_history(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -849,7 +870,7 @@ purple_conversation_add_smiley(PurpleConversation *conv, PurpleSmiley *smiley) {
 	g_return_if_fail(PURPLE_IS_CONVERSATION(conv));
 	g_return_if_fail(smiley);
 
-	priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	priv = purple_conversation_get_instance_private(conv);
 
 	if (priv->remote_smileys == NULL) {
 		priv->remote_smileys = purple_smiley_list_new();
@@ -878,7 +899,7 @@ purple_conversation_get_smiley(PurpleConversation *conv, const gchar *shortcut) 
 	g_return_val_if_fail(PURPLE_IS_CONVERSATION(conv), NULL);
 	g_return_val_if_fail(shortcut, NULL);
 
-	priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	priv = purple_conversation_get_instance_private(conv);
 
 	if (priv->remote_smileys == NULL)
 		return NULL;
@@ -889,7 +910,8 @@ purple_conversation_get_smiley(PurpleConversation *conv, const gchar *shortcut) 
 PurpleSmileyList *
 purple_conversation_get_remote_smileys(PurpleConversation *conv)
 {
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -907,7 +929,8 @@ purple_conversation_set_property(GObject *obj, guint param_id, const GValue *val
 		GParamSpec *pspec)
 {
 	PurpleConversation *conv = PURPLE_CONVERSATION(obj);
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 
 	switch (param_id) {
 		case PROP_ACCOUNT:
@@ -962,6 +985,11 @@ purple_conversation_get_property(GObject *obj, guint param_id, GValue *value,
 	}
 }
 
+static void
+purple_conversation_init(PurpleConversation *conv)
+{
+}
+
 /* Called when done constructing */
 static void
 purple_conversation_constructed(GObject *object)
@@ -971,7 +999,7 @@ purple_conversation_constructed(GObject *object)
 	PurpleConnection *gc;
 	PurpleConversationUiOps *ops;
 
-	parent_class->constructed(object);
+	G_OBJECT_CLASS(purple_conversation_parent_class)->constructed(object);
 
 	g_object_get(object, "account", &account, NULL);
 	gc = purple_account_get_connection(account);
@@ -1011,7 +1039,8 @@ static void
 purple_conversation_finalize(GObject *object)
 {
 	PurpleConversation *conv = PURPLE_CONVERSATION(object);
-	PurpleConversationPrivate *priv = PURPLE_CONVERSATION_GET_PRIVATE(conv);
+	PurpleConversationPrivate *priv =
+			purple_conversation_get_instance_private(conv);
 	PurpleConversationUiOps *ops  = purple_conversation_get_ui_ops(conv);
 
 	purple_request_close_with_handle(conv);
@@ -1037,7 +1066,7 @@ purple_conversation_finalize(GObject *object)
 	priv->name = NULL;
 	priv->title = NULL;
 
-	parent_class->finalize(object);
+	G_OBJECT_CLASS(purple_conversation_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -1046,8 +1075,6 @@ purple_conversation_class_init(PurpleConversationClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->dispose = purple_conversation_dispose;
 	obj_class->finalize = purple_conversation_finalize;
 	obj_class->constructed = purple_conversation_constructed;
@@ -1055,8 +1082,6 @@ purple_conversation_class_init(PurpleConversationClass *klass)
 	/* Setup properties */
 	obj_class->get_property = purple_conversation_get_property;
 	obj_class->set_property = purple_conversation_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleConversationPrivate));
 
 	properties[PROP_ACCOUNT] = g_param_spec_object("account", "Account",
 				"The account for the conversation.", PURPLE_TYPE_ACCOUNT,
@@ -1081,31 +1106,4 @@ purple_conversation_class_init(PurpleConversationClass *klass)
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_conversation_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleConversationClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_conversation_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleConversation),
-			0,
-			NULL,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-				"PurpleConversation",
-				&info, G_TYPE_FLAG_ABSTRACT);
-	}
-
-	return type;
 }

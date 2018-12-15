@@ -75,9 +75,7 @@ typedef guint32 aim_snacid_t;
 
 #include "snactypes.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 #define FAIM_SNAC_HASH_SIZE 16
 
@@ -1375,8 +1373,6 @@ void oscar_free_name_data(struct name_data *data);
 
 void oscar_init_account_options(PurpleProtocol *protocol, gboolean is_icq);
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _OSCAR_H_ */

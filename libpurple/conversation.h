@@ -333,7 +333,7 @@ void purple_conversation_set_ui_ops(PurpleConversation *conv,
  *
  * Returns: The operations structure.
  */
-PurpleConversationUiOps *purple_conversation_get_ui_ops(const PurpleConversation *conv);
+PurpleConversationUiOps *purple_conversation_get_ui_ops(PurpleConversation *conv);
 
 /**
  * purple_conversation_set_account:
@@ -359,7 +359,7 @@ void purple_conversation_set_account(PurpleConversation *conv,
  *
  * Returns: (transfer none): The conversation's purple_account.
  */
-PurpleAccount *purple_conversation_get_account(const PurpleConversation *conv);
+PurpleAccount *purple_conversation_get_account(PurpleConversation *conv);
 
 /**
  * purple_conversation_get_connection:
@@ -369,7 +369,7 @@ PurpleAccount *purple_conversation_get_account(const PurpleConversation *conv);
  *
  * Returns: (transfer none): The conversation's purple_connection.
  */
-PurpleConnection *purple_conversation_get_connection(const PurpleConversation *conv);
+PurpleConnection *purple_conversation_get_connection(PurpleConversation *conv);
 
 /**
  * purple_conversation_set_title:
@@ -388,7 +388,7 @@ void purple_conversation_set_title(PurpleConversation *conv, const char *title);
  *
  * Returns: The title.
  */
-const char *purple_conversation_get_title(const PurpleConversation *conv);
+const char *purple_conversation_get_title(PurpleConversation *conv);
 
 /**
  * purple_conversation_autoset_title:
@@ -419,7 +419,7 @@ void purple_conversation_set_name(PurpleConversation *conv, const char *name);
  * Returns: The conversation's name. If the conversation is an IM with a
  *          PurpleBuddy, then it's the name of the PurpleBuddy.
  */
-const char *purple_conversation_get_name(const PurpleConversation *conv);
+const char *purple_conversation_get_name(PurpleConversation *conv);
 
 /**
  * purple_conversation_set_e2ee_state:
@@ -460,7 +460,7 @@ void purple_conversation_set_logging(PurpleConversation *conv, gboolean log);
  *
  * Returns: %TRUE if logging is enabled, or %FALSE otherwise.
  */
-gboolean purple_conversation_is_logging(const PurpleConversation *conv);
+gboolean purple_conversation_is_logging(PurpleConversation *conv);
 
 /**
  * purple_conversation_close_logs:

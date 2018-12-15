@@ -36,9 +36,6 @@
 #define FT_INITIAL_BUFFER_SIZE 4096
 #define FT_MAX_BUFFER_SIZE     65535
 
-#define PURPLE_XFER_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_XFER, PurpleXferPrivate))
-
 typedef struct _PurpleXferPrivate  PurpleXferPrivate;
 
 static PurpleXferUiOps *xfer_ui_ops = NULL;
@@ -140,8 +137,9 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleXfer, purple_xfer, G_TYPE_OBJECT);
 
 static int purple_xfer_choose_file(PurpleXfer *xfer);
 
@@ -172,7 +170,7 @@ purple_xfer_status_type_to_string(PurpleXferStatus type)
 void
 purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatus status)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -236,7 +234,7 @@ purple_xfer_conversation_write_internal(PurpleXfer *xfer,
 	char *escaped;
 	gconstpointer thumbnail_data;
 	gsize size;
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 	g_return_if_fail(message != NULL);
@@ -298,7 +296,7 @@ static void purple_xfer_show_file_error(PurpleXfer *xfer, const char *filename)
 	gchar *msg = NULL, *utf8;
 	PurpleXferType xfer_type = purple_xfer_get_xfer_type(xfer);
 	PurpleAccount *account = purple_xfer_get_account(xfer);
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	utf8 = g_filename_to_utf8(filename, -1, NULL, NULL, NULL);
 	switch(xfer_type) {
@@ -458,7 +456,7 @@ cancel_recv_cb(PurpleXfer *xfer)
 static void
 purple_xfer_ask_recv(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	char *buf, *size_buf;
 	goffset size;
 	gconstpointer thumb;
@@ -525,7 +523,7 @@ ask_accept_cancel(PurpleXfer *xfer)
 static void
 purple_xfer_ask_accept(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	char *buf, *buf2 = NULL;
 	PurpleBuddy *buddy = purple_blist_find_buddy(priv->account, priv->who);
 
@@ -548,7 +546,7 @@ purple_xfer_ask_accept(PurpleXfer *xfer)
 void
 purple_xfer_request(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 	g_return_if_fail(priv->ops.init != NULL);
@@ -592,7 +590,7 @@ purple_xfer_request(PurpleXfer *xfer)
 void
 purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferType type;
 	GStatBuf st;
 	char *msg, *utf8, *base;
@@ -683,7 +681,7 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const char *filename)
 void
 purple_xfer_request_denied(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -697,7 +695,7 @@ purple_xfer_request_denied(PurpleXfer *xfer)
 
 int purple_xfer_get_fd(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -706,7 +704,7 @@ int purple_xfer_get_fd(PurpleXfer *xfer)
 
 int purple_xfer_get_watcher(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -714,9 +712,9 @@ int purple_xfer_get_watcher(PurpleXfer *xfer)
 }
 
 PurpleXferType
-purple_xfer_get_xfer_type(const PurpleXfer *xfer)
+purple_xfer_get_xfer_type(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, PURPLE_XFER_TYPE_UNKNOWN);
 
@@ -724,9 +722,9 @@ purple_xfer_get_xfer_type(const PurpleXfer *xfer)
 }
 
 PurpleAccount *
-purple_xfer_get_account(const PurpleXfer *xfer)
+purple_xfer_get_account(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -736,7 +734,7 @@ purple_xfer_get_account(const PurpleXfer *xfer)
 void
 purple_xfer_set_remote_user(PurpleXfer *xfer, const char *who)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -747,9 +745,9 @@ purple_xfer_set_remote_user(PurpleXfer *xfer, const char *who)
 }
 
 const char *
-purple_xfer_get_remote_user(const PurpleXfer *xfer)
+purple_xfer_get_remote_user(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -757,9 +755,9 @@ purple_xfer_get_remote_user(const PurpleXfer *xfer)
 }
 
 PurpleXferStatus
-purple_xfer_get_status(const PurpleXfer *xfer)
+purple_xfer_get_status(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, PURPLE_XFER_STATUS_UNKNOWN);
 
@@ -767,7 +765,7 @@ purple_xfer_get_status(const PurpleXfer *xfer)
 }
 
 gboolean
-purple_xfer_is_cancelled(const PurpleXfer *xfer)
+purple_xfer_is_cancelled(PurpleXfer *xfer)
 {
 	g_return_val_if_fail(PURPLE_IS_XFER(xfer), TRUE);
 
@@ -779,7 +777,7 @@ purple_xfer_is_cancelled(const PurpleXfer *xfer)
 }
 
 gboolean
-purple_xfer_is_completed(const PurpleXfer *xfer)
+purple_xfer_is_completed(PurpleXfer *xfer)
 {
 	g_return_val_if_fail(PURPLE_IS_XFER(xfer), TRUE);
 
@@ -787,9 +785,9 @@ purple_xfer_is_completed(const PurpleXfer *xfer)
 }
 
 const char *
-purple_xfer_get_filename(const PurpleXfer *xfer)
+purple_xfer_get_filename(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -797,9 +795,9 @@ purple_xfer_get_filename(const PurpleXfer *xfer)
 }
 
 const char *
-purple_xfer_get_local_filename(const PurpleXfer *xfer)
+purple_xfer_get_local_filename(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -807,9 +805,9 @@ purple_xfer_get_local_filename(const PurpleXfer *xfer)
 }
 
 goffset
-purple_xfer_get_bytes_sent(const PurpleXfer *xfer)
+purple_xfer_get_bytes_sent(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -817,9 +815,9 @@ purple_xfer_get_bytes_sent(const PurpleXfer *xfer)
 }
 
 goffset
-purple_xfer_get_bytes_remaining(const PurpleXfer *xfer)
+purple_xfer_get_bytes_remaining(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -827,9 +825,9 @@ purple_xfer_get_bytes_remaining(const PurpleXfer *xfer)
 }
 
 goffset
-purple_xfer_get_size(const PurpleXfer *xfer)
+purple_xfer_get_size(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -837,7 +835,7 @@ purple_xfer_get_size(const PurpleXfer *xfer)
 }
 
 double
-purple_xfer_get_progress(const PurpleXfer *xfer)
+purple_xfer_get_progress(PurpleXfer *xfer)
 {
 	g_return_val_if_fail(PURPLE_IS_XFER(xfer), 0.0);
 
@@ -849,9 +847,9 @@ purple_xfer_get_progress(const PurpleXfer *xfer)
 }
 
 guint16
-purple_xfer_get_local_port(const PurpleXfer *xfer)
+purple_xfer_get_local_port(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, -1);
 
@@ -859,9 +857,9 @@ purple_xfer_get_local_port(const PurpleXfer *xfer)
 }
 
 const char *
-purple_xfer_get_remote_ip(const PurpleXfer *xfer)
+purple_xfer_get_remote_ip(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -869,9 +867,9 @@ purple_xfer_get_remote_ip(const PurpleXfer *xfer)
 }
 
 guint16
-purple_xfer_get_remote_port(const PurpleXfer *xfer)
+purple_xfer_get_remote_port(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, -1);
 
@@ -879,9 +877,9 @@ purple_xfer_get_remote_port(const PurpleXfer *xfer)
 }
 
 time_t
-purple_xfer_get_start_time(const PurpleXfer *xfer)
+purple_xfer_get_start_time(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -889,9 +887,9 @@ purple_xfer_get_start_time(const PurpleXfer *xfer)
 }
 
 time_t
-purple_xfer_get_end_time(const PurpleXfer *xfer)
+purple_xfer_get_end_time(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -900,7 +898,7 @@ purple_xfer_get_end_time(const PurpleXfer *xfer)
 
 void purple_xfer_set_fd(PurpleXfer *xfer, int fd)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -911,7 +909,7 @@ void purple_xfer_set_fd(PurpleXfer *xfer, int fd)
 
 void purple_xfer_set_watcher(PurpleXfer *xfer, int watcher)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -923,7 +921,7 @@ void purple_xfer_set_watcher(PurpleXfer *xfer, int watcher)
 void
 purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 
 	g_return_if_fail(priv != NULL);
@@ -972,7 +970,7 @@ purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 void
 purple_xfer_set_message(PurpleXfer *xfer, const char *message)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -985,9 +983,9 @@ purple_xfer_set_message(PurpleXfer *xfer, const char *message)
 }
 
 const char *
-purple_xfer_get_message(const PurpleXfer *xfer)
+purple_xfer_get_message(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -997,7 +995,7 @@ purple_xfer_get_message(const PurpleXfer *xfer)
 void
 purple_xfer_set_filename(PurpleXfer *xfer, const char *filename)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1012,7 +1010,7 @@ purple_xfer_set_filename(PurpleXfer *xfer, const char *filename)
 void
 purple_xfer_set_local_filename(PurpleXfer *xfer, const char *filename)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1027,7 +1025,7 @@ purple_xfer_set_local_filename(PurpleXfer *xfer, const char *filename)
 void
 purple_xfer_set_size(PurpleXfer *xfer, goffset size)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1039,7 +1037,7 @@ purple_xfer_set_size(PurpleXfer *xfer, goffset size)
 void
 purple_xfer_set_local_port(PurpleXfer *xfer, guint16 local_port)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1051,7 +1049,7 @@ purple_xfer_set_local_port(PurpleXfer *xfer, guint16 local_port)
 void
 purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1061,9 +1059,9 @@ purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent)
 }
 
 PurpleXferUiOps *
-purple_xfer_get_ui_ops(const PurpleXfer *xfer)
+purple_xfer_get_ui_ops(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -1073,7 +1071,7 @@ purple_xfer_get_ui_ops(const PurpleXfer *xfer)
 void
 purple_xfer_set_init_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1082,7 +1080,7 @@ purple_xfer_set_init_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 
 void purple_xfer_set_request_denied_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1092,7 +1090,7 @@ void purple_xfer_set_request_denied_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer
 void
 purple_xfer_set_read_fnc(PurpleXfer *xfer, gssize (*fnc)(guchar **, size_t, PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1103,7 +1101,7 @@ void
 purple_xfer_set_write_fnc(PurpleXfer *xfer,
 						gssize (*fnc)(const guchar *, size_t, PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1114,7 +1112,7 @@ void
 purple_xfer_set_ack_fnc(PurpleXfer *xfer,
 			  void (*fnc)(PurpleXfer *, const guchar *, size_t))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1124,7 +1122,7 @@ purple_xfer_set_ack_fnc(PurpleXfer *xfer,
 void
 purple_xfer_set_start_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1134,7 +1132,7 @@ purple_xfer_set_start_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 void
 purple_xfer_set_end_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1144,7 +1142,7 @@ purple_xfer_set_end_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 void
 purple_xfer_set_cancel_send_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1154,7 +1152,7 @@ purple_xfer_set_cancel_send_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 void
 purple_xfer_set_cancel_recv_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1164,7 +1162,7 @@ purple_xfer_set_cancel_recv_fnc(PurpleXfer *xfer, void (*fnc)(PurpleXfer *))
 static void
 purple_xfer_increase_buffer_size(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	priv->current_buffer_size = MIN(priv->current_buffer_size * 1.5,
 			FT_MAX_BUFFER_SIZE);
@@ -1173,7 +1171,7 @@ purple_xfer_increase_buffer_size(PurpleXfer *xfer)
 gssize
 purple_xfer_read(PurpleXfer *xfer, guchar **buffer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	gssize s, r;
 
 	g_return_val_if_fail(priv   != NULL, 0);
@@ -1213,7 +1211,7 @@ purple_xfer_read(PurpleXfer *xfer, guchar **buffer)
 static gssize
 do_write(PurpleXfer *xfer, const guchar *buffer, gsize size)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	gssize r;
 
 	g_return_val_if_fail(priv   != NULL, 0);
@@ -1234,7 +1232,7 @@ do_write(PurpleXfer *xfer, const guchar *buffer, gsize size)
 gssize
 purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	gssize s;
 
 	g_return_val_if_fail(priv != NULL, 0);
@@ -1247,7 +1245,7 @@ purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size)
 gboolean
 purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 	gsize wc;
 	gboolean fs_known;
@@ -1293,7 +1291,7 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 gssize
 purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 	gssize got_len;
 
@@ -1347,7 +1345,7 @@ purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 static void
 do_transfer(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 	guchar *buffer = NULL;
 	gssize r = 0;
@@ -1481,7 +1479,7 @@ static void
 transfer_cb(gpointer data, gint source, PurpleInputCondition condition)
 {
 	PurpleXfer *xfer = data;
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	if (priv->dest_fp == NULL) {
 		/* The UI is moderating its side manually */
@@ -1504,7 +1502,7 @@ transfer_cb(gpointer data, gint source, PurpleInputCondition condition)
 static void
 begin_transfer(PurpleXfer *xfer, PurpleInputCondition cond)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferType type = purple_xfer_get_xfer_type(xfer);
 	PurpleXferUiOps *ui_ops = purple_xfer_get_ui_ops(xfer);
 
@@ -1560,7 +1558,7 @@ connect_cb(gpointer data, gint source, const gchar *error_message)
 void
 purple_xfer_ui_ready(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleInputCondition cond;
 	PurpleXferType type;
 
@@ -1593,7 +1591,7 @@ purple_xfer_ui_ready(PurpleXfer *xfer)
 void
 purple_xfer_protocol_ready(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1615,7 +1613,7 @@ purple_xfer_protocol_ready(PurpleXfer *xfer)
 void
 purple_xfer_start(PurpleXfer *xfer, int fd, const char *ip, guint16 port)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleInputCondition cond;
 	PurpleXferType type;
 	GObject *obj;
@@ -1662,7 +1660,7 @@ purple_xfer_start(PurpleXfer *xfer, int fd, const char *ip, guint16 port)
 void
 purple_xfer_end(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1718,7 +1716,7 @@ purple_xfer_add(PurpleXfer *xfer)
 void
 purple_xfer_cancel_local(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 	char *msg = NULL;
 
@@ -1790,7 +1788,7 @@ purple_xfer_cancel_local(PurpleXfer *xfer)
 void
 purple_xfer_cancel_remote(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 	gchar *msg;
 	PurpleAccount *account;
@@ -1892,9 +1890,9 @@ purple_xfer_update_progress(PurpleXfer *xfer)
 }
 
 gconstpointer
-purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len)
+purple_xfer_get_thumbnail(PurpleXfer *xfer, gsize *len)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -1905,9 +1903,9 @@ purple_xfer_get_thumbnail(const PurpleXfer *xfer, gsize *len)
 }
 
 const gchar *
-purple_xfer_get_thumbnail_mimetype(const PurpleXfer *xfer)
+purple_xfer_get_thumbnail_mimetype(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -1918,7 +1916,7 @@ void
 purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
 	gsize size, const gchar *mimetype)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	gpointer old_thumbnail_data;
 	gchar *old_mimetype;
 
@@ -1946,7 +1944,7 @@ purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
 void
 purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1958,7 +1956,7 @@ purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats)
 void
 purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_if_fail(priv != NULL);
 
@@ -1966,9 +1964,9 @@ purple_xfer_set_protocol_data(PurpleXfer *xfer, gpointer proto_data)
 }
 
 gpointer
-purple_xfer_get_protocol_data(const PurpleXfer *xfer)
+purple_xfer_get_protocol_data(PurpleXfer *xfer)
 {
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -1982,7 +1980,7 @@ void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data)
 	xfer->ui_data = ui_data;
 }
 
-gpointer purple_xfer_get_ui_data(const PurpleXfer *xfer)
+gpointer purple_xfer_get_ui_data(PurpleXfer *xfer)
 {
 	g_return_val_if_fail(PURPLE_IS_XFER(xfer), NULL);
 
@@ -1998,7 +1996,7 @@ purple_xfer_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
 	PurpleXfer *xfer = PURPLE_XFER(obj);
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	switch (param_id) {
 		case PROP_TYPE:
@@ -2119,10 +2117,9 @@ purple_xfer_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_xfer_init(GTypeInstance *instance, gpointer klass)
+purple_xfer_init(PurpleXfer *xfer)
 {
-	PurpleXfer *xfer = PURPLE_XFER(instance);
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
 	priv->ui_ops = purple_xfers_get_ui_ops();
 	priv->current_buffer_size = FT_INITIAL_BUFFER_SIZE;
@@ -2135,10 +2132,10 @@ static void
 purple_xfer_constructed(GObject *object)
 {
 	PurpleXfer *xfer = PURPLE_XFER(object);
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 
-	parent_class->constructed(object);
+	G_OBJECT_CLASS(purple_xfer_parent_class)->constructed(object);
 
 	ui_ops = purple_xfers_get_ui_ops();
 
@@ -2160,7 +2157,7 @@ static void
 purple_xfer_finalize(GObject *object)
 {
 	PurpleXfer *xfer = PURPLE_XFER(object);
-	PurpleXferPrivate *priv = PURPLE_XFER_GET_PRIVATE(xfer);
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 
 	/* Close the file browser, if it's open */
@@ -2187,7 +2184,7 @@ purple_xfer_finalize(GObject *object)
 	g_free(priv->thumbnail_data);
 	g_free(priv->thumbnail_mimetype);
 
-	parent_class->finalize(object);
+	G_OBJECT_CLASS(purple_xfer_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -2196,16 +2193,12 @@ purple_xfer_class_init(PurpleXferClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_xfer_finalize;
 	obj_class->constructed = purple_xfer_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_xfer_get_property;
 	obj_class->set_property = purple_xfer_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleXferPrivate));
 
 	properties[PROP_TYPE] = g_param_spec_enum("type", "Transfer type",
 				"The type of file transfer.", PURPLE_TYPE_XFER_TYPE,
@@ -2316,32 +2309,6 @@ purple_xfer_class_init(PurpleXferClass *klass)
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_xfer_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleXferClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_xfer_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleXfer),
-			0,
-			(GInstanceInitFunc)purple_xfer_init,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT, "PurpleXfer",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleXfer *

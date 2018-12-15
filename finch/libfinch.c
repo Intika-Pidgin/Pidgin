@@ -20,6 +20,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include <internal.h>
+#include <locale.h>
 #include "finch.h"
 
 #include "account.h"
@@ -156,11 +157,9 @@ init_libpurple(int argc, char **argv)
 		{NULL}
 	};
 
-#ifdef ENABLE_NLS
 	bindtextdomain(PACKAGE, PURPLE_LOCALEDIR);
 	bind_textdomain_codeset(PACKAGE, "UTF-8");
 	textdomain(PACKAGE);
-#endif
 
 	setlocale(LC_ALL, "");
 
