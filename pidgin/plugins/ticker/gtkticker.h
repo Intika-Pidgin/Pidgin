@@ -30,9 +30,7 @@
 
 #include "plugins.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 #define GTK_TYPE_TICKER            (gtk_ticker_get_type())
 #define GTK_TICKER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), GTK_TYPE_TICKER, GtkTicker))
@@ -94,9 +92,6 @@ guint      gtk_ticker_get_scootch      (GtkTicker       *ticker);
 void       gtk_ticker_start_scroll     (GtkTicker       *ticker);
 void       gtk_ticker_stop_scroll      (GtkTicker       *ticker);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
-
+G_END_DECLS
 
 #endif /* __GTK_TICKER_H__ */
