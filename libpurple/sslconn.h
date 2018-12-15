@@ -111,7 +111,7 @@ G_BEGIN_DECLS
 const gchar * purple_ssl_strerror(PurpleSslErrorType error);
 
 /**
- * purple_ssl_connect:
+ * purple_ssl_connect: (skip)
  * @account:    The account making the connection.
  * @host:       The destination host.
  * @port:       The destination port.
@@ -134,7 +134,7 @@ PurpleSslConnection *purple_ssl_connect(PurpleAccount *account, const char *host
 									void *data);
 
 /**
- * purple_ssl_connect_with_ssl_cn:
+ * purple_ssl_connect_with_ssl_cn: (skip)
  * @account:    The account making the connection.
  * @host:       The destination host.
  * @port:       The destination port.
@@ -159,7 +159,7 @@ PurpleSslConnection *purple_ssl_connect_with_ssl_cn(PurpleAccount *account, cons
 									void *data);
 
 /**
- * purple_ssl_connect_with_host_fd:
+ * purple_ssl_connect_with_host_fd: (skip)
  * @account:    The account making the connection.
  * @fd:         The file descriptor.
  * @func:       The SSL input handler function.
@@ -178,7 +178,7 @@ PurpleSslConnection *purple_ssl_connect_with_host_fd(PurpleAccount *account, int
                                            void *data);
 
 /**
- * purple_ssl_input_add:
+ * purple_ssl_input_add: (skip)
  * @gsc:   The SSL connection handle.
  * @func:  The callback function.
  * @data:  User-defined data.
@@ -190,7 +190,7 @@ void purple_ssl_input_add(PurpleSslConnection *gsc, PurpleSslInputFunction func,
 						void *data);
 
 /**
- * purple_ssl_input_remove:
+ * purple_ssl_input_remove: (skip)
  * @gsc: The SSL connection handle.
  *
  * Removes an input watcher, added with purple_ssl_input_add().
@@ -201,7 +201,7 @@ void
 purple_ssl_input_remove(PurpleSslConnection *gsc);
 
 /**
- * purple_ssl_close:
+ * purple_ssl_close: (skip)
  * @gsc: The SSL connection to close.
  *
  * Closes a SSL connection.
@@ -209,7 +209,7 @@ purple_ssl_input_remove(PurpleSslConnection *gsc);
 void purple_ssl_close(PurpleSslConnection *gsc);
 
 /**
- * purple_ssl_read:
+ * purple_ssl_read: (skip)
  * @gsc:    The SSL connection handle.
  * @buffer: The destination buffer.
  * @len:    The maximum number of bytes to read.
@@ -221,7 +221,7 @@ void purple_ssl_close(PurpleSslConnection *gsc);
 size_t purple_ssl_read(PurpleSslConnection *gsc, void *buffer, size_t len);
 
 /**
- * purple_ssl_write:
+ * purple_ssl_write: (skip)
  * @gsc:    The SSL connection handle.
  * @buffer: The buffer to write.
  * @len:    The length of the data to write.
@@ -233,7 +233,7 @@ size_t purple_ssl_read(PurpleSslConnection *gsc, void *buffer, size_t len);
 size_t purple_ssl_write(PurpleSslConnection *gsc, const void *buffer, size_t len);
 
 /**
- * purple_ssl_get_peer_certificates:
+ * purple_ssl_get_peer_certificates: (skip)
  * @gsc:    The SSL connection handle
  *
  * Obtains the peer's presented certificates
