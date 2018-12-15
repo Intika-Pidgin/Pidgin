@@ -8,9 +8,7 @@
 #ifndef _UNTAR_H_
 #define _UNTAR_H_
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 typedef enum {
 	UNTAR_LISTING =      (1 << 0),
@@ -23,8 +21,6 @@ typedef enum {
 
 int untar(const char *filename, const char *destdir, untar_opt options);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif

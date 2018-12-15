@@ -24,10 +24,7 @@
 #define _LIBC_INTERNAL_
 #include <glib.h>
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 /* sys/socket.h */
 int wpurple_socket(int domain, int style, int protocol);
@@ -114,9 +111,6 @@ int wpurple_write(int fd, const void *buf, unsigned int size);
 int wpurple_close(int fd);
 int wpurple_gethostname(char *name, size_t size);
 
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _LIBC_INTERNAL_ */
