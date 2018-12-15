@@ -1,6 +1,13 @@
 #ifndef PIDGIN_ABOUT_H
 #define PIDGIN_ABOUT_H
 
+/**
+ * SECTION:pidginabout
+ * @section_id: pidgin-about
+ * @short_description: <filename>pidginabout.h</filename>
+ * @title: About Dialog
+ */
+
 #include <gtk/gtk.h>
 
 #define PIDGIN_TYPE_ABOUT_DIALOG            (pidgin_about_dialog_get_type())
