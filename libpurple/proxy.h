@@ -77,6 +77,13 @@ G_BEGIN_DECLS
 /**************************************************************************/
 
 /**
+ * purple_proxy_info_get_type:
+ *
+ * Returns: The #GType for proxy information.
+ */
+GType purple_proxy_info_get_type(void);
+
+/**
  * purple_proxy_info_new:
  *
  * Creates a proxy information structure.
