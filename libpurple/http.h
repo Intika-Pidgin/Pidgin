@@ -834,12 +834,32 @@ purple_http_keepalive_pool_get_limit_per_host(PurpleHttpKeepalivePool *pool);
 /* HTTP connection set API                                                */
 /**************************************************************************/
 
+/**
+ * purple_http_connection_set_new: (skip)
+ *
+ * Creates a new connection set.
+ *
+ * Returns: A new connection set.
+ */
 PurpleHttpConnectionSet *
 purple_http_connection_set_new(void);
 
+/**
+ * purple_http_connection_set_destroy: (skip)
+ * @set: The connection set to be destroyed
+ *
+ * Destroys connection set @set.
+ */
 void
 purple_http_connection_set_destroy(PurpleHttpConnectionSet *set);
 
+/**
+ * purple_http_connection_set_add: (skip)
+ * @set: The connection set to add to
+ * @http_conn: The connection to add
+ *
+ * Adds @http_conn to @set.
+ */
 void
 purple_http_connection_set_add(PurpleHttpConnectionSet *set,
 	PurpleHttpConnection *http_conn);
