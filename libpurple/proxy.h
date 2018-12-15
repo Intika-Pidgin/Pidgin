@@ -247,7 +247,7 @@ void purple_proxy_uninit(void);
 PurpleProxyInfo *purple_proxy_get_setup(PurpleAccount *account);
 
 /**
- * purple_proxy_connect:
+ * purple_proxy_connect: (skip)
  * @handle:     A handle that should be associated with this
  *              connection attempt.  The handle can be used
  *              to cancel the connection attempt using the
@@ -277,7 +277,7 @@ PurpleProxyConnectData *purple_proxy_connect(void *handle,
 			PurpleProxyConnectFunction connect_cb, gpointer data);
 
 /**
- * purple_proxy_connect_socks5_account:
+ * purple_proxy_connect_socks5_account: (skip)
  * @handle:     A handle that should be associated with this
  *              connection attempt.  The handle can be used
  *              to cancel the connection attempt using the
@@ -308,7 +308,7 @@ PurpleProxyConnectData *purple_proxy_connect_socks5_account(void *handle,
 			PurpleProxyConnectFunction connect_cb, gpointer data);
 
 /**
- * purple_proxy_connect_cancel:
+ * purple_proxy_connect_cancel: (skip)
  * @connect_data: The #PurpleProxyConnectData to cancel.
  *
  * Cancel an in-progress connection attempt.  This should be called
@@ -322,7 +322,7 @@ PurpleProxyConnectData *purple_proxy_connect_socks5_account(void *handle,
 void purple_proxy_connect_cancel(PurpleProxyConnectData *connect_data);
 
 /**
- * purple_proxy_connect_cancel_with_handle:
+ * purple_proxy_connect_cancel_with_handle: (skip)
  * @handle: The handle.
  *
  * Closes all proxy connections registered with the specified handle.
