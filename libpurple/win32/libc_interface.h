@@ -33,9 +33,7 @@
 #include <glib.h>
 #include "glibcompat.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 #ifdef _MSC_VER
 #define S_IRUSR S_IREAD
@@ -156,8 +154,6 @@ g_rename( oldname, newname )
 #define localtime_r( time, resultp ) \
 wpurple_localtime_r( time, resultp )
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _LIBC_INTERFACE_H_ */
