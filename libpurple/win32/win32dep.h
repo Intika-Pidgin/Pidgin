@@ -32,10 +32,7 @@
 #include "wpurpleerror.h"
 #include "libc_interface.h"
 
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
+G_BEGIN_DECLS
 
 /* the winapi headers don't yet have winhttp.h, so we use the struct from msdn directly */
 typedef struct {
@@ -79,9 +76,7 @@ const char *wpurple_sysconf_dir(void);
 void wpurple_init(void);
 void wpurple_cleanup(void);
 
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
+G_END_DECLS
 
 #endif /* _WIN32DEP_H_ */
 
