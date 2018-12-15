@@ -51,7 +51,8 @@ GtkWidget *pidgin_talkatu_editor_new_for_connection(PurpleConnection *pc);
  * pidgin_talkatu_buffer_new_for_connection:
  * @pc: The connection for which the buffer should be created
  *
- * Creates a new #TalkatuBuffer appropriate for use with @pc.
+ * Creates a new #TalkatuBuffer. Depending on @pc's #PurpleConnectionFlags,
+ * it will create a plain, HTML, or markdown buffer.
  *
  * Returns: (transfer full): the new #TalkatuBuffer
  */
