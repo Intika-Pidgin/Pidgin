@@ -21,6 +21,7 @@
 
 #include <config.h>
 
+#include <glib/gi18n-lib.h>
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <io.h>
@@ -36,26 +37,6 @@
 #include "util.h"
 #include <glib/gstdio.h>
 #include "util.h"
-
-/** This is redefined here because we can't include internal.h */
-#ifdef ENABLE_NLS
-#  include <locale.h>
-#  include <libintl.h>
-#  define _(String) ((const char *)dgettext(PACKAGE, String))
-#  ifdef gettext_noop
-#    define N_(String) gettext_noop (String)
-#  else
-#    define N_(String) (String)
-#  endif
-#else
-#  include <locale.h>
-#  define N_(String) (String)
-#  ifndef _
-#    define _(String) ((const char *)String)
-#  endif
-#  define ngettext(Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
-#  define dngettext(Domain, Singular, Plural, Number) ((Number == 1) ? ((const char *)Singular) : ((const char *)Plural))
-#endif
 
 #ifndef S_ISDIR
 # define S_ISDIR(m) (((m)&S_IFDIR)==S_IFDIR)

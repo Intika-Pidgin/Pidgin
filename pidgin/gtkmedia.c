@@ -288,10 +288,7 @@ setup_menubar(PidginMedia *window)
 	GtkWidget *menu;
 
 	window->priv->ui = gtk_builder_new();
-
-#ifdef ENABLE_NLS
 	gtk_builder_set_translation_domain(window->priv->ui, PACKAGE);
-#endif
 
 	error = NULL;
 	if (!gtk_builder_add_from_string(window->priv->ui, media_menu, -1,

@@ -78,6 +78,23 @@ purple_proxy_info_new(void)
 	return g_new0(PurpleProxyInfo, 1);
 }
 
+static PurpleProxyInfo *
+purple_proxy_info_copy(PurpleProxyInfo *info)
+{
+	PurpleProxyInfo *copy;
+
+	g_return_val_if_fail(info != NULL, NULL);
+
+	copy = purple_proxy_info_new();
+	copy->type = info->type;
+	copy->host = g_strdup(info->host);
+	copy->port = info->port;
+	copy->username = g_strdup(info->username);
+	copy->password = g_strdup(info->password);
+
+	return info;
+}
+
 void
 purple_proxy_info_destroy(PurpleProxyInfo *info)
 {
@@ -172,6 +189,9 @@ purple_proxy_info_get_password(const PurpleProxyInfo *info)
 
 	return info->password;
 }
+
+G_DEFINE_BOXED_TYPE(PurpleProxyInfo, purple_proxy_info,
+		purple_proxy_info_copy, purple_proxy_info_destroy);
 
 /**************************************************************************
  * Global Proxy API

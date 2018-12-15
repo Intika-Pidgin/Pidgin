@@ -54,9 +54,7 @@
 									 ((y) < PURPLE_MINOR_VERSION || \
 									  ((y) == PURPLE_MINOR_VERSION && (z) <= PURPLE_MICRO_VERSION)))
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+G_BEGIN_DECLS
 
 /**
  * purple_version_check:
@@ -99,9 +97,7 @@ extern const guint purple_minor_version;
  */
 extern const guint purple_micro_version;
 
-#ifdef __cplusplus
-}
-#endif
+G_END_DECLS
 
 #endif /* _PURPLE_VERSION_H_ */
 

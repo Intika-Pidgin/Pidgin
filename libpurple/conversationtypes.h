@@ -241,7 +241,7 @@ void purple_im_conversation_set_icon(PurpleIMConversation *im, PurpleBuddyIcon *
  *
  * Returns: The buddy icon.
  */
-PurpleBuddyIcon *purple_im_conversation_get_icon(const PurpleIMConversation *im);
+PurpleBuddyIcon *purple_im_conversation_get_icon(PurpleIMConversation *im);
 
 /**
  * purple_im_conversation_set_typing_state:
@@ -260,7 +260,7 @@ void purple_im_conversation_set_typing_state(PurpleIMConversation *im, PurpleIMT
  *
  * Returns: The IM's typing state.
  */
-PurpleIMTypingState purple_im_conversation_get_typing_state(const PurpleIMConversation *im);
+PurpleIMTypingState purple_im_conversation_get_typing_state(PurpleIMConversation *im);
 
 /**
  * purple_im_conversation_start_typing_timeout:
@@ -288,7 +288,7 @@ void purple_im_conversation_stop_typing_timeout(PurpleIMConversation *im);
  *
  * Returns: The timeout.
  */
-guint purple_im_conversation_get_typing_timeout(const PurpleIMConversation *im);
+guint purple_im_conversation_get_typing_timeout(PurpleIMConversation *im);
 
 /**
  * purple_im_conversation_set_type_again:
@@ -313,7 +313,7 @@ void purple_im_conversation_set_type_again(PurpleIMConversation *im, unsigned in
  * Returns: The time in seconds since the epoch.  Or 0 if no additional
  *         PURPLE_IM_TYPING message should be sent.
  */
-time_t purple_im_conversation_get_type_again(const PurpleIMConversation *im);
+time_t purple_im_conversation_get_type_again(PurpleIMConversation *im);
 
 /**
  * purple_im_conversation_start_send_typed_timeout:
@@ -339,7 +339,7 @@ void purple_im_conversation_stop_send_typed_timeout(PurpleIMConversation *im);
  *
  * Returns: The type again timeout interval.
  */
-guint purple_im_conversation_get_send_typed_timeout(const PurpleIMConversation *im);
+guint purple_im_conversation_get_send_typed_timeout(PurpleIMConversation *im);
 
 /**
  * purple_im_conversation_update_typing:
@@ -384,7 +384,7 @@ PurpleChatConversation *purple_chat_conversation_new(PurpleAccount *account,
  *          The list of users. Use g_list_free() when done
  *          using the list.
  */
-GList *purple_chat_conversation_get_users(const PurpleChatConversation *chat);
+GList *purple_chat_conversation_get_users(PurpleChatConversation *chat);
 
 /**
  * purple_chat_conversation_get_users_count:
@@ -395,7 +395,7 @@ GList *purple_chat_conversation_get_users(const PurpleChatConversation *chat);
  * Returns: The count of users in the chat room.
  */
 guint
-purple_chat_conversation_get_users_count(const PurpleChatConversation *chat);
+purple_chat_conversation_get_users_count(PurpleChatConversation *chat);
 
 /**
  * purple_chat_conversation_ignore:
@@ -437,7 +437,7 @@ GList *purple_chat_conversation_set_ignored(PurpleChatConversation *chat, GList 
  * Returns: (element-type char*) (transfer none):
  *          The list of ignored users.
  */
-GList *purple_chat_conversation_get_ignored(const PurpleChatConversation *chat);
+GList *purple_chat_conversation_get_ignored(PurpleChatConversation *chat);
 
 /**
  * purple_chat_conversation_get_ignored_user:
@@ -454,7 +454,7 @@ GList *purple_chat_conversation_get_ignored(const PurpleChatConversation *chat);
  * Returns: The ignored user if found, complete with prefixes, or %NULL
  *         if not found.
  */
-const char *purple_chat_conversation_get_ignored_user(const PurpleChatConversation *chat,
+const char *purple_chat_conversation_get_ignored_user(PurpleChatConversation *chat,
 											const char *user);
 
 /**
@@ -466,7 +466,7 @@ const char *purple_chat_conversation_get_ignored_user(const PurpleChatConversati
  *
  * Returns: %TRUE if the user is in the ignore list; %FALSE otherwise.
  */
-gboolean purple_chat_conversation_is_ignored_user(const PurpleChatConversation *chat,
+gboolean purple_chat_conversation_is_ignored_user(PurpleChatConversation *chat,
 										const char *user);
 
 /**
@@ -488,7 +488,7 @@ void purple_chat_conversation_set_topic(PurpleChatConversation *chat, const char
  *
  * Returns: The chat's topic.
  */
-const char *purple_chat_conversation_get_topic(const PurpleChatConversation *chat);
+const char *purple_chat_conversation_get_topic(PurpleChatConversation *chat);
 
 /**
  * purple_chat_conversation_get_topic_who:
@@ -498,7 +498,7 @@ const char *purple_chat_conversation_get_topic(const PurpleChatConversation *cha
  *
  * Returns: Who set the topic.
  */
-const char *purple_chat_conversation_get_topic_who(const PurpleChatConversation *chat);
+const char *purple_chat_conversation_get_topic_who(PurpleChatConversation *chat);
 
 /**
  * purple_chat_conversation_set_id:
@@ -517,7 +517,7 @@ void purple_chat_conversation_set_id(PurpleChatConversation *chat, int id);
  *
  * Returns: The ID.
  */
-int purple_chat_conversation_get_id(const PurpleChatConversation *chat);
+int purple_chat_conversation_get_id(PurpleChatConversation *chat);
 
 /**
  * purple_chat_conversation_add_user:
@@ -714,7 +714,7 @@ void purple_chat_user_set_chat(PurpleChatUser *cb,
  * Returns: (transfer none):
  *          The chat conversation that the buddy belongs to.
  */
-PurpleChatConversation *purple_chat_user_get_chat(const PurpleChatUser *cb);
+PurpleChatConversation *purple_chat_user_get_chat(PurpleChatUser *cb);
 
 /**
  * purple_chat_user_new:
@@ -750,7 +750,7 @@ void purple_chat_user_set_ui_data(PurpleChatUser *cb, gpointer ui_data);
  *         convenience field provided to the UIs--it is not
  *         used by the libpurple core.
  */
-gpointer purple_chat_user_get_ui_data(const PurpleChatUser *cb);
+gpointer purple_chat_user_get_ui_data(PurpleChatUser *cb);
 
 /**
  * purple_chat_user_get_alias:
@@ -760,7 +760,7 @@ gpointer purple_chat_user_get_ui_data(const PurpleChatUser *cb);
  *
  * Returns: The alias of the chat user.
  */
-const char *purple_chat_user_get_alias(const PurpleChatUser *cb);
+const char *purple_chat_user_get_alias(PurpleChatUser *cb);
 
 /**
  * purple_chat_user_get_name:
@@ -770,7 +770,7 @@ const char *purple_chat_user_get_alias(const PurpleChatUser *cb);
  *
  * Returns: The name of the chat user.
  */
-const char *purple_chat_user_get_name(const PurpleChatUser *cb);
+const char *purple_chat_user_get_name(PurpleChatUser *cb);
 
 /**
  * purple_chat_user_set_flags:
@@ -789,7 +789,7 @@ void purple_chat_user_set_flags(PurpleChatUser *cb, PurpleChatUserFlags flags);
  *
  * Returns: The flags of the chat user.
  */
-PurpleChatUserFlags purple_chat_user_get_flags(const PurpleChatUser *cb);
+PurpleChatUserFlags purple_chat_user_get_flags(PurpleChatUser *cb);
 
 /**
  * purple_chat_user_is_buddy:
@@ -799,7 +799,7 @@ PurpleChatUserFlags purple_chat_user_get_flags(const PurpleChatUser *cb);
  *
  * Returns: TRUE if the chat user is on the buddy list.
  */
-gboolean purple_chat_user_is_buddy(const PurpleChatUser *cb);
+gboolean purple_chat_user_is_buddy(PurpleChatUser *cb);
 
 G_END_DECLS
 

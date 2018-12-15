@@ -301,7 +301,8 @@ if enable_introspection
 	    include_directories : [
 	    	include_directories(join_paths(gplugin.get_pkgconfig_variable('prefix'), 'share/gir-1.0')),
 	    ],
-	    install : true)
+	    install : true,
+	    extra_args : ['--quiet'])
 endif
 
 subdir('tests')

@@ -37,6 +37,7 @@ man_conf = configuration_data()
 purple_h_conf = configuration_data()
 version_conf = configuration_data()
 
+conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE_NAME', meson.project_name())
 conf.set_quoted('VERSION', purple_display_version)
@@ -263,8 +264,6 @@ endif
 INSTALL_I18N = get_option('nls')
 
 if INSTALL_I18N
-	conf.set('ENABLE_NLS', true)
-
 	i18n = import('i18n')
 
 	subdir('po')
@@ -299,9 +298,6 @@ enable_gestures = get_option('gestures')
 # #######################################################################
 if get_option('gtkui')
 	gtk = dependency('gtk+-3.0', version : '>= 3.10.0')
-	# We only really need Pango >= 1.4 for decent RTL support
-	pango = dependency('pango', version : '>= 1.4.0')
-	conf.set('HAVE_PANGO14', pango.found())
 
 	webkit = dependency('webkitgtk-3.0', version : '>= 1.3.7')
 	talkatu = dependency('talkatu', version: '>=0.1.0')
@@ -981,10 +977,6 @@ conf.set('HAVE_SYS_SYSCTL_H',
 conf.set('HAVE_SYS_SOCKET_H',
     compiler.has_header('sys/socket.h'))
 #AC_VAR_TIMEZONE_EXTERNALS
-
-conf.set('HAVE_TM_GMTOFF',
-    compiler.has_member('struct tm', 'tm_gmtoff',
-        prefix : '#include<time.h>'))
 
 #######################################################################
 # Disable pixmap installation

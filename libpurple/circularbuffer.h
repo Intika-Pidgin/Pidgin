@@ -50,7 +50,7 @@ struct _PurpleCircularBufferClass {
 
 	void (*grow)(PurpleCircularBuffer *buffer, gsize len);
 	void (*append)(PurpleCircularBuffer *buffer, gconstpointer src, gsize len);
-	gsize (*max_read_size)(const PurpleCircularBuffer *buffer);
+	gsize (*max_read_size)(PurpleCircularBuffer *buffer);
 	gboolean (*mark_read)(PurpleCircularBuffer *buffer, gsize len);
 
 	void (*purple_reserved1)(void);
@@ -100,7 +100,7 @@ void purple_circular_buffer_append(PurpleCircularBuffer *buffer, gconstpointer s
  *
  * Returns: the number of bytes that can be read from the PurpleCircularBuffer
  */
-gsize purple_circular_buffer_get_max_read(const PurpleCircularBuffer *buffer);
+gsize purple_circular_buffer_get_max_read(PurpleCircularBuffer *buffer);
 
 /**
  * purple_circular_buffer_mark_read:
@@ -133,7 +133,7 @@ void purple_circular_buffer_grow(PurpleCircularBuffer *buffer, gsize len);
  *
  * Returns: The grow size of the buffer.
  */
-gsize purple_circular_buffer_get_grow_size(const PurpleCircularBuffer *buffer);
+gsize purple_circular_buffer_get_grow_size(PurpleCircularBuffer *buffer);
 
 /**
  * purple_circular_buffer_get_used:
@@ -143,7 +143,7 @@ gsize purple_circular_buffer_get_grow_size(const PurpleCircularBuffer *buffer);
  *
  * Returns: The number of bytes that contain unread data.
  */
-gsize purple_circular_buffer_get_used(const PurpleCircularBuffer *buffer);
+gsize purple_circular_buffer_get_used(PurpleCircularBuffer *buffer);
 
 /**
  * purple_circular_buffer_get_output:
@@ -156,7 +156,7 @@ gsize purple_circular_buffer_get_used(const PurpleCircularBuffer *buffer);
  *
  * Returns: The output pointer for the buffer.
  */
-const gchar *purple_circular_buffer_get_output(const PurpleCircularBuffer *buffer);
+const gchar *purple_circular_buffer_get_output(PurpleCircularBuffer *buffer);
 
 /**
  * purple_circular_buffer_reset:
