@@ -56,9 +56,6 @@ option('libgadu', type : 'boolean', value : true,
 option('silc', type : 'boolean', value : false,
        description : 'compile with SILC plugin')
 
-option('static-prpls', type : 'string',
-       description : 'Link to certain protocols statically')
-
 option('dynamic-prpls', type : 'string', value: 'all',
        description : 'specify which protocols to build dynamically')
 

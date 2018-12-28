@@ -51,11 +51,7 @@ GGSOURCES = [
 	'oauth/oauth-purple.h'
 ]
 
-if STATIC_GG
-	gg_prpl = static_library('gg', GGSOURCES,
-	    c_args : '-DPURPLE_STATIC_PRPL',
-	    dependencies : [libgadu, json, libpurple_dep, glib])
-elif DYNAMIC_GG
+if DYNAMIC_GG
 	gg_prpl = shared_library('gg', GGSOURCES,
 	    dependencies : [libgadu, json, libpurple_dep, glib],
 	    install : true, install_dir : PURPLE_PLUGINDIR)

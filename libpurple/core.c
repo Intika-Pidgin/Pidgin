@@ -60,9 +60,6 @@ struct PurpleCore
 static PurpleCoreUiOps *_ops  = NULL;
 static PurpleCore      *_core = NULL;
 
-STATIC_PROTO_LOAD
-STATIC_PROTO_UNLOAD
-
 static void
 purple_core_print_version(void)
 {
@@ -143,9 +140,6 @@ purple_core_init(const char *ui)
 
 	purple_cmds_init();
 	purple_protocols_init();
-
-	/* Load all static protocols. */
-	static_proto_load();
 
 	/* Since plugins get probed so early we should probably initialize their
 	 * subsystem right away too.
@@ -248,7 +242,6 @@ purple_core_quit(void)
 	purple_prefs_uninit();
 	purple_plugins_uninit();
 
-	static_proto_unload();
 	purple_protocols_uninit();
 
 	purple_cmds_uninit();
