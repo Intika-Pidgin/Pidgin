@@ -68,11 +68,7 @@ if EXTERNAL_LIBZEPHYR
 	extdep = ext_zephyr
 endif
 
-if STATIC_ZEPHYR
-	zephyr_prpl = static_library('zephyr', ZEPHYRSOURCES,
-	    c_args : ['-Dlint', '-DPURPLE_STATIC_PRPL'],
-	    dependencies : [extdep, libpurple_dep, glib])
-elif DYNAMIC_ZEPHYR
+if DYNAMIC_ZEPHYR
 	zephyr_prpl = shared_library('zephyr', ZEPHYRSOURCES,
 	    c_args : '-Dlint',
 	    dependencies : [extdep, libpurple_dep, glib],

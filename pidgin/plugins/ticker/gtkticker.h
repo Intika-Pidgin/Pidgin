@@ -28,7 +28,7 @@
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
 
-#include "plugins.h"
+#include <purple.h>
 
 G_BEGIN_DECLS
 

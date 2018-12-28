@@ -535,68 +535,6 @@ DEFAULT_PRPLS = ['bonjour', 'facebook', 'gg', 'irc', 'jabber', 'novell',
 ALL_PRPLS = DEFAULT_PRPLS + ['null']
 
 dynamic_list = get_option('dynamic-prpls').split(',')
-static_list = get_option('static-prpls').split(',')
-if (static_list != [''] and static_list != []) and dynamic_list == ['all']
-	dynamic_list = []
-endif
-
-if static_list == ['all']
-	static_list = DEFAULT_PRPLS
-endif
-STATIC_PRPLS = []
-foreach prpl : static_list
-	if prpl == ''
-		# The list was empty; do nothing.
-	elif prpl == 'sametime' and not enable_meanwhile
-		# Do nothing
-	elif prpl == 'bonjour' and not enable_avahi
-		# Do nothing
-	elif prpl == 'silc' and not have_silc
-		# Do nothing
-	elif prpl == 'gg' and not have_libgadu
-		# Do nothing
-	elif prpl == 'zephyr' and IS_WIN32
-		# Do nothing
-	else
-		STATIC_PRPLS += [prpl]
-	endif
-endforeach
-STATIC_LINK_LIBS = []
-extern_load = []
-load_proto = []
-extern_unload = []
-unload_proto = []
-foreach prpl : STATIC_PRPLS
-	# Ugly special case for 'libsilcpurple.la':
-	if prpl == 'silc'
-		STATIC_LINK_LIBS.append('\$(top_builddir)/libpurple/protocols/@1@/lib@1@purple.la'.format(meson.build_root(), prpl))
-	else
-		# FIXME: Shouldn't be libtool:
-		STATIC_LINK_LIBS.append('\$(top_builddir)/libpurple/protocols/@1@/lib@1@.la'.format(meson.build_root(), prpl))
-	endif
-	extern_load.append('extern gboolean @0@_plugin_load();'.format(prpl))
-	load_proto.append('@0@_plugin_load();'.format(prpl))
-	extern_unload.append('extern gboolean @0@_plugin_unload();'.format(prpl))
-	unload_proto.append('@0@_plugin_unload();'.format(prpl))
-endforeach
-STATIC_BONJOUR = STATIC_PRPLS.contains('bonjour')
-STATIC_FACEBOOK = STATIC_PRPLS.contains('facebook')
-STATIC_GG = STATIC_PRPLS.contains('gg')
-STATIC_IRC = STATIC_PRPLS.contains('irc')
-STATIC_JABBER = STATIC_PRPLS.contains('jabber')
-STATIC_NOVELL = STATIC_PRPLS.contains('novell')
-STATIC_OSCAR = STATIC_PRPLS.contains('oscar') or STATIC_PRPLS.contains('aim') or STATIC_PRPLS.contains('icq')
-STATIC_SAMETIME = STATIC_PRPLS.contains('sametime')
-STATIC_SILC = STATIC_PRPLS.contains('silc')
-STATIC_SIMPLE = STATIC_PRPLS.contains('simple')
-STATIC_ZEPHYR = STATIC_PRPLS.contains('zephyr')
-conf.set('STATIC_PROTO_LOAD',
-    ' '.join(extern_load) +
-    ' static void static_proto_load(void) { ' + ' '.join(load_proto) + ' }')
-conf.set('STATIC_PROTO_UNLOAD',
-    ' '.join(extern_unload) +
-    ' static void static_proto_unload(void) { ' + ' '.join(unload_proto) + ' }')
-
 if dynamic_list == ['all']
 	dynamic_list = DEFAULT_PRPLS
 endif
@@ -1019,7 +957,6 @@ message('Build for X11................. : ' + with_x.to_string())
 message('')
 message('Enable Gestures............... : ' + enable_gestures.to_string())
 message('Protocols to build dynamically : @0@'.format(DYNAMIC_PRPLS))
-message('Protocols to link statically.. : @0@'.format(STATIC_PRPLS))
 message('')
 message('Build with GStreamer support.. : ' + enable_gst.to_string())
 message('Build with voice and video.... : ' + enable_vv.to_string())
