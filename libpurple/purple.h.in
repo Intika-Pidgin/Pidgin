@@ -49,54 +49,6 @@
 
 @PLUGINS_DEFINE@
 
-#include <accounts.h>
-#include <accountopt.h>
-#include <buddylist.h>
-#include <buddyicon.h>
-#include <circularbuffer.h>
-#include <cmds.h>
-#include <connection.h>
-#include <conversations.h>
-#include <core.h>
-#include <debug.h>
-#include <enums.h>
-#include <eventloop.h>
-#include <idle.h>
-#include <log.h>
-#include <media.h>
-#include <mediamanager.h>
-#include <mime.h>
-#include <nat-pmp.h>
-#include <network.h>
-#include <notify.h>
-#include <plugins.h>
-#include <pluginpref.h>
-#include <pounce.h>
-#include <prefs.h>
-#include <presence.h>
-#include <proxy.h>
-#include <protocols.h>
-#include <request.h>
-#include <roomlist.h>
-#include <savedstatuses.h>
-#include <server.h>
-#include <signals.h>
-#include <smiley.h>
-#include <sound.h>
-#include <sound-theme.h>
-#include <sound-theme-loader.h>
-#include <sslconn.h>
-#include <status.h>
-#include <stringref.h>
-#include <stun.h>
-#include <theme.h>
-#include <theme-loader.h>
-#include <theme-manager.h>
-#include <upnp.h>
-#include <util.h>
-#include <version.h>
-#include <whiteboard.h>
-#include <xfer.h>
-#include <xmlnode.h>
+@PURPLE_H_INCLUDES@
 
 #endif
