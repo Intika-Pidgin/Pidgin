@@ -591,7 +591,7 @@ static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model, Gt
 		gchar *text;
 
 		text = g_strdup_printf(
-			"<b>%s</b> %s\n<span weight=\"bold\" color=\"red\"%s</span>",
+			"<b>%s</b> %s\n<span weight=\"bold\" color=\"red\">%s</span>",
 			purple_plugin_info_get_name(info),
 			purple_plugin_info_get_version(info), disp_error);
 		gtk_list_store_set(GTK_LIST_STORE (model), iter,
