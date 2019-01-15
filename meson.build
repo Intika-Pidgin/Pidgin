@@ -776,7 +776,6 @@ if enable_introspection
 endif
 
 if get_option('plugins')
-	conf.set('PURPLE_PLUGINS', 1)
 	PLUGINS = true
 else
 	PLUGINS = false
