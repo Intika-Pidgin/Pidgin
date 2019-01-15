@@ -286,17 +286,14 @@ pkgconfig.generate(
 # TODO: Only use purple_filebase once everything is ported to only use purple.h
     subdirs : [purple_filebase, purple_include_base],
     libraries : [libpurple],
-    requires : ['glib-2.0'] + GPLUGIN_REQ,
+    requires : ['glib-2.0', 'gplugin'],
     variables : ['plugindir=${libdir}/@0@'.format(purple_filebase)])
 
 if enable_introspection
 	introspection_sources = (purple_coreheaders + purple_builtheaders +
 	                         purple_mediaheaders)
 
-	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0']
-	if PLUGINS
-		Purple_gir_includes += ['GPlugin-0.0']
-	endif
+	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0', 'GPlugin-0.0']
 	if enable_gst
 		Purple_gir_includes += ['Gst-1.0']
 	endif
