@@ -741,9 +741,7 @@ int pidgin_start(int argc, char *argv[])
 
 	g_application_add_main_option_entries(app, option_entries);
 	g_application_add_option_group(app, purple_get_option_group());
-#ifdef PURPLE_PLUGINS
 	g_application_add_option_group(app, gplugin_get_option_group());
-#endif
 
 	g_object_set(app, "register-session", TRUE, NULL);
 

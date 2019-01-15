@@ -67,25 +67,17 @@ enum
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE(PurplePluginInfo, purple_plugin_info,
-#ifdef PURPLE_PLUGINS
-		GPLUGIN_TYPE_PLUGIN_INFO
-#else
-		G_TYPE_OBJECT
-#endif
-		);
+		GPLUGIN_TYPE_PLUGIN_INFO);
 
 /**************************************************************************
  * Globals
  **************************************************************************/
-#ifdef PURPLE_PLUGINS
 static GList *loaded_plugins     = NULL;
 static GList *plugins_to_disable = NULL;
-#endif
 
 /**************************************************************************
  * Plugin API
  **************************************************************************/
-#ifdef PURPLE_PLUGINS
 static gboolean
 plugin_loading_cb(GObject *manager, PurplePlugin *plugin, GError **error,
                   gpointer data)
@@ -180,12 +172,10 @@ plugin_unloaded_cb(GObject *manager, PurplePlugin *plugin)
 
 	purple_prefs_disconnect_by_handle(plugin);
 }
-#endif /* PURPLE_PLUGINS */
 
 gboolean
 purple_plugin_load(PurplePlugin *plugin, GError **error)
 {
-#ifdef PURPLE_PLUGINS
 	GError *err = NULL;
 
 	g_return_val_if_fail(plugin != NULL, FALSE);
@@ -206,17 +196,11 @@ purple_plugin_load(PurplePlugin *plugin, GError **error)
 	}
 
 	return TRUE;
-
-#else
-	g_set_error(error, PURPLE_PLUGINS_DOMAIN, 0, "Plugin support is disabled.");
-	return FALSE;
-#endif /* PURPLE_PLUGINS */
 }
 
 gboolean
 purple_plugin_unload(PurplePlugin *plugin, GError **error)
 {
-#ifdef PURPLE_PLUGINS
 	GError *err = NULL;
 
 	g_return_val_if_fail(plugin != NULL, FALSE);
@@ -237,43 +221,27 @@ purple_plugin_unload(PurplePlugin *plugin, GError **error)
 	}
 
 	return TRUE;
-
-#else
-	g_set_error(error, PURPLE_PLUGINS_DOMAIN, 0, "Plugin support is disabled.");
-	return FALSE;
-#endif /* PURPLE_PLUGINS */
 }
 
 gboolean
 purple_plugin_is_loaded(const PurplePlugin *plugin)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(plugin != NULL, FALSE);
 
 	return (gplugin_plugin_get_state(plugin) == GPLUGIN_PLUGIN_STATE_LOADED);
-
-#else
-	return FALSE;
-#endif
 }
 
 const gchar *
 purple_plugin_get_filename(const PurplePlugin *plugin)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(plugin != NULL, NULL);
 
 	return gplugin_plugin_get_filename(plugin);
-
-#else
-	return NULL;
-#endif
 }
 
 PurplePluginInfo *
 purple_plugin_get_info(const PurplePlugin *plugin)
 {
-#ifdef PURPLE_PLUGINS
 	GPluginPluginInfo *info;
 
 	g_return_val_if_fail(plugin != NULL, NULL);
@@ -290,20 +258,15 @@ purple_plugin_get_info(const PurplePlugin *plugin)
 		return PURPLE_PLUGIN_INFO(info);
 	else
 		return NULL;
-#else
-	return NULL;
-#endif
 }
 
 void
 purple_plugin_disable(PurplePlugin *plugin)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_if_fail(plugin != NULL);
 
 	if (!g_list_find(plugins_to_disable, plugin))
 		plugins_to_disable = g_list_prepend(plugins_to_disable, plugin);
-#endif
 }
 
 GType
@@ -311,15 +274,10 @@ purple_plugin_register_type(PurplePlugin *plugin, GType parent,
                             const gchar *name, const GTypeInfo *info,
                             GTypeFlags flags)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(GPLUGIN_IS_NATIVE_PLUGIN(plugin), G_TYPE_INVALID);
 
 	return gplugin_native_plugin_register_type(GPLUGIN_NATIVE_PLUGIN(plugin),
 	                                           parent, name, info, flags);
-
-#else
-	return G_TYPE_INVALID;
-#endif
 }
 
 void
@@ -327,13 +285,11 @@ purple_plugin_add_interface(PurplePlugin *plugin, GType instance_type,
                             GType interface_type,
                             const GInterfaceInfo *interface_info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_if_fail(GPLUGIN_IS_NATIVE_PLUGIN(plugin));
 
 	gplugin_native_plugin_add_interface(GPLUGIN_NATIVE_PLUGIN(plugin),
 	                                    instance_type, interface_type,
 	                                    interface_info);
-#endif
 }
 
 gboolean
@@ -355,12 +311,7 @@ GSList *
 purple_plugin_get_dependent_plugins(const PurplePlugin *plugin)
 {
 #warning TODO: Implement this when GPlugin can return dependent plugins.
-
-#ifdef PURPLE_PLUGINS
 	return NULL;
-#else
-	return NULL;
-#endif
 }
 
 /**************************************************************************
@@ -570,183 +521,113 @@ purple_plugin_info_new(const char *first_property, ...)
 const gchar *
 purple_plugin_info_get_id(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_id(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_name(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_name(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_version(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_version(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_category(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_category(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_summary(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_summary(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_description(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_description(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar * const *
 purple_plugin_info_get_authors(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_authors(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_website(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_website(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_icon(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_icon(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_license_id(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_license_id(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_license_text(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_license_text(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar *
 purple_plugin_info_get_license_url(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_license_url(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 const gchar * const *
 purple_plugin_info_get_dependencies(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, NULL);
 
 	return gplugin_plugin_info_get_dependencies(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return NULL;
-#endif
 }
 
 guint32
 purple_plugin_info_get_abi_version(const PurplePluginInfo *info)
 {
-#ifdef PURPLE_PLUGINS
 	g_return_val_if_fail(info != NULL, 0);
 
 	return gplugin_plugin_info_get_abi_version(GPLUGIN_PLUGIN_INFO(info));
-
-#else
-	return 0;
-#endif
 }
 
 PurplePluginActionsCb
@@ -886,7 +767,6 @@ purple_plugin_action_get_type(void)
 GList *
 purple_plugins_find_all(void)
 {
-#ifdef PURPLE_PLUGINS
 	GList *ret = NULL, *ids, *l;
 	GSList *plugins, *ll;
 
@@ -906,34 +786,23 @@ purple_plugins_find_all(void)
 	g_list_free(ids);
 
 	return ret;
-
-#else
-	return NULL;
-#endif
 }
 
 GList *
 purple_plugins_get_loaded(void)
 {
-#ifdef PURPLE_PLUGINS
 	return loaded_plugins;
-#else
-	return NULL;
-#endif
 }
 
 void
 purple_plugins_add_search_path(const gchar *path)
 {
-#ifdef PURPLE_PLUGINS
 	gplugin_manager_append_path(path);
-#endif
 }
 
 void
 purple_plugins_refresh(void)
 {
-#ifdef PURPLE_PLUGINS
 	GList *plugins, *l;
 
 	gplugin_manager_refresh();
@@ -959,13 +828,11 @@ purple_plugins_refresh(void)
 	}
 
 	g_list_free(plugins);
-#endif
 }
 
 PurplePlugin *
 purple_plugins_find_plugin(const gchar *id)
 {
-#ifdef PURPLE_PLUGINS
 	PurplePlugin *plugin;
 
 	g_return_val_if_fail(id != NULL && *id != '\0', NULL);
@@ -982,10 +849,6 @@ purple_plugins_find_plugin(const gchar *id)
 	g_object_unref(plugin);
 
 	return plugin;
-
-#else
-	return NULL;
-#endif
 }
 
 PurplePlugin *
@@ -1013,7 +876,6 @@ purple_plugins_find_by_filename(const char *filename)
 void
 purple_plugins_save_loaded(const char *key)
 {
-#ifdef PURPLE_PLUGINS
 	GList *pl;
 	GList *files = NULL;
 
@@ -1035,13 +897,11 @@ purple_plugins_save_loaded(const char *key)
 
 	purple_prefs_set_path_list(key, files);
 	g_list_free(files);
-#endif
 }
 
 void
 purple_plugins_load_saved(const char *key)
 {
-#ifdef PURPLE_PLUGINS
 	GList *l, *files;
 
 	g_return_if_fail(key != NULL && *key != '\0');
@@ -1070,7 +930,6 @@ purple_plugins_load_saved(const char *key)
 	}
 
 	g_list_free(files);
-#endif /* PURPLE_PLUGINS */
 }
 
 /**************************************************************************
@@ -1088,9 +947,7 @@ void
 purple_plugins_init(void)
 {
 	void *handle = purple_plugins_get_handle();
-#ifdef PURPLE_PLUGINS
 	const gchar *search_path;
-#endif
 
 	purple_signal_register(handle, "plugin-load",
 	                       purple_marshal_VOID__POINTER,
@@ -1099,7 +956,6 @@ purple_plugins_init(void)
 	                       purple_marshal_VOID__POINTER,
 	                       G_TYPE_NONE, 1, PURPLE_TYPE_PLUGIN);
 
-#ifdef PURPLE_PLUGINS
 	gplugin_init();
 
 	search_path = g_getenv("PURPLE_PLUGIN_PATH");
@@ -1133,7 +989,6 @@ purple_plugins_init(void)
 	                 G_CALLBACK(plugin_unloaded_cb), NULL);
 
 	purple_plugins_refresh();
-#endif
 }
 
 void
@@ -1141,16 +996,12 @@ purple_plugins_uninit(void)
 {
 	void *handle = purple_plugins_get_handle();
 
-#ifdef PURPLE_PLUGINS
 	purple_debug_info("plugins", "Unloading all plugins\n");
 	while (loaded_plugins != NULL)
 		purple_plugin_unload(loaded_plugins->data, NULL);
-#endif
 
 	purple_signals_disconnect_by_handle(handle);
 	purple_signals_unregister_by_instance(handle);
 
-#ifdef PURPLE_PLUGINS
 	gplugin_uninit();
-#endif
 }

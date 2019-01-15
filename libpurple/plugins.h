@@ -31,19 +31,12 @@
  *     <link linkend="chapter-plugin-i18n">Third Party Plugin Translation</link>
  */
 
-#ifdef PURPLE_PLUGINS
 #include <gplugin.h>
 #include <gplugin-native.h>
-#else
-#include <glib.h>
-#include <glib-object.h>
-#endif
 
 #include "version.h"
 
 #define PURPLE_PLUGINS_DOMAIN          (g_quark_from_static_string("plugins"))
-
-#ifdef PURPLE_PLUGINS
 
 #define PURPLE_TYPE_PLUGIN             GPLUGIN_TYPE_PLUGIN
 #define PURPLE_PLUGIN(obj)             GPLUGIN_PLUGIN(obj)
@@ -61,20 +54,6 @@
 typedef GPluginPlugin PurplePlugin;
 
 typedef GPluginPluginClass PurplePluginClass;
-
-#else /* !defined(PURPLE_PLUGINS) */
-
-#define PURPLE_TYPE_PLUGIN             G_TYPE_OBJECT
-#define PURPLE_PLUGIN(obj)             G_OBJECT(obj)
-#define PURPLE_PLUGIN_CLASS(klass)     G_OBJECT_CLASS(klass)
-#define PURPLE_IS_PLUGIN(obj)          G_IS_OBJECT(obj)
-#define PURPLE_IS_PLUGIN_CLASS(klass)  G_IS_OBJECT_CLASS(klass)
-#define PURPLE_PLUGIN_GET_CLASS(obj)   G_OBJECT_GET_CLASS(obj)
-
-typedef GObject PurplePlugin;
-typedef GObjectClass PurplePluginClass;
-
-#endif /* PURPLE_PLUGINS */
 
 #define PURPLE_TYPE_PLUGIN_INFO             (purple_plugin_info_get_type())
 #define PURPLE_PLUGIN_INFO(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfo))
@@ -162,22 +141,14 @@ typedef enum /*< flags >*/
  * Holds information about a plugin.
  */
 struct _PurplePluginInfo {
-#ifdef PURPLE_PLUGINS
 	GPluginPluginInfo parent;
-#else
-	GObject parent;
-#endif
 
 	/*< public >*/
 	gpointer ui_data;
 };
 
 struct _PurplePluginInfoClass {
-#ifdef PURPLE_PLUGINS
 	GPluginPluginInfoClass parent_class;
-#else
-	GObjectClass parent_class;
-#endif
 
 	/*< private >*/
 	void (*_purple_reserved1)(void);
@@ -239,7 +210,6 @@ struct _PurplePluginAction {
  *
  * Defines the plugin's entry points.
  */
-#ifdef PURPLE_PLUGINS
 #define PURPLE_PLUGIN_INIT(pluginname,pluginquery,pluginload,pluginunload) \
 	G_MODULE_EXPORT GPluginPluginInfo *gplugin_query(GError **e); \
 	G_MODULE_EXPORT GPluginPluginInfo *gplugin_query(GError **e) { \
@@ -253,7 +223,6 @@ struct _PurplePluginAction {
 	G_MODULE_EXPORT gboolean gplugin_unload(GPluginNativePlugin *p, GError **e) { \
 		return pluginunload(PURPLE_PLUGIN(p), e); \
 	}
-#endif
 
 /**
  * PURPLE_DEFINE_TYPE:
@@ -266,10 +235,8 @@ struct _PurplePluginAction {
  * function. You must define an instance initialization function *_init()
  * and a class initialization function *_class_init() for the type.
  */
-#ifdef PURPLE_PLUGINS
 #define PURPLE_DEFINE_TYPE(TN, t_n, T_P) \
 	PURPLE_DEFINE_DYNAMIC_TYPE(TN, t_n, T_P)
-#endif
 
 /**
  * PURPLE_DEFINE_TYPE_EXTENDED:
@@ -282,10 +249,8 @@ struct _PurplePluginAction {
  * A more general version of PURPLE_DEFINE_TYPE() which allows you to
  * specify #GTypeFlags and custom code.
  */
-#ifdef PURPLE_PLUGINS
 #define PURPLE_DEFINE_TYPE_EXTENDED \
 	PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED
-#endif
 
 /**
  * PURPLE_IMPLEMENT_INTERFACE_STATIC:
@@ -312,10 +277,8 @@ struct _PurplePluginAction {
  * of PURPLE_DEFINE_TYPE_EXTENDED(). You should use this macro if the
  * interface lives in the plugin.
  */
-#ifdef PURPLE_PLUGINS
 #define PURPLE_IMPLEMENT_INTERFACE(TYPE_IFACE, iface_init) \
 	PURPLE_IMPLEMENT_INTERFACE_DYNAMIC(TYPE_IFACE, iface_init)
-#endif
 
 /**
  * PURPLE_DEFINE_DYNAMIC_TYPE:
