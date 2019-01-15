@@ -760,14 +760,7 @@ endif
 #######################################################################
 # Check for GPlugin 0.0.17
 #######################################################################
-if get_option('plugins')
-	gplugin = dependency('gplugin', version : '>= 0.0.17')
-	# GPLUGIN_REQ sets pkg-config requirements in the .pc file
-	GPLUGIN_REQ = ['gplugin']
-else
-	gplugin = []
-	GPLUGIN_REQ = []
-endif
+gplugin = dependency('gplugin', version : '>= 0.0.17')
 
 #######################################################################
 # Check for GObject Introspection
