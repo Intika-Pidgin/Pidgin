@@ -168,9 +168,7 @@ init_libpurple(int argc, char **argv)
 	g_option_context_add_main_entries(context, option_entries, PACKAGE);
 
 	g_option_context_add_group(context, purple_get_option_group());
-#ifdef PURPLE_PLUGINS
 	g_option_context_add_group(context, gplugin_get_option_group());
-#endif
 
 #ifdef G_OS_WIN32
 	/* Handle Unicode filenames on Windows. See GOptionContext docs. */
