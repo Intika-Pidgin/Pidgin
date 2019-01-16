@@ -60,7 +60,7 @@ option('dynamic-prpls', type : 'string', value: 'all',
        description : 'specify which protocols to build dynamically')
 
 option('plugins', type : 'boolean', value : true,
-       description : 'compile with plugin support')
+       description : 'compile plugins')
 
 option('introspection', type : 'boolean', value : true,
        description : 'build introspection data')
