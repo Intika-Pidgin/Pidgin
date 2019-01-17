@@ -34,7 +34,6 @@ purple_display_version = '@0@@1@'.format(purple_version,
 add_project_arguments('-DHAVE_CONFIG_H=1', language : 'c')
 conf = configuration_data()
 man_conf = configuration_data()
-purple_h_conf = configuration_data()
 version_conf = configuration_data()
 
 conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
@@ -779,10 +778,8 @@ endif
 if get_option('plugins')
 	conf.set('PURPLE_PLUGINS', 1)
 	PLUGINS = true
-	purple_h_conf.set('PLUGINS_DEFINE', '#define PURPLE_PLUGINS 1')
 else
 	PLUGINS = false
-	purple_h_conf.set('PLUGINS_DEFINE', '#undef PURPLE_PLUGINS')
 endif
 
 #######################################################################
