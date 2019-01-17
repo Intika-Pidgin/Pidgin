@@ -47,8 +47,6 @@
 #	endif
 #endif
 
-@PLUGINS_DEFINE@
-
 @PURPLE_H_INCLUDES@
 
 #endif
