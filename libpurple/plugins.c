@@ -274,7 +274,7 @@ purple_plugin_register_type(PurplePlugin *plugin, GType parent,
                             const gchar *name, const GTypeInfo *info,
                             GTypeFlags flags)
 {
-	g_return_val_if_fail(G_TYPE_MODULE(plugin), G_TYPE_INVALID);
+	g_return_val_if_fail(G_IS_TYPE_MODULE(plugin), G_TYPE_INVALID);
 
 	return g_type_module_register_type(G_TYPE_MODULE(plugin),
 	                                   parent, name, info, flags);
@@ -285,7 +285,7 @@ purple_plugin_add_interface(PurplePlugin *plugin, GType instance_type,
                             GType interface_type,
                             const GInterfaceInfo *interface_info)
 {
-	g_return_if_fail(G_TYPE_MODULE(plugin));
+	g_return_if_fail(G_IS_TYPE_MODULE(plugin));
 
 	g_type_module_add_interface(G_TYPE_MODULE(plugin),
 	                            instance_type, interface_type,
