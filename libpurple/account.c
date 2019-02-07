@@ -2541,7 +2541,7 @@ status_to_xmlnode(const PurpleStatus *status)
 }
 
 static PurpleXmlNode *
-statuses_to_xmlnode(const PurplePresence *presence)
+statuses_to_xmlnode(PurplePresence *presence)
 {
 	PurpleXmlNode *node, *child;
 	GList *statuses;
