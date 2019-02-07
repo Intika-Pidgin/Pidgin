@@ -59,8 +59,8 @@ static const gchar *fb_props_strs[] = {
 	"token"
 };
 
-G_DEFINE_TYPE(FbData, fb_data, G_TYPE_OBJECT);
-G_DEFINE_TYPE(FbDataImage, fb_data_image, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE(FbData, fb_data, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE(FbDataImage, fb_data_image, G_TYPE_OBJECT);
 
 static void
 fb_data_dispose(GObject *obj)
@@ -94,15 +94,12 @@ fb_data_class_init(FbDataClass *klass)
 	GObjectClass *gklass = G_OBJECT_CLASS(klass);
 
 	gklass->dispose = fb_data_dispose;
-	g_type_class_add_private(klass, sizeof (FbDataPrivate));
 }
 
 static void
 fb_data_init(FbData *fata)
 {
-	FbDataPrivate *priv;
-
-	priv = G_TYPE_INSTANCE_GET_PRIVATE(fata, FB_TYPE_DATA, FbDataPrivate);
+	FbDataPrivate *priv = fb_data_get_instance_private(fata);
 	fata->priv = priv;
 
 	priv->cons = fb_http_conns_new();
@@ -137,16 +134,12 @@ fb_data_image_class_init(FbDataImageClass *klass)
 	GObjectClass *gklass = G_OBJECT_CLASS(klass);
 
 	gklass->dispose = fb_data_image_dispose;
-	g_type_class_add_private(klass, sizeof (FbDataImagePrivate));
 }
 
 static void
 fb_data_image_init(FbDataImage *img)
 {
-	FbDataImagePrivate *priv;
-
-	priv = G_TYPE_INSTANCE_GET_PRIVATE(img, FB_TYPE_DATA_IMAGE,
-	                                   FbDataImagePrivate);
+	FbDataImagePrivate *priv = fb_data_image_get_instance_private(img);
 	img->priv = priv;
 }
 

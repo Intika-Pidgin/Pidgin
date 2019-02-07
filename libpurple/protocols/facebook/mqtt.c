@@ -62,8 +62,8 @@ struct _FbMqttMessagePrivate
 	gboolean local;
 };
 
-G_DEFINE_TYPE(FbMqtt, fb_mqtt, G_TYPE_OBJECT);
-G_DEFINE_TYPE(FbMqttMessage, fb_mqtt_message, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE(FbMqtt, fb_mqtt, G_TYPE_OBJECT);
+G_DEFINE_TYPE_WITH_PRIVATE(FbMqttMessage, fb_mqtt_message, G_TYPE_OBJECT);
 
 static void fb_mqtt_read_packet(FbMqtt *mqtt);
 
@@ -83,8 +83,6 @@ fb_mqtt_class_init(FbMqttClass *klass)
 	GObjectClass *gklass = G_OBJECT_CLASS(klass);
 
 	gklass->dispose = fb_mqtt_dispose;
-	g_type_class_add_private(klass, sizeof (FbMqttPrivate));
-
 	/**
 	 * FbMqtt::connect:
 	 * @mqtt: The #FbMqtt.
@@ -152,9 +150,8 @@ fb_mqtt_class_init(FbMqttClass *klass)
 static void
 fb_mqtt_init(FbMqtt *mqtt)
 {
-	FbMqttPrivate *priv;
+	FbMqttPrivate *priv = fb_mqtt_get_instance_private(mqtt);
 
-	priv = G_TYPE_INSTANCE_GET_PRIVATE(mqtt, FB_TYPE_MQTT, FbMqttPrivate);
 	mqtt->priv = priv;
 
 	priv->rbuf = g_byte_array_new();
@@ -176,16 +173,13 @@ fb_mqtt_message_class_init(FbMqttMessageClass *klass)
 	GObjectClass *gklass = G_OBJECT_CLASS(klass);
 
 	gklass->dispose = fb_mqtt_message_dispose;
-	g_type_class_add_private(klass, sizeof (FbMqttMessagePrivate));
 }
 
 static void
 fb_mqtt_message_init(FbMqttMessage *msg)
 {
-	FbMqttMessagePrivate *priv;
+	FbMqttMessagePrivate *priv = fb_mqtt_message_get_instance_private(msg);
 
-	priv = G_TYPE_INSTANCE_GET_PRIVATE(msg, FB_TYPE_MQTT_MESSAGE,
-	                                   FbMqttMessagePrivate);
 	msg->priv = priv;
 }
 
