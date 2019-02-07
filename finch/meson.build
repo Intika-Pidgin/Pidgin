@@ -199,7 +199,7 @@ if enable_consoleui
 		    nsversion : '@0@.@1@'.format(purple_major_version,
 		                                 purple_minor_version),
 		    include_directories : [
-		    	include_directories(join_paths(gplugin.get_pkgconfig_variable('prefix'), 'share/gir-1.0')),
+		        gplugin_include_directories,
 		    ],
 		    install : true,
 		    extra_args : ['--quiet'])

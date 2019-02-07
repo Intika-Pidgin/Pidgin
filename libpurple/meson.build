@@ -262,7 +262,7 @@ libpurple = library('purple',
                     install : true,
                     version : PURPLE_LIB_VERSION,
                     dependencies : # static_link_libs
-                        [dnsapi, ws2_32, glib, gio, gplugin, libxml,
+                        [dnsapi, ws2_32, glib, gio, gplugin_dep, libxml,
                          farstream, gstreamer, gstreamer_video,
                          gstreamer_app, json, math])
 
@@ -271,7 +271,7 @@ libpurple_dep = declare_dependency(
     sources : [purple_builtheaders],
     include_directories : [toplevel_inc, libpurple_inc],
     link_with : libpurple,
-    dependencies : [gstreamer, gplugin, glib, gio])
+    dependencies : [gstreamer, gplugin_dep, glib, gio])
 
 install_headers(purple_coreheaders,
                 subdir : purple_include_base)
@@ -294,7 +294,7 @@ if enable_introspection
 	introspection_sources = (purple_coreheaders + purple_builtheaders +
 	                         purple_mediaheaders)
 
-	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0', 'GPlugin-0.0']
+	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0', gplugin_gir]
 	if enable_gst
 		Purple_gir_includes += ['Gst-1.0']
 	endif
@@ -309,7 +309,7 @@ if enable_introspection
 	    nsversion : '@0@.@1@'.format(purple_major_version,
 	                                 purple_minor_version),
 	    include_directories : [
-	    	include_directories(join_paths(gplugin.get_pkgconfig_variable('prefix'), 'share/gir-1.0')),
+	        gplugin_include_directories,
 	    ],
 	    install : true,
 	    extra_args : ['--quiet'])
