@@ -243,7 +243,7 @@ void _purple_connection_new_unregister(PurpleAccount *account, const char *passw
  * Note: This function should only be called by purple_account_set_enabled()
  *       in account.c.
  */
-gboolean _purple_connection_wants_to_die(const PurpleConnection *gc);
+gboolean _purple_connection_wants_to_die(PurpleConnection *gc);
 
 /**
  * _purple_connection_add_active_chat:
