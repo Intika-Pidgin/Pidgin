@@ -24,9 +24,6 @@
 #include "glibcompat.h"
 #include "util.h"
 
-#define PURPLE_BUDDY_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_BUDDY, PurpleBuddyPrivate))
-
 typedef struct _PurpleBuddyPrivate      PurpleBuddyPrivate;
 
 struct _PurpleBuddyPrivate {
@@ -60,8 +57,9 @@ enum {
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static PurpleBlistNode *parent_class;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleBuddy, purple_buddy, PURPLE_TYPE_BLIST_NODE)
 
 /******************************************************************************
  * API
@@ -70,7 +68,7 @@ void
 purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 {
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
 
@@ -90,9 +88,9 @@ purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 }
 
 PurpleBuddyIcon *
-purple_buddy_get_icon(const PurpleBuddy *buddy)
+purple_buddy_get_icon(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -100,9 +98,9 @@ purple_buddy_get_icon(const PurpleBuddy *buddy)
 }
 
 PurpleAccount *
-purple_buddy_get_account(const PurpleBuddy *buddy)
+purple_buddy_get_account(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -112,7 +110,7 @@ purple_buddy_get_account(const PurpleBuddy *buddy)
 void
 purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	g_return_if_fail(priv != NULL);
@@ -133,9 +131,9 @@ purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 }
 
 const char *
-purple_buddy_get_name(const PurpleBuddy *buddy)
+purple_buddy_get_name(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -143,9 +141,9 @@ purple_buddy_get_name(const PurpleBuddy *buddy)
 }
 
 gpointer
-purple_buddy_get_protocol_data(const PurpleBuddy *buddy)
+purple_buddy_get_protocol_data(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -155,7 +153,7 @@ purple_buddy_get_protocol_data(const PurpleBuddy *buddy)
 void
 purple_buddy_set_protocol_data(PurpleBuddy *buddy, gpointer data)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
 
@@ -164,7 +162,7 @@ purple_buddy_set_protocol_data(PurpleBuddy *buddy, gpointer data)
 
 const char *purple_buddy_get_alias_only(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -182,7 +180,7 @@ const char *purple_buddy_get_alias_only(PurpleBuddy *buddy)
 const char *purple_buddy_get_contact_alias(PurpleBuddy *buddy)
 {
 	PurpleContact *c;
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -206,7 +204,7 @@ const char *purple_buddy_get_contact_alias(PurpleBuddy *buddy)
 
 const char *purple_buddy_get_alias(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -230,7 +228,7 @@ purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
 
@@ -272,7 +270,7 @@ purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 
 const char *purple_buddy_get_local_alias(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -286,7 +284,7 @@ purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
 
@@ -329,7 +327,7 @@ purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 
 const char *purple_buddy_get_server_alias(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -346,9 +344,9 @@ PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy)
 	return PURPLE_CONTACT(PURPLE_BLIST_NODE(buddy)->parent);
 }
 
-PurplePresence *purple_buddy_get_presence(const PurpleBuddy *buddy)
+PurplePresence *purple_buddy_get_presence(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -363,7 +361,7 @@ purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 	PurpleContact *contact;
 	PurpleCountingNode *contact_counter, *group_counter;
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
 
@@ -421,9 +419,9 @@ purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 		ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
 }
 
-PurpleMediaCaps purple_buddy_get_media_caps(const PurpleBuddy *buddy)
+PurpleMediaCaps purple_buddy_get_media_caps(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -432,7 +430,7 @@ PurpleMediaCaps purple_buddy_get_media_caps(const PurpleBuddy *buddy)
 
 void purple_buddy_set_media_caps(PurpleBuddy *buddy, PurpleMediaCaps media_caps)
 {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
 
@@ -460,7 +458,7 @@ purple_buddy_set_property(GObject *obj, guint param_id, const GValue *value,
                           GParamSpec *pspec)
 {
 	PurpleBuddy *buddy = PURPLE_BUDDY(obj);
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	switch (param_id) {
 		case PROP_NAME:
@@ -530,16 +528,17 @@ purple_buddy_get_property(GObject *obj, guint param_id, GValue *value,
 }
 
 static void
-purple_buddy_init(GTypeInstance *instance, gpointer klass) {
+purple_buddy_init(PurpleBuddy *buddy)
+{
 }
 
 static void
 purple_buddy_constructed(GObject *object) {
 	PurpleBuddy *buddy = PURPLE_BUDDY(object);
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
-	G_OBJECT_CLASS(parent_class)->constructed(object);
+	G_OBJECT_CLASS(purple_buddy_parent_class)->constructed(object);
 
 	priv->presence = PURPLE_PRESENCE(purple_buddy_presence_new(buddy));
 	purple_presence_set_status_active(priv->presence, "offline", TRUE);
@@ -552,7 +551,7 @@ purple_buddy_constructed(GObject *object) {
 
 static void
 purple_buddy_dispose(GObject *object) {
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(object);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(PURPLE_BUDDY(object));
 
 	if (priv->icon) {
 		purple_buddy_icon_unref(priv->icon);
@@ -564,13 +563,13 @@ purple_buddy_dispose(GObject *object) {
 		priv->presence = NULL;
 	}
 
-	G_OBJECT_CLASS(parent_class)->dispose(object);
+	G_OBJECT_CLASS(purple_buddy_parent_class)->dispose(object);
 }
 
 static void
 purple_buddy_finalize(GObject *object) {
 	PurpleBuddy *buddy = PURPLE_BUDDY(object);
-	PurpleBuddyPrivate *priv = PURPLE_BUDDY_GET_PRIVATE(buddy);
+	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 	PurpleProtocol *protocol;
 
 	/*
@@ -585,13 +584,11 @@ purple_buddy_finalize(GObject *object) {
 	g_free(priv->local_alias);
 	g_free(priv->server_alias);
 
-	G_OBJECT_CLASS(parent_class)->finalize(object);
+	G_OBJECT_CLASS(purple_buddy_parent_class)->finalize(object);
 }
 
 static void purple_buddy_class_init(PurpleBuddyClass *klass) {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	parent_class = g_type_class_peek_parent(klass);
 
 	obj_class->dispose = purple_buddy_dispose;
 	obj_class->finalize = purple_buddy_finalize;
@@ -600,8 +597,6 @@ static void purple_buddy_class_init(PurpleBuddyClass *klass) {
 	obj_class->get_property = purple_buddy_get_property;
 	obj_class->set_property = purple_buddy_set_property;
 	obj_class->constructed = purple_buddy_constructed;
-
-	g_type_class_add_private(klass, sizeof(PurpleBuddyPrivate));
 
 	properties[PROP_NAME] = g_param_spec_string(
 		"name",
@@ -659,32 +654,6 @@ static void purple_buddy_class_init(PurpleBuddyClass *klass) {
 	);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_buddy_get_type(void) {
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleBuddyClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_buddy_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleBuddy),
-			0,
-			(GInstanceInitFunc)purple_buddy_init,
-			NULL,
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_BLIST_NODE,
-				"PurpleBuddy",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleBuddy *
