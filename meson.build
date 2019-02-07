@@ -307,7 +307,13 @@ if get_option('gtkui')
 		    join_paths(talkatu_dep.get_pkgconfig_variable('prefix'),
 		               'share/gir-1.0'))
 	else
-		talkatu_proj = subproject('talkatu')
+		talkatu_proj = subproject('talkatu',
+		    default_options : [
+		        'doc=' + get_option('doc').to_string(),
+		        'gobject-introspection=' + get_option('introspection').to_string(),
+		        'nls=' + get_option('nls').to_string(),
+		    ]
+		)
 		talkatu_dep = talkatu_proj.get_variable('talkatu_dep')
 		talkatu_gir = talkatu_proj.get_variable('talkatu_gir')[0]
 		talkatu_include_directories = []
@@ -778,7 +784,13 @@ if gplugin_dep.found()
 	    join_paths(gplugin_dep.get_pkgconfig_variable('prefix'),
 	               'share/gir-1.0'))
 else
-	gplugin_proj = subproject('gplugin')
+	gplugin_proj = subproject('gplugin',
+	    default_options : [
+	        'doc=' + get_option('doc').to_string(),
+	        'gobject-introspection=' + get_option('introspection').to_string(),
+	        'nls=' + get_option('nls').to_string(),
+	    ]
+	)
 	gplugin_dep = gplugin_proj.get_variable('gplugin_dep')
 	gplugin_gir = gplugin_proj.get_variable('gplugin_gir')[0]
 	gplugin_include_directories = []
