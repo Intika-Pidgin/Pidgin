@@ -2469,7 +2469,7 @@ status_attribute_to_xmlnode(const PurpleStatus *status, const PurpleStatusType *
 		const char *default_string_value = g_value_get_string(default_value);
 		if (purple_strequal(string_value, default_string_value))
 			return NULL;
-		value = g_strdup(g_value_get_string(attr_value));
+		value = g_value_dup_string(attr_value);
 	}
 	else if (attr_type == G_TYPE_INT)
 	{
