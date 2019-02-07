@@ -42,9 +42,6 @@ G_DEFINE_QUARK(purple-connection-error-quark, purple_connection_error);
 
 #define KEEPALIVE_INTERVAL 30
 
-#define PURPLE_CONNECTION_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_CONNECTION, PurpleConnectionPrivate))
-
 typedef struct _PurpleConnectionPrivate  PurpleConnectionPrivate;
 
 /* Private data for a connection */
@@ -99,7 +96,6 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class;
 static GParamSpec *properties[PROP_LAST];
 
 static GList *connections = NULL;
@@ -112,6 +108,8 @@ static PurpleConnectionErrorInfo *
 purple_connection_error_info_new(PurpleConnectionError type,
                                  const gchar *description);
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleConnection, purple_connection, G_TYPE_OBJECT)
+
 /**************************************************************************
  * Connection API
  **************************************************************************/
@@ -119,7 +117,7 @@ static gboolean
 send_keepalive(gpointer data)
 {
 	PurpleConnection *gc = data;
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	/* Only send keep-alives if we haven't heard from the
 	 * server in a while.
@@ -135,7 +133,7 @@ send_keepalive(gpointer data)
 static void
 update_keepalive(PurpleConnection *gc, gboolean on)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -169,7 +167,7 @@ void
 purple_connection_set_state(PurpleConnection *gc, PurpleConnectionState state)
 {
 	PurpleConnectionUiOps *ops;
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -259,7 +257,7 @@ purple_connection_set_state(PurpleConnection *gc, PurpleConnectionState state)
 void
 purple_connection_set_flags(PurpleConnection *gc, PurpleConnectionFlags flags)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -272,7 +270,7 @@ purple_connection_set_flags(PurpleConnection *gc, PurpleConnectionFlags flags)
 void
 purple_connection_set_display_name(PurpleConnection *gc, const char *name)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -285,7 +283,7 @@ purple_connection_set_display_name(PurpleConnection *gc, const char *name)
 void
 purple_connection_set_protocol_data(PurpleConnection *gc, void *proto_data)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -293,9 +291,9 @@ purple_connection_set_protocol_data(PurpleConnection *gc, void *proto_data)
 }
 
 PurpleConnectionState
-purple_connection_get_state(const PurpleConnection *gc)
+purple_connection_get_state(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, PURPLE_CONNECTION_DISCONNECTED);
 
@@ -303,9 +301,9 @@ purple_connection_get_state(const PurpleConnection *gc)
 }
 
 PurpleConnectionFlags
-purple_connection_get_flags(const PurpleConnection *gc)
+purple_connection_get_flags(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -313,9 +311,9 @@ purple_connection_get_flags(const PurpleConnection *gc)
 }
 
 gboolean
-purple_connection_is_disconnecting(const PurpleConnection *gc)
+purple_connection_is_disconnecting(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, TRUE);
 
@@ -323,9 +321,9 @@ purple_connection_is_disconnecting(const PurpleConnection *gc)
 }
 
 PurpleAccount *
-purple_connection_get_account(const PurpleConnection *gc)
+purple_connection_get_account(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -333,9 +331,9 @@ purple_connection_get_account(const PurpleConnection *gc)
 }
 
 PurpleProtocol *
-purple_connection_get_protocol(const PurpleConnection *gc)
+purple_connection_get_protocol(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -343,9 +341,9 @@ purple_connection_get_protocol(const PurpleConnection *gc)
 }
 
 const char *
-purple_connection_get_password(const PurpleConnection *gc)
+purple_connection_get_password(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -353,9 +351,9 @@ purple_connection_get_password(const PurpleConnection *gc)
 }
 
 GSList *
-purple_connection_get_active_chats(const PurpleConnection *gc)
+purple_connection_get_active_chats(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -363,9 +361,9 @@ purple_connection_get_active_chats(const PurpleConnection *gc)
 }
 
 const char *
-purple_connection_get_display_name(const PurpleConnection *gc)
+purple_connection_get_display_name(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -373,9 +371,9 @@ purple_connection_get_display_name(const PurpleConnection *gc)
 }
 
 void *
-purple_connection_get_protocol_data(const PurpleConnection *gc)
+purple_connection_get_protocol_data(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -385,7 +383,7 @@ purple_connection_get_protocol_data(const PurpleConnection *gc)
 void
 _purple_connection_add_active_chat(PurpleConnection *gc, PurpleChatConversation *chat)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -395,7 +393,7 @@ _purple_connection_add_active_chat(PurpleConnection *gc, PurpleChatConversation 
 void
 _purple_connection_remove_active_chat(PurpleConnection *gc, PurpleChatConversation *chat)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -403,9 +401,9 @@ _purple_connection_remove_active_chat(PurpleConnection *gc, PurpleChatConversati
 }
 
 gboolean
-_purple_connection_wants_to_die(const PurpleConnection *gc)
+_purple_connection_wants_to_die(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, FALSE);
 
@@ -452,7 +450,7 @@ purple_connection_disconnect_cb(gpointer data)
 
 	account = data;
 	gc = purple_account_get_connection(account);
-	priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	priv = purple_connection_get_instance_private(gc);
 
 	if (priv != NULL)
 		priv->disconnect_timeout = 0;
@@ -467,7 +465,7 @@ purple_connection_error (PurpleConnection *gc,
                          const char *description)
 {
 	PurpleConnectionUiOps *ops;
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 	/* This sanity check relies on PURPLE_CONNECTION_ERROR_OTHER_ERROR
@@ -511,9 +509,9 @@ purple_connection_error (PurpleConnection *gc,
 }
 
 PurpleConnectionErrorInfo *
-purple_connection_get_error_info(const PurpleConnection *gc)
+purple_connection_get_error_info(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -623,7 +621,7 @@ purple_connection_error_is_fatal (PurpleConnectionError reason)
 
 void purple_connection_update_last_received(PurpleConnection *gc)
 {
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	g_return_if_fail(priv != NULL);
 
@@ -717,7 +715,7 @@ purple_connection_set_property(GObject *obj, guint param_id, const GValue *value
 		GParamSpec *pspec)
 {
 	PurpleConnection *gc = PURPLE_CONNECTION(obj);
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
 	switch (param_id) {
 		case PROP_PROTOCOL:
@@ -779,10 +777,8 @@ purple_connection_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_connection_init(GTypeInstance *instance, gpointer klass)
+purple_connection_init(PurpleConnection *gc)
 {
-	PurpleConnection *gc = PURPLE_CONNECTION(instance);
-
 	purple_connection_set_state(gc, PURPLE_CONNECTION_CONNECTING);
 	connections = g_list_append(connections, gc);
 }
@@ -794,7 +790,7 @@ purple_connection_constructed(GObject *object)
 	PurpleConnection *gc = PURPLE_CONNECTION(object);
 	PurpleAccount *account;
 
-	G_OBJECT_CLASS(parent_class)->constructed(object);
+	G_OBJECT_CLASS(purple_connection_parent_class)->constructed(object);
 
 	g_object_get(gc, "account", &account, NULL);
 	purple_account_set_connection(account, gc);
@@ -808,7 +804,7 @@ static void
 purple_connection_finalize(GObject *object)
 {
 	PurpleConnection *gc = PURPLE_CONNECTION(object);
-	PurpleConnectionPrivate *priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 	PurpleAccount *account;
 	GSList *buddies;
 	gboolean remove = FALSE;
@@ -873,7 +869,7 @@ purple_connection_finalize(GObject *object)
 	purple_str_wipe(priv->password);
 	g_free(priv->display_name);
 
-	G_OBJECT_CLASS(parent_class)->finalize(object);
+	G_OBJECT_CLASS(purple_connection_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -881,16 +877,12 @@ static void purple_connection_class_init(PurpleConnectionClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_connection_finalize;
 	obj_class->constructed = purple_connection_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_connection_get_property;
 	obj_class->set_property = purple_connection_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleConnectionPrivate));
 
 	properties[PROP_PROTOCOL] = g_param_spec_object("protocol", "Protocol",
 				"The protocol that the connection is using.",
@@ -924,32 +916,6 @@ static void purple_connection_class_init(PurpleConnectionClass *klass)
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_connection_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleConnectionClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_connection_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleConnection),
-			0,
-			(GInstanceInitFunc)purple_connection_init,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT, "PurpleConnection",
-				&info, 0);
-	}
-
-	return type;
 }
 
 void
@@ -1008,10 +974,12 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 
 	if (regist)
 	{
+		PurpleConnectionPrivate *priv;
 		purple_debug_info("connection", "Registering.  gc = %p\n", gc);
 
 		/* set this so we don't auto-reconnect after registering */
-		PURPLE_CONNECTION_GET_PRIVATE(gc)->wants_to_die = TRUE;
+		priv = purple_connection_get_instance_private(gc);
+		priv->wants_to_die = TRUE;
 
 		purple_protocol_server_iface_register_user(protocol, account);
 	}
@@ -1103,7 +1071,7 @@ purple_connections_disconnect_all(void)
 
 	while ((l = purple_connections_get_all()) != NULL) {
 		gc = l->data;
-		priv = PURPLE_CONNECTION_GET_PRIVATE(gc);
+		priv = purple_connection_get_instance_private(gc);
 		priv->wants_to_die = TRUE;
 		purple_account_disconnect(priv->account);
 	}

@@ -366,7 +366,7 @@ void purple_connection_set_protocol_data(PurpleConnection *connection, void *pro
  *
  * Returns: The connection state.
  */
-PurpleConnectionState purple_connection_get_state(const PurpleConnection *gc);
+PurpleConnectionState purple_connection_get_state(PurpleConnection *gc);
 
 /**
  * purple_connection_get_flags:
@@ -376,7 +376,7 @@ PurpleConnectionState purple_connection_get_state(const PurpleConnection *gc);
  *
  * Returns: The connection flags.
  */
-PurpleConnectionFlags purple_connection_get_flags(const PurpleConnection *gc);
+PurpleConnectionFlags purple_connection_get_flags(PurpleConnection *gc);
 
 /**
  * PURPLE_CONNECTION_IS_CONNECTED:
@@ -397,7 +397,7 @@ PurpleConnectionFlags purple_connection_get_flags(const PurpleConnection *gc);
  * Returns: %TRUE, if the account is disconnecting.
  */
 gboolean
-purple_connection_is_disconnecting(const PurpleConnection *gc);
+purple_connection_is_disconnecting(PurpleConnection *gc);
 
 /**
  * purple_connection_get_account:
@@ -407,7 +407,7 @@ purple_connection_is_disconnecting(const PurpleConnection *gc);
  *
  * Returns: (transfer none): The connection's account.
  */
-PurpleAccount *purple_connection_get_account(const PurpleConnection *gc);
+PurpleAccount *purple_connection_get_account(PurpleConnection *gc);
 
 /**
  * purple_connection_get_protocol:
@@ -417,7 +417,7 @@ PurpleAccount *purple_connection_get_account(const PurpleConnection *gc);
  *
  * Returns: (transfer none): The protocol.
  */
-PurpleProtocol *purple_connection_get_protocol(const PurpleConnection *gc);
+PurpleProtocol *purple_connection_get_protocol(PurpleConnection *gc);
 
 /**
  * purple_connection_get_password:
@@ -427,7 +427,7 @@ PurpleProtocol *purple_connection_get_protocol(const PurpleConnection *gc);
  *
  * Returns: The connection's password.
  */
-const char *purple_connection_get_password(const PurpleConnection *gc);
+const char *purple_connection_get_password(PurpleConnection *gc);
 
 /**
  * purple_connection_get_active_chats:
@@ -438,7 +438,7 @@ const char *purple_connection_get_password(const PurpleConnection *gc);
  * Returns: (element-type PurpleChatConversation) (transfer none): The active
  *          chats on the connection.
  */
-GSList *purple_connection_get_active_chats(const PurpleConnection *gc);
+GSList *purple_connection_get_active_chats(PurpleConnection *gc);
 
 /**
  * purple_connection_get_display_name:
@@ -448,7 +448,7 @@ GSList *purple_connection_get_active_chats(const PurpleConnection *gc);
  *
  * Returns: The connection's displayed name.
  */
-const char *purple_connection_get_display_name(const PurpleConnection *gc);
+const char *purple_connection_get_display_name(PurpleConnection *gc);
 
 /**
  * purple_connection_get_protocol_data:
@@ -458,7 +458,7 @@ const char *purple_connection_get_display_name(const PurpleConnection *gc);
  *
  * Returns: The protocol data for the connection.
  */
-void *purple_connection_get_protocol_data(const PurpleConnection *gc);
+void *purple_connection_get_protocol_data(PurpleConnection *gc);
 
 /**
  * purple_connection_update_progress:
@@ -506,7 +506,7 @@ purple_connection_error(PurpleConnection *gc,
  *         error exists, %NULL otherwise.
  */
 PurpleConnectionErrorInfo *
-purple_connection_get_error_info(const PurpleConnection *gc);
+purple_connection_get_error_info(PurpleConnection *gc);
 
 /**
  * purple_connection_ssl_error:
