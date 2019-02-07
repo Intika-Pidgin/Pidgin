@@ -299,7 +299,19 @@ if get_option('gtkui')
 	gtk = dependency('gtk+-3.0', version : '>= 3.10.0')
 
 	webkit = dependency('webkitgtk-3.0', version : '>= 1.3.7')
-	talkatu = dependency('talkatu', version: '>=0.1.0')
+
+	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
+	if talkatu_dep.found()
+		talkatu_gir = 'Talkatu-0.0'
+		talkatu_include_directories = include_directories(
+		    join_paths(talkatu_dep.get_pkgconfig_variable('prefix'),
+		               'share/gir-1.0'))
+	else
+		talkatu_proj = subproject('talkatu')
+		talkatu_dep = talkatu_proj.get_variable('talkatu_dep')
+		talkatu_gir = talkatu_proj.get_variable('talkatu_gir')[0]
+		talkatu_include_directories = []
+	endif
 
 	#######################################################################
 	# Check if we should compile with enchant support

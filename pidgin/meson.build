@@ -165,7 +165,7 @@ if ENABLE_GTK
 	    	IOKIT,
 	    	json,
 	    	math,
-	    	talkatu,
+	        talkatu_dep,
 	    	webkit,
 	    	x11,
 	    	libpurple_dep,
@@ -225,7 +225,7 @@ if ENABLE_GTK
 
 		gnome.generate_gir(libpidgin,
 		    sources : introspection_sources,
-		    includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], 'WebKit-3.0', 'Talkatu-0.0'],
+		    includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], 'WebKit-3.0', talkatu_gir],
 		    namespace : 'Pidgin',
 		    symbol_prefix : 'pidgin',
 		    identifier_prefix : 'Pidgin',
@@ -234,7 +234,7 @@ if ENABLE_GTK
 		                                 purple_minor_version),
 		    include_directories : [
 		        gplugin_include_directories,
-		    	include_directories(join_paths(talkatu.get_pkgconfig_variable('prefix'), 'share/gir-1.0')),
+			talkatu_include_directories,
 		    ],
 		    install : true,
 		    extra_args : ['--quiet'])
