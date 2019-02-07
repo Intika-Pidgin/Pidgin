@@ -26,9 +26,6 @@
 #include "enums.h"
 #include "message.h"
 
-#define PURPLE_MESSAGE_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_MESSAGE, PurpleMessagePrivate))
-
 typedef struct {
 	guint id;
 	gchar *author;
@@ -52,10 +49,11 @@ enum
 	PROP_LAST
 };
 
-static GObjectClass *parent_class;
 static GParamSpec *properties[PROP_LAST];
 
 static GHashTable *messages = NULL;
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleMessage, purple_message, G_TYPE_OBJECT)
 
 /******************************************************************************
  * API implementation
@@ -117,9 +115,9 @@ purple_message_new_system(const gchar *contents, PurpleMessageFlags flags)
 }
 
 guint
-purple_message_get_id(const PurpleMessage *msg)
+purple_message_get_id(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -135,9 +133,9 @@ purple_message_find_by_id(guint id)
 }
 
 const gchar *
-purple_message_get_author(const PurpleMessage *msg)
+purple_message_get_author(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -145,9 +143,9 @@ purple_message_get_author(const PurpleMessage *msg)
 }
 
 const gchar *
-purple_message_get_recipient(const PurpleMessage *msg)
+purple_message_get_recipient(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -161,9 +159,9 @@ purple_message_set_author_alias(PurpleMessage *msg, const gchar *alias)
 }
 
 const gchar *
-purple_message_get_author_alias(const PurpleMessage *msg)
+purple_message_get_author_alias(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -180,9 +178,9 @@ purple_message_set_contents(PurpleMessage *msg, const gchar *cont)
 }
 
 const gchar *
-purple_message_get_contents(const PurpleMessage *msg)
+purple_message_get_contents(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -190,7 +188,7 @@ purple_message_get_contents(const PurpleMessage *msg)
 }
 
 gboolean
-purple_message_is_empty(const PurpleMessage *msg)
+purple_message_is_empty(PurpleMessage *msg)
 {
 	const gchar *cont = purple_message_get_contents(msg);
 
@@ -204,9 +202,9 @@ purple_message_set_time(PurpleMessage *msg, guint64 msgtime)
 }
 
 guint64
-purple_message_get_time(const PurpleMessage *msg)
+purple_message_get_time(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -220,9 +218,9 @@ purple_message_set_flags(PurpleMessage *msg, PurpleMessageFlags flags)
 }
 
 PurpleMessageFlags
-purple_message_get_flags(const PurpleMessage *msg)
+purple_message_get_flags(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -234,12 +232,11 @@ purple_message_get_flags(const PurpleMessage *msg)
  ******************************************************************************/
 
 static void
-purple_message_init(GTypeInstance *instance, gpointer klass)
+purple_message_init(PurpleMessage *msg)
 {
 	static guint max_id = 0;
 
-	PurpleMessage *msg = PURPLE_MESSAGE(instance);
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(msg);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
 
 	priv->id = ++max_id;
 	g_hash_table_insert(messages, GINT_TO_POINTER(max_id), msg);
@@ -249,14 +246,14 @@ static void
 purple_message_finalize(GObject *obj)
 {
 	PurpleMessage *message = PURPLE_MESSAGE(obj);
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(message);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(message);
 
 	g_free(priv->author);
 	g_free(priv->author_alias);
 	g_free(priv->recipient);
 	g_free(priv->contents);
 
-	G_OBJECT_CLASS(parent_class)->finalize(obj);
+	G_OBJECT_CLASS(purple_message_parent_class)->finalize(obj);
 }
 
 static void
@@ -264,7 +261,7 @@ purple_message_get_property(GObject *object, guint par_id, GValue *value,
 	GParamSpec *pspec)
 {
 	PurpleMessage *message = PURPLE_MESSAGE(object);
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(message);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(message);
 
 	switch (par_id) {
 		case PROP_ID:
@@ -299,7 +296,7 @@ purple_message_set_property(GObject *object, guint par_id, const GValue *value,
 	GParamSpec *pspec)
 {
 	PurpleMessage *message = PURPLE_MESSAGE(object);
-	PurpleMessagePrivate *priv = PURPLE_MESSAGE_GET_PRIVATE(message);
+	PurpleMessagePrivate *priv = purple_message_get_instance_private(message);
 
 	switch (par_id) {
 		case PROP_AUTHOR:
@@ -335,10 +332,6 @@ purple_message_class_init(PurpleMessageClass *klass)
 {
 	GObjectClass *gobj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	g_type_class_add_private(klass, sizeof(PurpleMessagePrivate));
-
 	gobj_class->finalize = purple_message_finalize;
 	gobj_class->get_property = purple_message_get_property;
 	gobj_class->set_property = purple_message_set_property;
@@ -368,26 +361,6 @@ purple_message_class_init(PurpleMessageClass *klass)
 		G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(gobj_class, PROP_LAST, properties);
-}
-
-GType
-purple_message_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleMessageClass),
-			.class_init = (GClassInitFunc)purple_message_class_init,
-			.instance_size = sizeof(PurpleMessage),
-			.instance_init = purple_message_init,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-			"PurpleMessage", &info, 0);
-	}
-
-	return type;
 }
 
 void
