@@ -535,6 +535,11 @@ version 3.0.0 (??/??/????):
 		* xmlnode_set_attrib_with_namespace
 		* xmlnode_set_attrib_with_prefix
 
+		Deprecated:
+		* purple_user_dir
+		* purple_util_write_data_to_file
+		* purple_util_read_xml_from_file
+
 	Pidgin:
 		Added:
 		* pidgin_create_webview
