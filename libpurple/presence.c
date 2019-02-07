@@ -23,20 +23,11 @@
 #include "debug.h"
 #include "presence.h"
 
-#define PURPLE_PRESENCE_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_PRESENCE, PurplePresencePrivate))
-
 /** @copydoc _PurplePresencePrivate */
 typedef struct _PurplePresencePrivate  PurplePresencePrivate;
 
-#define PURPLE_ACCOUNT_PRESENCE_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_ACCOUNT_PRESENCE, PurpleAccountPresencePrivate))
-
 /** @copydoc _PurpleAccountPresencePrivate */
 typedef struct _PurpleAccountPresencePrivate  PurpleAccountPresencePrivate;
-
-#define PURPLE_BUDDY_PRESENCE_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_BUDDY_PRESENCE, PurpleBuddyPresencePrivate))
 
 /** @copydoc _PurpleBuddyPresencePrivate */
 typedef struct _PurpleBuddyPresencePrivate  PurpleBuddyPresencePrivate;
@@ -94,12 +85,15 @@ enum
 	BUDPRES_PROP_LAST
 };
 
-static GObjectClass         *parent_class;
-static PurplePresenceClass  *presence_class;
-
 static GParamSpec *properties[PRES_PROP_LAST];
 static GParamSpec *ap_properties[ACPRES_PROP_LAST];
 static GParamSpec *bp_properties[BUDPRES_PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurplePresence, purple_presence, G_TYPE_OBJECT)
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleAccountPresence, purple_account_presence,
+		PURPLE_TYPE_PRESENCE)
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleBuddyPresence, purple_buddy_presence,
+		PURPLE_TYPE_PRESENCE)
 
 /**************************************************************************
 * PurplePresence API
@@ -146,7 +140,7 @@ void
 purple_presence_set_idle(PurplePresence *presence, gboolean idle, time_t idle_time)
 {
 	gboolean old_idle;
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 	PurplePresenceClass *klass = PURPLE_PRESENCE_GET_CLASS(presence);
 	GObject *obj;
 
@@ -172,7 +166,7 @@ purple_presence_set_idle(PurplePresence *presence, gboolean idle, time_t idle_ti
 void
 purple_presence_set_login_time(PurplePresence *presence, time_t login_time)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	g_return_if_fail(priv != NULL);
 
@@ -186,9 +180,9 @@ purple_presence_set_login_time(PurplePresence *presence, time_t login_time)
 }
 
 GList *
-purple_presence_get_statuses(const PurplePresence *presence)
+purple_presence_get_statuses(PurplePresence *presence)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -196,10 +190,10 @@ purple_presence_get_statuses(const PurplePresence *presence)
 }
 
 PurpleStatus *
-purple_presence_get_status(const PurplePresence *presence, const char *status_id)
+purple_presence_get_status(PurplePresence *presence, const char *status_id)
 {
 	PurpleStatus *status;
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 	GList *l = NULL;
 
 	g_return_val_if_fail(priv      != NULL, NULL);
@@ -228,9 +222,9 @@ purple_presence_get_status(const PurplePresence *presence, const char *status_id
 }
 
 PurpleStatus *
-purple_presence_get_active_status(const PurplePresence *presence)
+purple_presence_get_active_status(PurplePresence *presence)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -238,7 +232,7 @@ purple_presence_get_active_status(const PurplePresence *presence)
 }
 
 gboolean
-purple_presence_is_available(const PurplePresence *presence)
+purple_presence_is_available(PurplePresence *presence)
 {
 	PurpleStatus *status;
 
@@ -251,7 +245,7 @@ purple_presence_is_available(const PurplePresence *presence)
 }
 
 gboolean
-purple_presence_is_online(const PurplePresence *presence)
+purple_presence_is_online(PurplePresence *presence)
 {
 	PurpleStatus *status;
 
@@ -264,7 +258,7 @@ purple_presence_is_online(const PurplePresence *presence)
 }
 
 gboolean
-purple_presence_is_status_active(const PurplePresence *presence,
+purple_presence_is_status_active(PurplePresence *presence,
 		const char *status_id)
 {
 	PurpleStatus *status;
@@ -278,7 +272,7 @@ purple_presence_is_status_active(const PurplePresence *presence,
 }
 
 gboolean
-purple_presence_is_status_primitive_active(const PurplePresence *presence,
+purple_presence_is_status_primitive_active(PurplePresence *presence,
 		PurpleStatusPrimitive primitive)
 {
 	GList *l;
@@ -300,9 +294,9 @@ purple_presence_is_status_primitive_active(const PurplePresence *presence,
 }
 
 gboolean
-purple_presence_is_idle(const PurplePresence *presence)
+purple_presence_is_idle(PurplePresence *presence)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, FALSE);
 
@@ -310,9 +304,9 @@ purple_presence_is_idle(const PurplePresence *presence)
 }
 
 time_t
-purple_presence_get_idle_time(const PurplePresence *presence)
+purple_presence_get_idle_time(PurplePresence *presence)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -320,9 +314,9 @@ purple_presence_get_idle_time(const PurplePresence *presence)
 }
 
 time_t
-purple_presence_get_login_time(const PurplePresence *presence)
+purple_presence_get_login_time(PurplePresence *presence)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, 0);
 
@@ -339,7 +333,7 @@ purple_presence_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
 	PurplePresence *presence = PURPLE_PRESENCE(obj);
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
 
 	switch (param_id) {
 		case PRES_PROP_IDLE:
@@ -415,18 +409,18 @@ purple_presence_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_presence_init(GTypeInstance *instance, gpointer klass)
+purple_presence_init(PurplePresence *presence)
 {
-	PURPLE_PRESENCE_GET_PRIVATE(instance)->status_table =
-				g_hash_table_new_full(g_str_hash, g_str_equal,
-				g_free, NULL);
+	PurplePresencePrivate *priv = purple_presence_get_instance_private(presence);
+	priv->status_table = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 }
 
 /* GObject dispose function */
 static void
 purple_presence_dispose(GObject *object)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(object);
+	PurplePresencePrivate *priv =
+		purple_presence_get_instance_private(PURPLE_PRESENCE(object));
 
 	if (priv->statuses) {
 		g_list_foreach(priv->statuses, (GFunc)g_object_unref, NULL);
@@ -434,18 +428,19 @@ purple_presence_dispose(GObject *object)
 		priv->statuses = NULL;
 	}
 
-	parent_class->dispose(object);
+	G_OBJECT_CLASS(purple_presence_parent_class)->dispose(object);
 }
 
 /* GObject finalize function */
 static void
 purple_presence_finalize(GObject *object)
 {
-	PurplePresencePrivate *priv = PURPLE_PRESENCE_GET_PRIVATE(object);
+	PurplePresencePrivate *priv =
+		purple_presence_get_instance_private(PURPLE_PRESENCE(object));
 
 	g_hash_table_destroy(priv->status_table);
 
-	parent_class->finalize(object);
+	G_OBJECT_CLASS(purple_presence_parent_class)->finalize(object);
 }
 
 /* Class initializer function */
@@ -453,16 +448,12 @@ static void purple_presence_class_init(PurplePresenceClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->dispose = purple_presence_dispose;
 	obj_class->finalize = purple_presence_finalize;
 
 	/* Setup properties */
 	obj_class->get_property = purple_presence_get_property;
 	obj_class->set_property = purple_presence_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurplePresencePrivate));
 
 	properties[PRES_PROP_IDLE] = g_param_spec_boolean("idle", "Idle",
 				"Whether the presence is in idle state.", FALSE,
@@ -519,32 +510,6 @@ static void purple_presence_class_init(PurplePresenceClass *klass)
 	g_object_class_install_properties(obj_class, PRES_PROP_LAST, properties);
 }
 
-GType
-purple_presence_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurplePresenceClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_presence_class_init,
-			NULL,
-			NULL,
-			sizeof(PurplePresence),
-			0,
-			(GInstanceInitFunc)purple_presence_init,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT, "PurplePresence",
-				&info, G_TYPE_FLAG_ABSTRACT);
-	}
-
-	return type;
-}
-
 /**************************************************************************
 * PurpleAccountPresence API
 **************************************************************************/
@@ -597,9 +562,9 @@ purple_account_presence_update_idle(PurplePresence *presence, gboolean old_idle)
 }
 
 PurpleAccount *
-purple_account_presence_get_account(const PurpleAccountPresence *presence)
+purple_account_presence_get_account(PurpleAccountPresence *presence)
 {
-	PurpleAccountPresencePrivate *priv = PURPLE_ACCOUNT_PRESENCE_GET_PRIVATE(presence);
+	PurpleAccountPresencePrivate *priv = purple_account_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -607,7 +572,7 @@ purple_account_presence_get_account(const PurpleAccountPresence *presence)
 }
 
 static int
-purple_buddy_presence_compute_score(const PurpleBuddyPresence *buddy_presence)
+purple_buddy_presence_compute_score(PurpleBuddyPresence *buddy_presence)
 {
 	GList *l;
 	int score = 0;
@@ -636,8 +601,8 @@ purple_buddy_presence_compute_score(const PurpleBuddyPresence *buddy_presence)
 }
 
 gint
-purple_buddy_presence_compare(const PurpleBuddyPresence *buddy_presence1,
-		const PurpleBuddyPresence *buddy_presence2)
+purple_buddy_presence_compare(PurpleBuddyPresence *buddy_presence1,
+		PurpleBuddyPresence *buddy_presence2)
 {
 	PurplePresence *presence1 = PURPLE_PRESENCE(buddy_presence1);
 	PurplePresence *presence2 = PURPLE_PRESENCE(buddy_presence2);
@@ -692,7 +657,7 @@ purple_account_presence_set_property(GObject *obj, guint param_id, const GValue 
 {
 	PurpleAccountPresence *account_presence = PURPLE_ACCOUNT_PRESENCE(obj);
 	PurpleAccountPresencePrivate *priv =
-			PURPLE_ACCOUNT_PRESENCE_GET_PRIVATE(account_presence);
+			purple_account_presence_get_instance_private(account_presence);
 
 	switch (param_id) {
 		case ACPRES_PROP_ACCOUNT:
@@ -727,12 +692,13 @@ static void
 purple_account_presence_constructed(GObject *object)
 {
 	PurplePresence *presence = PURPLE_PRESENCE(object);
-	PurpleAccountPresencePrivate *priv = PURPLE_ACCOUNT_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *parent_priv = purple_presence_get_instance_private(presence);
+	PurpleAccountPresencePrivate *account_priv =
+		purple_account_presence_get_instance_private(PURPLE_ACCOUNT_PRESENCE(presence));
 
-	G_OBJECT_CLASS(presence_class)->constructed(object);
+	G_OBJECT_CLASS(purple_account_presence_parent_class)->constructed(object);
 
-	PURPLE_PRESENCE_GET_PRIVATE(presence)->statuses =
-			purple_protocol_get_statuses(priv->account, presence);
+	parent_priv->statuses = purple_protocol_get_statuses(account_priv->account, presence);
 }
 
 /* Class initializer function */
@@ -742,15 +708,11 @@ static void purple_account_presence_class_init(PurpleAccountPresenceClass *klass
 
 	PURPLE_PRESENCE_CLASS(klass)->update_idle = purple_account_presence_update_idle;
 
-	presence_class = g_type_class_peek_parent(klass);
-
 	obj_class->constructed = purple_account_presence_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_account_presence_get_property;
 	obj_class->set_property = purple_account_presence_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleAccountPresencePrivate));
 
 	ap_properties[ACPRES_PROP_ACCOUNT] = g_param_spec_object("account",
 				"Account",
@@ -762,31 +724,9 @@ static void purple_account_presence_class_init(PurpleAccountPresenceClass *klass
 				ap_properties);
 }
 
-GType
-purple_account_presence_get_type(void)
+static void
+purple_account_presence_init(PurpleAccountPresence *presence)
 {
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleAccountPresenceClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_account_presence_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleAccountPresence),
-			0,
-			NULL,
-			NULL,
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_PRESENCE,
-				"PurpleAccountPresence",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleAccountPresence *
@@ -871,9 +811,9 @@ purple_buddy_presence_update_idle(PurplePresence *presence, gboolean old_idle)
 }
 
 PurpleBuddy *
-purple_buddy_presence_get_buddy(const PurpleBuddyPresence *presence)
+purple_buddy_presence_get_buddy(PurpleBuddyPresence *presence)
 {
-	PurpleBuddyPresencePrivate *priv = PURPLE_BUDDY_PRESENCE_GET_PRIVATE(presence);
+	PurpleBuddyPresencePrivate *priv = purple_buddy_presence_get_instance_private(presence);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -891,7 +831,7 @@ purple_buddy_presence_set_property(GObject *obj, guint param_id, const GValue *v
 {
 	PurpleBuddyPresence *buddy_presence = PURPLE_BUDDY_PRESENCE(obj);
 	PurpleBuddyPresencePrivate *priv =
-			PURPLE_BUDDY_PRESENCE_GET_PRIVATE(buddy_presence);
+			purple_buddy_presence_get_instance_private(buddy_presence);
 
 	switch (param_id) {
 		case BUDPRES_PROP_BUDDY:
@@ -926,14 +866,15 @@ static void
 purple_buddy_presence_constructed(GObject *object)
 {
 	PurplePresence *presence = PURPLE_PRESENCE(object);
-	PurpleBuddyPresencePrivate *priv = PURPLE_BUDDY_PRESENCE_GET_PRIVATE(presence);
+	PurplePresencePrivate *parent_priv = purple_presence_get_instance_private(presence);
+	PurpleBuddyPresencePrivate *buddy_priv =
+		purple_buddy_presence_get_instance_private(PURPLE_BUDDY_PRESENCE(presence));
 	PurpleAccount *account;
 
-	G_OBJECT_CLASS(presence_class)->constructed(object);
+	G_OBJECT_CLASS(purple_buddy_presence_parent_class)->constructed(object);
 
-	account = purple_buddy_get_account(priv->buddy);
-	PURPLE_PRESENCE_GET_PRIVATE(presence)->statuses =
-			purple_protocol_get_statuses(account, presence);
+	account = purple_buddy_get_account(buddy_priv->buddy);
+	parent_priv->statuses = purple_protocol_get_statuses(account, presence);
 }
 
 /* Class initializer function */
@@ -943,15 +884,11 @@ static void purple_buddy_presence_class_init(PurpleBuddyPresenceClass *klass)
 
 	PURPLE_PRESENCE_CLASS(klass)->update_idle = purple_buddy_presence_update_idle;
 
-	presence_class = g_type_class_peek_parent(klass);
-
 	obj_class->constructed = purple_buddy_presence_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_buddy_presence_get_property;
 	obj_class->set_property = purple_buddy_presence_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleBuddyPresencePrivate));
 
 	bp_properties[BUDPRES_PROP_BUDDY] = g_param_spec_object("buddy", "Buddy",
 				"The buddy that this presence is of.", PURPLE_TYPE_BUDDY,
@@ -962,31 +899,9 @@ static void purple_buddy_presence_class_init(PurpleBuddyPresenceClass *klass)
 				bp_properties);
 }
 
-GType
-purple_buddy_presence_get_type(void)
+static void
+purple_buddy_presence_init(PurpleBuddyPresence *presence)
 {
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleBuddyPresenceClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_buddy_presence_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleBuddyPresence),
-			0,
-			NULL,
-			NULL,
-		};
-
-		type = g_type_register_static(PURPLE_TYPE_PRESENCE,
-				"PurpleBuddyPresence",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleBuddyPresence *
