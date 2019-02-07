@@ -80,18 +80,8 @@ jingle_rawudp_candidate_free(JingleRawUdpCandidate *candidate)
 	g_free(candidate->ip);
 }
 
-GType
-jingle_rawudp_candidate_get_type()
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("JingleRawUdpCandidate",
-				(GBoxedCopyFunc)jingle_rawudp_candidate_copy,
-				(GBoxedFreeFunc)jingle_rawudp_candidate_free);
-	}
-	return type;
-}
+G_DEFINE_BOXED_TYPE(JingleRawUdpCandidate, jingle_rawudp_candidate,
+		jingle_rawudp_candidate_copy, jingle_rawudp_candidate_free)
 
 JingleRawUdpCandidate *
 jingle_rawudp_candidate_new(const gchar *id, guint generation, guint component, const gchar *ip, guint port)

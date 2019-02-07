@@ -89,18 +89,8 @@ jingle_google_p2p_candidate_free(JingleGoogleP2PCandidate *candidate)
 	g_free(candidate->password);
 }
 
-GType
-jingle_google_p2p_candidate_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("JingleGoogleP2PCandidate",
-				(GBoxedCopyFunc)jingle_google_p2p_candidate_copy,
-				(GBoxedFreeFunc)jingle_google_p2p_candidate_free);
-	}
-	return type;
-}
+G_DEFINE_BOXED_TYPE(JingleGoogleP2PCandidate, jingle_google_p2p_candidate,
+		jingle_google_p2p_candidate_copy, jingle_google_p2p_candidate_free)
 
 JingleGoogleP2PCandidate *
 jingle_google_p2p_candidate_new(const gchar *id, guint generation,
