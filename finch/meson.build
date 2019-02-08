@@ -4,7 +4,11 @@ if get_option('consoleui')
 	if libgnt_dep.found()
 		libgnt_gir = ['Gnt-2.9']
 	else
-		libgnt_proj = subproject('libgnt')
+		libgnt_proj = subproject('libgnt',
+		    default_options : [
+		        'introspection=' + get_option('introspection').to_string(),
+		    ]
+		)
 		libgnt_dep = libgnt_proj.get_variable('libgnt_dep')
 		libgnt_gir = libgnt_proj.get_variable('libgnt_gir')
 	endif
@@ -199,7 +203,7 @@ if enable_consoleui
 		    nsversion : '@0@.@1@'.format(purple_major_version,
 		                                 purple_minor_version),
 		    include_directories : [
-		    	include_directories(join_paths(gplugin.get_pkgconfig_variable('prefix'), 'share/gir-1.0')),
+		        gplugin_include_directories,
 		    ],
 		    install : true,
 		    extra_args : ['--quiet'])

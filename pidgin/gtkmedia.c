@@ -1098,8 +1098,7 @@ pidgin_media_set_property (GObject *object, guint prop_id, const GValue *value, 
 		{
 			if (media->priv->media)
 				g_object_unref(media->priv->media);
-			media->priv->media = g_value_get_object(value);
-			g_object_ref(media->priv->media);
+			media->priv->media = g_value_dup_object(value);
 
 			if (purple_media_is_initiator(media->priv->media,
 					 NULL, NULL) == TRUE)

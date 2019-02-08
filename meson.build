@@ -299,7 +299,25 @@ if get_option('gtkui')
 	gtk = dependency('gtk+-3.0', version : '>= 3.10.0')
 
 	webkit = dependency('webkitgtk-3.0', version : '>= 1.3.7')
-	talkatu = dependency('talkatu', version: '>=0.1.0')
+
+	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
+	if talkatu_dep.found()
+		talkatu_gir = 'Talkatu-0.0'
+		talkatu_include_directories = include_directories(
+		    join_paths(talkatu_dep.get_pkgconfig_variable('prefix'),
+		               'share/gir-1.0'))
+	else
+		talkatu_proj = subproject('talkatu',
+		    default_options : [
+		        'doc=' + get_option('doc').to_string(),
+		        'gobject-introspection=' + get_option('introspection').to_string(),
+		        'nls=' + get_option('nls').to_string(),
+		    ]
+		)
+		talkatu_dep = talkatu_proj.get_variable('talkatu_dep')
+		talkatu_gir = talkatu_proj.get_variable('talkatu_gir')[0]
+		talkatu_include_directories = []
+	endif
 
 	#######################################################################
 	# Check if we should compile with enchant support
@@ -759,7 +777,24 @@ endif
 #######################################################################
 # Check for GPlugin 0.28.0
 #######################################################################
-gplugin = dependency('gplugin', version : '>= 0.28.0')
+gplugin_dep = dependency('gplugin', version : '>= 0.28.0', required : false)
+if gplugin_dep.found()
+	gplugin_gir = 'GPlugin-0.0'
+	gplugin_include_directories = include_directories(
+	    join_paths(gplugin_dep.get_pkgconfig_variable('prefix'),
+	               'share/gir-1.0'))
+else
+	gplugin_proj = subproject('gplugin',
+	    default_options : [
+	        'doc=' + get_option('doc').to_string(),
+	        'gobject-introspection=' + get_option('introspection').to_string(),
+	        'nls=' + get_option('nls').to_string(),
+	    ]
+	)
+	gplugin_dep = gplugin_proj.get_variable('gplugin_dep')
+	gplugin_gir = gplugin_proj.get_variable('gplugin_gir')[0]
+	gplugin_include_directories = []
+endif
 
 #######################################################################
 # Check for GObject Introspection
