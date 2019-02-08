@@ -5,13 +5,6 @@ pipelines:
     - step:
         script:
           - set -ex
-          - hg clone https://bitbucket.org/pidgin/talkatu
-          - meson -Dprefix=/usr talkatu talkatu/build
-          - ninja -C talkatu/build install
-          - hg clone https://bitbucket.org/pidgin/libgnt
-          - meson -Dprefix=/usr libgnt libgnt/build
-          - ninja -C libgnt/build install
-          - ldconfig
           - meson -Dsilc=false -Ddoc=true -Dconsole-logging=true build-pipelines
           - ninja -C build-pipelines
           - ninja -C build-pipelines test

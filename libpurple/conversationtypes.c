@@ -1743,11 +1743,11 @@ purple_chat_user_set_property(GObject *obj, guint param_id, const GValue *value,
 			break;
 		case CU_PROP_NAME:
 			g_free(priv->name);
-			priv->name = g_strdup(g_value_get_string(value));
+			priv->name = g_value_dup_string(value);
 			break;
 		case CU_PROP_ALIAS:
 			g_free(priv->alias);
-			priv->alias = g_strdup(g_value_get_string(value));
+			priv->alias = g_value_dup_string(value);
 			break;
 		case CU_PROP_FLAGS:
 			priv->flags = g_value_get_flags(value);
