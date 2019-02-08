@@ -734,7 +734,7 @@ purple_connection_set_property(GObject *obj, guint param_id, const GValue *value
 			break;
 		case PROP_PASSWORD:
 			g_free(priv->password);
-			priv->password = g_strdup(g_value_get_string(value));
+			priv->password = g_value_dup_string(value);
 			break;
 		case PROP_DISPLAY_NAME:
 			purple_connection_set_display_name(gc, g_value_get_string(value));

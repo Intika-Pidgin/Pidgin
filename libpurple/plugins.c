@@ -334,7 +334,7 @@ purple_plugin_info_set_property(GObject *obj, guint param_id, const GValue *valu
 
 	switch (param_id) {
 		case PROP_UI_REQUIREMENT:
-			priv->ui_requirement = g_strdup(g_value_get_string(value));
+			priv->ui_requirement = g_value_dup_string(value);
 			break;
 		case PROP_ACTIONS_CB:
 			priv->actions_cb = g_value_get_pointer(value);
