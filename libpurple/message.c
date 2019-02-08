@@ -304,19 +304,19 @@ purple_message_set_property(GObject *object, guint par_id, const GValue *value,
 	switch (par_id) {
 		case PROP_AUTHOR:
 			g_free(priv->author);
-			priv->author = g_strdup(g_value_get_string(value));
+			priv->author = g_value_dup_string(value);
 			break;
 		case PROP_AUTHOR_ALIAS:
 			g_free(priv->author_alias);
-			priv->author_alias = g_strdup(g_value_get_string(value));
+			priv->author_alias = g_value_dup_string(value);
 			break;
 		case PROP_RECIPIENT:
 			g_free(priv->recipient);
-			priv->recipient = g_strdup(g_value_get_string(value));
+			priv->recipient = g_value_dup_string(value);
 			break;
 		case PROP_CONTENTS:
 			g_free(priv->contents);
-			priv->contents = g_strdup(g_value_get_string(value));
+			priv->contents = g_value_dup_string(value);
 			break;
 		case PROP_TIME:
 			priv->msgtime = g_value_get_uint64(value);
