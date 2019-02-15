@@ -1693,7 +1693,7 @@ create_session(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 		return FALSE;
 	}
 
-	filename = g_build_filename(purple_user_dir(), "fs-codec.conf", NULL);
+	filename = g_build_filename(purple_config_dir(), "fs-codec.conf", NULL);
 	codec_conf = fs_codec_list_from_keyfile(filename, &err);
 	g_free(filename);
 

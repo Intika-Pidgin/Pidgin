@@ -339,7 +339,7 @@ sync_statuses(void)
 
 	node = statuses_to_xmlnode();
 	data = purple_xmlnode_to_formatted_str(node, NULL);
-	purple_util_write_data_to_file("status.xml", data, -1);
+	purple_util_write_data_to_config_file("status.xml", data, -1);
 	g_free(data);
 	purple_xmlnode_free(node);
 }
@@ -527,7 +527,7 @@ load_statuses(void)
 
 	statuses_loaded = TRUE;
 
-	statuses = purple_util_read_xml_from_file("status.xml", _("saved statuses"));
+	statuses = purple_util_read_xml_from_config_file("status.xml", _("saved statuses"));
 
 	if (statuses == NULL)
 		return;
