@@ -68,7 +68,7 @@ sync_accounts(void)
 
 	node = accounts_to_xmlnode();
 	data = purple_xmlnode_to_formatted_str(node, NULL);
-	purple_util_write_data_to_file("accounts.xml", data, -1);
+	purple_util_write_data_to_config_file("accounts.xml", data, -1);
 	g_free(data);
 	purple_xmlnode_free(node);
 }
@@ -543,7 +543,7 @@ load_accounts(void)
 
 	accounts_loaded = TRUE;
 
-	node = purple_util_read_xml_from_file("accounts.xml", _("accounts"));
+	node = purple_util_read_xml_from_config_file("accounts.xml", _("accounts"));
 
 	if (node == NULL)
 		return;

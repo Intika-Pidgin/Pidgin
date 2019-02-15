@@ -242,7 +242,7 @@ sync_prefs(void)
 
 	node = prefs_to_xmlnode();
 	data = purple_xmlnode_to_formatted_str(node, NULL);
-	purple_util_write_data_to_file("prefs.xml", data, -1);
+	purple_util_write_data_to_config_file("prefs.xml", data, -1);
 	g_free(data);
 	purple_xmlnode_free(node);
 }
@@ -424,7 +424,7 @@ purple_prefs_load()
 		return uiop->load();
 	}
 
-	filename = g_build_filename(purple_user_dir(), "prefs.xml", NULL);
+	filename = g_build_filename(purple_config_dir(), "prefs.xml", NULL);
 
 	if (!filename) {
 		prefs_loaded = TRUE;
