@@ -40,12 +40,12 @@ void
 run_commands()
 {
 	GStatBuf finfo;
-	char filename[MAXPATHLEN];
+	gchar *filename;
 	char buffer[1024];
 	char *command, *arg1, *arg2;
 	FILE *file;
 
-	snprintf(filename, MAXPATHLEN, "%s" G_DIR_SEPARATOR_S "control", purple_user_dir());
+	filename = g_build_filename(purple_config_dir(), "control", NULL);
 
 	file = g_fopen(filename, "r+");
 	while (fgets(buffer, sizeof(buffer), file)) {
@@ -110,9 +110,10 @@ run_commands()
 
 	fclose(file);
 
-	if (g_stat(filename, &finfo) != 0)
-		return;
-	mtime = finfo.st_mtime;
+	if (g_stat(filename, &finfo) == 0)
+		mtime = finfo.st_mtime;
+
+	g_free(filename);
 }
 
 /**
@@ -123,12 +124,14 @@ init_file()
 {
 	/* most of this was taken from Bash v2.04 by the FSF */
 	GStatBuf finfo;
-	char filename[MAXPATHLEN];
+	gchar *filename;
 
-	snprintf(filename, MAXPATHLEN, "%s" G_DIR_SEPARATOR_S "control", purple_user_dir());
+	filename = g_build_filename(purple_config_dir(), "control", NULL);
 
 	if ((g_stat(filename, &finfo) == 0) && (finfo.st_size > 0))
 		run_commands();
+
+	g_free(filename);
 }
 
 /**
@@ -139,9 +142,9 @@ check_file()
 {
 	/* most of this was taken from Bash v2.04 by the FSF */
 	GStatBuf finfo;
-	char filename[MAXPATHLEN];
+	gchar *filename;
 
-	snprintf(filename, MAXPATHLEN, "%s" G_DIR_SEPARATOR_S "control", purple_user_dir());
+	filename = g_build_filename(purple_config_dir(), "control", NULL);
 
 	if ((g_stat(filename, &finfo) == 0) && (finfo.st_size > 0))
 	{
@@ -150,6 +153,8 @@ check_file()
 			run_commands();
 		}
 	}
+
+	g_free(filename);
 
 	return TRUE;
 }
