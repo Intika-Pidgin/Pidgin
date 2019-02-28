@@ -58,6 +58,5 @@ if DYNAMIC_OSCAR
 	    link_args : oscar_link_args,
 	    dependencies : [libpurple_dep, glib, ws2_32],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
+	subdir('tests')
 endif
-
-subdir('tests')
