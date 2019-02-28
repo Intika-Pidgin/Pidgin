@@ -120,6 +120,5 @@ if DYNAMIC_JABBER
 	    link_args : jabber_link_args,
 	    dependencies : [gstreamer, idn, libxml, sasl, libpurple_dep, glib, gio, math, ws2_32],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
+	subdir('tests')
 endif
-
-subdir('tests')
