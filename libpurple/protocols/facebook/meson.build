@@ -25,7 +25,9 @@ if DYNAMIC_FACEBOOK
 endif
 
 # Used to produce docs.
-facebook_inc = include_directories('.')
-facebook_dep = declare_dependency(
-    link_with : facebook_prpl,
-    dependencies : [json, libpurple_dep, glib])
+if DYNAMIC_FACEBOOK
+	facebook_inc = include_directories('.')
+	facebook_dep = declare_dependency(
+	    link_with : facebook_prpl,
+	    dependencies : [json, libpurple_dep, glib])
+endif
