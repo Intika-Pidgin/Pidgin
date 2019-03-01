@@ -1,35 +1,41 @@
-project('pidgin', 'c', meson_version : '>=0.37.0')
-
 # UPDATING VERSION NUMBERS FOR RELEASES
 #
-# purple_micro_version += 1
+# The version number is:
+#   <major>.<minor>.<micro><suffix>
+#
+# micro += 1
 #
 # If any functions have been added to libpurple, Pidgin, or Finch:
-#   purple_micro_version = 0
-#   purple_minor_version += 1
-#   purple_lt_current += 1
+#   micro = 0
+#   minor += 1
 #
 # If backwards compatibility has been broken in libpurple, Pidgin, or Finch:
-#   purple_micro_version = 0
-#   purple_minor_version = 0
-#   purple_major_version += 1;
-#   purple_lt_current += 1
+#   micro = 0
+#   minor = 0
+#   major += 1
+#   purple_soversion += 1
 #
-# purple_version_suffix should be similar to one of the following:
-#   For beta releases:          'beta2'
-#   For code under development: 'devel'
+# suffix should be similar to one of the following:
+#   For beta releases:          '-beta2'
+#   For code under development: '-devel'
 #   For production releases:    ''
 #
-purple_lt_current = 20
-purple_major_version = 3
-purple_minor_version = 0
-purple_micro_version = 0
-purple_version_suffix = 'devel'
-purple_version = '@0@.@1@.@2@'.format(purple_major_version,
-                                      purple_minor_version,
-                                      purple_micro_version)
-purple_display_version = '@0@@1@'.format(purple_version,
-                                         purple_version_suffix)
+project('pidgin', 'c',
+    version : '3.0.0-devel',
+    meson_version : '>=0.37.0')
+purple_soversion = 20
+
+parts = meson.project_version().split('-')
+if parts.length() > 1
+  purple_version_suffix = parts[1]
+else
+  purple_version_suffix = ''
+endif
+
+parts = parts[0].split('.')
+purple_major_version = parts[0]
+purple_minor_version = parts[1]
+purple_micro_version = parts[2]
 
 add_project_arguments('-DHAVE_CONFIG_H=1', language : 'c')
 conf = configuration_data()
@@ -39,16 +45,15 @@ version_conf = configuration_data()
 conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE_NAME', meson.project_name())
-conf.set_quoted('VERSION', purple_display_version)
+conf.set_quoted('VERSION', meson.project_version())
 
 version_conf.set('PURPLE_MAJOR_VERSION', purple_major_version)
 version_conf.set('PURPLE_MINOR_VERSION', purple_minor_version)
 version_conf.set('PURPLE_MICRO_VERSION', purple_micro_version)
-version_conf.set('PURPLE_VERSION', purple_display_version)
-version_conf.set('PURPLE_API_VERSION',
-                 purple_lt_current - purple_minor_version)
+version_conf.set('PURPLE_VERSION', meson.project_version())
+version_conf.set('PURPLE_API_VERSION', purple_soversion)
 
-PURPLE_LIB_VERSION = '@0@.@1@.@2@'.format(purple_lt_current - purple_minor_version,
+PURPLE_LIB_VERSION = '@0@.@1@.@2@'.format(purple_soversion,
                                           purple_minor_version,
                                           purple_micro_version)
 
@@ -58,7 +63,7 @@ package_revision = vcs_tag(
     fallback : meson.project_version())
 
 # For man pages.
-man_conf.set('VERSION', purple_display_version)
+man_conf.set('VERSION', meson.project_version())
 man_conf.set('prefix', get_option('prefix'))
 
 # Used for pkg-config files.
@@ -91,7 +96,7 @@ if host_machine.system() == 'windows'
 	conf.set('WIN32_LEAN_AND_MEAN', true)
 
 	conf.set('LIBPIDGIN_DLL_NAMEW',
-	    'L"libpidgin-@0@.dll"'.format(purple_lt_current))
+	    'L"libpidgin-@0@.dll"'.format(purple_soversion))
 else
 	IS_WIN32 = false
 	ws2_32 = []
@@ -972,7 +977,7 @@ configure_file(output : 'config.h',
     configuration : conf)
 
 message('')
-message('pidgin ' + purple_display_version)
+message('pidgin ' + meson.project_version())
 
 message('')
 message('Build GTK+ UI................. : ' + get_option('gtkui').to_string())

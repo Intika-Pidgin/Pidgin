@@ -184,7 +184,7 @@ if enable_consoleui
 	pkgconfig.generate(
 	    name : 'Finch',
 	    description : 'Finch is an instant messenger application that uses libpurple for protocol support and ncurses (libgnt) for the UI.',
-	    version : purple_display_version,
+	    version : meson.project_version(),
 	    filebase : 'finch',
 	    subdirs : 'finch',
 	    libraries : [libfinch],
