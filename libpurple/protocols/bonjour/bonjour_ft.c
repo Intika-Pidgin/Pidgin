@@ -627,7 +627,8 @@ purple_xmlnode_insert_twin_copy(PurpleXmlNode *node) {
  */
 static gboolean
 add_ipv6_link_local_ifaces(PurpleXmlNode *cur_streamhost, const char *host,
-			   const PurpleBuddy *pb) {
+			   PurpleBuddy *pb)
+{
 	PurpleXmlNode *new_streamhost = NULL;
 	struct in6_addr in6_addr;
 	BonjourBuddy *bb;

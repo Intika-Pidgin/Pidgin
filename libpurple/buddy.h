@@ -133,7 +133,7 @@ void purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon);
  *
  * Returns: The buddy icon.
  */
-PurpleBuddyIcon *purple_buddy_get_icon(const PurpleBuddy *buddy);
+PurpleBuddyIcon *purple_buddy_get_icon(PurpleBuddy *buddy);
 
 /**
  * purple_buddy_get_account:
@@ -143,7 +143,7 @@ PurpleBuddyIcon *purple_buddy_get_icon(const PurpleBuddy *buddy);
  *
  * Returns: The account
  */
-PurpleAccount *purple_buddy_get_account(const PurpleBuddy *buddy);
+PurpleAccount *purple_buddy_get_account(PurpleBuddy *buddy);
 
 /**
  * purple_buddy_set_name:
@@ -162,7 +162,7 @@ void purple_buddy_set_name(PurpleBuddy *buddy, const char *name);
  *
  * Returns: The name.
  */
-const char *purple_buddy_get_name(const PurpleBuddy *buddy);
+const char *purple_buddy_get_name(PurpleBuddy *buddy);
 
 /**
  * purple_buddy_get_protocol_data:
@@ -176,7 +176,7 @@ const char *purple_buddy_get_name(const PurpleBuddy *buddy);
  *
  * Returns:      The protocol data.
  */
-gpointer purple_buddy_get_protocol_data(const PurpleBuddy *buddy);
+gpointer purple_buddy_get_protocol_data(PurpleBuddy *buddy);
 
 /**
  * purple_buddy_set_protocol_data:
@@ -209,7 +209,7 @@ PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy);
  *
  * Returns: The buddy's presence.
  */
-PurplePresence *purple_buddy_get_presence(const PurpleBuddy *buddy);
+PurplePresence *purple_buddy_get_presence(PurpleBuddy *buddy);
 
 /**
  * purple_buddy_update_status:
@@ -230,7 +230,7 @@ void purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status);
  *
  * Returns:      The media caps.
  */
-PurpleMediaCaps purple_buddy_get_media_caps(const PurpleBuddy *buddy);
+PurpleMediaCaps purple_buddy_get_media_caps(PurpleBuddy *buddy);
 
 /**
  * purple_buddy_set_media_caps:

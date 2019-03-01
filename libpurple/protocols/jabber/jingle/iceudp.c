@@ -96,18 +96,8 @@ jingle_iceudp_candidate_free(JingleIceUdpCandidate *candidate)
 	g_free(candidate->password);
 }
 
-GType
-jingle_iceudp_candidate_get_type()
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("JingleIceUdpCandidate",
-				(GBoxedCopyFunc)jingle_iceudp_candidate_copy,
-				(GBoxedFreeFunc)jingle_iceudp_candidate_free);
-	}
-	return type;
-}
+G_DEFINE_BOXED_TYPE(JingleIceUdpCandidate, jingle_iceudp_candidate,
+		jingle_iceudp_candidate_copy, jingle_iceudp_candidate_free)
 
 JingleIceUdpCandidate *
 jingle_iceudp_candidate_new(const gchar *id,

@@ -342,7 +342,7 @@ bonjour_set_buddy_icon(PurpleConnection *conn, PurpleImage *img)
 static char *
 bonjour_status_text(PurpleBuddy *buddy)
 {
-	const PurplePresence *presence;
+	PurplePresence *presence;
 	const PurpleStatus *status;
 	const char *message;
 	gchar *ret = NULL;

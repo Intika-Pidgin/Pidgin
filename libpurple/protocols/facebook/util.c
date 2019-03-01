@@ -345,19 +345,23 @@ fb_util_request_buddy_cancel(gpointer *mata, PurpleRequestFields *fields)
 static gint
 fb_buddy_cmp(gconstpointer a, gconstpointer b)
 {
+	PurpleBuddy *pba, *pbb;
 	gint alias_verdict, name_verdict;
 	gchar *astr, *bstr;
 
-	astr = g_utf8_casefold(purple_buddy_get_alias(PURPLE_BUDDY(a)), -1);
-	bstr = g_utf8_casefold(purple_buddy_get_alias(PURPLE_BUDDY(b)), -1);
+	pba = PURPLE_BUDDY(a);
+	pbb = PURPLE_BUDDY(b);
+
+	astr = g_utf8_casefold(purple_buddy_get_alias(pba), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_alias(pbb), -1);
 	alias_verdict = g_utf8_collate(astr, bstr);
 	g_free(astr);
 	g_free(bstr);
 	if (alias_verdict != 0) {
 		return alias_verdict;
 	}
-	astr = g_utf8_casefold(purple_buddy_get_name(a), -1);
-	bstr = g_utf8_casefold(purple_buddy_get_name(b), -1);
+	astr = g_utf8_casefold(purple_buddy_get_name(pba), -1);
+	bstr = g_utf8_casefold(purple_buddy_get_name(pbb), -1);
 	name_verdict = g_utf8_collate(astr, bstr);
 	g_free(astr);
 	g_free(bstr);

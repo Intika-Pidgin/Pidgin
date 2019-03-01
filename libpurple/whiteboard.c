@@ -381,7 +381,7 @@ purple_whiteboard_set_property(GObject *obj, guint param_id, const GValue *value
 			priv->account = g_value_get_object(value);
 			break;
 		case PROP_WHO:
-			priv->who = g_strdup(g_value_get_string(value));
+			priv->who = g_value_dup_string(value);
 			break;
 		case PROP_DRAW_LIST:
 			purple_whiteboard_set_draw_list(wb, g_value_get_pointer(value));
