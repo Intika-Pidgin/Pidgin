@@ -289,8 +289,7 @@ finch_media_set_property (GObject *object, guint prop_id, const GValue *value, G
 		{
 			if (media->priv->media)
 				g_object_unref(media->priv->media);
-			media->priv->media = g_value_get_object(value);
-			g_object_ref(media->priv->media);
+			media->priv->media = g_value_dup_object(value);
 			g_signal_connect_swapped(G_OBJECT(media->priv->accept), "activate",
 				 G_CALLBACK(finch_media_accept_cb), media->priv->media);
 			g_signal_connect_swapped(G_OBJECT(media->priv->reject), "activate",

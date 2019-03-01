@@ -681,7 +681,7 @@ void jabber_message_parse(JabberStream *js, PurpleXmlNode *packet)
 			if(!jm->xhtml && purple_xmlnode_get_child(child, "body")) {
 				char *c;
 
-				const PurpleConnection *gc = js->gc;
+				PurpleConnection *gc = js->gc;
 				PurpleAccount *account = purple_connection_get_account(gc);
 				PurpleConversation *conv = NULL;
 				GList *smiley_refs = NULL, *it;
@@ -1308,8 +1308,7 @@ gboolean jabber_buzz_isenabled(JabberStream *js, const gchar *namespace) {
 
 gboolean jabber_custom_smileys_isenabled(JabberStream *js, const gchar *namespace)
 {
-	const PurpleConnection *gc = js->gc;
-	PurpleAccount *account = purple_connection_get_account(gc);
+	PurpleAccount *account = purple_connection_get_account(js->gc);
 
 	return purple_account_get_bool(account, "custom_smileys", TRUE);
 }

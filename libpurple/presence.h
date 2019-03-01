@@ -187,7 +187,7 @@ PurpleAccountPresence *purple_account_presence_new(PurpleAccount *account);
  *
  * Returns: The presence's account.
  */
-PurpleAccount *purple_account_presence_get_account(const PurpleAccountPresence *presence);
+PurpleAccount *purple_account_presence_get_account(PurpleAccountPresence *presence);
 
 /**************************************************************************/
 /* PurpleBuddyPresence API                                                */
@@ -218,7 +218,7 @@ PurpleBuddyPresence *purple_buddy_presence_new(PurpleBuddy *buddy);
  *
  * Returns: The presence's buddy.
  */
-PurpleBuddy *purple_buddy_presence_get_buddy(const PurpleBuddyPresence *presence);
+PurpleBuddy *purple_buddy_presence_get_buddy(PurpleBuddyPresence *presence);
 
 /**
  * purple_buddy_presence_compare:
@@ -231,8 +231,8 @@ PurpleBuddy *purple_buddy_presence_get_buddy(const PurpleBuddyPresence *presence
  *           0 if @buddy_presence1 is equal to @buddy_presence2.
  *           1 if @buddy_presence1 is less available than @buddy_presence2.
  */
-gint purple_buddy_presence_compare(const PurpleBuddyPresence *buddy_presence1,
-						   const PurpleBuddyPresence *buddy_presence2);
+gint purple_buddy_presence_compare(PurpleBuddyPresence *buddy_presence1,
+						   PurpleBuddyPresence *buddy_presence2);
 
 /**************************************************************************/
 /* PurplePresence API                                                     */
@@ -304,7 +304,7 @@ void purple_presence_set_login_time(PurplePresence *presence, time_t login_time)
  *
  * Returns: (element-type PurpleStatus) (transfer none): The statuses.
  */
-GList *purple_presence_get_statuses(const PurplePresence *presence);
+GList *purple_presence_get_statuses(PurplePresence *presence);
 
 /**
  * purple_presence_get_status:
@@ -315,7 +315,7 @@ GList *purple_presence_get_statuses(const PurplePresence *presence);
  *
  * Returns: The status if found, or NULL.
  */
-PurpleStatus *purple_presence_get_status(const PurplePresence *presence,
+PurpleStatus *purple_presence_get_status(PurplePresence *presence,
 									 const char *status_id);
 
 /**
@@ -326,7 +326,7 @@ PurpleStatus *purple_presence_get_status(const PurplePresence *presence,
  *
  * Returns: The active exclusive status.
  */
-PurpleStatus *purple_presence_get_active_status(const PurplePresence *presence);
+PurpleStatus *purple_presence_get_active_status(PurplePresence *presence);
 
 /**
  * purple_presence_is_available:
@@ -338,7 +338,7 @@ PurpleStatus *purple_presence_get_active_status(const PurplePresence *presence);
  *
  * Returns: TRUE if the presence is available, or FALSE otherwise.
  */
-gboolean purple_presence_is_available(const PurplePresence *presence);
+gboolean purple_presence_is_available(PurplePresence *presence);
 
 /**
  * purple_presence_is_online:
@@ -348,7 +348,7 @@ gboolean purple_presence_is_available(const PurplePresence *presence);
  *
  * Returns: TRUE if the presence is online, or FALSE otherwise.
  */
-gboolean purple_presence_is_online(const PurplePresence *presence);
+gboolean purple_presence_is_online(PurplePresence *presence);
 
 /**
  * purple_presence_is_status_active:
@@ -361,7 +361,7 @@ gboolean purple_presence_is_online(const PurplePresence *presence);
  *
  * Returns: TRUE if the status is active, or FALSE.
  */
-gboolean purple_presence_is_status_active(const PurplePresence *presence,
+gboolean purple_presence_is_status_active(PurplePresence *presence,
 										const char *status_id);
 
 /**
@@ -377,7 +377,7 @@ gboolean purple_presence_is_status_active(const PurplePresence *presence,
  * Returns: TRUE if the status is active, or FALSE.
  */
 gboolean purple_presence_is_status_primitive_active(
-	const PurplePresence *presence, PurpleStatusPrimitive primitive);
+	PurplePresence *presence, PurpleStatusPrimitive primitive);
 
 /**
  * purple_presence_is_idle:
@@ -389,7 +389,7 @@ gboolean purple_presence_is_status_primitive_active(
  *         If the presence is offline (purple_presence_is_online()
  *         returns FALSE) then FALSE is returned.
  */
-gboolean purple_presence_is_idle(const PurplePresence *presence);
+gboolean purple_presence_is_idle(PurplePresence *presence);
 
 /**
  * purple_presence_get_idle_time:
@@ -399,7 +399,7 @@ gboolean purple_presence_is_idle(const PurplePresence *presence);
  *
  * Returns: The presence's idle time.
  */
-time_t purple_presence_get_idle_time(const PurplePresence *presence);
+time_t purple_presence_get_idle_time(PurplePresence *presence);
 
 /**
  * purple_presence_get_login_time:
@@ -409,7 +409,7 @@ time_t purple_presence_get_idle_time(const PurplePresence *presence);
  *
  * Returns: The presence's login time.
  */
-time_t purple_presence_get_login_time(const PurplePresence *presence);
+time_t purple_presence_get_login_time(PurplePresence *presence);
 
 G_END_DECLS
 
