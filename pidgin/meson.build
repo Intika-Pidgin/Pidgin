@@ -191,7 +191,7 @@ if ENABLE_GTK
 	pkgconfig.generate(
 	    name : 'Pidgin',
 	    description : 'Pidgin is a GTK3-based instant messenger application.',
-	    version : purple_display_version,
+	    version : meson.project_version(),
 	    filebase : 'pidgin-3',
 	    subdirs : 'pidgin',
 	    libraries : [libpidgin],
