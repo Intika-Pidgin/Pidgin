@@ -282,7 +282,7 @@ install_headers(purple_mediaheaders,
 pkgconfig.generate(
     name : 'libpurple',
     description : 'libpurple is a GLib-based instant messenger library.',
-    version : purple_display_version,
+    version : meson.project_version(),
     filebase : purple_filebase,
 # TODO: Only use purple_filebase once everything is ported to only use purple.h
     subdirs : [purple_filebase, purple_include_base],
