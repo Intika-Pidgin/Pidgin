@@ -752,6 +752,7 @@ const gchar *purple_home_dir(void);
  * Deprecated: Use purple_cache_dir(), purple_config_dir() or
  *             purple_data_dir() instead.
  */
+G_DEPRECATED_FOR(purple_cache_dir' or 'purple_config_dir' or 'purple_data_dir)
 const char *purple_user_dir(void);
 
 /**
@@ -845,6 +846,7 @@ int purple_build_dir(const char *path, int mode);
  *             purple_util_write_data_to_config_file() or
  *             purple_util_write_data_to_data_file() instead.
  */
+G_DEPRECATED_FOR(purple_util_write_data_to_cache_file' or 'purple_util_write_data_to_config_file' or 'purple_util_write_data_to_data_file)
 gboolean purple_util_write_data_to_file(const char *filename, const char *data,
 									  gssize size);
 
@@ -938,6 +940,7 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
  *             purple_util_read_xml_from_config_file() or
  *             purple_util_read_xml_from_data_file() instead.
  */
+G_DEPRECATED_FOR(purple_util_read_xml_from_cache_file' or 'purple_util_read_xml_from_config_file' or 'purple_util_read_xml_from_data_file)
 PurpleXmlNode *purple_util_read_xml_from_file(const char *filename,
 									  const char *description);
 

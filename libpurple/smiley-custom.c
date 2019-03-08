@@ -300,9 +300,9 @@ _purple_smiley_custom_init(void)
 {
 	gint ret;
 
-	smileys_dir = g_build_filename(purple_user_dir(),
+	smileys_dir = g_build_filename(purple_data_dir(),
 		SMILEYS_DEFAULT_FOLDER, NULL);
-	smileys_index = g_build_filename(purple_user_dir(),
+	smileys_index = g_build_filename(purple_config_dir(),
 		SMILEYS_INDEX_FILE, NULL);
 	smileys_list = purple_smiley_list_new();
 

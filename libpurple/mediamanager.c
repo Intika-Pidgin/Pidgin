@@ -320,7 +320,7 @@ purple_media_manager_get_pipeline(PurpleMediaManager *manager)
 		gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL, NULL);
 		gst_object_unref(bus);
 
-		filename = g_build_filename(purple_user_dir(),
+		filename = g_build_filename(purple_config_dir(),
 				"fs-element.conf", NULL);
 		keyfile = g_key_file_new();
 		if (!g_key_file_load_from_file(keyfile, filename,
