@@ -412,7 +412,7 @@ purple_blist_sync(void)
 
 	node = blist_to_xmlnode();
 	data = purple_xmlnode_to_formatted_str(node, NULL);
-	purple_util_write_data_to_file("blist.xml", data, -1);
+	purple_util_write_data_to_config_file("blist.xml", data, -1);
 	g_free(data);
 	purple_xmlnode_free(node);
 }
@@ -631,7 +631,7 @@ load_blist(void)
 
 	blist_loaded = TRUE;
 
-	purple = purple_util_read_xml_from_file("blist.xml", _("buddy list"));
+	purple = purple_util_read_xml_from_config_file("blist.xml", _("buddy list"));
 
 	if (purple == NULL)
 		return;

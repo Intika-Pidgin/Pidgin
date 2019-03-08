@@ -291,7 +291,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	char *dirname;
 
-	dirname = g_build_filename(purple_user_dir(), "autoaccept", NULL);
+	dirname = g_build_filename(g_get_user_special_dir(G_USER_DIRECTORY_DOWNLOAD), "autoaccept", NULL);
 	purple_prefs_add_none(PREF_PREFIX);
 	purple_prefs_add_string(PREF_PATH, dirname);
 	purple_prefs_add_bool(PREF_NOTIFY, TRUE);

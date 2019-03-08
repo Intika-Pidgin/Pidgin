@@ -2948,7 +2948,9 @@ purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path)
 		gchar *old_path;
 		gboolean old_path_exists;
 
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 		old_path = g_build_filename(purple_user_dir(), path, NULL);
+G_GNUC_END_IGNORE_DEPRECATIONS
 		old_path_exists = g_file_test(old_path, G_FILE_TEST_EXISTS);
 		if (old_path_exists) {
 			int rename_res;
@@ -3020,7 +3022,9 @@ purple_util_write_data_to_file_common(const char *dir, const char *filename, con
 gboolean
 purple_util_write_data_to_file(const char *filename, const char *data, gssize size)
 {
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	const char *user_dir = purple_user_dir();
+G_GNUC_END_IGNORE_DEPRECATIONS
 	gboolean ret = purple_util_write_data_to_file_common(user_dir, filename, data, size);
 
 	return ret;
@@ -3083,7 +3087,9 @@ purple_util_write_data_to_file_absolute(const char *filename_full, const char *d
 PurpleXmlNode *
 purple_util_read_xml_from_file(const char *filename, const char *description)
 {
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	return purple_xmlnode_from_file(purple_user_dir(), filename, description, "util");
+G_GNUC_END_IGNORE_DEPRECATIONS
 }
 
 PurpleXmlNode *
