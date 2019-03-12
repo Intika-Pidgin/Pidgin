@@ -58,8 +58,6 @@ static gchar *
 pidgin_debug_plugin_info_build_html(void) {
 	GString *str = g_string_new(NULL);
 	GList *plugins = NULL, *l = NULL;
-	GError *error = NULL;
-	gchar *ret = NULL;
 
 	g_string_append_printf(str, "<h2>%s</h2><dl>", _("Plugin Information"));
 
@@ -76,7 +74,7 @@ pidgin_debug_plugin_info_build_html(void) {
 		gchar *version, *license, *website, *id;
 		gchar *authors = NULL, *extra = NULL;
 		const gchar *error_message = NULL;
-		const gchar * const *authorsv;
+		gchar **authorsv;
 		gboolean loaded;
 
 		g_object_get(
@@ -157,13 +155,15 @@ pidgin_debug_plugin_info_init(PidginDebugPluginInfo *debug_plugin_info) {
 
 static void
 pidgin_debug_plugin_info_class_init(PidginDebugPluginInfoClass *klass) {
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
 	gtk_widget_class_set_template_from_resource(
-		GTK_WIDGET_CLASS(klass),
+		widget_class,
 		"/im/pidgin/Pidgin/Debug/plugininfo.ui"
 	);
 
-	gtk_widget_class_bind_template_child_private(klass, PidginDebugPluginInfo, buffer);
-	gtk_widget_class_bind_template_child_private(klass, PidginDebugPluginInfo, view);
+	gtk_widget_class_bind_template_child_private(widget_class, PidginDebugPluginInfo, buffer);
+	gtk_widget_class_bind_template_child_private(widget_class, PidginDebugPluginInfo, view);
 }
 
 /******************************************************************************
