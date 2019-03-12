@@ -118,12 +118,12 @@ pidgin_debug_plugin_info_build_html(void) {
 			loaded ? "Yes" : "No"
 		);
 
-		g_free(authors);
+		g_clear_pointer(&authors, g_free);
 		g_free(version);
 		g_free(license);
 		g_free(website);
 		g_free(id);
-		g_free(extra);
+		g_clear_pointer(&extra, g_free);
 
 		g_string_append(str, "</dd>");
 	}
