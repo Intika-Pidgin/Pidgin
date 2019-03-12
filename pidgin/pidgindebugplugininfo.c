@@ -46,6 +46,14 @@ G_DEFINE_TYPE_WITH_PRIVATE(PidginDebugPluginInfo, pidgin_debug_plugin_info, GTK_
 /******************************************************************************
  * Helpers
  *****************************************************************************/
+static gint
+purple_debug_plugin_compare_plugin_id(gconstpointer a, gconstpointer b) {
+	return g_strcmp0(
+		purple_plugin_info_get_id(purple_plugin_get_info(PURPLE_PLUGIN(a))),
+		purple_plugin_info_get_id(purple_plugin_get_info(PURPLE_PLUGIN(b)))
+	);
+}
+
 static gchar *
 pidgin_debug_plugin_info_build_html(void) {
 	GString *str = g_string_new(NULL);
@@ -55,7 +63,11 @@ pidgin_debug_plugin_info_build_html(void) {
 
 	g_string_append_printf(str, "<h2>%s</h2><dl>", _("Plugin Information"));
 
-	plugins = purple_plugins_find_all();
+	plugins = g_list_sort(
+		purple_plugins_find_all(),
+		purple_debug_plugin_compare_plugin_id
+	);
+
 	for(l = plugins; l != NULL; l = l->next) {
 		PurplePlugin *plugin = PURPLE_PLUGIN(l->data);
 		PurplePluginInfo *info = purple_plugin_get_info(plugin);
