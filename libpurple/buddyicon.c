@@ -158,7 +158,6 @@ purple_buddy_icon_data_cache(PurpleImage *img)
 	dirname = purple_buddy_icons_get_cache_dir();
 	filename = image_get_filename(img);
 	g_return_if_fail(filename != NULL);
-	path = g_build_filename(dirname, filename, NULL);
 
 	if (!g_file_test(dirname, G_FILE_TEST_IS_DIR))
 	{
@@ -173,6 +172,7 @@ purple_buddy_icon_data_cache(PurpleImage *img)
 		}
 	}
 
+	path = g_build_filename(dirname, filename, NULL);
 	if (!purple_image_save(img, path))
 		purple_debug_error("buddyicon", "failed to save icon %s", path);
 

@@ -594,11 +594,9 @@ static GList *msn_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 						found = TRUE;
 						break;
 					}
-					g_free(path);
 					g_free(history_path);
 				}
-				else
-					g_free(path);
+				g_free(path);
 			}
 			g_dir_close(dir);
 		}
