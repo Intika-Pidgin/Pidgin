@@ -483,6 +483,7 @@ pidgin_smiley_theme_activate_impl(PurpleSmileyTheme *theme)
 			if (!g_file_test(smiley_path, G_FILE_TEST_EXISTS)) {
 				purple_debug_warning("gtksmiley-theme",
 					"Smiley %s is missing", smiley_path);
+				g_free(smiley_path);
 				continue;
 			}
 
@@ -500,6 +501,8 @@ pidgin_smiley_theme_activate_impl(PurpleSmileyTheme *theme)
 				purple_smiley_list_add(proto_smileys, smiley);
 				g_object_unref(smiley);
 			}
+
+			g_free(smiley_path);
 		}
 	}
 
