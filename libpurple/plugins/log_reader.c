@@ -621,6 +621,7 @@ static GList *msn_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 
 			while ((name = g_dir_read_name(dir))) {
 				const char *c = name;
+				gchar *full_path;
 
 				if (!purple_str_has_prefix(c, username))
 					continue;
@@ -633,16 +634,18 @@ static GList *msn_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 					c++;
 				}
 
-				path = g_build_filename(path, name, NULL);
+				full_path = g_build_filename(path, name, NULL);
 				if (purple_strequal(c, ".xml") &&
-				    g_file_test(path, G_FILE_TEST_EXISTS)) {
+				    g_file_test(full_path, G_FILE_TEST_EXISTS)) {
 					found = TRUE;
+					g_free(path);
+					path = full_path;
 					g_free(logfile);
 					logfile = g_strdup(name);
 					break;
 				}
 				else
-					g_free(path);
+					g_free(full_path);
 			}
 			g_dir_close(dir);
 		}
