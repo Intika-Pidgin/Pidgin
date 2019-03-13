@@ -452,8 +452,7 @@ smiley_list_dnd_url_got(PurpleHttpConnection *http_conn,
 		return;
 
 	image_data = purple_http_response_get_data(response, &image_size);
-	image = purple_image_new_from_data(g_memdup(image_data, image_size),
-		image_size);
+	image = purple_image_new_from_data((const guint8 *)image_data, image_size);
 	if (!image)
 		return;
 

@@ -188,7 +188,7 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 		g_free(data);
 	} else if (data != NULL) {
 		if (len > 0)
-			dialog->icon_img = purple_image_new_from_data(data, len);
+			dialog->icon_img = purple_image_new_take_data(data, len);
 		else
 			g_free(data);
 	}
