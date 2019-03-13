@@ -92,7 +92,7 @@ purple_proxy_info_copy(PurpleProxyInfo *info)
 	copy->username = g_strdup(info->username);
 	copy->password = g_strdup(info->password);
 
-	return info;
+	return copy;
 }
 
 void
