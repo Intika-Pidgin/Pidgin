@@ -942,12 +942,12 @@ static int  free_parse_tree(parse_tree* tree) {
 		for(i=0;i<tree->num_children;i++){
 			if (tree->children[i]) {
 				free_parse_tree(tree->children[i]);
-				g_free(tree->children[i]);
 			}
 		}
-		if ((tree != &null_parse_tree) && (tree->contents != NULL))
+		if (tree != &null_parse_tree) {
 			g_free(tree->contents);
-
+			g_free(tree);
+		}
 	}
 	return 0;
 }
