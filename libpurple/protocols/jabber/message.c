@@ -208,7 +208,7 @@ static void handle_chat(JabberMessage *jm)
 			}
 
 			g_free(jbr->thread_id);
-			jbr->thread_id = g_strdup(jbr->thread_id);
+			jbr->thread_id = g_strdup(jm->thread_id);
 		}
 
 		purple_serv_got_im(gc, jm->from, body->str, 0, jm->sent);
