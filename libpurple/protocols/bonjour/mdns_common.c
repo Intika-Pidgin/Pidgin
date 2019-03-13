@@ -142,7 +142,7 @@ static void free_presence_txt_records(GSList *lst) {
 		g_free(kvp->key);
 		g_free(kvp->value);
 		g_free(kvp);
-		lst = g_slist_remove(lst, lst->data);
+		lst = g_slist_delete_link(lst, lst);
 	}
 }
 
