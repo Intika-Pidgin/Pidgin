@@ -785,15 +785,6 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 	g_return_val_if_fail(port       >  0,    NULL);
 	g_return_val_if_fail(connect_cb != NULL, NULL);
 
-	connect_data = g_new0(PurpleProxyConnectData, 1);
-	connect_data->fd = -1;
-	connect_data->handle = handle;
-	connect_data->connect_cb = connect_cb;
-	connect_data->data = data;
-	connect_data->host = g_strdup(host);
-	connect_data->port = port;
-	connect_data->gpi = purple_proxy_get_setup(account);
-
 	client = purple_gio_socket_client_new(account, &error);
 
 	if (client == NULL) {
@@ -802,11 +793,17 @@ purple_proxy_connect(void *handle, PurpleAccount *account,
 			error->message,
 			purple_request_cpar_from_account(account));
 		g_clear_error(&error);
-
-		purple_proxy_connect_data_destroy(connect_data);
 		return NULL;
 	}
 
+	connect_data = g_new0(PurpleProxyConnectData, 1);
+	connect_data->fd = -1;
+	connect_data->handle = handle;
+	connect_data->connect_cb = connect_cb;
+	connect_data->data = data;
+	connect_data->host = g_strdup(host);
+	connect_data->port = port;
+	connect_data->gpi = purple_proxy_get_setup(account);
 	connect_data->cancellable = g_cancellable_new();
 
 	purple_debug_info("proxy", "Attempting connection to %s:%u\n",
@@ -978,15 +975,6 @@ purple_proxy_connect_socks5_account(void *handle, PurpleAccount *account,
 	g_return_val_if_fail(port       >= 0,    NULL);
 	g_return_val_if_fail(connect_cb != NULL, NULL);
 
-	connect_data = g_new0(PurpleProxyConnectData, 1);
-	connect_data->fd = -1;
-	connect_data->handle = handle;
-	connect_data->connect_cb = connect_cb;
-	connect_data->data = data;
-	connect_data->host = g_strdup(host);
-	connect_data->port = port;
-	connect_data->gpi = gpi;
-
 	client = purple_gio_socket_client_new(account, &error);
 
 	if (client == NULL) {
@@ -995,11 +983,17 @@ purple_proxy_connect_socks5_account(void *handle, PurpleAccount *account,
 			error->message,
 			purple_request_cpar_from_account(account));
 		g_clear_error(&error);
-
-		purple_proxy_connect_data_destroy(connect_data);
 		return NULL;
 	}
 
+	connect_data = g_new0(PurpleProxyConnectData, 1);
+	connect_data->fd = -1;
+	connect_data->handle = handle;
+	connect_data->connect_cb = connect_cb;
+	connect_data->data = data;
+	connect_data->host = g_strdup(host);
+	connect_data->port = port;
+	connect_data->gpi = gpi;
 	connect_data->cancellable = g_cancellable_new();
 
 	purple_debug_info("proxy",
