@@ -1607,17 +1607,7 @@ pidgin_account_dialog_show_continue(PurpleAccount *account,
 
 	dialog = g_new0(AccountPrefsDialog, 1);
 
-	if (accounts_window != NULL && account != NULL)
-	{
-		g_hash_table_insert(account_pref_wins, account, dialog);
-	}
-
-	dialog->account = account;
-	dialog->password = g_strdup(password);
-	dialog->type = type;
-	dialog->sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-
-	if (dialog->account == NULL) {
+	if (account == NULL) {
 		/* Select the first protocol in the list*/
 		GList *protocol_list = purple_protocols_get_all();
 		if (protocol_list != NULL) {
@@ -1633,9 +1623,20 @@ pidgin_account_dialog_show_continue(PurpleAccount *account,
 
 	/* TODO if no protocols are loaded, this should inform the user that
 	        protocols need to be loaded instead of just doing nothing */
-	if (!dialog->protocol_id)
+	if (!dialog->protocol_id) {
+		g_free(dialog);
 		return;
+	}
 
+	if (accounts_window != NULL && account != NULL)
+	{
+		g_hash_table_insert(account_pref_wins, account, dialog);
+	}
+
+	dialog->account = account;
+	dialog->password = g_strdup(password);
+	dialog->type = type;
+	dialog->sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 	dialog->protocol = purple_protocols_find(dialog->protocol_id);
 
 	dialog->window = win = pidgin_create_dialog((type == PIDGIN_ADD_ACCOUNT_DIALOG) ? _("Add Account") : _("Modify Account"),

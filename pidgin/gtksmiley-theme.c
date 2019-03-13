@@ -107,6 +107,8 @@ pidgin_smiley_theme_index_free(PidginSmileyThemeIndex *index)
 		g_free(proto);
 	}
 	g_list_free(index->protocols);
+
+	g_free(index);
 }
 
 static PidginSmileyThemeIndex *
