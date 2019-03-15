@@ -195,7 +195,6 @@ pidgin_debug_plugin_info_show(void) {
 	priv = pidgin_debug_plugin_info_get_instance_private(PIDGIN_DEBUG_PLUGIN_INFO(win));
 
 	text = pidgin_debug_plugin_info_build_html();
-	g_warning("text: '%s'", text);
 	talkatu_markup_set_html(TALKATU_BUFFER(priv->buffer), text, -1);
 	g_free(text);
 
