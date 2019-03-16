@@ -271,8 +271,11 @@ typedef struct _PurpleProtocolServerIface PurpleProtocolServerIface;
  *                   protocol's active connections. You'd want to do this if you
  *                   need to repeatedly send some kind of keepalive packet to
  *                   the server to avoid being disconnected. ("Regularly" is
- *                   defined by <literal>KEEPALIVE_INTERVAL</literal> in
+ *                   defined to be 30 unless get_keepalive_interval() is
+ *                   implemented to override it).
  *                   <filename>libpurple/connection.c</filename>.)
+ * @get_keepalive_interval: If implemented, this will override the default
+ *                          keepalive interval.
  * @alias_buddy:     Save/store buddy's alias on server list/roster
  * @group_buddy:     Change a buddy's group on a server list/roster
  * @rename_group:    Rename a group on a server list/roster
@@ -351,6 +354,8 @@ struct _PurpleProtocolServerIface
 	void (*remove_buddies)(PurpleConnection *connection, GList *buddies, GList *groups);
 
 	void (*keepalive)(PurpleConnection *connection);
+
+	int (*get_keepalive_interval)(void);
 
 	void (*alias_buddy)(PurpleConnection *connection, const char *who,
 						const char *alias);
@@ -902,6 +907,8 @@ void purple_protocol_server_iface_remove_buddies(PurpleProtocol *protocol,
 
 void purple_protocol_server_iface_keepalive(PurpleProtocol *protocol,
 		PurpleConnection *connection);
+
+int purple_protocol_server_iface_get_keepalive_interval(PurpleProtocol *protocol);
 
 void purple_protocol_server_iface_alias_buddy(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *who, const char *alias);

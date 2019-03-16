@@ -40,8 +40,6 @@
 
 G_DEFINE_QUARK(purple-connection-error-quark, purple_connection_error);
 
-#define KEEPALIVE_INTERVAL 30
-
 typedef struct _PurpleConnectionPrivate  PurpleConnectionPrivate;
 
 /* Private data for a connection */
@@ -134,8 +132,9 @@ update_keepalive(PurpleConnection *gc, gboolean on)
 
 	if (on && !priv->keepalive)
 	{
-		purple_debug_info("connection", "Activating keepalive.\n");
-		priv->keepalive = g_timeout_add_seconds(KEEPALIVE_INTERVAL, send_keepalive, gc);
+		int interval = purple_protocol_server_iface_get_keepalive_interval(priv->protocol);
+		purple_debug_info("connection", "Activating keepalive to %d seconds.", interval);
+		priv->keepalive = g_timeout_add_seconds(interval, send_keepalive, gc);
 	}
 	else if (!on && priv->keepalive > 0)
 	{
@@ -622,7 +621,7 @@ void purple_connection_update_last_received(PurpleConnection *gc)
 	 * keepalive mechanism is inactive.
 	 */
 	if (priv->keepalive) {
-		purple_timeout_reset(priv->keepalive, KEEPALIVE_INTERVAL);
+		purple_timeout_reset(priv->keepalive, purple_protocol_server_iface_get_keepalive_interval(priv->protocol));
 	}
 }
 
