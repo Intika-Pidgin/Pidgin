@@ -498,6 +498,43 @@ char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
 
 
 /**************************************************************************/
+/* GLib Event Loop Functions                                              */
+/**************************************************************************/
+
+/**
+ * purple_timeout_reset:
+ * @id:               Id of a #GTimeoutSource.
+ * @seconds_from_now: Seconds to add to current monotonic time.
+ *
+ * Resets a #GTimeoutSource to be dispatched after @seconds_from_now seconds,
+ * after which it'll continue dispatching at its specified interval.
+ *
+ * The #GSource API exposes a function g_source_set_ready_time(), which is
+ * meant to be used for implementing custom source types. It sets a #GSource
+ * to be dispatched when the given monotonic time is reached, and it's also
+ * the function that's used by the #GTimeoutSource implementation to keep
+ * dispatching at a specified interval.
+ *
+ * The #GTimeoutSource API doesn't expose a function to reset when a
+ * #GTimeoutSource will dispatch the next time, but because it works to
+ * directly call g_source_set_ready_time() on a #GTimeoutSource, and since
+ * it seems unlikely that the implementation will change, we just do that
+ * for now as a workaround for this API shortcoming.
+ *
+ * For the moment, these would be correct ways to achieve a similar effect,
+ * both of which are ugly:
+ *
+ * - Remove the old #GTimeoutSource by calling g_source_remove(), and add a
+ *   new #GTimeoutSource by calling g_timeout_add_seconds(). Destroying and
+ *   creating #GSource objects is unnecessarily expensive.
+ * - Implement a custom #GResettableTimeoutSource. This means duplicating
+ *   #GTimeoutSource and adding one function g_resettable_timeout_reset()
+ *   which simply calls g_source_set_ready_time().
+ */
+void purple_timeout_reset(guint id, gint64 seconds_from_now);
+
+
+/**************************************************************************/
 /* Markup Functions                                                       */
 /**************************************************************************/
 

@@ -79,8 +79,6 @@ struct _PurpleConnectionPrivate
 	PurpleConnectionErrorInfo *error_info;
 
 	guint disconnect_timeout;  /* Timer used for nasty stack tricks         */
-	time_t last_received;      /* When we last received a packet. Set by the
-	                              protocols to avoid sending unneeded keepalives */
 };
 
 /* GObject property enums */
@@ -118,12 +116,6 @@ send_keepalive(gpointer data)
 {
 	PurpleConnection *gc = data;
 	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
-
-	/* Only send keep-alives if we haven't heard from the
-	 * server in a while.
-	 */
-	if ((time(NULL) - priv->last_received) < KEEPALIVE_INTERVAL)
-		return TRUE;
 
 	purple_protocol_server_iface_keepalive(priv->protocol, gc);
 
@@ -625,7 +617,13 @@ void purple_connection_update_last_received(PurpleConnection *gc)
 
 	g_return_if_fail(priv != NULL);
 
-	priv->last_received = time(NULL);
+	/*
+	 * For safety, actually this function shouldn't be called when the
+	 * keepalive mechanism is inactive.
+	 */
+	if (priv->keepalive) {
+		purple_timeout_reset(priv->keepalive, KEEPALIVE_INTERVAL);
+	}
 }
 
 static PurpleConnectionErrorInfo *
