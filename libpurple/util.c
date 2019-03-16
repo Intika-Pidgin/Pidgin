@@ -1239,6 +1239,19 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 	return g_string_free(string, FALSE);
 }
 
+
+/**************************************************************************/
+/* GLib Event Loop Functions                                              */
+/**************************************************************************/
+
+void purple_timeout_reset(guint id, gint64 seconds_from_now)
+{
+	GSource *source = g_main_context_find_source_by_id(NULL, id);
+
+	g_source_set_ready_time(source, g_get_monotonic_time() + (seconds_from_now * G_USEC_PER_SEC));
+}
+
+
 /**************************************************************************
  * Markup Functions
  **************************************************************************/
