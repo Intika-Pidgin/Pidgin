@@ -271,6 +271,8 @@ hbn_listen_cb(int fd, gpointer data) {
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
 		nattype.lookup_time = time(NULL);
 		do_callbacks();
+		g_resolver_free_addresses(ld->addresses);
+		g_free(ld);
 		return;
 	}
 
@@ -330,6 +332,7 @@ hbn_cb(GObject *sender, GAsyncResult *res, gpointer data) {
 
 		do_callbacks();
 
+		g_free(ld);
 		return;
 	}
 
@@ -340,6 +343,8 @@ hbn_cb(GObject *sender, GAsyncResult *res, gpointer data) {
 
 		do_callbacks();
 
+		g_resolver_free_addresses(ld->addresses);
+		g_free(ld);
 		return;
 	}
 }

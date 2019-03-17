@@ -834,6 +834,7 @@ convert_image_tags(const PurpleLog *log, const char *msg)
 			/* Write the new image tag */
 			g_string_append_printf(newmsg, "<img src=\"%s\">", new_filename);
 			g_free(path);
+			g_free(dir);
 		}
 
 		/* Continue from the end of the tag */
