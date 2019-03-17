@@ -340,8 +340,6 @@ _value_to_string(NMField * field)
 		}
 	} else {
 		/* assume it is a number */
-		value = g_new0(char, 20);
-
 		switch (field->type) {
 		case NMFIELD_TYPE_BYTE:
 		case NMFIELD_TYPE_WORD:
