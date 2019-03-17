@@ -173,6 +173,11 @@ sending_msg_cb(PurpleAccount *account, PurpleMessage *msg, gpointer handle)
 					_("No"), cancel_poune);
 		g_free(ask);
 	}
+	else
+	{
+		g_warn_if_reached();
+		g_free(offline);
+	}
 }
 
 static PurplePluginPrefFrame *

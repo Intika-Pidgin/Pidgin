@@ -81,6 +81,7 @@ pidgin_icon_loader_build(const gchar *theme_dir)
 
 	purple_xmlnode_free(root_node);
 	g_free(data);
+	g_free(dir);
 	return PURPLE_THEME(theme);
 }
 

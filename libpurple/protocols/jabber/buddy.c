@@ -1208,7 +1208,7 @@ static void jabber_vcard_parse(JabberStream *js, const char *from,
 						char *img_text;
 						char *hash;
 
-						img = purple_image_new_from_data(g_memdup(data, size), size);
+						img = purple_image_new_from_data(data, size);
 						img_id = purple_image_store_add(img);
 
 						jbi->vcard_images = g_slist_prepend(jbi->vcard_images, img);

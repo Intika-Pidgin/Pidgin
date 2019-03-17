@@ -355,7 +355,7 @@ peer_odc_handle_payload(PeerConnection *conn, const char *msg, size_t len, int e
 			if ((embedded_data != NULL) && (embedded_data->size == size))
 			{
 				image = purple_image_new_from_data(
-					g_memdup(embedded_data->data, size),
+					embedded_data->data,
 					size);
 				purple_image_set_friendly_filename(image, src);
 			}

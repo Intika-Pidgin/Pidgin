@@ -350,6 +350,7 @@ get_outgoing_next_content_html(PidginConvThemePrivate *priv, const char *dir)
 	if (!g_file_get_contents(file, &priv->outgoing_next_content_html, NULL, NULL)) {
 		priv->outgoing_next_content_html = g_strdup(get_outgoing_content_html(priv, dir));
 	}
+	g_free(file);
 
 	return priv->outgoing_next_content_html;
 }

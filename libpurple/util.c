@@ -1868,7 +1868,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						g_free(pt);
 					}
 					g_free(tag->data);
-					tags = g_list_remove(tags, tag->data);
+					tags = g_list_delete_link(tags, tag);
 				} else {
 					/* a closing tag we weren't expecting...
 					 * we'll let it slide, if it's really a tag...if it's

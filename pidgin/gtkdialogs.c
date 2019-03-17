@@ -20,6 +20,8 @@
  */
 #define _PIDGIN_GTKDIALOGS_C_
 
+#include <talkatu.h>
+
 #include "internal.h"
 #include "pidgin.h"
 #include "package_revision.h"
@@ -39,7 +41,6 @@
 #include "gtkdialogs.h"
 #include "gtklog.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 #include "pidginstock.h"
 
 #ifdef USE_GSTREAMER
@@ -113,8 +114,9 @@ pidgin_logo_versionize(GdkPixbuf **original, GtkWidget *widget) {
 static GtkWidget *
 pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 {
-	GtkWidget *win, *vbox, *frame, *logo, *webview, *button;
+	GtkWidget *win, *vbox, *logo, *view, *button;
 	GdkPixbuf *pixbuf;
+	GtkTextBuffer *buffer;
 	AtkObject *obj;
 	char *filename, *tmp;
 
@@ -128,10 +130,6 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 	pixbuf = pidgin_pixbuf_new_from_file(filename);
 	g_free(filename);
 
-#if 0  /* Don't versionize the logo when the logo has the version in it */
-	pidgin_logo_versionize(&pixbuf, logo);
-#endif
-
 	/* Insert the logo */
 	logo = gtk_image_new_from_pixbuf(pixbuf);
 	if (pixbuf)
@@ -142,11 +140,11 @@ pidgin_build_help_dialog(const char *title, const char *role, GString *string)
 	g_free(tmp);
 	gtk_box_pack_start(GTK_BOX(vbox), logo, FALSE, FALSE, 0);
 
-	frame = pidgin_create_webview(FALSE, &webview, NULL);
-	pidgin_webview_set_format_functions(PIDGIN_WEBVIEW(webview), PIDGIN_WEBVIEW_ALL ^ PIDGIN_WEBVIEW_SMILEY);
-	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
+	buffer = talkatu_html_buffer_new();
+	talkatu_markup_append_html(TALKATU_BUFFER(buffer), string->str, -1);
 
-	pidgin_webview_append_html(PIDGIN_WEBVIEW(webview), string->str);
+	view = talkatu_view_new_with_buffer(buffer);
+	gtk_box_pack_start(GTK_BOX(vbox), view, TRUE, TRUE, 0);
 
 	button = pidgin_dialog_add_button(GTK_DIALOG(win), _("_Close"),
 	                G_CALLBACK(destroy_win), win);
@@ -244,7 +242,7 @@ void pidgin_dialogs_plugins_info(void)
 	}
 	g_list_free(plugins);
 
-	g_string_append(str, "</dl>");
+	g_string_append(str, "</dl><br/>");
 
 	plugins_info = pidgin_build_help_dialog(title, "plugins_info", str);
 	g_signal_connect(G_OBJECT(plugins_info), "destroy",
