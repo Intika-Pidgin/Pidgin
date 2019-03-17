@@ -641,11 +641,15 @@ purple_keyring_drop_passwords(PurpleKeyring *keyring,
 	save_cb = purple_keyring_get_save_password(keyring);
 	g_assert(save_cb != NULL);
 
+	it = purple_accounts_get_all();
+	if (it == NULL)
+		return;
+
 	tracker = g_new0(PurpleKeyringDropTracker, 1);
 	tracker->cb = cb;
 	tracker->cb_data = data;
 
-	for (it = purple_accounts_get_all(); it != NULL; it = it->next) {
+	for (; it != NULL; it = it->next) {
 		PurpleAccount *account = it->data;
 
 		tracker->drop_outstanding++;

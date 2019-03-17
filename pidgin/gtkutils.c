@@ -3317,7 +3317,6 @@ open_file(PidginWebView *webview, const char *filename)
 	}
 #else
 	char *command = NULL;
-	char *tmp = NULL;
 	GError *error = NULL;
 
 	if (purple_running_gnome())
@@ -3347,7 +3346,7 @@ open_file(PidginWebView *webview, const char *filename)
 		gint exit_status;
 		if (!g_spawn_command_line_sync(command, NULL, NULL, &exit_status, &error))
 		{
-			tmp = g_strdup_printf(_("Error launching %s: %s"),
+			gchar *tmp = g_strdup_printf(_("Error launching %s: %s"),
 							filename, error->message);
 			purple_notify_error(webview, NULL, _("Unable to open file."), tmp, NULL);
 			g_free(tmp);
@@ -3359,7 +3358,8 @@ open_file(PidginWebView *webview, const char *filename)
 			char *secondary = g_strdup_printf(_("Process returned error code %d"),
 									exit_status);
 			purple_notify_error(webview, NULL, primary, secondary, NULL);
-			g_free(tmp);
+			g_free(primary);
+			g_free(secondary);
 		}
 	}
 #endif

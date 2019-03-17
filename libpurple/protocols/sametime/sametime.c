@@ -1646,7 +1646,6 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
 
   if (privacy->deny) {
     while ((list = purple_account_privacy_get_denied(acct))) {
-      g_free(list->data);
       purple_account_privacy_deny_remove(acct, list->data, TRUE);
     }
     while (count--) {
@@ -1655,7 +1654,6 @@ static void mw_session_setPrivacyInfo(struct mwSession *session) {
     }
   } else {
     while ((list = purple_account_privacy_get_permitted(acct))) {
-      g_free(list->data);
       purple_account_privacy_permit_remove(acct, list->data, TRUE);
     }
     while (count--) {
