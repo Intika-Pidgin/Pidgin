@@ -31,7 +31,6 @@
 #include "gtkplugin.h"
 #include "gtkutils.h"
 #include "gtkwebviewtoolbar.h"
-#include "pidginstock.h"
 
 #include <json-glib/json-glib.h>
 

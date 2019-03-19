@@ -397,8 +397,8 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 
 	gtk_dialog_add_action_widget(draw_window, color_button,
 		SCRNCAP_RESPONSE_COLOR);
-	gtk_dialog_add_button(draw_window, GTK_STOCK_ADD, GTK_RESPONSE_OK);
-	gtk_dialog_add_button(draw_window, GTK_STOCK_CANCEL,
+	gtk_dialog_add_button(draw_window, _("Add"), GTK_RESPONSE_OK);
+	gtk_dialog_add_button(draw_window, _("Cancel"),
 		GTK_RESPONSE_CANCEL);
 	gtk_dialog_set_default_response(draw_window, GTK_RESPONSE_OK);
 	g_signal_connect(G_OBJECT(draw_window), "response",
