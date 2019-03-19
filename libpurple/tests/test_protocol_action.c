@@ -21,7 +21,6 @@
  */
 
 #include <glib.h>
-#include <string.h>
 
 #include <purple.h>
 
@@ -30,7 +29,6 @@
  *****************************************************************************/
 static void
 _test_purple_protocol_action_callback(PurpleProtocolAction *action) {
-
 }
 
 /******************************************************************************
