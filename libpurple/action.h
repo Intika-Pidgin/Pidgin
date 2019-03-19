@@ -35,8 +35,8 @@ typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *action);
 /**
  * PurpleActionMenu:
  *
- * A generic structure that contains information about an "action."  One
- * place this is is used is by protocols to tell the core the list of available
+ * A generic structure that contains information about an "action".  One
+ * place this is used is by protocols to tell the core the list of available
  * right-click actions for a buddy list row.
  */
 typedef struct _PurpleActionMenu PurpleActionMenu;
@@ -93,7 +93,7 @@ void purple_action_menu_free(PurpleActionMenu *act);
  *
  * Returns: The label string.
  */
-gchar *purple_action_menu_get_label(const PurpleActionMenu *act);
+const gchar *purple_action_menu_get_label(const PurpleActionMenu *act);
 
 /**
  * purple_action_menu_get_callback:
@@ -132,7 +132,7 @@ GList* purple_action_menu_get_children(const PurpleActionMenu *act);
  *
  * Set the label to the PurpleActionMenu.
  */
-void purple_action_menu_set_label(PurpleActionMenu *act, gchar *label);
+void purple_action_menu_set_label(PurpleActionMenu *act, const gchar *label);
 
 /**
  * purple_action_menu_set_callback:
@@ -160,15 +160,6 @@ void purple_action_menu_set_data(PurpleActionMenu *act, gpointer data);
  * Set the children of the PurpleActionMenu.
  */
 void purple_action_menu_set_children(PurpleActionMenu *act, GList *children);
-
-/**
- * purple_action_menu_set_stock_icon:
- * @act:   The menu action.
- * @stock: The stock icon identifier.
- *
- * Sets the icon for the PurpleActionMenu.
- */
-void purple_action_menu_set_stock_icon(PurpleActionMenu *act, const gchar *stock);
 
 /**
  * purple_action_menu_get_stock_icon:
