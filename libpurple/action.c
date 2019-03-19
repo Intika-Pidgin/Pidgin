@@ -49,12 +49,14 @@ void
 purple_action_menu_free(PurpleActionMenu *act) {
 	g_return_if_fail(act != NULL);
 
+	purple_action_menu_set_children(act, NULL);
+
 	g_free(act->stock_icon);
 	g_free(act->label);
 	g_free(act);
 }
 
-gchar *
+const gchar *
 purple_action_menu_get_label(const PurpleActionMenu *act) {
 	g_return_val_if_fail(act != NULL, NULL);
 
@@ -83,10 +85,12 @@ purple_action_menu_get_children(const PurpleActionMenu *act) {
 }
 
 void
-purple_action_menu_set_label(PurpleActionMenu *act, gchar *label) {
+purple_action_menu_set_label(PurpleActionMenu *act, const gchar *label) {
 	g_return_if_fail(act != NULL);
 
-	act-> label = label;
+	g_free(act->label);
+
+	act->label = g_strdup(label);
 }
 
 void
@@ -107,16 +111,9 @@ void
 purple_action_menu_set_children(PurpleActionMenu *act, GList *children) {
 	g_return_if_fail(act != NULL);
 
+	g_list_free_full(act->children, purple_action_menu_free);
+
 	act->children = children;
-}
-
-void
-purple_action_menu_set_stock_icon(PurpleActionMenu *act, const gchar *stock) {
-	g_return_if_fail(act != NULL);
-
-	g_free(act->stock_icon);
-
-	act->stock_icon = g_strdup(stock);
 }
 
 const gchar *
