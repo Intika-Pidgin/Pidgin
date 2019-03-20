@@ -43,25 +43,21 @@ jabber_data_create_from_data(gconstpointer rawdata, gsize size, const char *type
 {
 	JabberData *data;
 	gchar *checksum;
-	gchar cid[256]; /* "Big enough" for a SHA1 hex hash value */
 
 	g_return_val_if_fail(rawdata != NULL, NULL);
 	g_return_val_if_fail(size > 0, NULL);
 	g_return_val_if_fail(type != NULL, NULL);
 
-	data = g_new0(JabberData, 1);
 	checksum = g_compute_checksum_for_data(G_CHECKSUM_SHA1, rawdata, size);
 
-	g_snprintf(cid, sizeof(cid), "sha1+%s@bob.xmpp.org", checksum);
-	g_free(checksum);
-
-	data->cid = g_strdup(cid);
+	data = g_new0(JabberData, 1);
+	data->cid = g_strdup_printf("sha1+%s@bob.xmpp.org", checksum);
 	data->type = g_strdup(type);
 	data->size = size;
 	data->ephemeral = ephemeral;
-
 	data->data = g_memdup(rawdata, size);
 
+	g_free(checksum);
 	return data;
 }
 
