@@ -44,8 +44,6 @@ G_BEGIN_DECLS
 typedef struct _JingleTransport JingleTransport;
 /** @copydoc _JingleTransportClass */
 typedef struct _JingleTransportClass JingleTransportClass;
-/** @copydoc _JingleTransportPrivate */
-typedef struct _JingleTransportPrivate JingleTransportPrivate;
 
 /** The transport class */
 struct _JingleTransportClass
@@ -63,7 +61,6 @@ struct _JingleTransportClass
 struct _JingleTransport
 {
 	GObject parent;                /**< The parent of this object. */
-	JingleTransportPrivate *priv;      /**< The private data of this object. */
 };
 
 /**
@@ -76,7 +73,7 @@ G_MODULE_EXPORT GType jingle_transport_get_type(void);
 /**
  * Registers the JingleTransport type in the type system.
  */
-void jingle_transport_register_type(PurplePlugin *plugin);
+void jingle_transport_register(PurplePlugin *plugin);
 
 JingleTransport *jingle_transport_create(const gchar *type);
 const gchar *jingle_transport_get_transport_type(JingleTransport *transport);

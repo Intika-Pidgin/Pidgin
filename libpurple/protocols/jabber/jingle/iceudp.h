@@ -33,7 +33,6 @@
 G_BEGIN_DECLS
 
 #define JINGLE_TYPE_ICEUDP            (jingle_iceudp_get_type())
-#define JINGLE_TYPE_ICEUDP_CANDIDATE  (jingle_iceudp_candidate_get_type())
 #define JINGLE_ICEUDP(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_ICEUDP, JingleIceUdp))
 #define JINGLE_ICEUDP_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_ICEUDP, JingleIceUdpClass))
 #define JINGLE_IS_ICEUDP(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_ICEUDP))
@@ -44,8 +43,9 @@ G_BEGIN_DECLS
 typedef struct _JingleIceUdp JingleIceUdp;
 /** @copydoc _JingleIceUdpClass */
 typedef struct _JingleIceUdpClass JingleIceUdpClass;
-/** @copydoc _JingleIceUdpPrivate */
-typedef struct _JingleIceUdpPrivate JingleIceUdpPrivate;
+
+#define JINGLE_TYPE_ICEUDP_CANDIDATE  (jingle_iceudp_candidate_get_type())
+
 /** @copydoc _JingleIceUdpCandidate */
 typedef struct _JingleIceUdpCandidate JingleIceUdpCandidate;
 
@@ -62,7 +62,6 @@ struct _JingleIceUdpClass
 struct _JingleIceUdp
 {
 	JingleTransport parent;                /**< The parent of this object. */
-	JingleIceUdpPrivate *priv;      /**< The private data of this object. */
 };
 
 struct _JingleIceUdpCandidate
@@ -99,7 +98,7 @@ G_MODULE_EXPORT GType jingle_iceudp_get_type(void);
 /**
  * Registers the JingleIceUdp type in the type system.
  */
-void jingle_iceudp_register_type(PurplePlugin *plugin);
+void jingle_iceudp_register(PurplePlugin *plugin);
 
 JingleIceUdpCandidate *jingle_iceudp_candidate_new(const gchar *id,
 		guint component, const gchar *foundation, guint generation,
