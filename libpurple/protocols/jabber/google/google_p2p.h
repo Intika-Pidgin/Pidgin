@@ -33,7 +33,6 @@
 G_BEGIN_DECLS
 
 #define JINGLE_TYPE_GOOGLE_P2P            (jingle_google_p2p_get_type())
-#define JINGLE_TYPE_GOOGLE_P2P_CANDIDATE  (jingle_google_p2p_candidate_get_type())
 #define JINGLE_GOOGLE_P2P(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_GOOGLE_P2P, JingleGoogleP2P))
 #define JINGLE_GOOGLE_P2P_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_GOOGLE_P2P, JingleGoogleP2PClass))
 #define JINGLE_IS_GOOGLE_P2P(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_GOOGLE_P2P))
@@ -44,8 +43,9 @@ G_BEGIN_DECLS
 typedef struct _JingleGoogleP2P JingleGoogleP2P;
 /** @copydoc _JingleGoogleP2PClass */
 typedef struct _JingleGoogleP2PClass JingleGoogleP2PClass;
-/** @copydoc _JingleGoogleP2PPrivate */
-typedef struct _JingleGoogleP2PPrivate JingleGoogleP2PPrivate;
+
+#define JINGLE_TYPE_GOOGLE_P2P_CANDIDATE  (jingle_google_p2p_candidate_get_type())
+
 /** @copydoc _JingleGoogleP2PCandidate */
 typedef struct _JingleGoogleP2PCandidate JingleGoogleP2PCandidate;
 
@@ -62,7 +62,6 @@ struct _JingleGoogleP2PClass
 struct _JingleGoogleP2P
 {
 	JingleTransport parent;         /**< The parent of this object. */
-	JingleGoogleP2PPrivate *priv;   /**< The private data of this object. */
 };
 
 struct _JingleGoogleP2PCandidate
@@ -94,7 +93,7 @@ G_MODULE_EXPORT GType jingle_google_p2p_get_type(void);
 /**
  * Registers the JingleGoogleP2P type in the type system.
  */
-void jingle_google_p2p_register_type(PurplePlugin *plugin);
+void jingle_google_p2p_register(PurplePlugin *plugin);
 
 JingleGoogleP2PCandidate *jingle_google_p2p_candidate_new(const gchar *id,
 		guint generation, const gchar *address, guint port, guint preference,

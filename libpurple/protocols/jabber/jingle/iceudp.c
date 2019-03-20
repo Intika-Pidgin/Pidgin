@@ -31,23 +31,11 @@
 
 #include <string.h>
 
-struct _JingleIceUdpPrivate
+typedef struct
 {
 	GList *local_candidates;
 	GList *remote_candidates;
-};
-
-#define JINGLE_ICEUDP_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), JINGLE_TYPE_ICEUDP, JingleIceUdpPrivate))
-
-static void jingle_iceudp_class_init (JingleIceUdpClass *klass);
-static void jingle_iceudp_init (JingleIceUdp *iceudp);
-static void jingle_iceudp_finalize (GObject *object);
-static void jingle_iceudp_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
-static void jingle_iceudp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-static JingleTransport *jingle_iceudp_parse_internal(PurpleXmlNode *iceudp);
-static PurpleXmlNode *jingle_iceudp_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
-static void jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate);
-static GList *jingle_iceudp_get_remote_candidates(JingleTransport *transport);
+} JingleIceUdpPrivate;
 
 enum {
 	PROP_0,
@@ -56,177 +44,24 @@ enum {
 	PROP_LAST
 };
 
-static JingleTransportClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
 
-static JingleIceUdpCandidate *
-jingle_iceudp_candidate_copy(JingleIceUdpCandidate *candidate)
-{
-	JingleIceUdpCandidate *new_candidate = g_new0(JingleIceUdpCandidate, 1);
-	new_candidate->id = g_strdup(candidate->id);
-	new_candidate->component = candidate->component;
-	new_candidate->foundation = g_strdup(candidate->foundation);
-	new_candidate->generation = candidate->generation;
-	new_candidate->ip = g_strdup(candidate->ip);
-	new_candidate->network = candidate->network;
-	new_candidate->port = candidate->port;
-	new_candidate->priority = candidate->priority;
-	new_candidate->protocol = g_strdup(candidate->protocol);
-	new_candidate->type = g_strdup(candidate->type);
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+	JingleIceUdp,
+	jingle_iceudp,
+	JINGLE_TYPE_TRANSPORT,
+	0,
+	G_ADD_PRIVATE_DYNAMIC(JingleIceUdp)
+);
 
-	new_candidate->username = g_strdup(candidate->username);
-	new_candidate->password = g_strdup(candidate->password);
-
-	new_candidate->rem_known = candidate->rem_known;
-
-	return new_candidate;
-}
-
-static void
-jingle_iceudp_candidate_free(JingleIceUdpCandidate *candidate)
-{
-	g_free(candidate->foundation);
-	g_free(candidate->id);
-	g_free(candidate->ip);
-	g_free(candidate->protocol);
-	g_free(candidate->reladdr);
-	g_free(candidate->type);
-
-	g_free(candidate->username);
-	g_free(candidate->password);
-}
-
-G_DEFINE_BOXED_TYPE(JingleIceUdpCandidate, jingle_iceudp_candidate,
-		jingle_iceudp_candidate_copy, jingle_iceudp_candidate_free)
-
-JingleIceUdpCandidate *
-jingle_iceudp_candidate_new(const gchar *id,
-		guint component, const gchar *foundation,
-		guint generation, const gchar *ip,
-		guint network, guint port, guint priority,
-		const gchar *protocol, const gchar *type,
-		const gchar *username, const gchar *password)
-{
-	JingleIceUdpCandidate *candidate = g_new0(JingleIceUdpCandidate, 1);
-	candidate->id = g_strdup(id);
-	candidate->component = component;
-	candidate->foundation = g_strdup(foundation);
-	candidate->generation = generation;
-	candidate->ip = g_strdup(ip);
-	candidate->network = network;
-	candidate->port = port;
-	candidate->priority = priority;
-	candidate->protocol = g_strdup(protocol);
-	candidate->type = g_strdup(type);
-
-	candidate->username = g_strdup(username);
-	candidate->password = g_strdup(password);
-
-	candidate->rem_known = FALSE;
-	return candidate;
-}
-
-PURPLE_DEFINE_TYPE(JingleIceUdp, jingle_iceudp, JINGLE_TYPE_TRANSPORT);
-
-static void
-jingle_iceudp_class_init (JingleIceUdpClass *klass)
-{
-	GObjectClass *gobject_class = (GObjectClass*)klass;
-	parent_class = g_type_class_peek_parent(klass);
-
-	gobject_class->finalize = jingle_iceudp_finalize;
-	gobject_class->set_property = jingle_iceudp_set_property;
-	gobject_class->get_property = jingle_iceudp_get_property;
-	klass->parent_class.to_xml = jingle_iceudp_to_xml_internal;
-	klass->parent_class.parse = jingle_iceudp_parse_internal;
-	klass->parent_class.transport_type = JINGLE_TRANSPORT_ICEUDP;
-	klass->parent_class.add_local_candidate = jingle_iceudp_add_local_candidate;
-	klass->parent_class.get_remote_candidates = jingle_iceudp_get_remote_candidates;
-
-	g_type_class_add_private(klass, sizeof(JingleIceUdpPrivate));
-
-	properties[PROP_LOCAL_CANDIDATES] = g_param_spec_pointer("local-candidates",
-			"Local candidates",
-			"The local candidates for this transport.",
-			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-	properties[PROP_REMOTE_CANDIDATES] = g_param_spec_pointer("remote-candidates",
-			"Remote candidates",
-			"The remote candidates for this transport.",
-			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-	g_object_class_install_properties(gobject_class, PROP_LAST, properties);
-}
-
-static void
-jingle_iceudp_init (JingleIceUdp *iceudp)
-{
-	iceudp->priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp);
-	iceudp->priv->local_candidates = NULL;
-	iceudp->priv->remote_candidates = NULL;
-}
-
-static void
-jingle_iceudp_finalize (GObject *iceudp)
-{
-/*	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp); */
-	purple_debug_info("jingle","jingle_iceudp_finalize\n");
-
-	G_OBJECT_CLASS(parent_class)->finalize(iceudp);
-}
-
-static void
-jingle_iceudp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-	JingleIceUdp *iceudp;
-
-	g_return_if_fail(object != NULL);
-	g_return_if_fail(JINGLE_IS_ICEUDP(object));
-
-	iceudp = JINGLE_ICEUDP(object);
-
-	switch (prop_id) {
-		case PROP_LOCAL_CANDIDATES:
-			iceudp->priv->local_candidates =
-					g_value_get_pointer(value);
-			break;
-		case PROP_REMOTE_CANDIDATES:
-			iceudp->priv->remote_candidates =
-					g_value_get_pointer(value);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-			break;
-	}
-}
-
-static void
-jingle_iceudp_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-	JingleIceUdp *iceudp;
-
-	g_return_if_fail(object != NULL);
-	g_return_if_fail(JINGLE_IS_ICEUDP(object));
-
-	iceudp = JINGLE_ICEUDP(object);
-
-	switch (prop_id) {
-		case PROP_LOCAL_CANDIDATES:
-			g_value_set_pointer(value, iceudp->priv->local_candidates);
-			break;
-		case PROP_REMOTE_CANDIDATES:
-			g_value_set_pointer(value, iceudp->priv->remote_candidates);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-			break;
-	}
-}
-
+/******************************************************************************
+ * JingleRawUdp Transport Implementation
+ *****************************************************************************/
 static void
 jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate)
 {
 	JingleIceUdp *iceudp = JINGLE_ICEUDP(transport);
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
 	PurpleMediaCandidateType type;
 	gchar *ip;
 	gchar *username;
@@ -257,19 +92,19 @@ jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, g
 	g_free(username);
 	g_free(ip);
 
-	for (iter = iceudp->priv->local_candidates; iter; iter = g_list_next(iter)) {
+	for (iter = priv->local_candidates; iter; iter = g_list_next(iter)) {
 		JingleIceUdpCandidate *c = iter->data;
 		if (purple_strequal(c->id, id)) {
 			generation = c->generation + 1;
 
 			g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
-			iceudp->priv->local_candidates = g_list_delete_link(
-					iceudp->priv->local_candidates, iter);
+			priv->local_candidates = g_list_delete_link(
+					priv->local_candidates, iter);
 
 			iceudp_candidate->generation = generation;
 
-			iceudp->priv->local_candidates = g_list_append(
-					iceudp->priv->local_candidates, iceudp_candidate);
+			priv->local_candidates = g_list_append(
+					priv->local_candidates, iceudp_candidate);
 
 			g_object_notify_by_pspec(G_OBJECT(iceudp), properties[PROP_LOCAL_CANDIDATES]);
 
@@ -277,8 +112,8 @@ jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, g
 		}
 	}
 
-	iceudp->priv->local_candidates = g_list_append(
-			iceudp->priv->local_candidates, iceudp_candidate);
+	priv->local_candidates = g_list_append(
+			priv->local_candidates, iceudp_candidate);
 
 	g_object_notify_by_pspec(G_OBJECT(iceudp), properties[PROP_LOCAL_CANDIDATES]);
 }
@@ -287,7 +122,8 @@ static GList *
 jingle_iceudp_get_remote_candidates(JingleTransport *transport)
 {
 	JingleIceUdp *iceudp = JINGLE_ICEUDP(transport);
-	GList *candidates = iceudp->priv->remote_candidates;
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
+	GList *candidates = priv->remote_candidates;
 	GList *ret = NULL;
 
 	for (; candidates; candidates = g_list_next(candidates)) {
@@ -321,7 +157,8 @@ static JingleIceUdpCandidate *
 jingle_iceudp_get_remote_candidate_by_id(JingleIceUdp *iceudp,
 		const gchar *id)
 {
-	GList *iter = iceudp->priv->remote_candidates;
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
+	GList *iter = priv->remote_candidates;
 	for (; iter; iter = g_list_next(iter)) {
 		JingleIceUdpCandidate *candidate = iter->data;
 		if (purple_strequal(candidate->id, id)) {
@@ -334,7 +171,7 @@ jingle_iceudp_get_remote_candidate_by_id(JingleIceUdp *iceudp,
 static void
 jingle_iceudp_add_remote_candidate(JingleIceUdp *iceudp, JingleIceUdpCandidate *candidate)
 {
-	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp);
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
 	JingleIceUdpCandidate *iceudp_candidate =
 			jingle_iceudp_get_remote_candidate_by_id(iceudp,
 					candidate->id);
@@ -351,7 +188,7 @@ jingle_iceudp_add_remote_candidate(JingleIceUdp *iceudp, JingleIceUdpCandidate *
 static JingleTransport *
 jingle_iceudp_parse_internal(PurpleXmlNode *iceudp)
 {
-	JingleTransport *transport = parent_class->parse(iceudp);
+	JingleTransport *transport = JINGLE_TRANSPORT_CLASS(jingle_iceudp_parent_class)->parse(iceudp);
 	PurpleXmlNode *candidate = purple_xmlnode_get_child(iceudp, "candidate");
 	JingleIceUdpCandidate *iceudp_candidate = NULL;
 
@@ -401,14 +238,14 @@ jingle_iceudp_parse_internal(PurpleXmlNode *iceudp)
 static PurpleXmlNode *
 jingle_iceudp_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action)
 {
-	PurpleXmlNode *node = parent_class->to_xml(transport, content, action);
+	PurpleXmlNode *node = JINGLE_TRANSPORT_CLASS(jingle_iceudp_parent_class)->to_xml(transport, content, action);
 
 	if (action == JINGLE_SESSION_INITIATE ||
 			action == JINGLE_SESSION_ACCEPT ||
 			action == JINGLE_TRANSPORT_INFO ||
 			action == JINGLE_CONTENT_ADD ||
 			action == JINGLE_TRANSPORT_REPLACE) {
-		JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(transport);
+		JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(JINGLE_ICEUDP(transport));
 		GList *iter = priv->local_candidates;
 		gboolean used_candidate = FALSE;
 
@@ -474,3 +311,171 @@ jingle_iceudp_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content
 	return node;
 }
 
+/******************************************************************************
+ * JingleRawUdp GObject Implementation
+ *****************************************************************************/
+static void
+jingle_iceudp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+	JingleIceUdp *iceudp = JINGLE_ICEUDP(object);
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
+
+	switch (prop_id) {
+		case PROP_LOCAL_CANDIDATES:
+			priv->local_candidates =
+					g_value_get_pointer(value);
+			break;
+		case PROP_REMOTE_CANDIDATES:
+			priv->remote_candidates =
+					g_value_get_pointer(value);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+jingle_iceudp_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+	JingleIceUdp *iceudp = JINGLE_ICEUDP(object);
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
+
+	switch (prop_id) {
+		case PROP_LOCAL_CANDIDATES:
+			g_value_set_pointer(value, priv->local_candidates);
+			break;
+		case PROP_REMOTE_CANDIDATES:
+			g_value_set_pointer(value, priv->remote_candidates);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+jingle_iceudp_init (JingleIceUdp *iceudp)
+{
+}
+
+static void
+jingle_iceudp_finalize (GObject *iceudp)
+{
+/*	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp); */
+	purple_debug_info("jingle","jingle_iceudp_finalize\n");
+
+	G_OBJECT_CLASS(jingle_iceudp_parent_class)->finalize(iceudp);
+}
+
+static void
+jingle_iceudp_class_finalize (JingleIceUdpClass *klass)
+{
+}
+
+static void
+jingle_iceudp_class_init (JingleIceUdpClass *klass)
+{
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
+	JingleTransportClass *transport_class = JINGLE_TRANSPORT_CLASS(klass);
+
+	obj_class->finalize = jingle_iceudp_finalize;
+	obj_class->set_property = jingle_iceudp_set_property;
+	obj_class->get_property = jingle_iceudp_get_property;
+
+	transport_class->to_xml = jingle_iceudp_to_xml_internal;
+	transport_class->parse = jingle_iceudp_parse_internal;
+	transport_class->transport_type = JINGLE_TRANSPORT_ICEUDP;
+	transport_class->add_local_candidate = jingle_iceudp_add_local_candidate;
+	transport_class->get_remote_candidates = jingle_iceudp_get_remote_candidates;
+
+	properties[PROP_LOCAL_CANDIDATES] = g_param_spec_pointer("local-candidates",
+			"Local candidates",
+			"The local candidates for this transport.",
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_REMOTE_CANDIDATES] = g_param_spec_pointer("remote-candidates",
+			"Remote candidates",
+			"The remote candidates for this transport.",
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties(obj_class, PROP_LAST, properties);
+}
+
+/******************************************************************************
+ * JingleIceUdpCandidate Boxed Implementation
+ *****************************************************************************/
+static JingleIceUdpCandidate *
+jingle_iceudp_candidate_copy(JingleIceUdpCandidate *candidate)
+{
+	JingleIceUdpCandidate *new_candidate = g_new0(JingleIceUdpCandidate, 1);
+	new_candidate->id = g_strdup(candidate->id);
+	new_candidate->component = candidate->component;
+	new_candidate->foundation = g_strdup(candidate->foundation);
+	new_candidate->generation = candidate->generation;
+	new_candidate->ip = g_strdup(candidate->ip);
+	new_candidate->network = candidate->network;
+	new_candidate->port = candidate->port;
+	new_candidate->priority = candidate->priority;
+	new_candidate->protocol = g_strdup(candidate->protocol);
+	new_candidate->type = g_strdup(candidate->type);
+
+	new_candidate->username = g_strdup(candidate->username);
+	new_candidate->password = g_strdup(candidate->password);
+
+	new_candidate->rem_known = candidate->rem_known;
+
+	return new_candidate;
+}
+
+static void
+jingle_iceudp_candidate_free(JingleIceUdpCandidate *candidate)
+{
+	g_free(candidate->foundation);
+	g_free(candidate->id);
+	g_free(candidate->ip);
+	g_free(candidate->protocol);
+	g_free(candidate->reladdr);
+	g_free(candidate->type);
+
+	g_free(candidate->username);
+	g_free(candidate->password);
+}
+
+G_DEFINE_BOXED_TYPE(JingleIceUdpCandidate, jingle_iceudp_candidate,
+		jingle_iceudp_candidate_copy, jingle_iceudp_candidate_free)
+
+/******************************************************************************
+ * Public API
+ *****************************************************************************/
+void
+jingle_iceudp_register(PurplePlugin *plugin) {
+	jingle_iceudp_register_type(G_TYPE_MODULE(plugin));
+}
+
+JingleIceUdpCandidate *
+jingle_iceudp_candidate_new(const gchar *id,
+		guint component, const gchar *foundation,
+		guint generation, const gchar *ip,
+		guint network, guint port, guint priority,
+		const gchar *protocol, const gchar *type,
+		const gchar *username, const gchar *password)
+{
+	JingleIceUdpCandidate *candidate = g_new0(JingleIceUdpCandidate, 1);
+	candidate->id = g_strdup(id);
+	candidate->component = component;
+	candidate->foundation = g_strdup(foundation);
+	candidate->generation = generation;
+	candidate->ip = g_strdup(ip);
+	candidate->network = network;
+	candidate->port = port;
+	candidate->priority = priority;
+	candidate->protocol = g_strdup(protocol);
+	candidate->type = g_strdup(type);
+
+	candidate->username = g_strdup(username);
+	candidate->password = g_strdup(password);
+
+	candidate->rem_known = FALSE;
+	return candidate;
+}

@@ -49,8 +49,6 @@ G_BEGIN_DECLS
 typedef struct _JingleRtp JingleRtp;
 /** @copydoc _JingleRtpClass */
 typedef struct _JingleRtpClass JingleRtpClass;
-/** @copydoc _JingleRtpPrivate */
-typedef struct _JingleRtpPrivate JingleRtpPrivate;
 
 /** The rtp class */
 struct _JingleRtpClass
@@ -62,7 +60,6 @@ struct _JingleRtpClass
 struct _JingleRtp
 {
 	JingleContent parent;                /**< The parent of this object. */
-	JingleRtpPrivate *priv;      /**< The private data of this object. */
 };
 
 /**
@@ -75,7 +72,7 @@ G_MODULE_EXPORT GType jingle_rtp_get_type(void);
 /**
  * Registers the JingleRtp type in the type system.
  */
-void jingle_rtp_register_type(PurplePlugin *plugin);
+void jingle_rtp_register(PurplePlugin *plugin);
 
 gchar *jingle_rtp_get_media_type(JingleContent *content);
 gchar *jingle_rtp_get_ssrc(JingleContent *content);
