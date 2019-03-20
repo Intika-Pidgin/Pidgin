@@ -387,7 +387,8 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 	SilcUInt32 pk_len;
 	char *fingerprint, *babbleprint;
 	SilcPublicKeyIdentifier ident;
-	char tmp2[1024], t[512];
+	char tmp2[1024];
+	const gchar *t;
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *g;
 	PurpleRequestField *f;
@@ -417,12 +418,11 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 	purple_request_field_group_add_field(g, f);
 	purple_request_fields_add_group(fields, g);
 
-	g_snprintf(t, sizeof(t),
-		   _("Channel authentication is used to secure the channel from "
-		     "unauthorized access. The authentication may be based on "
-		     "passphrase and digital signatures. If passphrase is set, it "
-		     "is required to be able to join. If channel public keys are set "
-		     "then only users whose public keys are listed are able to join."));
+	t = _("Channel authentication is used to secure the channel from "
+	      "unauthorized access. The authentication may be based on "
+	      "passphrase and digital signatures. If passphrase is set, it "
+	      "is required to be able to join. If channel public keys are set "
+	      "then only users whose public keys are listed are able to join.");
 
 	if (!channel_pubkeys || !silc_dlist_count(channel_pubkeys)) {
 		f = purple_request_field_list_new("list", NULL);
