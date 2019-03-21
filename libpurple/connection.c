@@ -60,7 +60,7 @@ struct _PurpleConnectionPrivate
 	void *proto_data;             /* Protocol-specific data.           */
 
 	char *display_name;           /* How you appear to other people.   */
-	guint keepalive;              /* Keep-alive.                       */
+	GSource *keepalive;           /* Keep-alive.                       */
 
 	/* Wants to Die state.  This is set when the user chooses to log out, or
 	 * when the protocol is disconnected and should not be automatically
@@ -134,13 +134,13 @@ update_keepalive(PurpleConnection *gc, gboolean on)
 	{
 		int interval = purple_protocol_server_iface_get_keepalive_interval(priv->protocol);
 		purple_debug_info("connection", "Activating keepalive to %d seconds.", interval);
-		priv->keepalive = g_timeout_add_seconds(interval, send_keepalive, gc);
+		priv->keepalive = g_main_context_find_source_by_id(NULL, g_timeout_add_seconds(interval, send_keepalive, gc));
 	}
-	else if (!on && priv->keepalive > 0)
+	else if (!on && priv->keepalive)
 	{
 		purple_debug_info("connection", "Deactivating keepalive.\n");
-		g_source_remove(priv->keepalive);
-		priv->keepalive = 0;
+		g_source_destroy(priv->keepalive);
+		priv->keepalive = NULL;
 	}
 }
 
