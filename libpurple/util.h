@@ -503,7 +503,7 @@ char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
 
 /**
  * purple_timeout_reset:
- * @id:               Id of a #GTimeoutSource.
+ * @source:           A #GTimeoutSource.
  * @seconds_from_now: Seconds to add to current monotonic time.
  *
  * Resets a #GTimeoutSource to be dispatched after @seconds_from_now seconds,
@@ -531,7 +531,7 @@ char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
  *   #GTimeoutSource and adding one function g_resettable_timeout_reset()
  *   which simply calls g_source_set_ready_time().
  */
-void purple_timeout_reset(guint id, gint64 seconds_from_now);
+void purple_timeout_reset(GSource *source, gint64 seconds_from_now);
 
 
 /**************************************************************************/
