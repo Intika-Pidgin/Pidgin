@@ -522,7 +522,7 @@ static void winpidgin_tray_update_icon(PurpleStatusPrimitive status,
 		icon_name = pidgin_status_icon_from_primitive(status);
 
 		if (flags & PIDGIN_DOCKLET_EMAIL_PENDING)
-			icon_name = PIDGDIN_ICON_MAIL_NEW;
+			icon_name = PIDGIN_ICON_MAIL_NEW;
 		else if (flags & PIDGIN_DOCKLET_CONV_PENDING)
 			icon_name = PIDGIN_ICON_MESSAGE_NEW;
 		else if (flags & PIDGIN_DOCKLET_CONNECTING)
