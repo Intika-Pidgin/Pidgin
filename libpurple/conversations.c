@@ -36,7 +36,7 @@ static GHashTable *conversation_cache = NULL;
 struct _purple_hconv {
 	gboolean im;
 	char *name;
-	const PurpleAccount *account;
+	PurpleAccount *account;
 };
 
 static guint
@@ -162,7 +162,7 @@ purple_conversations_get_chats(void)
 
 PurpleConversation *
 purple_conversations_find_with_account(const char *name,
-		const PurpleAccount *account)
+		PurpleAccount *account)
 {
 	PurpleConversation *c = NULL;
 	struct _purple_hconv hc;
@@ -184,7 +184,7 @@ purple_conversations_find_with_account(const char *name,
 
 PurpleIMConversation *
 purple_conversations_find_im_with_account(const char *name,
-		const PurpleAccount *account)
+		PurpleAccount *account)
 {
 	PurpleIMConversation *im = NULL;
 	struct _purple_hconv hc;
@@ -202,7 +202,7 @@ purple_conversations_find_im_with_account(const char *name,
 
 PurpleChatConversation *
 purple_conversations_find_chat_with_account(const char *name,
-		const PurpleAccount *account)
+		PurpleAccount *account)
 {
 	PurpleChatConversation *c = NULL;
 	struct _purple_hconv hc;

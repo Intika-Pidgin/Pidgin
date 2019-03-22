@@ -28,9 +28,6 @@
 #include "prefs.h"
 #include "status.h"
 
-#define PURPLE_STATUS_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_STATUS, PurpleStatusPrivate))
-
 typedef struct _PurpleStatusPrivate  PurpleStatusPrivate;
 
 /*
@@ -97,8 +94,9 @@ typedef struct
 	char *name;
 } PurpleStatusBuddyKey;
 
-static GObjectClass *parent_class;
 static GParamSpec *properties[PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleStatus, purple_status, G_TYPE_OBJECT);
 
 static int primitive_scores[] =
 {
@@ -589,7 +587,8 @@ status_has_changed(PurpleStatus *status)
 	{
 		old_status = purple_presence_get_active_status(presence);
 		if (old_status != NULL && (old_status != status)) {
-			PURPLE_STATUS_GET_PRIVATE(old_status)->active = FALSE;
+			PurpleStatusPrivate *priv = purple_status_get_instance_private(old_status);
+			priv->active = FALSE;
 			g_object_notify_by_pspec(G_OBJECT(old_status),
 					properties[PROP_ACTIVE]);
 		}
@@ -702,7 +701,7 @@ purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
 	GList *l;
 	GList *specified_attr_ids = NULL;
 	PurpleStatusType *status_type;
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(status);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
 	g_return_if_fail(priv != NULL);
 
@@ -822,9 +821,9 @@ purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
 }
 
 PurpleStatusType *
-purple_status_get_status_type(const PurpleStatus *status)
+purple_status_get_status_type(PurpleStatus *status)
 {
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(status);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -832,9 +831,9 @@ purple_status_get_status_type(const PurpleStatus *status)
 }
 
 PurplePresence *
-purple_status_get_presence(const PurpleStatus *status)
+purple_status_get_presence(PurpleStatus *status)
 {
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(status);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
@@ -842,7 +841,7 @@ purple_status_get_presence(const PurpleStatus *status)
 }
 
 const char *
-purple_status_get_id(const PurpleStatus *status)
+purple_status_get_id(PurpleStatus *status)
 {
 	g_return_val_if_fail(PURPLE_IS_STATUS(status), NULL);
 
@@ -850,7 +849,7 @@ purple_status_get_id(const PurpleStatus *status)
 }
 
 const char *
-purple_status_get_name(const PurpleStatus *status)
+purple_status_get_name(PurpleStatus *status)
 {
 	g_return_val_if_fail(PURPLE_IS_STATUS(status), NULL);
 
@@ -858,7 +857,7 @@ purple_status_get_name(const PurpleStatus *status)
 }
 
 gboolean
-purple_status_is_independent(const PurpleStatus *status)
+purple_status_is_independent(PurpleStatus *status)
 {
 	g_return_val_if_fail(PURPLE_IS_STATUS(status), FALSE);
 
@@ -866,7 +865,7 @@ purple_status_is_independent(const PurpleStatus *status)
 }
 
 gboolean
-purple_status_is_exclusive(const PurpleStatus *status)
+purple_status_is_exclusive(PurpleStatus *status)
 {
 	g_return_val_if_fail(PURPLE_IS_STATUS(status), FALSE);
 
@@ -874,7 +873,7 @@ purple_status_is_exclusive(const PurpleStatus *status)
 }
 
 gboolean
-purple_status_is_available(const PurpleStatus *status)
+purple_status_is_available(PurpleStatus *status)
 {
 	g_return_val_if_fail(PURPLE_IS_STATUS(status), FALSE);
 
@@ -882,9 +881,9 @@ purple_status_is_available(const PurpleStatus *status)
 }
 
 gboolean
-purple_status_is_active(const PurpleStatus *status)
+purple_status_is_active(PurpleStatus *status)
 {
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(status);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
 	g_return_val_if_fail(priv != NULL, FALSE);
 
@@ -892,7 +891,7 @@ purple_status_is_active(const PurpleStatus *status)
 }
 
 gboolean
-purple_status_is_online(const PurpleStatus *status)
+purple_status_is_online(PurpleStatus *status)
 {
 	PurpleStatusPrimitive primitive;
 
@@ -905,9 +904,9 @@ purple_status_is_online(const PurpleStatus *status)
 }
 
 GValue *
-purple_status_get_attr_value(const PurpleStatus *status, const char *id)
+purple_status_get_attr_value(PurpleStatus *status, const char *id)
 {
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(status);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
 	g_return_val_if_fail(priv != NULL, NULL);
 	g_return_val_if_fail(id   != NULL, NULL);
@@ -916,7 +915,7 @@ purple_status_get_attr_value(const PurpleStatus *status, const char *id)
 }
 
 gboolean
-purple_status_get_attr_boolean(const PurpleStatus *status, const char *id)
+purple_status_get_attr_boolean(PurpleStatus *status, const char *id)
 {
 	const GValue *value;
 
@@ -932,7 +931,7 @@ purple_status_get_attr_boolean(const PurpleStatus *status, const char *id)
 }
 
 int
-purple_status_get_attr_int(const PurpleStatus *status, const char *id)
+purple_status_get_attr_int(PurpleStatus *status, const char *id)
 {
 	const GValue *value;
 
@@ -948,7 +947,7 @@ purple_status_get_attr_int(const PurpleStatus *status, const char *id)
 }
 
 const char *
-purple_status_get_attr_string(const PurpleStatus *status, const char *id)
+purple_status_get_attr_string(PurpleStatus *status, const char *id)
 {
 	const GValue *value;
 
@@ -964,7 +963,7 @@ purple_status_get_attr_string(const PurpleStatus *status, const char *id)
 }
 
 gint
-purple_status_compare(const PurpleStatus *status1, const PurpleStatus *status2)
+purple_status_compare(PurpleStatus *status1, PurpleStatus *status2)
 {
 	PurpleStatusType *type1, *type2;
 	int score1 = 0, score2 = 0;
@@ -1113,7 +1112,7 @@ purple_status_set_property(GObject *obj, guint param_id, const GValue *value,
 		GParamSpec *pspec)
 {
 	PurpleStatus *status = PURPLE_STATUS(obj);
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(status);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
 	switch (param_id) {
 		case PROP_STATUS_TYPE:
@@ -1156,11 +1155,11 @@ purple_status_get_property(GObject *obj, guint param_id, GValue *value,
 
 /* GObject initialization function */
 static void
-purple_status_init(GTypeInstance *instance, gpointer klass)
+purple_status_init(PurpleStatus *status)
 {
-	PurpleStatus *status = PURPLE_STATUS(instance);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
-	PURPLE_STATUS_GET_PRIVATE(status)->attr_values =
+	priv->attr_values =
 		g_hash_table_new_full(g_str_hash, g_str_equal, NULL,
 		(GDestroyNotify)purple_value_free);
 }
@@ -1170,9 +1169,9 @@ static void
 purple_status_constructed(GObject *object)
 {
 	GList *l;
-	PurpleStatusPrivate *priv = PURPLE_STATUS_GET_PRIVATE(object);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(PURPLE_STATUS(object));
 
-	parent_class->constructed(object);
+	G_OBJECT_CLASS(purple_status_parent_class)->constructed(object);
 
 	for (l = purple_status_type_get_attrs(priv->status_type); l != NULL; l = l->next)
 	{
@@ -1192,11 +1191,12 @@ purple_status_constructed(GObject *object)
  *       remove it from the PurplePresence?
  */
 static void
-purple_status_finalize(GObject *object)
+purple_status_finalize(GObject *obj)
 {
-	g_hash_table_destroy(PURPLE_STATUS_GET_PRIVATE(object)->attr_values);
+	PurpleStatusPrivate *priv = purple_status_get_instance_private(PURPLE_STATUS(obj));
+	g_hash_table_destroy(priv->attr_values);
 
-	parent_class->finalize(object);
+	G_OBJECT_CLASS(purple_status_parent_class)->finalize(obj);
 }
 
 /* Class initializer function */
@@ -1205,16 +1205,12 @@ purple_status_class_init(PurpleStatusClass *klass)
 {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 
-	parent_class = g_type_class_peek_parent(klass);
-
 	obj_class->finalize = purple_status_finalize;
 	obj_class->constructed = purple_status_constructed;
 
 	/* Setup properties */
 	obj_class->get_property = purple_status_get_property;
 	obj_class->set_property = purple_status_set_property;
-
-	g_type_class_add_private(klass, sizeof(PurpleStatusPrivate));
 
 	properties[PROP_STATUS_TYPE] = g_param_spec_pointer("status-type",
 				"Status type",
@@ -1233,33 +1229,6 @@ purple_status_class_init(PurpleStatusClass *klass)
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
-}
-
-GType
-purple_status_get_type(void)
-{
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PurpleStatusClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)purple_status_class_init,
-			NULL,
-			NULL,
-			sizeof(PurpleStatus),
-			0,
-			(GInstanceInitFunc)purple_status_init,
-			NULL,
-		};
-
-		type = g_type_register_static(G_TYPE_OBJECT,
-				"PurpleStatus",
-				&info, 0);
-	}
-
-	return type;
 }
 
 PurpleStatus *

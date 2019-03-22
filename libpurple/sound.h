@@ -137,7 +137,7 @@ GType purple_sound_ui_ops_get_type(void);
  *
  * Plays the specified sound file.
  */
-void purple_sound_play_file(const char *filename, const PurpleAccount *account);
+void purple_sound_play_file(const char *filename, PurpleAccount *account);
 
 /**
  * purple_sound_play_event:
@@ -149,7 +149,7 @@ void purple_sound_play_file(const char *filename, const PurpleAccount *account);
  *
  * Plays the sound associated with the specified event.
  */
-void purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account);
+void purple_sound_play_event(PurpleSoundEventID event, PurpleAccount *account);
 
 /**
  * purple_sound_set_ui_ops:

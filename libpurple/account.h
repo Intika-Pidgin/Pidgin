@@ -213,7 +213,7 @@ void purple_account_disconnect(PurpleAccount *account);
  *
  * Returns: TRUE if the account is being disconnected.
  */
-gboolean purple_account_is_disconnecting(const PurpleAccount *account);
+gboolean purple_account_is_disconnecting(PurpleAccount *account);
 
 /**
  * purple_account_notify_added:
@@ -534,7 +534,7 @@ void purple_account_get_public_alias(PurpleAccount *account,
  *
  * Returns: %TRUE if suppression is used, or %FALSE if not.
  */
-gboolean purple_account_get_silence_suppression(const PurpleAccount *account);
+gboolean purple_account_get_silence_suppression(PurpleAccount *account);
 
 /**
  * purple_account_set_silence_suppression:
@@ -650,7 +650,7 @@ void purple_account_set_ui_data(PurpleAccount *account, gpointer ui_data);
  *         convenience field provided to the UIs--it is not
  *         used by the libpurple core.
  */
-gpointer purple_account_get_ui_data(const PurpleAccount *account);
+gpointer purple_account_get_ui_data(PurpleAccount *account);
 
 /**
  * purple_account_is_connected:
@@ -660,7 +660,7 @@ gpointer purple_account_get_ui_data(const PurpleAccount *account);
  *
  * Returns: %TRUE if connected, or %FALSE otherwise.
  */
-gboolean purple_account_is_connected(const PurpleAccount *account);
+gboolean purple_account_is_connected(PurpleAccount *account);
 
 /**
  * purple_account_is_connecting:
@@ -670,7 +670,7 @@ gboolean purple_account_is_connected(const PurpleAccount *account);
  *
  * Returns: %TRUE if connecting, or %FALSE otherwise.
  */
-gboolean purple_account_is_connecting(const PurpleAccount *account);
+gboolean purple_account_is_connecting(PurpleAccount *account);
 
 /**
  * purple_account_is_disconnected:
@@ -680,7 +680,7 @@ gboolean purple_account_is_connecting(const PurpleAccount *account);
  *
  * Returns: %TRUE if disconnected, or %FALSE otherwise.
  */
-gboolean purple_account_is_disconnected(const PurpleAccount *account);
+gboolean purple_account_is_disconnected(PurpleAccount *account);
 
 /**
  * purple_account_get_username:
@@ -690,7 +690,7 @@ gboolean purple_account_is_disconnected(const PurpleAccount *account);
  *
  * Returns: The username.
  */
-const char *purple_account_get_username(const PurpleAccount *account);
+const char *purple_account_get_username(PurpleAccount *account);
 
 /**
  * purple_account_get_password:
@@ -716,7 +716,7 @@ void purple_account_get_password(PurpleAccount *account,
  *
  * Returns: The alias.
  */
-const char *purple_account_get_private_alias(const PurpleAccount *account);
+const char *purple_account_get_private_alias(PurpleAccount *account);
 
 /**
  * purple_account_get_user_info:
@@ -726,7 +726,7 @@ const char *purple_account_get_private_alias(const PurpleAccount *account);
  *
  * Returns: The user information.
  */
-const char *purple_account_get_user_info(const PurpleAccount *account);
+const char *purple_account_get_user_info(PurpleAccount *account);
 
 /**
  * purple_account_get_buddy_icon_path:
@@ -736,7 +736,7 @@ const char *purple_account_get_user_info(const PurpleAccount *account);
  *
  * Returns: The buddy icon's non-cached path.
  */
-const char *purple_account_get_buddy_icon_path(const PurpleAccount *account);
+const char *purple_account_get_buddy_icon_path(PurpleAccount *account);
 
 /**
  * purple_account_get_protocol_id:
@@ -746,7 +746,7 @@ const char *purple_account_get_buddy_icon_path(const PurpleAccount *account);
  *
  * Returns: The protocol ID.
  */
-const char *purple_account_get_protocol_id(const PurpleAccount *account);
+const char *purple_account_get_protocol_id(PurpleAccount *account);
 
 /**
  * purple_account_get_protocol_name:
@@ -756,7 +756,7 @@ const char *purple_account_get_protocol_id(const PurpleAccount *account);
  *
  * Returns: The protocol name.
  */
-const char *purple_account_get_protocol_name(const PurpleAccount *account);
+const char *purple_account_get_protocol_name(PurpleAccount *account);
 
 /**
  * purple_account_get_connection:
@@ -766,7 +766,7 @@ const char *purple_account_get_protocol_name(const PurpleAccount *account);
  *
  * Returns: (transfer none): The connection.
  */
-PurpleConnection *purple_account_get_connection(const PurpleAccount *account);
+PurpleConnection *purple_account_get_connection(PurpleAccount *account);
 
 /**
  * purple_account_get_name_for_display:
@@ -779,7 +779,7 @@ PurpleConnection *purple_account_get_connection(const PurpleAccount *account);
  *
  * Returns: The name to display.
  */
-const gchar *purple_account_get_name_for_display(const PurpleAccount *account);
+const gchar *purple_account_get_name_for_display(PurpleAccount *account);
 
 /**
  * purple_account_get_remember_password:
@@ -789,7 +789,7 @@ const gchar *purple_account_get_name_for_display(const PurpleAccount *account);
  *
  * Returns: %TRUE if it should remember the password.
  */
-gboolean purple_account_get_remember_password(const PurpleAccount *account);
+gboolean purple_account_get_remember_password(PurpleAccount *account);
 
 /**
  * purple_account_get_check_mail:
@@ -799,7 +799,7 @@ gboolean purple_account_get_remember_password(const PurpleAccount *account);
  *
  * Returns: %TRUE if it should check for mail.
  */
-gboolean purple_account_get_check_mail(const PurpleAccount *account);
+gboolean purple_account_get_check_mail(PurpleAccount *account);
 
 /**
  * purple_account_get_enabled:
@@ -811,7 +811,7 @@ gboolean purple_account_get_check_mail(const PurpleAccount *account);
  *
  * Returns: %TRUE if it enabled on this UI.
  */
-gboolean purple_account_get_enabled(const PurpleAccount *account,
+gboolean purple_account_get_enabled(PurpleAccount *account,
 				  const char *ui);
 
 /**
@@ -822,7 +822,7 @@ gboolean purple_account_get_enabled(const PurpleAccount *account,
  *
  * Returns: The proxy information.
  */
-PurpleProxyInfo *purple_account_get_proxy_info(const PurpleAccount *account);
+PurpleProxyInfo *purple_account_get_proxy_info(PurpleAccount *account);
 
 /**
  * purple_account_get_privacy_type:
@@ -832,7 +832,7 @@ PurpleProxyInfo *purple_account_get_proxy_info(const PurpleAccount *account);
  *
  * Returns: The privacy type.
  */
-PurpleAccountPrivacyType purple_account_get_privacy_type(const PurpleAccount *account);
+PurpleAccountPrivacyType purple_account_get_privacy_type(PurpleAccount *account);
 
 /**
  * purple_account_privacy_permit_add:
@@ -984,7 +984,7 @@ gboolean purple_account_privacy_check(PurpleAccount *account, const char *who);
  *
  * Returns: (transfer none): The active status.
  */
-PurpleStatus *purple_account_get_active_status(const PurpleAccount *account);
+PurpleStatus *purple_account_get_active_status(PurpleAccount *account);
 
 /**
  * purple_account_get_status:
@@ -995,7 +995,7 @@ PurpleStatus *purple_account_get_active_status(const PurpleAccount *account);
  *
  * Returns: (transfer none): The status, or %NULL if it was never registered.
  */
-PurpleStatus *purple_account_get_status(const PurpleAccount *account,
+PurpleStatus *purple_account_get_status(PurpleAccount *account,
 									const char *status_id);
 
 /**
@@ -1007,7 +1007,7 @@ PurpleStatus *purple_account_get_status(const PurpleAccount *account,
  *
  * Returns: The status type if found, or %NULL.
  */
-PurpleStatusType *purple_account_get_status_type(const PurpleAccount *account,
+PurpleStatusType *purple_account_get_status_type(PurpleAccount *account,
 											 const char *id);
 
 /**
@@ -1023,7 +1023,7 @@ PurpleStatusType *purple_account_get_status_type(const PurpleAccount *account,
  * Returns: The status if found, or %NULL.
  */
 PurpleStatusType *purple_account_get_status_type_with_primitive(
-							const PurpleAccount *account,
+							PurpleAccount *account,
 							PurpleStatusPrimitive primitive);
 
 /**
@@ -1034,7 +1034,7 @@ PurpleStatusType *purple_account_get_status_type_with_primitive(
  *
  * Returns: (transfer none): The account's presence.
  */
-PurplePresence *purple_account_get_presence(const PurpleAccount *account);
+PurplePresence *purple_account_get_presence(PurpleAccount *account);
 
 /**
  * purple_account_is_status_active:
@@ -1045,7 +1045,7 @@ PurplePresence *purple_account_get_presence(const PurpleAccount *account);
  *
  * Returns: TRUE if active, or FALSE if not.
  */
-gboolean purple_account_is_status_active(const PurpleAccount *account,
+gboolean purple_account_is_status_active(PurpleAccount *account,
 									   const char *status_id);
 
 /**
@@ -1056,7 +1056,7 @@ gboolean purple_account_is_status_active(const PurpleAccount *account,
  *
  * Returns: (transfer none) (element-type PurpleStatusType): The account's status types.
  */
-GList *purple_account_get_status_types(const PurpleAccount *account);
+GList *purple_account_get_status_types(PurpleAccount *account);
 
 /**
  * purple_account_get_int:
@@ -1068,7 +1068,7 @@ GList *purple_account_get_status_types(const PurpleAccount *account);
  *
  * Returns: The value.
  */
-int purple_account_get_int(const PurpleAccount *account, const char *name,
+int purple_account_get_int(PurpleAccount *account, const char *name,
 						 int default_value);
 
 /**
@@ -1081,7 +1081,7 @@ int purple_account_get_int(const PurpleAccount *account, const char *name,
  *
  * Returns: The value.
  */
-const char *purple_account_get_string(const PurpleAccount *account,
+const char *purple_account_get_string(PurpleAccount *account,
 									const char *name,
 									const char *default_value);
 
@@ -1095,7 +1095,7 @@ const char *purple_account_get_string(const PurpleAccount *account,
  *
  * Returns: The value.
  */
-gboolean purple_account_get_bool(const PurpleAccount *account, const char *name,
+gboolean purple_account_get_bool(PurpleAccount *account, const char *name,
 							   gboolean default_value);
 
 /**
@@ -1109,7 +1109,7 @@ gboolean purple_account_get_bool(const PurpleAccount *account, const char *name,
  *
  * Returns: The value.
  */
-int purple_account_get_ui_int(const PurpleAccount *account, const char *ui,
+int purple_account_get_ui_int(PurpleAccount *account, const char *ui,
 							const char *name, int default_value);
 
 /**
@@ -1123,7 +1123,7 @@ int purple_account_get_ui_int(const PurpleAccount *account, const char *ui,
  *
  * Returns: The value.
  */
-const char *purple_account_get_ui_string(const PurpleAccount *account,
+const char *purple_account_get_ui_string(PurpleAccount *account,
 									   const char *ui, const char *name,
 									   const char *default_value);
 
@@ -1138,7 +1138,7 @@ const char *purple_account_get_ui_string(const PurpleAccount *account,
  *
  * Returns: The value.
  */
-gboolean purple_account_get_ui_bool(const PurpleAccount *account, const char *ui,
+gboolean purple_account_get_ui_bool(PurpleAccount *account, const char *ui,
 								  const char *name, gboolean default_value);
 
 

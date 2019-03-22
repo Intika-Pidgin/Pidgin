@@ -573,7 +573,7 @@ void purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean act
  *
  * Returns: The status's type.
  */
-PurpleStatusType *purple_status_get_status_type(const PurpleStatus *status);
+PurpleStatusType *purple_status_get_status_type(PurpleStatus *status);
 
 /**
  * purple_status_get_presence:
@@ -583,7 +583,7 @@ PurpleStatusType *purple_status_get_status_type(const PurpleStatus *status);
  *
  * Returns: The status's presence.
  */
-PurplePresence *purple_status_get_presence(const PurpleStatus *status);
+PurplePresence *purple_status_get_presence(PurpleStatus *status);
 
 /**
  * purple_status_get_id:
@@ -596,7 +596,7 @@ PurplePresence *purple_status_get_presence(const PurpleStatus *status);
  *
  * Returns: The status's ID.
  */
-const char *purple_status_get_id(const PurpleStatus *status);
+const char *purple_status_get_id(PurpleStatus *status);
 
 /**
  * purple_status_get_name:
@@ -609,7 +609,7 @@ const char *purple_status_get_id(const PurpleStatus *status);
  *
  * Returns: The status's name.
  */
-const char *purple_status_get_name(const PurpleStatus *status);
+const char *purple_status_get_name(PurpleStatus *status);
 
 /**
  * purple_status_is_independent:
@@ -622,7 +622,7 @@ const char *purple_status_get_name(const PurpleStatus *status);
  *
  * Returns: TRUE if the status is independent, or FALSE otherwise.
  */
-gboolean purple_status_is_independent(const PurpleStatus *status);
+gboolean purple_status_is_independent(PurpleStatus *status);
 
 /**
  * purple_status_is_exclusive:
@@ -635,7 +635,7 @@ gboolean purple_status_is_independent(const PurpleStatus *status);
  *
  * Returns: TRUE if the status is exclusive, FALSE otherwise.
  */
-gboolean purple_status_is_exclusive(const PurpleStatus *status);
+gboolean purple_status_is_exclusive(PurpleStatus *status);
 
 /**
  * purple_status_is_available:
@@ -650,7 +650,7 @@ gboolean purple_status_is_exclusive(const PurpleStatus *status);
  *
  * Returns: TRUE if the status is available, or FALSE otherwise.
  */
-gboolean purple_status_is_available(const PurpleStatus *status);
+gboolean purple_status_is_available(PurpleStatus *status);
 
 /**
  * purple_status_is_active:
@@ -660,7 +660,7 @@ gboolean purple_status_is_available(const PurpleStatus *status);
  *
  * Returns: The active state of the status.
  */
-gboolean purple_status_is_active(const PurpleStatus *status);
+gboolean purple_status_is_active(PurpleStatus *status);
 
 /**
  * purple_status_is_online:
@@ -670,7 +670,7 @@ gboolean purple_status_is_active(const PurpleStatus *status);
  *
  * Returns: TRUE if the status is considered online, FALSE otherwise
  */
-gboolean purple_status_is_online(const PurpleStatus *status);
+gboolean purple_status_is_online(PurpleStatus *status);
 
 /**
  * purple_status_get_attr_value:
@@ -681,8 +681,8 @@ gboolean purple_status_is_online(const PurpleStatus *status);
  *
  * Returns: The value of the attribute.
  */
-GValue *purple_status_get_attr_value(const PurpleStatus *status,
-									  const char *id);
+GValue *purple_status_get_attr_value(PurpleStatus *status,
+									 const char *id);
 
 /**
  * purple_status_get_attr_boolean:
@@ -693,8 +693,8 @@ GValue *purple_status_get_attr_value(const PurpleStatus *status,
  *
  * Returns: The boolean value of the attribute.
  */
-gboolean purple_status_get_attr_boolean(const PurpleStatus *status,
-									  const char *id);
+gboolean purple_status_get_attr_boolean(PurpleStatus *status,
+									    const char *id);
 
 /**
  * purple_status_get_attr_int:
@@ -705,7 +705,7 @@ gboolean purple_status_get_attr_boolean(const PurpleStatus *status,
  *
  * Returns: The integer value of the attribute.
  */
-int purple_status_get_attr_int(const PurpleStatus *status, const char *id);
+int purple_status_get_attr_int(PurpleStatus *status, const char *id);
 
 /**
  * purple_status_get_attr_string:
@@ -716,8 +716,8 @@ int purple_status_get_attr_int(const PurpleStatus *status, const char *id);
  *
  * Returns: The string value of the attribute.
  */
-const char *purple_status_get_attr_string(const PurpleStatus *status,
-										const char *id);
+const char *purple_status_get_attr_string(PurpleStatus *status,
+										  const char *id);
 
 /**
  * purple_status_compare:
@@ -730,7 +730,7 @@ const char *purple_status_get_attr_string(const PurpleStatus *status,
  *           0 if @status1 is equal to @status2.
  *           1 if @status2 is more available than @status1.
  */
-gint purple_status_compare(const PurpleStatus *status1, const PurpleStatus *status2);
+gint purple_status_compare(PurpleStatus *status1, PurpleStatus *status2);
 
 /**************************************************************************/
 /* Statuses subsystem                                                     */

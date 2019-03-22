@@ -3238,7 +3238,7 @@ purple_socket_speaks_ipv4(int fd)
  * String Functions
  **************************************************************************/
 const char *
-purple_normalize(const PurpleAccount *account, const char *str)
+purple_normalize(PurpleAccount *account, const char *str)
 {
 	const char *ret = NULL;
 	static char buf[BUF_LEN];

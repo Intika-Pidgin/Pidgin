@@ -32,7 +32,7 @@ static PurpleSoundUiOps *sound_ui_ops = NULL;
 static gint64 last_played[PURPLE_NUM_SOUNDS];
 
 static gboolean
-purple_sound_play_required(const PurpleAccount *account)
+purple_sound_play_required(PurpleAccount *account)
 {
 	gint pref_status = purple_prefs_get_int("/purple/sound/while_status");
 
@@ -62,7 +62,7 @@ purple_sound_play_required(const PurpleAccount *account)
 }
 
 void
-purple_sound_play_file(const char *filename, const PurpleAccount *account)
+purple_sound_play_file(const char *filename, PurpleAccount *account)
 {
 	if (!purple_sound_play_required(account))
 		return;
@@ -72,7 +72,7 @@ purple_sound_play_file(const char *filename, const PurpleAccount *account)
 }
 
 void
-purple_sound_play_event(PurpleSoundEventID event, const PurpleAccount *account)
+purple_sound_play_event(PurpleSoundEventID event, PurpleAccount *account)
 {
 	if (!purple_sound_play_required(account))
 		return;
