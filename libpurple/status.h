@@ -716,8 +716,7 @@ int purple_status_get_attr_int(PurpleStatus *status, const char *id);
  *
  * Returns: The string value of the attribute.
  */
-const char *purple_status_get_attr_string(PurpleStatus *status,
-										  const char *id);
+const char *purple_status_get_attr_string(PurpleStatus *status, const char *id);
 
 /**
  * purple_status_compare:
