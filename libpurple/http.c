@@ -41,6 +41,8 @@
 
 #define PURPLE_HTTP_PROGRESS_WATCHER_DEFAULT_INTERVAL 250000
 
+#define PURPLE_HTTP_GET_ACCOUNT(gc) (gc ? purple_connection_get_account(gc) : NULL)
+
 typedef struct _PurpleHttpSocket PurpleHttpSocket;
 
 typedef struct _PurpleHttpHeaders PurpleHttpHeaders;
@@ -567,8 +569,7 @@ purple_http_socket_connect_new(PurpleConnection *gc, const gchar *host,
 	GSocketClient *client;
 	GError *error = NULL;
 
-	client = purple_gio_socket_client_new(
-			purple_connection_get_account(gc), &error);
+	client = purple_gio_socket_client_new(PURPLE_HTTP_GET_ACCOUNT(gc), &error);
 
 	if (client == NULL) {
 		purple_debug_error("http", "Error connecting to '%s:%d': %s",
@@ -869,8 +870,7 @@ static void _purple_http_gen_headers(PurpleHttpConnection *hc)
 	req = hc->request;
 	url = hc->url;
 	hdrs = req->headers;
-	proxy = purple_proxy_get_setup(hc->gc ?
-		purple_connection_get_account(hc->gc) : NULL);
+	proxy = purple_proxy_get_setup(PURPLE_HTTP_GET_ACCOUNT(hc->gc));
 
 	proxy_http = (purple_proxy_info_get_proxy_type(proxy) == PURPLE_PROXY_HTTP ||
 		purple_proxy_info_get_proxy_type(proxy) == PURPLE_PROXY_USE_ENVVAR);

@@ -31,11 +31,6 @@
 
 #define PURPLE_PROTOCOLS_DOMAIN  (g_quark_from_static_string("protocols"))
 
-#define PURPLE_TYPE_PROTOCOL_ACTION  (purple_protocol_action_get_type())
-
-typedef struct _PurpleProtocolAction PurpleProtocolAction;
-typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *action);
-
 /**************************************************************************/
 /* Basic Protocol Information                                             */
 /**************************************************************************/
@@ -128,55 +123,11 @@ struct _PurpleProtocolChatEntry {
 	gboolean secret;
 };
 
-/**
- * PurpleProtocolAction:
- *
- * Represents an action that the protocol can perform. This shows up in the
- * Accounts menu, under a submenu with the name of the account.
- */
-struct _PurpleProtocolAction {
-	char *label;
-	PurpleProtocolActionCallback callback;
-	PurpleConnection *connection;
-	gpointer user_data;
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
 /* Attention Type API                                                     */
 /**************************************************************************/
-
-/**************************************************************************/
-/* Protocol Action API                                                    */
-/**************************************************************************/
-
-/**
- * purple_protocol_action_get_type:
- *
- * Returns: The #GType for the #PurpleProtocolAction boxed structure.
- */
-GType purple_protocol_action_get_type(void);
-
-/**
- * purple_protocol_action_new:
- * @label:    The description of the action to show to the user.
- * @callback: (scope call): The callback to call when the user selects this
- *            action.
- *
- * Allocates and returns a new PurpleProtocolAction. Use this to add actions in
- * a list in the get_actions function of the protocol.
- */
-PurpleProtocolAction *purple_protocol_action_new(const char* label,
-		PurpleProtocolActionCallback callback);
-
-/**
- * purple_protocol_action_free:
- * @action: The PurpleProtocolAction to free.
- *
- * Frees a PurpleProtocolAction
- */
-void purple_protocol_action_free(PurpleProtocolAction *action);
 
 /**************************************************************************/
 /* Protocol Chat Entry API                                                */

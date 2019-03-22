@@ -69,7 +69,7 @@ visibility_cb(PurpleBlistNode *node, gpointer whatever)
 	}
 }
 
-PurpleMenuAction *
+PurpleActionMenu *
 create_visibility_menu_item(OscarData *od, const char *bname)
 {
 	PurpleAccount *account = purple_connection_get_account(od->gc);
@@ -82,7 +82,7 @@ create_visibility_menu_item(OscarData *od, const char *bname)
 	} else {
 		label = on_list ? _(DONT_APPEAR_OFFLINE) : _(APPEAR_OFFLINE);
 	}
-	return purple_menu_action_new(label, PURPLE_CALLBACK(visibility_cb), NULL, NULL);
+	return purple_action_menu_new(label, PURPLE_CALLBACK(visibility_cb), NULL, NULL);
 }
 
 static void

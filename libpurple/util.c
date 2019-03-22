@@ -29,15 +29,6 @@
 
 #include <json-glib/json-glib.h>
 
-struct _PurpleMenuAction
-{
-	char *label;
-	PurpleCallback callback;
-	gpointer data;
-	GList *children;
-	gchar *stock_icon;
-};
-
 static char *custom_user_dir = NULL;
 static char *user_dir = NULL;
 static gchar *cache_dir = NULL;
@@ -46,99 +37,6 @@ static gchar *data_dir = NULL;
 
 static JsonNode *escape_js_node = NULL;
 static JsonGenerator *escape_js_gen = NULL;
-
-PurpleMenuAction *
-purple_menu_action_new(const char *label, PurpleCallback callback, gpointer data,
-                     GList *children)
-{
-	PurpleMenuAction *act = g_new0(PurpleMenuAction, 1);
-	act->label = g_strdup(label);
-	act->callback = callback;
-	act->data = data;
-	act->children = children;
-	return act;
-}
-
-void
-purple_menu_action_free(PurpleMenuAction *act)
-{
-	g_return_if_fail(act != NULL);
-
-	g_free(act->stock_icon);
-	g_free(act->label);
-	g_free(act);
-}
-
-char * purple_menu_action_get_label(const PurpleMenuAction *act)
-{
-	g_return_val_if_fail(act != NULL, NULL);
-
-	return act->label;
-}
-
-PurpleCallback purple_menu_action_get_callback(const PurpleMenuAction *act)
-{
-	g_return_val_if_fail(act != NULL, NULL);
-
-	return act->callback;
-}
-
-gpointer purple_menu_action_get_data(const PurpleMenuAction *act)
-{
-	g_return_val_if_fail(act != NULL, NULL);
-
-	return act->data;
-}
-
-GList* purple_menu_action_get_children(const PurpleMenuAction *act)
-{
-	g_return_val_if_fail(act != NULL, NULL);
-
-	return act->children;
-}
-
-void purple_menu_action_set_label(PurpleMenuAction *act, char *label)
-{
-	g_return_if_fail(act != NULL);
-
-	act-> label = label;
-}
-
-void purple_menu_action_set_callback(PurpleMenuAction *act, PurpleCallback callback)
-{
-	g_return_if_fail(act != NULL);
-
-	act->callback = callback;
-}
-
-void purple_menu_action_set_data(PurpleMenuAction *act, gpointer data)
-{
-	g_return_if_fail(act != NULL);
-
-	act->data = data;
-}
-
-void purple_menu_action_set_children(PurpleMenuAction *act, GList *children)
-{
-	g_return_if_fail(act != NULL);
-
-	act->children = children;
-}
-
-void purple_menu_action_set_stock_icon(PurpleMenuAction *act,
-	const gchar *stock)
-{
-	g_return_if_fail(act != NULL);
-
-	g_free(act->stock_icon);
-	act->stock_icon = g_strdup(stock);
-}
-
-const gchar *
-purple_menu_action_get_stock_icon(PurpleMenuAction *act)
-{
-	return act->stock_icon;
-}
 
 void
 purple_util_init(void)
