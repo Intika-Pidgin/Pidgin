@@ -26,6 +26,7 @@
 #include "internal.h"
 
 #include "accountopt.h"
+#include "action.h"
 #include "buddylist.h"
 #include "conversation.h"
 #include "core.h"

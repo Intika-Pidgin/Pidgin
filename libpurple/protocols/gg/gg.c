@@ -28,6 +28,7 @@
 
 #include <internal.h>
 
+#include "action.h"
 #include "plugins.h"
 #include "version.h"
 #include "notify.h"

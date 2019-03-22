@@ -387,7 +387,8 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 	SilcUInt32 pk_len;
 	char *fingerprint, *babbleprint;
 	SilcPublicKeyIdentifier ident;
-	char tmp2[1024], t[512];
+	char tmp2[1024];
+	const gchar *t;
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *g;
 	PurpleRequestField *f;
@@ -417,12 +418,11 @@ void silcpurple_chat_chauth_show(SilcPurple sg, SilcChannelEntry channel,
 	purple_request_field_group_add_field(g, f);
 	purple_request_fields_add_group(fields, g);
 
-	g_snprintf(t, sizeof(t),
-		   _("Channel authentication is used to secure the channel from "
-		     "unauthorized access. The authentication may be based on "
-		     "passphrase and digital signatures. If passphrase is set, it "
-		     "is required to be able to join. If channel public keys are set "
-		     "then only users whose public keys are listed are able to join."));
+	t = _("Channel authentication is used to secure the channel from "
+	      "unauthorized access. The authentication may be based on "
+	      "passphrase and digital signatures. If passphrase is set, it "
+	      "is required to be able to join. If channel public keys are set "
+	      "then only users whose public keys are listed are able to join.");
 
 	if (!channel_pubkeys || !silc_dlist_count(channel_pubkeys)) {
 		f = purple_request_field_list_new("list", NULL);
@@ -509,7 +509,7 @@ static void
 silcpurple_chat_prv_add(SilcPurpleCharPrv p, PurpleRequestFields *fields)
 {
 	SilcPurple sg = p->sg;
-	char tmp[512];
+	gchar *tmp;
 	PurpleRequestField *f;
 	const char *name, *passphrase, *alias;
 	GHashTable *comp;
@@ -528,9 +528,9 @@ silcpurple_chat_prv_add(SilcPurpleCharPrv p, PurpleRequestFields *fields)
 	alias = purple_request_field_string_get_value(f);
 
 	/* Add private group to buddy list */
-	g_snprintf(tmp, sizeof(tmp), "%s [Private Group]", name);
+	tmp = g_strdup_printf("%s [Private Group]", name);
 	comp = g_hash_table_new_full(g_str_hash, g_str_equal, NULL, g_free);
-	g_hash_table_replace(comp, "channel", g_strdup(tmp));
+	g_hash_table_replace(comp, "channel", tmp);
 	g_hash_table_replace(comp, "passphrase", g_strdup(passphrase));
 
 	cn = purple_chat_new(sg->account, alias, comp);
@@ -872,7 +872,7 @@ GList *silcpurple_chat_menu(PurpleChat *chat)
 	SilcUInt32 mode = 0;
 
 	GList *m = NULL;
-	PurpleMenuAction *act;
+	PurpleActionMenu *act;
 
 	if (components)
 		chname = g_hash_table_lookup(components, "channel");
@@ -889,31 +889,31 @@ GList *silcpurple_chat_menu(PurpleChat *chat)
 	if (strstr(chname, "[Private Group]"))
 		return NULL;
 
-	act = purple_menu_action_new(_("Get Info"),
+	act = purple_action_menu_new(_("Get Info"),
 	                           PURPLE_CALLBACK(silcpurple_chat_getinfo_menu),
 	                           NULL, NULL);
 	m = g_list_append(m, act);
 
 	if (chu) {
-		act = purple_menu_action_new(_("Add Private Group"),
+		act = purple_action_menu_new(_("Add Private Group"),
 		                           PURPLE_CALLBACK(silcpurple_chat_prv),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 	}
 
 	if (chu && mode & SILC_CHANNEL_UMODE_CHANFO) {
-		act = purple_menu_action_new(_("Channel Authentication"),
+		act = purple_action_menu_new(_("Channel Authentication"),
 		                           PURPLE_CALLBACK(silcpurple_chat_chauth),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 
 		if (channel->mode & SILC_CHANNEL_MODE_FOUNDER_AUTH) {
-			act = purple_menu_action_new(_("Reset Permanent"),
+			act = purple_action_menu_new(_("Reset Permanent"),
 			                           PURPLE_CALLBACK(silcpurple_chat_permanent_reset),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
 		} else {
-			act = purple_menu_action_new(_("Set Permanent"),
+			act = purple_action_menu_new(_("Set Permanent"),
 			                           PURPLE_CALLBACK(silcpurple_chat_permanent),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
@@ -921,42 +921,42 @@ GList *silcpurple_chat_menu(PurpleChat *chat)
 	}
 
 	if (chu && mode & SILC_CHANNEL_UMODE_CHANOP) {
-		act = purple_menu_action_new(_("Set User Limit"),
+		act = purple_action_menu_new(_("Set User Limit"),
 		                           PURPLE_CALLBACK(silcpurple_chat_ulimit),
 		                           NULL, NULL);
 		m = g_list_append(m, act);
 
 		if (channel->mode & SILC_CHANNEL_MODE_TOPIC) {
-			act = purple_menu_action_new(_("Reset Topic Restriction"),
+			act = purple_action_menu_new(_("Reset Topic Restriction"),
 			                           PURPLE_CALLBACK(silcpurple_chat_resettopic),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
 		} else {
-			act = purple_menu_action_new(_("Set Topic Restriction"),
+			act = purple_action_menu_new(_("Set Topic Restriction"),
 			                           PURPLE_CALLBACK(silcpurple_chat_settopic),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
 		}
 
 		if (channel->mode & SILC_CHANNEL_MODE_PRIVATE) {
-			act = purple_menu_action_new(_("Reset Private Channel"),
+			act = purple_action_menu_new(_("Reset Private Channel"),
 			                           PURPLE_CALLBACK(silcpurple_chat_resetprivate),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
 		} else {
-			act = purple_menu_action_new(_("Set Private Channel"),
+			act = purple_action_menu_new(_("Set Private Channel"),
 			                           PURPLE_CALLBACK(silcpurple_chat_setprivate),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
 		}
 
 		if (channel->mode & SILC_CHANNEL_MODE_SECRET) {
-			act = purple_menu_action_new(_("Reset Secret Channel"),
+			act = purple_action_menu_new(_("Reset Secret Channel"),
 			                           PURPLE_CALLBACK(silcpurple_chat_resetsecret),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
 		} else {
-			act = purple_menu_action_new(_("Set Secret Channel"),
+			act = purple_action_menu_new(_("Set Secret Channel"),
 			                           PURPLE_CALLBACK(silcpurple_chat_setsecret),
 			                           NULL, NULL);
 			m = g_list_append(m, act);
@@ -968,7 +968,7 @@ GList *silcpurple_chat_menu(PurpleChat *chat)
 		wb = silc_calloc(1, sizeof(*wb));
 		wb->sg = sg;
 		wb->channel = channel;
-		act = purple_menu_action_new(_("Draw On Whiteboard"),
+		act = purple_action_menu_new(_("Draw On Whiteboard"),
 		                           PURPLE_CALLBACK(silcpurple_chat_wb),
 		                           (void *)wb, NULL);
 		m = g_list_append(m, act);

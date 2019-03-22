@@ -289,7 +289,7 @@ gboolean purple_blist_node_is_transient(PurpleBlistNode *node);
  * purple_blist_node_get_extended_menu:
  * @n: The blist node for which to obtain the extended menu items.
  *
- * Returns: (element-type PurpleMenuAction): The extended menu items for a buddy
+ * Returns: (element-type PurpleActionMenu): The extended menu items for a buddy
  *          list node, as harvested by the blist-node-extended-menu signal.
  */
 GList *purple_blist_node_get_extended_menu(PurpleBlistNode *n);

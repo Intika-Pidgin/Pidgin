@@ -4259,16 +4259,16 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	jingle_session_register_type(plugin);
+	jingle_session_register(plugin);
 
-	jingle_transport_register_type(plugin);
-	jingle_iceudp_register_type(plugin);
-	jingle_rawudp_register_type(plugin);
-	jingle_google_p2p_register_type(plugin);
+	jingle_transport_register(plugin);
+	jingle_iceudp_register(plugin);
+	jingle_rawudp_register(plugin);
+	jingle_google_p2p_register(plugin);
 
-	jingle_content_register_type(plugin);
+	jingle_content_register(plugin);
 #ifdef USE_VV
-	jingle_rtp_register_type(plugin);
+	jingle_rtp_register(plugin);
 #endif
 
 	jabber_protocol_register_type(plugin);
