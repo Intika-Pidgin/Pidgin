@@ -755,9 +755,8 @@ static void ggp_roster_reply_list(PurpleConnection *gc, uint32_t version,
 static const gchar * ggp_roster_send_update_group_add(
 	ggp_roster_content *content, PurpleGroup *group)
 {
-	gchar *id_dyn;
+	gchar *id;
 	const char *id_existing, *group_name;
-	static gchar id[40];
 	PurpleXmlNode *group_node;
 	gboolean succ = TRUE;
 
@@ -773,9 +772,7 @@ static const gchar * ggp_roster_send_update_group_add(
 	purple_debug_info("gg", "ggp_roster_send_update_group_add: adding %s\n",
 		purple_group_get_name(group));
 
-	id_dyn = purple_uuid_random();
-	g_snprintf(id, sizeof(id), "%s", id_dyn);
-	g_free(id_dyn);
+	id = purple_uuid_random();
 
 	group_node = purple_xmlnode_new_child(content->groups_node, "Group");
 	succ &= ggp_xml_set_string(group_node, "Id", id);
@@ -786,7 +783,7 @@ static const gchar * ggp_roster_send_update_group_add(
 
 	g_hash_table_insert(content->group_ids, g_strdup(group_name),
 		g_strdup(id));
-	g_hash_table_insert(content->group_nodes, g_strdup(id), group_node);
+	g_hash_table_replace(content->group_nodes, id, group_node);
 
 	g_return_val_if_fail(succ, NULL);
 

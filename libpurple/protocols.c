@@ -538,61 +538,6 @@ purple_protocol_get_max_message_size(PurpleProtocol *protocol)
 	return purple_protocol_client_iface_get_max_message_size(protocol, NULL);
 }
 
-/**************************************************************************/
-/* Protocol Action API                                                    */
-/**************************************************************************/
-
-PurpleProtocolAction *
-purple_protocol_action_new(const char* label,
-		PurpleProtocolActionCallback callback)
-{
-	PurpleProtocolAction *action;
-
-	g_return_val_if_fail(label != NULL && callback != NULL, NULL);
-
-	action = g_new0(PurpleProtocolAction, 1);
-
-	action->label    = g_strdup(label);
-	action->callback = callback;
-
-	return action;
-}
-
-void
-purple_protocol_action_free(PurpleProtocolAction *action)
-{
-	g_return_if_fail(action != NULL);
-
-	g_free(action->label);
-	g_free(action);
-}
-
-/**************************************************************************
- * GBoxed code for PurpleProtocolAction
- **************************************************************************/
-
-static PurpleProtocolAction *
-purple_protocol_action_copy(PurpleProtocolAction *action)
-{
-	g_return_val_if_fail(action != NULL, NULL);
-
-	return purple_protocol_action_new(action->label, action->callback);
-}
-
-GType
-purple_protocol_action_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("PurpleProtocolAction",
-				(GBoxedCopyFunc)purple_protocol_action_copy,
-				(GBoxedFreeFunc)purple_protocol_action_free);
-	}
-
-	return type;
-}
-
 /**************************************************************************
  * Protocols API
  **************************************************************************/

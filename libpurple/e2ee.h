@@ -223,7 +223,7 @@ purple_e2ee_provider_get_name(PurpleE2eeProvider *provider);
  * The function is called, when user extends the E2EE menu for the conversation
  * specified in its parameter.
  *
- * Function should return the GList of PurpleMenuAction objects.
+ * Function should return the GList of PurpleActionMenu objects.
  */
 void
 purple_e2ee_provider_set_conv_menu_cb(PurpleE2eeProvider *provider,
@@ -245,7 +245,7 @@ purple_e2ee_provider_get_conv_menu_cb(PurpleE2eeProvider *provider);
  * @provider: The E2EE provider.
  * @conv: The conversation.
  *
- * Returns: (element-type PurpleMenuAction) (transfer full): The list of
+ * Returns: (element-type PurpleActionMenu) (transfer full): The list of
  *          actions for an E2EE menu.
  */
 GList *

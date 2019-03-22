@@ -47,8 +47,6 @@ G_BEGIN_DECLS
 typedef struct _JingleContent JingleContent;
 /** @copydoc _JingleContentClass */
 typedef struct _JingleContentClass JingleContentClass;
-/** @copydoc _JingleContentPrivate */
-typedef struct _JingleContentPrivate JingleContentPrivate;
 
 /** The content class */
 struct _JingleContentClass
@@ -65,7 +63,6 @@ struct _JingleContentClass
 struct _JingleContent
 {
 	GObject parent;                /**< The parent of this object. */
-	JingleContentPrivate *priv;      /**< The private data of this object. */
 };
 
 /**
@@ -78,7 +75,7 @@ G_MODULE_EXPORT GType jingle_content_get_type(void);
 /**
  * Registers the JingleContent type in the type system.
  */
-void jingle_content_register_type(PurplePlugin *plugin);
+void jingle_content_register(PurplePlugin *plugin);
 
 JingleContent *jingle_content_create(const gchar *type, const gchar *creator,
 		const gchar *disposition, const gchar *name,

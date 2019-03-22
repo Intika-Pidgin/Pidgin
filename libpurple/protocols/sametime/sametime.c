@@ -33,6 +33,7 @@
 /* purple includes */
 #include "account.h"
 #include "accountopt.h"
+#include "action.h"
 #include "circularbuffer.h"
 #include "conversation.h"
 #include "debug.h"
@@ -43,7 +44,6 @@
 #include "plugins.h"
 #include "protocol.h"
 #include "request.h"
-#include "util.h"
 #include "version.h"
 
 /* meanwhile includes */
@@ -1337,7 +1337,7 @@ static void blist_node_menu_cb(PurpleBlistNode *node,
                                GList **menu, struct mwPurpleProtocolData *pd) {
   const char *owner;
   PurpleAccount *acct;
-  PurpleMenuAction *act;
+  PurpleActionMenu *act;
 
   /* we only want groups */
   if(! PURPLE_IS_GROUP(node)) return;
@@ -1351,7 +1351,7 @@ static void blist_node_menu_cb(PurpleBlistNode *node,
   /* check if it's a NAB group for this account */
   owner = purple_blist_node_get_string(node, GROUP_KEY_OWNER);
   if(owner && purple_strequal(owner, purple_account_get_username(acct))) {
-    act = purple_menu_action_new(_("Get Notes Address Book Info"),
+    act = purple_action_menu_new(_("Get Notes Address Book Info"),
                                PURPLE_CALLBACK(blist_menu_nab), pd, NULL);
     *menu = g_list_append(*menu, act);
   }
@@ -3535,14 +3535,14 @@ static void blist_menu_conf(PurpleBlistNode *node, gpointer data) {
 
 static GList *mw_protocol_blist_node_menu(PurpleBlistNode *node) {
   GList *l = NULL;
-  PurpleMenuAction *act;
+  PurpleActionMenu *act;
 
   if(! PURPLE_IS_BUDDY(node))
     return l;
 
   l = g_list_append(l, NULL);
 
-  act = purple_menu_action_new(_("Invite to Conference..."),
+  act = purple_action_menu_new(_("Invite to Conference..."),
                              PURPLE_CALLBACK(blist_menu_conf), NULL, NULL);
   l = g_list_append(l, act);
 
