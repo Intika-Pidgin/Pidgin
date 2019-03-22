@@ -55,7 +55,7 @@ G_DEFINE_DYNAMIC_TYPE_EXTENDED(
 );
 
 /******************************************************************************
- * JingleRawUdp Transport Implementation
+ * JingleIceUdp Transport Implementation
  *****************************************************************************/
 static void
 jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate)
@@ -312,7 +312,7 @@ jingle_iceudp_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content
 }
 
 /******************************************************************************
- * JingleRawUdp GObject Implementation
+ * JingleIceUdp GObject Implementation
  *****************************************************************************/
 static void
 jingle_iceudp_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)

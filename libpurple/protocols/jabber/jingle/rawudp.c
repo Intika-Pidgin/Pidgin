@@ -272,10 +272,6 @@ jingle_rawudp_get_property (GObject *object, guint prop_id, GValue *value, GPara
 static void
 jingle_rawudp_init (JingleRawUdp *rawudp)
 {
-	JingleRawUdpPrivate *priv = jingle_rawudp_get_instance_private(rawudp);
-
-	priv->local_candidates = NULL;
-	priv->remote_candidates = NULL;
 }
 
 static void

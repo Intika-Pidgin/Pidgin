@@ -112,7 +112,6 @@ jingle_transport_add_local_candidate(JingleTransport *transport, const gchar *id
 	                                                           generation, candidate);
 }
 
-
 GList *
 jingle_transport_get_remote_candidates(JingleTransport *transport)
 {

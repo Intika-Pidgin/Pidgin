@@ -554,8 +554,7 @@ jingle_session_add_content(JingleSession *session, JingleContent* content)
 
 	priv = jingle_session_get_instance_private(session);
 
-	priv->contents =
-			g_list_append(priv->contents, content);
+	priv->contents = g_list_append(priv->contents, content);
 	jingle_content_set_session(content, session);
 
 	g_object_notify_by_pspec(G_OBJECT(session), properties[PROP_CONTENTS]);
