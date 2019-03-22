@@ -39,6 +39,14 @@ typedef void (*PurpleRequestDatasheetActionCb)(
 typedef gboolean (*PurpleRequestDatasheetActionCheckCb)(
 	PurpleRequestDatasheetRecord *rec, gpointer user_data);
 
+/**
+ * PurpleRequestDatasheetColumnType:
+ * @PURPLE_REQUEST_DATASHEET_COLUMN_STRING: The column displays strings.
+ * @PURPLE_REQUEST_DATASHEET_COLUMN_IMAGE: The column displays images.
+ *
+ * The type of data to be shown in a column.
+ */
+
 typedef enum
 {
 	PURPLE_REQUEST_DATASHEET_COLUMN_STRING,
