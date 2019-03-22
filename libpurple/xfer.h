@@ -193,6 +193,9 @@ struct _PurpleXferClass
 
 /**
  * PurpleProtocolXferInterface:
+ * @can_receive: A method to determine if we can receive a file.
+ * @send_file: A method to determine if we can send a file.
+ * @new_xfer: A method to create a new file transfer.
  *
  * The protocol file transfer interface.
  *

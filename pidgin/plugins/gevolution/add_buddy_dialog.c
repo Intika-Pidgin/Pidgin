@@ -493,7 +493,7 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 					 G_CALLBACK(search_changed_cb), dialog);
 
 	/* Clear button */
-	button = gtk_button_new_from_stock(GTK_STOCK_CLEAR);
+	button = gtk_button_new_with_mnemonic(_("C_lear"));
 	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -553,8 +553,7 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 	gtk_widget_show(bbox);
 
 	/* "New Person" button */
-	button = pidgin_pixbuf_button_from_stock(_("New Person"), GTK_STOCK_NEW,
-										   PIDGIN_BUTTON_HORIZONTAL);
+	button = gtk_button_new_with_mnemonic(_("_New Person"));
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -562,7 +561,7 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 					 G_CALLBACK(new_person_cb), dialog);
 
 	/* "Cancel" button */
-	button = gtk_button_new_from_stock(GTK_STOCK_CANCEL);
+	button = gtk_button_new_with_mnemonic(_("_Cancel"));
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -570,8 +569,7 @@ gevo_add_buddy_dialog_show(PurpleAccount *account, const char *username,
 					 G_CALLBACK(cancel_cb), dialog);
 
 	/* "Select Buddy" button */
-	button = pidgin_pixbuf_button_from_stock(_("Select Buddy"), GTK_STOCK_APPLY,
-										   PIDGIN_BUTTON_HORIZONTAL);
+	button = gtk_button_new_with_mnemonic(_("_Select Buddy"));
 	dialog->select_button = button;
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(button, FALSE);

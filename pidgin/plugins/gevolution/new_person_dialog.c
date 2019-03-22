@@ -316,23 +316,6 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	gtk_box_pack_start(GTK_BOX(vbox), hbox, TRUE, TRUE, 0);
 	gtk_widget_show(hbox);
 
-#if 0
-	/* Now the left side of the hbox */
-	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
-	gtk_box_pack_start(GTK_BOX(hbox), vbox2, FALSE, FALSE, 0);
-	gtk_widget_show(vbox2);
-
-	/* Buddy icon button */
-	button = gtk_button_new_from_stock(GTK_STOCK_OPEN);
-	gtk_box_pack_start(GTK_BOX(vbox2), button, FALSE, FALSE, 0);
-	gtk_widget_show(button);
-
-	/* Label */
-	label = gtk_label_new(_("Buddy Icon"));
-	gtk_box_pack_start(GTK_BOX(vbox2), label, FALSE, FALSE, 0);
-	gtk_widget_show(label);
-#endif
-
 	/* Now the right side. */
 	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, 12);
 	gtk_box_pack_start(GTK_BOX(hbox), vbox2, TRUE, TRUE, 0);
@@ -395,7 +378,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	gtk_widget_show(bbox);
 
 	/* Cancel button */
-	button = gtk_button_new_from_stock(GTK_STOCK_CANCEL);
+	button = gtk_button_new_with_mnemonic(_("_Cancel"));
 	gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0);
 	gtk_widget_show(button);
 
@@ -403,7 +386,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 					 G_CALLBACK(cancel_cb), dialog);
 
 	/* Add button */
-	button = gtk_button_new_from_stock(GTK_STOCK_ADD);
+	button = gtk_button_new_with_mnemonic(_("_Add"));
 	dialog->add_button = button;
 	if (username == NULL || *username == '\0')
 		gtk_widget_set_sensitive(button, FALSE);

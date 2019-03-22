@@ -31,23 +31,11 @@
 
 #include <string.h>
 
-struct _JingleGoogleP2PPrivate
+typedef struct
 {
 	GList *local_candidates;
 	GList *remote_candidates;
-};
-
-#define JINGLE_GOOGLE_P2P_GET_PRIVATE(obj) (G_TYPE_INSTANCE_GET_PRIVATE((obj), JINGLE_TYPE_GOOGLE_P2P, JingleGoogleP2PPrivate))
-
-static void jingle_google_p2p_class_init (JingleGoogleP2PClass *klass);
-static void jingle_google_p2p_init (JingleGoogleP2P *google_p2p);
-static void jingle_google_p2p_finalize (GObject *object);
-static void jingle_google_p2p_get_property (GObject *object, guint prop_id, GValue *value, GParamSpec *pspec);
-static void jingle_google_p2p_set_property (GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec);
-static JingleTransport *jingle_google_p2p_parse_internal(PurpleXmlNode *google_p2p);
-static PurpleXmlNode *jingle_google_p2p_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
-static void jingle_google_p2p_add_local_candidate(JingleTransport *transport, const gchar *id, guint generation, PurpleMediaCandidate *candidate);
-static GList *jingle_google_p2p_get_remote_candidates(JingleTransport *transport);
+} JingleGoogleP2PPrivate;
 
 enum {
 	PROP_0,
@@ -56,163 +44,25 @@ enum {
 	PROP_LAST
 };
 
-static JingleTransportClass *parent_class = NULL;
 static GParamSpec *properties[PROP_LAST];
 
-static JingleGoogleP2PCandidate *
-jingle_google_p2p_candidate_copy(JingleGoogleP2PCandidate *candidate)
-{
-	JingleGoogleP2PCandidate *new_candidate = g_new0(JingleGoogleP2PCandidate, 1);
-	new_candidate->id = g_strdup(candidate->id);
-	new_candidate->address = g_strdup(candidate->address);
-	new_candidate->port = candidate->port;
-	new_candidate->preference = candidate->preference;
-	new_candidate->type = g_strdup(candidate->type);
-	new_candidate->protocol = g_strdup(candidate->protocol);
-	new_candidate->username = g_strdup(candidate->username);
-	new_candidate->password = g_strdup(candidate->password);
-	new_candidate->generation = candidate->generation;
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+	JingleGoogleP2P,
+	jingle_google_p2p,
+	JINGLE_TYPE_TRANSPORT,
+	0,
+	G_ADD_PRIVATE_DYNAMIC(JingleGoogleP2P)
+);
 
-	new_candidate->rem_known = candidate->rem_known;
-
-	return new_candidate;
-}
-
-static void
-jingle_google_p2p_candidate_free(JingleGoogleP2PCandidate *candidate)
-{
-	g_free(candidate->id);
-	g_free(candidate->address);
-	g_free(candidate->type);
-	g_free(candidate->protocol);
-	g_free(candidate->username);
-	g_free(candidate->password);
-}
-
-G_DEFINE_BOXED_TYPE(JingleGoogleP2PCandidate, jingle_google_p2p_candidate,
-		jingle_google_p2p_candidate_copy, jingle_google_p2p_candidate_free)
-
-JingleGoogleP2PCandidate *
-jingle_google_p2p_candidate_new(const gchar *id, guint generation,
-		const gchar *address, guint port, guint preference,
-		const gchar *type, const gchar *protocol,
-		const gchar *username, const gchar *password)
-{
-	JingleGoogleP2PCandidate *candidate = g_new0(JingleGoogleP2PCandidate, 1);
-	candidate->id = g_strdup(id);
-	candidate->address = g_strdup(address);
-	candidate->port = port;
-	candidate->preference = preference;
-	candidate->type = g_strdup(type);
-	candidate->protocol = g_strdup(protocol);
-	candidate->username = g_strdup(username);
-	candidate->password = g_strdup(password);
-	candidate->generation = generation;
-
-	candidate->rem_known = FALSE;
-	return candidate;
-}
-
-PURPLE_DEFINE_TYPE(JingleGoogleP2P, jingle_google_p2p, JINGLE_TYPE_TRANSPORT);
-
-static void
-jingle_google_p2p_class_init(JingleGoogleP2PClass *klass)
-{
-	GObjectClass *gobject_class = (GObjectClass *)klass;
-	parent_class = g_type_class_peek_parent(klass);
-
-	gobject_class->finalize = jingle_google_p2p_finalize;
-	gobject_class->set_property = jingle_google_p2p_set_property;
-	gobject_class->get_property = jingle_google_p2p_get_property;
-	klass->parent_class.to_xml = jingle_google_p2p_to_xml_internal;
-	klass->parent_class.parse = jingle_google_p2p_parse_internal;
-	klass->parent_class.transport_type = NS_GOOGLE_TRANSPORT_P2P;
-	klass->parent_class.add_local_candidate = jingle_google_p2p_add_local_candidate;
-	klass->parent_class.get_remote_candidates = jingle_google_p2p_get_remote_candidates;
-
-	g_type_class_add_private(klass, sizeof(JingleGoogleP2PPrivate));
-
-	properties[PROP_LOCAL_CANDIDATES] = g_param_spec_pointer("local-candidates",
-			"Local candidates",
-			"The local candidates for this transport.",
-			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-	properties[PROP_REMOTE_CANDIDATES] = g_param_spec_pointer("remote-candidates",
-			"Remote candidates",
-			"The remote candidates for this transport.",
-			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-	g_object_class_install_properties(gobject_class, PROP_LAST, properties);
-}
-
-static void
-jingle_google_p2p_init(JingleGoogleP2P *google_p2p)
-{
-	google_p2p->priv = JINGLE_GOOGLE_P2P_GET_PRIVATE(google_p2p);
-	google_p2p->priv->local_candidates = NULL;
-	google_p2p->priv->remote_candidates = NULL;
-}
-
-static void
-jingle_google_p2p_finalize(GObject *google_p2p)
-{
-/*	JingleGoogleP2PPrivate *priv = JINGLE_GOOGLE_P2P_GET_PRIVATE(google_p2p); */
-	purple_debug_info("jingle","jingle_google_p2p_finalize\n");
-
-	G_OBJECT_CLASS(parent_class)->finalize(google_p2p);
-}
-
-static void
-jingle_google_p2p_set_property(GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
-{
-	JingleGoogleP2P *google_p2p;
-
-	g_return_if_fail(object != NULL);
-	g_return_if_fail(JINGLE_IS_GOOGLE_P2P(object));
-
-	google_p2p = JINGLE_GOOGLE_P2P(object);
-
-	switch (prop_id) {
-		case PROP_LOCAL_CANDIDATES:
-			google_p2p->priv->local_candidates = g_value_get_pointer(value);
-			break;
-		case PROP_REMOTE_CANDIDATES:
-			google_p2p->priv->remote_candidates = g_value_get_pointer(value);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
-			break;
-	}
-}
-
-static void
-jingle_google_p2p_get_property(GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
-{
-	JingleGoogleP2P *google_p2p;
-
-	g_return_if_fail(object != NULL);
-	g_return_if_fail(JINGLE_IS_GOOGLE_P2P(object));
-
-	google_p2p = JINGLE_GOOGLE_P2P(object);
-
-	switch (prop_id) {
-		case PROP_LOCAL_CANDIDATES:
-			g_value_set_pointer(value, google_p2p->priv->local_candidates);
-			break;
-		case PROP_REMOTE_CANDIDATES:
-			g_value_set_pointer(value, google_p2p->priv->remote_candidates);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
-			break;
-	}
-}
-
+/******************************************************************************
+ * JingleGoogleP2P Transport Implementation
+ *****************************************************************************/
 static void
 jingle_google_p2p_add_local_candidate(JingleTransport *transport, const gchar *id,
                                       guint generation, PurpleMediaCandidate *candidate)
 {
 	JingleGoogleP2P *google_p2p = JINGLE_GOOGLE_P2P(transport);
+	JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(google_p2p);
 	JingleGoogleP2PCandidate *google_p2p_candidate;
 	gchar *ip;
 	gchar *username;
@@ -242,19 +92,19 @@ jingle_google_p2p_add_local_candidate(JingleTransport *transport, const gchar *i
 	g_free(username);
 	g_free(ip);
 
-	for (iter = google_p2p->priv->local_candidates; iter; iter = g_list_next(iter)) {
+	for (iter = priv->local_candidates; iter; iter = g_list_next(iter)) {
 		JingleGoogleP2PCandidate *c = iter->data;
 		if (!strcmp(c->id, id)) {
 			generation = c->generation + 1;
 
 			g_boxed_free(JINGLE_TYPE_GOOGLE_P2P_CANDIDATE, c);
-			google_p2p->priv->local_candidates = g_list_delete_link(
-					google_p2p->priv->local_candidates, iter);
+			priv->local_candidates = g_list_delete_link(
+					priv->local_candidates, iter);
 
 			google_p2p_candidate->generation = generation;
 
-			google_p2p->priv->local_candidates = g_list_append(
-					google_p2p->priv->local_candidates, candidate);
+			priv->local_candidates = g_list_append(
+					priv->local_candidates, candidate);
 
 			g_object_notify_by_pspec(G_OBJECT(google_p2p), properties[PROP_LOCAL_CANDIDATES]);
 
@@ -262,17 +112,50 @@ jingle_google_p2p_add_local_candidate(JingleTransport *transport, const gchar *i
 		}
 	}
 
-	google_p2p->priv->local_candidates = g_list_append(
-			google_p2p->priv->local_candidates, google_p2p_candidate);
+	priv->local_candidates = g_list_append(
+			priv->local_candidates, google_p2p_candidate);
 
 	g_object_notify_by_pspec(G_OBJECT(google_p2p), properties[PROP_LOCAL_CANDIDATES]);
+}
+
+static JingleGoogleP2PCandidate *
+jingle_google_p2p_get_remote_candidate_by_id(JingleGoogleP2P *google_p2p,
+		const gchar *id)
+{
+	JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(google_p2p);
+	GList *iter = priv->remote_candidates;
+	for (; iter; iter = g_list_next(iter)) {
+		JingleGoogleP2PCandidate *candidate = iter->data;
+		if (!strcmp(candidate->id, id)) {
+			return candidate;
+		}
+	}
+	return NULL;
+}
+
+static void
+jingle_google_p2p_add_remote_candidate(JingleGoogleP2P *google_p2p, JingleGoogleP2PCandidate *candidate)
+{
+	JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(google_p2p);
+	JingleGoogleP2PCandidate *google_p2p_candidate =
+			jingle_google_p2p_get_remote_candidate_by_id(google_p2p,
+					candidate->id);
+	if (google_p2p_candidate != NULL) {
+		priv->remote_candidates = g_list_remove(priv->remote_candidates,
+		                                        google_p2p_candidate);
+		g_boxed_free(JINGLE_TYPE_GOOGLE_P2P_CANDIDATE, google_p2p_candidate);
+	}
+	priv->remote_candidates = g_list_append(priv->remote_candidates, candidate);
+
+	g_object_notify_by_pspec(G_OBJECT(google_p2p), properties[PROP_REMOTE_CANDIDATES]);
 }
 
 static GList *
 jingle_google_p2p_get_remote_candidates(JingleTransport *transport)
 {
 	JingleGoogleP2P *google_p2p = JINGLE_GOOGLE_P2P(transport);
-	GList *candidates = google_p2p->priv->remote_candidates;
+	JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(google_p2p);
+	GList *candidates = priv->remote_candidates;
 	GList *ret = NULL;
 
 	for (; candidates; candidates = g_list_next(candidates)) {
@@ -301,85 +184,17 @@ jingle_google_p2p_get_remote_candidates(JingleTransport *transport)
 	return ret;
 }
 
-static JingleGoogleP2PCandidate *
-jingle_google_p2p_get_remote_candidate_by_id(JingleGoogleP2P *google_p2p,
-		const gchar *id)
-{
-	GList *iter = google_p2p->priv->remote_candidates;
-	for (; iter; iter = g_list_next(iter)) {
-		JingleGoogleP2PCandidate *candidate = iter->data;
-		if (!strcmp(candidate->id, id)) {
-			return candidate;
-		}
-	}
-	return NULL;
-}
-
-static void
-jingle_google_p2p_add_remote_candidate(JingleGoogleP2P *google_p2p, JingleGoogleP2PCandidate *candidate)
-{
-	JingleGoogleP2PPrivate *priv = JINGLE_GOOGLE_P2P_GET_PRIVATE(google_p2p);
-	JingleGoogleP2PCandidate *google_p2p_candidate =
-			jingle_google_p2p_get_remote_candidate_by_id(google_p2p,
-					candidate->id);
-	if (google_p2p_candidate != NULL) {
-		priv->remote_candidates = g_list_remove(priv->remote_candidates,
-		                                        google_p2p_candidate);
-		g_boxed_free(JINGLE_TYPE_GOOGLE_P2P_CANDIDATE, google_p2p_candidate);
-	}
-	priv->remote_candidates = g_list_append(priv->remote_candidates, candidate);
-
-	g_object_notify_by_pspec(G_OBJECT(google_p2p), properties[PROP_REMOTE_CANDIDATES]);
-}
-
-static JingleTransport *
-jingle_google_p2p_parse_internal(PurpleXmlNode *google_p2p)
-{
-	JingleTransport *transport = parent_class->parse(google_p2p);
-	PurpleXmlNode *candidate = purple_xmlnode_get_child(google_p2p, "candidate");
-	JingleGoogleP2PCandidate *google_p2p_candidate = NULL;
-
-	for (; candidate; candidate = purple_xmlnode_get_next_twin(candidate)) {
-		const gchar *generation = purple_xmlnode_get_attrib(candidate, "generation");
-		const gchar *id = purple_xmlnode_get_attrib(candidate, "name");
-		const gchar *address = purple_xmlnode_get_attrib(candidate, "address");
-		const gchar *port = purple_xmlnode_get_attrib(candidate, "port");
-		const gchar *preference = purple_xmlnode_get_attrib(candidate, "preference");
-		const gchar *type = purple_xmlnode_get_attrib(candidate, "type");
-		const gchar *protocol = purple_xmlnode_get_attrib(candidate, "protocol");
-		const gchar *username = purple_xmlnode_get_attrib(candidate, "username");
-		const gchar *password = purple_xmlnode_get_attrib(candidate, "password");
-
-		if (!generation || !id || !address || !port || !preference ||
-				!type || !protocol || !username || !password)
-			continue;
-
-		google_p2p_candidate = jingle_google_p2p_candidate_new(id,
-				atoi(generation),
-				address,
-				atoi(port),
-				atoi(preference),
-				type,
-				protocol,
-				username, password);
-		google_p2p_candidate->rem_known = TRUE;
-		jingle_google_p2p_add_remote_candidate(JINGLE_GOOGLE_P2P(transport), google_p2p_candidate);
-	}
-
-	return transport;
-}
-
 static PurpleXmlNode *
 jingle_google_p2p_to_xml_internal(JingleTransport *transport, PurpleXmlNode *content, JingleActionType action)
 {
-	PurpleXmlNode *node = parent_class->to_xml(transport, content, action);
+	PurpleXmlNode *node = JINGLE_TRANSPORT_CLASS(jingle_google_p2p_parent_class)->to_xml(transport, content, action);
 
 	if (action == JINGLE_SESSION_INITIATE ||
 			action == JINGLE_SESSION_ACCEPT ||
 			action == JINGLE_TRANSPORT_INFO ||
 			action == JINGLE_CONTENT_ADD ||
 			action == JINGLE_TRANSPORT_REPLACE) {
-		JingleGoogleP2PPrivate *priv = JINGLE_GOOGLE_P2P_GET_PRIVATE(transport);
+		JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(JINGLE_GOOGLE_P2P(transport));
 		GList *iter = priv->local_candidates;
 
 		for (; iter; iter = g_list_next(iter)) {
@@ -419,3 +234,193 @@ jingle_google_p2p_to_xml_internal(JingleTransport *transport, PurpleXmlNode *con
 	return node;
 }
 
+static JingleTransport *
+jingle_google_p2p_parse_internal(PurpleXmlNode *google_p2p)
+{
+	JingleTransport *transport = JINGLE_TRANSPORT_CLASS(jingle_google_p2p_parent_class)->parse(google_p2p);
+	PurpleXmlNode *candidate = purple_xmlnode_get_child(google_p2p, "candidate");
+	JingleGoogleP2PCandidate *google_p2p_candidate = NULL;
+
+	for (; candidate; candidate = purple_xmlnode_get_next_twin(candidate)) {
+		const gchar *generation = purple_xmlnode_get_attrib(candidate, "generation");
+		const gchar *id = purple_xmlnode_get_attrib(candidate, "name");
+		const gchar *address = purple_xmlnode_get_attrib(candidate, "address");
+		const gchar *port = purple_xmlnode_get_attrib(candidate, "port");
+		const gchar *preference = purple_xmlnode_get_attrib(candidate, "preference");
+		const gchar *type = purple_xmlnode_get_attrib(candidate, "type");
+		const gchar *protocol = purple_xmlnode_get_attrib(candidate, "protocol");
+		const gchar *username = purple_xmlnode_get_attrib(candidate, "username");
+		const gchar *password = purple_xmlnode_get_attrib(candidate, "password");
+
+		if (!generation || !id || !address || !port || !preference ||
+				!type || !protocol || !username || !password)
+			continue;
+
+		google_p2p_candidate = jingle_google_p2p_candidate_new(id,
+				atoi(generation),
+				address,
+				atoi(port),
+				atoi(preference),
+				type,
+				protocol,
+				username, password);
+		google_p2p_candidate->rem_known = TRUE;
+		jingle_google_p2p_add_remote_candidate(JINGLE_GOOGLE_P2P(transport), google_p2p_candidate);
+	}
+
+	return transport;
+}
+
+/******************************************************************************
+ * JingleGoogleP2P GObject stuff
+ *****************************************************************************/
+static void
+jingle_google_p2p_init(JingleGoogleP2P *google_p2p)
+{
+}
+
+static void
+jingle_google_p2p_finalize(GObject *google_p2p)
+{
+/*	JingleGoogleP2PPrivate *priv = JINGLE_GOOGLE_P2P_GET_PRIVATE(google_p2p); */
+	purple_debug_info("jingle","jingle_google_p2p_finalize\n");
+
+	G_OBJECT_CLASS(jingle_google_p2p_parent_class)->finalize(google_p2p);
+}
+
+static void
+jingle_google_p2p_set_property(GObject *object, guint prop_id, const GValue *value, GParamSpec *pspec)
+{
+	JingleGoogleP2P *google_p2p = JINGLE_GOOGLE_P2P(object);
+	JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(google_p2p);
+
+	switch (prop_id) {
+		case PROP_LOCAL_CANDIDATES:
+			priv->local_candidates = g_value_get_pointer(value);
+			break;
+		case PROP_REMOTE_CANDIDATES:
+			priv->remote_candidates = g_value_get_pointer(value);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+jingle_google_p2p_get_property(GObject *object, guint prop_id, GValue *value, GParamSpec *pspec)
+{
+	JingleGoogleP2P *google_p2p = JINGLE_GOOGLE_P2P(object);
+	JingleGoogleP2PPrivate *priv = jingle_google_p2p_get_instance_private(google_p2p);
+
+	switch (prop_id) {
+		case PROP_LOCAL_CANDIDATES:
+			g_value_set_pointer(value, priv->local_candidates);
+			break;
+		case PROP_REMOTE_CANDIDATES:
+			g_value_set_pointer(value, priv->remote_candidates);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID (object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+jingle_google_p2p_class_finalize(JingleGoogleP2PClass *klass) {
+}
+
+static void
+jingle_google_p2p_class_init(JingleGoogleP2PClass *klass)
+{
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
+	JingleTransportClass *transport_class = JINGLE_TRANSPORT_CLASS(klass);
+
+	obj_class->finalize = jingle_google_p2p_finalize;
+	obj_class->set_property = jingle_google_p2p_set_property;
+	obj_class->get_property = jingle_google_p2p_get_property;
+
+	transport_class->to_xml = jingle_google_p2p_to_xml_internal;
+	transport_class->parse = jingle_google_p2p_parse_internal;
+	transport_class->transport_type = NS_GOOGLE_TRANSPORT_P2P;
+	transport_class->add_local_candidate = jingle_google_p2p_add_local_candidate;
+	transport_class->get_remote_candidates = jingle_google_p2p_get_remote_candidates;
+
+	properties[PROP_LOCAL_CANDIDATES] = g_param_spec_pointer("local-candidates",
+			"Local candidates",
+			"The local candidates for this transport.",
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_REMOTE_CANDIDATES] = g_param_spec_pointer("remote-candidates",
+			"Remote candidates",
+			"The remote candidates for this transport.",
+			G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties(obj_class, PROP_LAST, properties);
+}
+
+/******************************************************************************
+ * JingleGoogleP2PCandidate Boxed Implementation
+ *****************************************************************************/
+static JingleGoogleP2PCandidate *
+jingle_google_p2p_candidate_copy(JingleGoogleP2PCandidate *candidate)
+{
+	JingleGoogleP2PCandidate *new_candidate = g_new0(JingleGoogleP2PCandidate, 1);
+	new_candidate->id = g_strdup(candidate->id);
+	new_candidate->address = g_strdup(candidate->address);
+	new_candidate->port = candidate->port;
+	new_candidate->preference = candidate->preference;
+	new_candidate->type = g_strdup(candidate->type);
+	new_candidate->protocol = g_strdup(candidate->protocol);
+	new_candidate->username = g_strdup(candidate->username);
+	new_candidate->password = g_strdup(candidate->password);
+	new_candidate->generation = candidate->generation;
+
+	new_candidate->rem_known = candidate->rem_known;
+
+	return new_candidate;
+}
+
+static void
+jingle_google_p2p_candidate_free(JingleGoogleP2PCandidate *candidate)
+{
+	g_free(candidate->id);
+	g_free(candidate->address);
+	g_free(candidate->type);
+	g_free(candidate->protocol);
+	g_free(candidate->username);
+	g_free(candidate->password);
+}
+
+G_DEFINE_BOXED_TYPE(JingleGoogleP2PCandidate, jingle_google_p2p_candidate,
+		jingle_google_p2p_candidate_copy, jingle_google_p2p_candidate_free)
+
+
+/******************************************************************************
+ * Public API
+ *****************************************************************************/
+void
+jingle_google_p2p_register(PurplePlugin *plugin) {
+	jingle_google_p2p_register_type(G_TYPE_MODULE(plugin));
+}
+
+JingleGoogleP2PCandidate *
+jingle_google_p2p_candidate_new(const gchar *id, guint generation,
+		const gchar *address, guint port, guint preference,
+		const gchar *type, const gchar *protocol,
+		const gchar *username, const gchar *password)
+{
+	JingleGoogleP2PCandidate *candidate = g_new0(JingleGoogleP2PCandidate, 1);
+	candidate->id = g_strdup(id);
+	candidate->address = g_strdup(address);
+	candidate->port = port;
+	candidate->preference = preference;
+	candidate->type = g_strdup(type);
+	candidate->protocol = g_strdup(protocol);
+	candidate->username = g_strdup(username);
+	candidate->password = g_strdup(password);
+	candidate->generation = generation;
+
+	candidate->rem_known = FALSE;
+	return candidate;
+}

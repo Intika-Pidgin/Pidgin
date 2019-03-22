@@ -87,9 +87,33 @@ typedef struct _PurplePrefsUiOps PurplePrefsUiOps;
 
 /**
  * PurplePrefsUiOps:
+ * @add_none: see #purple_prefs_add_none.
+ * @add_bool: see #purple_prefs_add_bool.
+ * @add_int: see #purple_prefs_add_int.
+ * @add_string: see #purple_prefs_add_string.
+ * @add_string_list: see #purple_prefs_add_string_list.
+ * @set_bool: see #purple_prefs_set_bool.
+ * @set_int: see #purple_prefs_set_int.
+ * @set_string: see #purple_prefs_set_string.
+ * @set_string_list: see #purple_prefs_set_string_list.
+ * @get_bool: see #purple_prefs_get_bool.
+ * @get_int: see #purple_prefs_get_int.
+ * @get_string: see #purple_prefs_get_string.
+ * @get_string_list: see #purple_prefs_get_string_list.
+ * @get_type: see #purple_prefs_get_type.
+ * @get_children_names: see #purple_prefs_get_children_names.
+ * @exists: see #purple_prefs_exists.
+ * @remove: see #purple_prefs_remove.
+ * @rename: see #purple_prefs_rename.
+ * @rename_boolean_toggle: see #purple_prefs_rename_boolean_toggle.
+ * @load: see #purple_prefs_load.
+ * @save: see #purple_prefs_save.
+ * @schedule_save: see #purple_prefs_schedule_save.
+ * @connect_callback: see #purple_prefs_connect_callback.
+ * @disconnect_callback: see #purple_prefs_disconnect_callback.
  *
  * Prefs UI operations. This allows overriding the prefs.xml storage with
- * anything else. 
+ * anything else.
  *
  * Unless specified otherwise, each entry provides an implementation for the
  * corresponding purple_prefs_* method, and disables the prefs.xml code for it.
@@ -128,29 +152,10 @@ struct _PurplePrefsUiOps
 	void (*save)(void);
 	void (*schedule_save)(void);
 
-	/**
-	 * connect_callback:
-	 * @name: The preference name.
-	 * @data: The object to be passed when triggering the callback
-	 *
-	 * Called when a callback is added to a preference. The UI must keep
-	 * track of it and call #purple_prefs_trigger_callback_object with the
-	 * data attribute.
-	 *
-	 * Returns: A pointer to a ui_data object.
-	 */
 	void *(*connect_callback)(const char *name, PurplePrefCallbackData *data);
-
-	/**
-	 * disconnect_callback:
-	 * @name The preference name
-	 * @ui_data The object that was returned from the connect_callback UI OP.
-	 *
-	 * Called when a callback is removed from a preference. The ui_data
-	 * object is the one returned from connect_callback.
-	 */
 	void (*disconnect_callback)(const char *name, void *ui_data);
 
+	/*< private >*/
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
 	void (*_purple_reserved3)(void);
@@ -482,6 +487,7 @@ guint purple_prefs_connect_callback(void *handle, const char *name, PurplePrefCa
 
 /**
  * purple_prefs_disconnect_callback:
+ * @callback_id: The callback_id to disconnect.
  *
  * Remove a callback to a pref
  */
@@ -489,6 +495,7 @@ void purple_prefs_disconnect_callback(guint callback_id);
 
 /**
  * purple_prefs_disconnect_by_handle:
+ * @handle: The handle to remove.
  *
  * Remove all pref callbacks by handle
  */
@@ -496,6 +503,7 @@ void purple_prefs_disconnect_by_handle(void *handle);
 
 /**
  * purple_prefs_trigger_callback:
+ * @name: The name of the preference.
  *
  * Trigger callbacks as if the pref changed
  */
@@ -503,6 +511,7 @@ void purple_prefs_trigger_callback(const char *name);
 
 /**
  * purple_prefs_trigger_callback_object:
+ * @data: Callback data.
  *
  * Trigger callbacks as if the pref changed, taking a #PurplePrefCallbackData
  * instead of a name

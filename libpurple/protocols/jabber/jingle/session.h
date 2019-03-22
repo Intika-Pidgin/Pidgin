@@ -44,8 +44,6 @@ G_BEGIN_DECLS
 typedef struct _JingleSession JingleSession;
 /** @copydoc _JingleSessionClass */
 typedef struct _JingleSessionClass JingleSessionClass;
-/** @copydoc _JingleSessionPrivate */
-typedef struct _JingleSessionPrivate JingleSessionPrivate;
 
 /** The session class */
 struct _JingleSessionClass
@@ -57,7 +55,6 @@ struct _JingleSessionClass
 struct _JingleSession
 {
 	GObject parent;                /**< The parent of this object. */
-	JingleSessionPrivate *priv;      /**< The private data of this object. */
 };
 
 struct _JingleContent;
@@ -72,7 +69,7 @@ G_MODULE_EXPORT GType jingle_session_get_type(void);
 /**
  * Registers the JingleSession type in the type system.
  */
-void jingle_session_register_type(PurplePlugin *plugin);
+void jingle_session_register(PurplePlugin *plugin);
 
 JingleSession *jingle_session_create(JabberStream *js, const gchar *sid,
 				     const gchar *local_jid, const gchar *remote_jid,
