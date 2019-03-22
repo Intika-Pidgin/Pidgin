@@ -78,6 +78,9 @@ typedef enum
 
 /**
  * PurplePounceCb:
+ * @pounce: The #PurplePounce.
+ * @event: The #PurplePounceEvent.
+ * @data: user-data.
  *
  * A pounce callback.
  */

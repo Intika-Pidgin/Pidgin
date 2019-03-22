@@ -69,6 +69,8 @@ typedef enum
 
 /**
  * PurpleRoomlistFieldType:
+ * @PURPLE_ROOMLIST_FIELD_BOOL: The field is a boolean.
+ * @PURPLE_ROOMLIST_FIELD_INT: The field is an integer.
  * @PURPLE_ROOMLIST_FIELD_STRING: We do a g_strdup on the passed value if it's
  *                                this type.
  *
