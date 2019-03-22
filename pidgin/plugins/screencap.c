@@ -32,7 +32,7 @@
 #include "gtkplugin.h"
 #include "gtkutils.h"
 #include "gtkwebviewtoolbar.h"
-#include "pidginstock.h"
+#include "pidginicon.h"
 
 #define SCRNCAP_SHOOTING_TIMEOUT 500
 #define SCRNCAP_DEFAULT_COLOR "#FFFF00000000"
@@ -397,8 +397,8 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 
 	gtk_dialog_add_action_widget(draw_window, color_button,
 		SCRNCAP_RESPONSE_COLOR);
-	gtk_dialog_add_button(draw_window, GTK_STOCK_ADD, GTK_RESPONSE_OK);
-	gtk_dialog_add_button(draw_window, GTK_STOCK_CANCEL,
+	gtk_dialog_add_button(draw_window, _("_Add"), GTK_RESPONSE_OK);
+	gtk_dialog_add_button(draw_window, _("_Cancel"),
 		GTK_RESPONSE_CANCEL);
 	gtk_dialog_set_default_response(draw_window, GTK_RESPONSE_OK);
 	g_signal_connect(G_OBJECT(draw_window), "response",
@@ -718,7 +718,7 @@ scrncap_convwin_init(PidginConvWindow *win)
 		return;
 
 	action = gtk_action_new("InsertScreenshot", _("Insert Screens_hot..."),
-		NULL, PIDGIN_STOCK_TOOLBAR_INSERT_SCREENSHOT);
+		NULL, PIDGIN_ICON_CAMERA_PHOTO);
 	gtk_action_set_is_important(action, TRUE);
 	g_object_set_data_full(G_OBJECT(menu->menubar),
 		"insert-screenshot-action", action, g_object_unref);
@@ -807,7 +807,7 @@ scrncap_conversation_init(PidginConversation *gtkconv)
 	g_return_if_fail(lean_view != NULL);
 
 	action = gtk_action_new("InsertScreenshot", _("_Screenshot"),
-		_("Insert screenshot"), PIDGIN_STOCK_TOOLBAR_INSERT_SCREENSHOT);
+		_("Insert screenshot"), PIDGIN_ICON_CAMERA_PHOTO);
 	gtk_action_set_is_important(action, TRUE);
 	g_signal_connect(G_OBJECT(action), "activate",
 		G_CALLBACK(scrncap_do_screenshot), webview);

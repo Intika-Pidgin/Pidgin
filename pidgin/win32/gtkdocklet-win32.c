@@ -36,7 +36,7 @@
 #include "MinimizeToTray.h"
 #include "gtkwin32dep.h"
 #include "gtkdocklet.h"
-#include "pidginstock.h"
+#include "pidginicon.h"
 
 /*
  *  DEFINES, MACROS & DATA TYPES
@@ -518,33 +518,15 @@ static void winpidgin_tray_update_icon(PurpleStatusPrimitive status,
 	/* Look up and cache the HICON if we don't already have it */
 	if (cached_icons[icon_index] == NULL) {
 		const gchar *icon_name = NULL;
-		switch (status) {
-			case PURPLE_STATUS_OFFLINE:
-				icon_name = PIDGIN_STOCK_TRAY_OFFLINE;
-				break;
-			case PURPLE_STATUS_AWAY:
-				icon_name = PIDGIN_STOCK_TRAY_AWAY;
-				break;
-			case PURPLE_STATUS_UNAVAILABLE:
-				icon_name = PIDGIN_STOCK_TRAY_BUSY;
-				break;
-			case PURPLE_STATUS_EXTENDED_AWAY:
-				icon_name = PIDGIN_STOCK_TRAY_XA;
-				break;
-			case PURPLE_STATUS_INVISIBLE:
-				icon_name = PIDGIN_STOCK_TRAY_INVISIBLE;
-				break;
-			default:
-				icon_name = PIDGIN_STOCK_TRAY_AVAILABLE;
-				break;
-		}
+
+		icon_name = pidgin_status_icon_from_primitive(status);
 
 		if (flags & PIDGIN_DOCKLET_EMAIL_PENDING)
-			icon_name = PIDGDIN_STOCK_TRAY_EMAIL;
+			icon_name = PIDGIN_ICON_MAIL_NEW;
 		else if (flags & PIDGIN_DOCKLET_CONV_PENDING)
-			icon_name = PIDGIN_STOCK_TRAY_PENDING;
+			icon_name = PIDGIN_ICON_MESSAGE_NEW;
 		else if (flags & PIDGIN_DOCKLET_CONNECTING)
-			icon_name = PIDGIN_STOCK_TRAY_CONNECT;
+			icon_name = PIDGIN_ICON_CONNECT;
 
 		g_return_if_fail(icon_name != NULL);
 

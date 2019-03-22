@@ -33,7 +33,6 @@
 G_BEGIN_DECLS
 
 #define JINGLE_TYPE_RAWUDP            (jingle_rawudp_get_type())
-#define JINGLE_TYPE_RAWUDP_CANDIDATE  (jingle_rawudp_candidate_get_type())
 #define JINGLE_RAWUDP(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_RAWUDP, JingleRawUdp))
 #define JINGLE_RAWUDP_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_RAWUDP, JingleRawUdpClass))
 #define JINGLE_IS_RAWUDP(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_RAWUDP))
@@ -44,8 +43,9 @@ G_BEGIN_DECLS
 typedef struct _JingleRawUdp JingleRawUdp;
 /** @copydoc _JingleRawUdpClass */
 typedef struct _JingleRawUdpClass JingleRawUdpClass;
-/** @copydoc _JingleRawUdpPrivate */
-typedef struct _JingleRawUdpPrivate JingleRawUdpPrivate;
+
+#define JINGLE_TYPE_RAWUDP_CANDIDATE  (jingle_rawudp_candidate_get_type())
+
 /** @copydoc _JingleRawUdpCandidate */
 typedef struct _JingleRawUdpCandidate JingleRawUdpCandidate;
 
@@ -62,7 +62,6 @@ struct _JingleRawUdpClass
 struct _JingleRawUdp
 {
 	JingleTransport parent;                /**< The parent of this object. */
-	JingleRawUdpPrivate *priv;      /**< The private data of this object. */
 };
 
 struct _JingleRawUdpCandidate
@@ -89,7 +88,7 @@ G_MODULE_EXPORT GType jingle_rawudp_get_type(void);
 /**
  * Registers the JingleRawUdp type in the type system.
  */
-void jingle_rawudp_register_type(PurplePlugin *plugin);
+void jingle_rawudp_register(PurplePlugin *plugin);
 
 JingleRawUdpCandidate *jingle_rawudp_candidate_new(const gchar *id,
 		guint generation, guint component, const gchar *ip, guint port);

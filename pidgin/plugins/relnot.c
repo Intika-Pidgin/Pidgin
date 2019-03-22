@@ -35,7 +35,7 @@
 #include "gtkutils.h"
 #include "http.h"
 #include "notify.h"
-#include "pidginstock.h"
+#include "pidginicon.h"
 #include "prefs.h"
 #include "util.h"
 #include "version.h"
