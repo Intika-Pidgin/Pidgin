@@ -29,6 +29,7 @@
 #include "libpurple/internal.h"
 
 #include "accountopt.h"
+#include "action.h"
 #include "debug.h"
 #include "notify.h"
 #include "plugins.h"

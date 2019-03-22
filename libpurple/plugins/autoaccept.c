@@ -35,12 +35,12 @@
 #include <plugins.h>
 #include <version.h>
 
+#include <action.h>
 #include <buddylist.h>
 #include <conversation.h>
 #include <xfer.h>
 #include <request.h>
 #include <notify.h>
-#include <util.h>
 
 #define PREF_PREFIX		"/plugins/core/" PLUGIN_ID
 #define PREF_PATH		PREF_PREFIX "/path"
@@ -217,13 +217,13 @@ set_auto_accept_settings(PurpleBlistNode *node, gpointer plugin)
 static void
 context_menu(PurpleBlistNode *node, GList **menu, gpointer plugin)
 {
-	PurpleMenuAction *action;
+	PurpleActionMenu *action;
 
 	if (!PURPLE_IS_BUDDY(node) && !PURPLE_IS_CONTACT(node) &&
 		!purple_blist_node_is_transient(node))
 		return;
 
-	action = purple_menu_action_new(_("Autoaccept File Transfers..."),
+	action = purple_action_menu_new(_("Autoaccept File Transfers..."),
 					PURPLE_CALLBACK(set_auto_accept_settings), plugin, NULL);
 	(*menu) = g_list_prepend(*menu, action);
 }

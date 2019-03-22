@@ -18,11 +18,11 @@
  */
 #include "internal.h"
 
+#include <action.h>
 #include <debug.h>
 #include <notify.h>
 #include <request.h>
 #include <signals.h>
-#include <util.h>
 #include <version.h>
 
 static void
@@ -55,13 +55,13 @@ buddynote_edit_cb(PurpleBlistNode *node, gpointer data)
 static void
 buddynote_extended_menu_cb(PurpleBlistNode *node, GList **m)
 {
-	PurpleMenuAction *bna = NULL;
+	PurpleActionMenu *bna = NULL;
 
 	if (purple_blist_node_is_transient(node))
 		return;
 
 	*m = g_list_append(*m, bna);
-	bna = purple_menu_action_new(_("Edit Notes..."), PURPLE_CALLBACK(buddynote_edit_cb), NULL, NULL);
+	bna = purple_action_menu_new(_("Edit Notes..."), PURPLE_CALLBACK(buddynote_edit_cb), NULL, NULL);
 	*m = g_list_append(*m, bna);
 }
 
