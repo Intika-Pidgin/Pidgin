@@ -93,7 +93,7 @@ GList *purple_conversations_get_chats(void);
  * Returns: The conversation if found, or %NULL otherwise.
  */
 PurpleConversation *purple_conversations_find_with_account(const char *name,
-		const PurpleAccount *account);
+		PurpleAccount *account);
 
 /**
  * purple_conversations_find_im_with_account:
@@ -105,7 +105,7 @@ PurpleConversation *purple_conversations_find_with_account(const char *name,
  * Returns: The conversation if found, or %NULL otherwise.
  */
 PurpleIMConversation *purple_conversations_find_im_with_account(const char *name,
-		const PurpleAccount *account);
+		PurpleAccount *account);
 
 /**
  * purple_conversations_find_chat_with_account:
@@ -117,7 +117,7 @@ PurpleIMConversation *purple_conversations_find_im_with_account(const char *name
  * Returns: The conversation if found, or %NULL otherwise.
  */
 PurpleChatConversation *purple_conversations_find_chat_with_account(const char *name,
-		const PurpleAccount *account);
+		PurpleAccount *account);
 
 /**
  * purple_conversations_find_chat:

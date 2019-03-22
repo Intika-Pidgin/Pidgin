@@ -312,7 +312,7 @@ void *purple_pounce_get_data(const PurplePounce *pounce);
  *
  * Executes a pounce with the specified pouncer, pouncee, and event type.
  */
-void purple_pounce_execute(const PurpleAccount *pouncer, const char *pouncee,
+void purple_pounce_execute(PurpleAccount *pouncer, const char *pouncee,
 						 PurplePounceEvent events);
 
 /**************************************************************************/
@@ -329,7 +329,7 @@ void purple_pounce_execute(const PurpleAccount *pouncer, const char *pouncee,
  *
  * Returns: The pounce if found, or %NULL otherwise.
  */
-PurplePounce *purple_find_pounce(const PurpleAccount *pouncer,
+PurplePounce *purple_find_pounce(PurpleAccount *pouncer,
 							 const char *pouncee, PurplePounceEvent events);
 
 /**

@@ -1004,7 +1004,7 @@ purple_strequal(const gchar *left, const gchar *right)
  *
  * Returns: A pointer to the normalized version stored in a static buffer.
  */
-const char *purple_normalize(const PurpleAccount *account, const char *str);
+const char *purple_normalize(PurpleAccount *account, const char *str);
 
 /**
  * purple_normalize_nocase:

@@ -111,7 +111,7 @@ void
 purple_action_menu_set_children(PurpleActionMenu *act, GList *children) {
 	g_return_if_fail(act != NULL);
 
-	g_list_free_full(act->children, purple_action_menu_free);
+	g_list_free_full(act->children, (GDestroyNotify)purple_action_menu_free);
 
 	act->children = children;
 }

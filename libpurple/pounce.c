@@ -944,7 +944,7 @@ purple_pounce_get_data(const PurplePounce *pounce)
 }
 
 void
-purple_pounce_execute(const PurpleAccount *pouncer, const char *pouncee,
+purple_pounce_execute(PurpleAccount *pouncer, const char *pouncee,
 					PurplePounceEvent events)
 {
 	PurplePounce *pounce;
@@ -990,7 +990,7 @@ purple_pounce_execute(const PurpleAccount *pouncer, const char *pouncee,
 }
 
 PurplePounce *
-purple_find_pounce(const PurpleAccount *pouncer, const char *pouncee,
+purple_find_pounce(PurpleAccount *pouncer, const char *pouncee,
 				 PurplePounceEvent events)
 {
 	PurplePounce *pounce = NULL;
