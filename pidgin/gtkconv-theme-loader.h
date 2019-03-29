@@ -32,31 +32,7 @@
 #include <glib-object.h>
 #include "theme-loader.h"
 
-typedef struct _PidginConvThemeLoader       PidginConvThemeLoader;
-typedef struct _PidginConvThemeLoaderClass  PidginConvThemeLoaderClass;
-
-#define PIDGIN_TYPE_CONV_THEME_LOADER            (pidgin_conversation_theme_loader_get_type ())
-#define PIDGIN_CONV_THEME_LOADER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PIDGIN_TYPE_CONV_THEME_LOADER, PidginConvThemeLoader))
-#define PIDGIN_CONV_THEME_LOADER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PIDGIN_TYPE_CONV_THEME_LOADER, PidginConvThemeLoaderClass))
-#define PIDGIN_IS_CONV_THEME_LOADER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_CONV_THEME_LOADER))
-#define PIDGIN_IS_CONV_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_CONV_THEME_LOADER))
-#define PIDGIN_CONV_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_CONV_THEME_LOADER, PidginConvThemeLoaderClass))
-
-/**
- * PidginConvThemeLoader:
- *
- * A pidgin conversation theme loader. Extends PurpleThemeLoader (theme-loader.h)
- * This is a class designed to build conversation themes
- */
-struct _PidginConvThemeLoader
-{
-	PurpleThemeLoader parent;
-};
-
-struct _PidginConvThemeLoaderClass
-{
-	PurpleThemeLoaderClass parent_class;
-};
+#define PIDGIN_TYPE_CONV_THEME_LOADER  pidgin_conversation_theme_loader_get_type()
 
 /**************************************************************************/
 /* Pidgin Conversation Theme-Loader API                                   */
@@ -68,7 +44,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for a conversation theme loader.
  */
-GType pidgin_conversation_theme_loader_get_type(void);
+G_DECLARE_FINAL_TYPE(PidginConvThemeLoader, pidgin_conversation_theme_loader,
+		PIDGIN, CONV_THEME_LOADER, PurpleThemeLoader)
 
 G_END_DECLS
 

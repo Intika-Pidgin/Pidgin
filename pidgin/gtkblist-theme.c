@@ -29,6 +29,19 @@
  * Structs
  *****************************************************************************/
 
+/**
+ * PidginBlistTheme:
+ *
+ * A pidgin buddy list theme.
+ * This is an object for Purple to represent a buddy list theme.
+ *
+ * PidginBlistTheme is a PurpleTheme Object.
+ */
+struct _PidginBlistTheme
+{
+	PurpleTheme parent;
+};
+
 typedef struct {
 	/* Buddy list */
 	gdouble opacity;

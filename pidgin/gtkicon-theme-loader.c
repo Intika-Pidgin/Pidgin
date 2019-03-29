@@ -26,6 +26,17 @@
 #include "xmlnode.h"
 #include "debug.h"
 
+/**
+ * PidginIconThemeLoader:
+ *
+ * A pidgin icon theme loader. Extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build icon themes
+ */
+struct _PidginIconThemeLoader
+{
+	PurpleThemeLoader parent;
+};
+
 /*****************************************************************************
  * Icon Theme Builder
  *****************************************************************************/

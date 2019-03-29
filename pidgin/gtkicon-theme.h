@@ -32,29 +32,7 @@
 #include <glib-object.h>
 #include "theme.h"
 
-typedef struct _PidginIconTheme        PidginIconTheme;
-typedef struct _PidginIconThemeClass   PidginIconThemeClass;
-
-#define PIDGIN_TYPE_ICON_THEME            (pidgin_icon_theme_get_type ())
-#define PIDGIN_ICON_THEME(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PIDGIN_TYPE_ICON_THEME, PidginIconTheme))
-#define PIDGIN_ICON_THEME_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PIDGIN_TYPE_ICON_THEME, PidginIconThemeClass))
-#define PIDGIN_IS_ICON_THEME(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_ICON_THEME))
-#define PIDGIN_IS_ICON_THEME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_ICON_THEME))
-#define PIDGIN_ICON_THEME_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_ICON_THEME, PidginIconThemeClass))
-
-/**
- * PidginIconTheme:
- *
- * extends PurpleTheme (theme.h)
- * A pidgin icon theme.
- * This object represents a Pidgin icon theme.
- *
- * PidginIconTheme is a PurpleTheme Object.
- */
-struct _PidginIconTheme
-{
-	PurpleTheme parent;
-};
+#define PIDGIN_TYPE_ICON_THEME  pidgin_icon_theme_get_type()
 
 struct _PidginIconThemeClass
 {
@@ -71,7 +49,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for an icon theme.
  */
-GType pidgin_icon_theme_get_type(void);
+G_DECLARE_DERIVABLE_TYPE(PidginIconTheme, pidgin_icon_theme, PIDGIN,
+		ICON_THEME, PurpleTheme)
 
 /**
  * pidgin_icon_theme_get_icon:

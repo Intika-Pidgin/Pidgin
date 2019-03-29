@@ -33,34 +33,7 @@
 #include "conversation.h"
 #include "theme.h"
 
-typedef struct _PidginConvTheme        PidginConvTheme;
-typedef struct _PidginConvThemeClass   PidginConvThemeClass;
-
-#define PIDGIN_TYPE_CONV_THEME            (pidgin_conversation_theme_get_type ())
-#define PIDGIN_CONV_THEME(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PIDGIN_TYPE_CONV_THEME, PidginConvTheme))
-#define PIDGIN_CONV_THEME_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PIDGIN_TYPE_CONV_THEME, PidginConvThemeClass))
-#define PIDGIN_IS_CONV_THEME(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_CONV_THEME))
-#define PIDGIN_IS_CONV_THEME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_CONV_THEME))
-#define PIDGIN_CONV_THEME_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_CONV_THEME, PidginConvThemeClass))
-
-/**
- * PidginConvTheme:
- *
- * extends PurpleTheme (theme.h)
- * A pidgin icon theme.
- * This object represents a Pidgin icon theme.
- *
- * PidginConvTheme is a PurpleTheme Object.
- */
-struct _PidginConvTheme
-{
-	PurpleTheme parent;
-};
-
-struct _PidginConvThemeClass
-{
-	PurpleThemeClass parent_class;
-};
+#define PIDGIN_TYPE_CONV_THEME  pidgin_conversation_theme_get_type()
 
 typedef enum {
 	PIDGIN_CONVERSATION_THEME_TEMPLATE_MAIN,
@@ -91,7 +64,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for a conversation theme.
  */
-GType pidgin_conversation_theme_get_type(void);
+G_DECLARE_FINAL_TYPE(PidginConvTheme, pidgin_conversation_theme, PIDGIN,
+		CONV_THEME, PurpleTheme)
 
 /**
  * pidgin_conversation_theme_get_info:

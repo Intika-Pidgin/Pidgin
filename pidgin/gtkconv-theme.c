@@ -40,6 +40,20 @@
  * Structs
  *****************************************************************************/
 
+/**
+ * PidginConvTheme:
+ *
+ * extends PurpleTheme (theme.h)
+ * A pidgin icon theme.
+ * This object represents a Pidgin icon theme.
+ *
+ * PidginConvTheme is a PurpleTheme Object.
+ */
+struct _PidginConvTheme
+{
+	PurpleTheme parent;
+};
+
 typedef struct {
 	/* current config options */
 	char     *variant; /* allowed to be NULL if there are no variants */
