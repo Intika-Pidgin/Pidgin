@@ -58,7 +58,7 @@ struct _PurpleMediaOutputWindow
 #endif
 };
 
-struct _PurpleMediaManagerPrivate
+typedef struct _PurpleMediaManagerPrivate
 {
 #ifdef USE_GSTREAMER
 	GstElement *pipeline;
@@ -87,6 +87,19 @@ struct _PurpleMediaManagerPrivate
 	guint appdata_cb_token; /* last used read/write callback token */
 #endif
 #endif
+} PurpleMediaManagerPrivate;
+
+/**
+ * PurpleMediaManager:
+ *
+ * The media manager's data.
+ */
+struct _PurpleMediaManager
+{
+	GObject parent;
+
+	/*< private >*/
+	PurpleMediaManagerPrivate *priv;
 };
 
 #ifdef HAVE_MEDIA_APPLICATION

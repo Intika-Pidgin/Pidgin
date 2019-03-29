@@ -32,32 +32,11 @@
 #include <glib-object.h>
 
 typedef struct _PurpleMediaManager PurpleMediaManager;
-typedef struct _PurpleMediaManagerClass PurpleMediaManagerClass;
-
-typedef struct _PurpleMediaManagerPrivate PurpleMediaManagerPrivate;
 
 #include "account.h"
 #include "media.h"
 
-#define PURPLE_TYPE_MEDIA_MANAGER            (purple_media_manager_get_type())
-#define PURPLE_MEDIA_MANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_MEDIA_MANAGER, PurpleMediaManager))
-#define PURPLE_MEDIA_MANAGER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_MEDIA_MANAGER, PurpleMediaManagerClass))
-#define PURPLE_IS_MEDIA_MANAGER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_MEDIA_MANAGER))
-#define PURPLE_IS_MEDIA_MANAGER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MEDIA_MANAGER))
-#define PURPLE_MEDIA_MANAGER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MEDIA_MANAGER, PurpleMediaManagerClass))
-
-/**
- * PurpleMediaManager:
- *
- * The media manager's data.
- */
-struct _PurpleMediaManager
-{
-	GObject parent;
-
-	/*< private >*/
-	PurpleMediaManagerPrivate *priv;
-};
+#define PURPLE_TYPE_MEDIA_MANAGER  purple_media_manager_get_type()
 
 /**
  * PurpleMediaManagerClass:
@@ -112,7 +91,8 @@ G_BEGIN_DECLS
  *
  * Returns: The media manager's GType.
  */
-GType purple_media_manager_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleMediaManager, purple_media_manager, PURPLE,
+		MEDIA_MANAGER, GObject)
 
 /**
  * purple_media_manager_get:

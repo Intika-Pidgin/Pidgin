@@ -21,22 +21,18 @@
 
 #include "candidate.h"
 
-/** @copydoc _PurpleMediaCandidateClass */
-typedef struct _PurpleMediaCandidateClass PurpleMediaCandidateClass;
-/** @copydoc _PurpleMediaCandidatePrivate */
-typedef struct _PurpleMediaCandidatePrivate PurpleMediaCandidatePrivate;
-
-struct _PurpleMediaCandidateClass
-{
-	GObjectClass parent_class;
-};
-
+/**
+ * PurpleMediaCandidate:
+ *
+ * An opaque structure representing a network candidate (IP Address and port
+ * pair).
+ */
 struct _PurpleMediaCandidate
 {
 	GObject parent;
 };
 
-struct _PurpleMediaCandidatePrivate
+typedef struct _PurpleMediaCandidatePrivate
 {
 	gchar *foundation;
 	guint component_id;
@@ -50,7 +46,7 @@ struct _PurpleMediaCandidatePrivate
 	gchar *username;
 	gchar *password;
 	guint ttl;
-};
+} PurpleMediaCandidatePrivate;
 
 enum {
 	PROP_CANDIDATE_0,
