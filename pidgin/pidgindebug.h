@@ -34,39 +34,8 @@ G_BEGIN_DECLS
 
 #define PIDGIN_TYPE_DEBUG_UI (pidgin_debug_ui_get_type())
 #define PIDGIN_TYPE_DEBUG_WINDOW (pidgin_debug_window_get_type())
-#if GLIB_CHECK_VERSION(2,44,0)
 G_DECLARE_FINAL_TYPE(PidginDebugUi, pidgin_debug_ui, PIDGIN, DEBUG_UI, GObject)
 G_DECLARE_FINAL_TYPE(PidginDebugWindow, pidgin_debug_window, PIDGIN, DEBUG_WINDOW, GtkWindow)
-#else
-GType pidgin_debug_ui_get_type(void);
-GType pidgin_debug_window_get_type(void);
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-typedef struct _PidginDebugUi PidginDebugUi;
-typedef struct { GObjectClass parent_class; } PidginDebugUiClass;
-static inline PidginDebugUi *
-PIDGIN_DEBUG_UI(gpointer ptr)
-{
-	return G_TYPE_CHECK_INSTANCE_CAST(ptr, pidgin_debug_ui_get_type(), PidginDebugUi);
-}
-static inline gboolean
-PIDGIN_IS_DEBUG_UI(gpointer ptr)
-{
-	return G_TYPE_CHECK_INSTANCE_TYPE(ptr, pidgin_debug_ui_get_type());
-}
-typedef struct _PidginDebugWindow PidginDebugWindow;
-typedef struct { GtkWindowClass parent_class; } PidginDebugWindowClass;
-static inline PidginDebugWindow *
-PIDGIN_DEBUG_WINDOW(gpointer ptr)
-{
-	return G_TYPE_CHECK_INSTANCE_CAST(ptr, pidgin_debug_window_get_type(), PidginDebugWindow);
-}
-static inline gboolean
-PIDGIN_IS_DEBUG_WINDOW(gpointer ptr)
-{
-	return G_TYPE_CHECK_INSTANCE_TYPE(ptr, pidgin_debug_window_get_type());
-}
-G_GNUC_END_IGNORE_DEPRECATIONS
-#endif
 
 /**
  * pidgin_debug_ui_new:
