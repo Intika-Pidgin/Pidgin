@@ -34,7 +34,7 @@
 #include "mqtt.h"
 #include "util.h"
 
-struct _FbMqttPrivate
+typedef struct _FbMqttPrivate
 {
 	PurpleConnection *gc;
 	GIOStream *conn;
@@ -48,9 +48,22 @@ struct _FbMqttPrivate
 	gsize remz;
 
 	gint tev;
+} FbMqttPrivate;
+
+/**
+ * FbMqtt:
+ *
+ * Represents an MQTT connection.
+ */
+struct _FbMqtt
+{
+	GObject parent;
+	FbMqttPrivate *priv;
 };
 
-struct _FbMqttMessagePrivate
+G_DEFINE_TYPE_WITH_PRIVATE(FbMqtt, fb_mqtt, G_TYPE_OBJECT);
+
+typedef struct _FbMqttMessagePrivate
 {
 	FbMqttMessageType type;
 	FbMqttMessageFlags flags;
@@ -60,9 +73,19 @@ struct _FbMqttMessagePrivate
 	guint pos;
 
 	gboolean local;
+} FbMqttMessagePrivate;
+
+/**
+ * FbMqttMessage:
+ *
+ * Represents a reader/writer for an MQTT message.
+ */
+struct _FbMqttMessage
+{
+	GObject parent;
+	FbMqttMessagePrivate *priv;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE(FbMqtt, fb_mqtt, G_TYPE_OBJECT);
 G_DEFINE_TYPE_WITH_PRIVATE(FbMqttMessage, fb_mqtt_message, G_TYPE_OBJECT);
 
 static void fb_mqtt_read_packet(FbMqtt *mqtt);

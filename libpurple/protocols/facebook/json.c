@@ -37,7 +37,7 @@ struct _FbJsonValue
 	GValue value;
 };
 
-struct _FbJsonValuesPrivate
+typedef struct _FbJsonValuesPrivate
 {
 	JsonNode *root;
 	GQueue *queue;
@@ -48,6 +48,17 @@ struct _FbJsonValuesPrivate
 	guint index;
 
 	GError *error;
+} FbJsonValuesPrivate;
+
+/**
+ * FbJsonValues:
+ *
+ * Represents a JSON value handler.
+ */
+struct _FbJsonValues
+{
+	GObject parent;
+	FbJsonValuesPrivate *priv;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE(FbJsonValues, fb_json_values, G_TYPE_OBJECT);
