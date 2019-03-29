@@ -23,22 +23,12 @@
 #include "glibcompat.h"
 #include "codec.h"
 
-/** @copydoc _PurpleMediaCodecClass */
-typedef struct _PurpleMediaCodecClass PurpleMediaCodecClass;
-/** @copydoc _PurpleMediaCodecPrivate */
-typedef struct _PurpleMediaCodecPrivate PurpleMediaCodecPrivate;
-
-struct _PurpleMediaCodecClass
-{
-	GObjectClass parent_class;
-};
-
 struct _PurpleMediaCodec
 {
 	GObject parent;
 };
 
-struct _PurpleMediaCodecPrivate
+typedef struct _PurpleMediaCodecPrivate
 {
 	gint id;
 	char *encoding_name;
@@ -46,7 +36,7 @@ struct _PurpleMediaCodecPrivate
 	guint clock_rate;
 	guint channels;
 	GList *optional_params;
-};
+} PurpleMediaCodecPrivate;
 
 enum {
 	PROP_CODEC_0,

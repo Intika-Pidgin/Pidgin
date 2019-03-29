@@ -43,13 +43,7 @@ typedef struct _PurpleMediaCodec PurpleMediaCodec;
 
 G_BEGIN_DECLS
 
-#define PURPLE_TYPE_MEDIA_CODEC            (purple_media_codec_get_type())
-#define PURPLE_IS_MEDIA_CODEC(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_MEDIA_CODEC))
-#define PURPLE_IS_MEDIA_CODEC_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MEDIA_CODEC))
-#define PURPLE_MEDIA_CODEC(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_MEDIA_CODEC, PurpleMediaCodec))
-#define PURPLE_MEDIA_CODEC_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_MEDIA_CODEC, PurpleMediaCodec))
-#define PURPLE_MEDIA_CODEC_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MEDIA_CODEC, PurpleMediaCodec))
-
+#define PURPLE_TYPE_MEDIA_CODEC  purple_media_codec_get_type()
 
 /**
  * purple_media_codec_get_type:
@@ -58,7 +52,8 @@ G_BEGIN_DECLS
  *
  * Returns: The media codec's GType
  */
-GType purple_media_codec_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleMediaCodec, purple_media_codec, PURPLE,
+		MEDIA_CODEC, GObject)
 
 /**
  * purple_media_codec_new:

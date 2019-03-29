@@ -39,10 +39,6 @@
 #define gst_registry_get() gst_registry_get_default()
 #endif
 
-/** @copydoc _PurpleMediaBackendFs2Class */
-typedef struct _PurpleMediaBackendFs2Class PurpleMediaBackendFs2Class;
-/** @copydoc _PurpleMediaBackendFs2Private */
-typedef struct _PurpleMediaBackendFs2Private PurpleMediaBackendFs2Private;
 /** @copydoc _PurpleMediaBackendFs2Session */
 typedef struct _PurpleMediaBackendFs2Session PurpleMediaBackendFs2Session;
 /** @copydoc _PurpleMediaBackendFs2Stream */
@@ -104,11 +100,11 @@ static gboolean purple_media_backend_fs2_set_send_rtcp_mux(
 static void free_stream(PurpleMediaBackendFs2Stream *stream);
 static void free_session(PurpleMediaBackendFs2Session *session);
 
-struct _PurpleMediaBackendFs2Class
-{
-	GObjectClass parent_class;
-};
-
+/**
+ * PurpleMediaBackendFs2:
+ *
+ * An opaque structure representing the Farstream media backend.
+ */
 struct _PurpleMediaBackendFs2
 {
 	GObject parent;
@@ -150,7 +146,7 @@ struct _PurpleMediaBackendFs2Session
 	PurpleMediaSessionType type;
 };
 
-struct _PurpleMediaBackendFs2Private
+typedef struct _PurpleMediaBackendFs2Private
 {
 	PurpleMedia *media;
 	GstElement *confbin;
@@ -165,7 +161,7 @@ struct _PurpleMediaBackendFs2Private
 	GList *streams;
 
 	gdouble silence_threshold;
-};
+} PurpleMediaBackendFs2Private;
 
 enum {
 	PROP_0,

@@ -33,13 +33,8 @@
 
 #include <gst/gst.h>
 
-#define PURPLE_TYPE_MEDIA_ELEMENT_TYPE           (purple_media_element_type_get_type())
-#define PURPLE_TYPE_MEDIA_ELEMENT_INFO           (purple_media_element_info_get_type())
-#define PURPLE_MEDIA_ELEMENT_INFO(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_MEDIA_ELEMENT_INFO, PurpleMediaElementInfo))
-#define PURPLE_MEDIA_ELEMENT_INFO_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_MEDIA_ELEMENT_INFO, PurpleMediaElementInfo))
-#define PURPLE_IS_MEDIA_ELEMENT_INFO(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_MEDIA_ELEMENT_INFO))
-#define PURPLE_IS_MEDIA_ELEMENT_INFO_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MEDIA_ELEMENT_INFO))
-#define PURPLE_MEDIA_ELEMENT_INFO_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MEDIA_ELEMENT_INFO, PurpleMediaElementInfo))
+#define PURPLE_TYPE_MEDIA_ELEMENT_TYPE  purple_media_element_type_get_type()
+#define PURPLE_TYPE_MEDIA_ELEMENT_INFO  purple_media_element_info_get_type()
 
 /**
  * PurpleMediaElementInfo:
@@ -47,7 +42,6 @@
  * An opaque structure representing an audio/video source/sink.
  */
 typedef struct _PurpleMediaElementInfo PurpleMediaElementInfo;
-typedef struct _PurpleMediaElementInfoClass PurpleMediaElementInfoClass;
 
 typedef GstElement *(*PurpleMediaElementCreateCallback)(
 		PurpleMediaElementInfo *info, PurpleMedia *media,
@@ -112,7 +106,8 @@ GType purple_media_element_type_get_type(void);
  *
  * Returns: The element info's GType.
  */
-GType purple_media_element_info_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleMediaElementInfo, purple_media_element_info, PURPLE,
+		MEDIA_ELEMENT_INFO, GObject)
 
 /**
  * purple_media_get_src:
