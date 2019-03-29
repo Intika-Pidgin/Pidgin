@@ -32,27 +32,7 @@
 #include <glib-object.h>
 #include "theme.h"
 
-typedef struct _PurpleThemeLoader        PurpleThemeLoader;
-typedef struct _PurpleThemeLoaderClass   PurpleThemeLoaderClass;
-
-#define PURPLE_TYPE_THEME_LOADER            (purple_theme_loader_get_type())
-#define PURPLE_THEME_LOADER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_THEME_LOADER, PurpleThemeLoader))
-#define PURPLE_THEME_LOADER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_THEME_LOADER, PurpleThemeLoaderClass))
-#define PURPLE_IS_THEME_LOADER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_THEME_LOADER))
-#define PURPLE_IS_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_THEME_LOADER))
-#define PURPLE_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_THEME_LOADER, PurpleThemeLoaderClass))
-
-/**
- * PurpleThemeLoader:
- *
- * A purple theme loader.
- * This is an abstract class for Purple to use with the Purple theme manager.
- * The loader is responsible for building each type of theme
- */
-struct _PurpleThemeLoader
-{
-	GObject parent;
-};
+#define PURPLE_TYPE_THEME_LOADER  purple_theme_loader_get_type()
 
 struct _PurpleThemeLoaderClass
 {
@@ -78,7 +58,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for theme loader.
  */
-GType purple_theme_loader_get_type(void);
+G_DECLARE_DERIVABLE_TYPE(PurpleThemeLoader, purple_theme_loader, PURPLE,
+		THEME_LOADER, GObject)
 
 /**
  * purple_theme_loader_get_type_string:

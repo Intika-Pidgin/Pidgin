@@ -27,6 +27,17 @@
 #include "xmlnode.h"
 #include "debug.h"
 
+/**
+ * PurpleSoundThemeLoader:
+ *
+ * A purple sound theme loader. extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build sound themes
+ */
+struct _PurpleSoundThemeLoader
+{
+	PurpleThemeLoader parent;
+};
+
 /*****************************************************************************
  * Sound Theme Builder
  *****************************************************************************/
