@@ -32,31 +32,7 @@
 #include <glib-object.h>
 #include "theme-loader.h"
 
-typedef struct _PidginBlistThemeLoader        PidginBlistThemeLoader;
-typedef struct _PidginBlistThemeLoaderClass   PidginBlistThemeLoaderClass;
-
-#define PIDGIN_TYPE_BLIST_THEME_LOADER            (pidgin_blist_theme_loader_get_type ())
-#define PIDGIN_BLIST_THEME_LOADER(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PIDGIN_TYPE_BLIST_THEME_LOADER, PidginBlistThemeLoader))
-#define PIDGIN_BLIST_THEME_LOADER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PIDGIN_TYPE_BLIST_THEME_LOADER, PidginBlistThemeLoaderClass))
-#define PIDGIN_IS_BLIST_THEME_LOADER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_BLIST_THEME_LOADER))
-#define PIDGIN_IS_BLIST_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_BLIST_THEME_LOADER))
-#define PIDGIN_BLIST_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_BLIST_THEME_LOADER, PidginBlistThemeLoaderClass))
-
-/**
- * PidginBlistThemeLoader:
- *
- * A pidgin buddy list theme loader. extends PurpleThemeLoader (theme-loader.h)
- * This is a class designed to build sound themes
- */
-struct _PidginBlistThemeLoader
-{
-	PurpleThemeLoader parent;
-};
-
-struct _PidginBlistThemeLoaderClass
-{
-	PurpleThemeLoaderClass parent_class;
-};
+#define PIDGIN_TYPE_BLIST_THEME_LOADER  pidgin_blist_theme_loader_get_type()
 
 /**************************************************************************/
 /* Buddy List Theme-Loader API                                            */
@@ -68,7 +44,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for a blist theme loader.
  */
-GType pidgin_blist_theme_loader_get_type(void);
+G_DECLARE_FINAL_TYPE(PidginBlistThemeLoader, pidgin_blist_theme_loader, PIDGIN,
+		BLIST_THEME_LOADER, PurpleThemeLoader)
 
 G_END_DECLS
 
