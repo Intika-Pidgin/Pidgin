@@ -817,15 +817,50 @@ const char *purple_protocol_class_list_icon(PurpleProtocol *protocol,
  */
 GType purple_protocol_client_iface_get_type(void);
 
+/**
+ * purple_protocol_client_iface_get_actions:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ *
+ * Gets a list of actions for @connection.
+ *
+ * Returns: (transfer full) (element-type PurpleProtocolAction): The list of actions for @connection.
+ */
 GList *purple_protocol_client_iface_get_actions(PurpleProtocol *protocol,
 		PurpleConnection *connection);
 
+/**
+ * purple_protocol_client_iface_list_emblem:
+ * @protocol: The #PurpleProtocol instance.
+ * @buddy: The #PurpleBuddy instance.
+ *
+ * Gets the icon name the emblem that should be used for @buddy.
+ *
+ * Returns: (transfer none): The icon name of the emblem or NULL.
+ */
 const char *purple_protocol_client_iface_list_emblem(PurpleProtocol *protocol,
 		PurpleBuddy *buddy);
 
+/**
+ * purple_protocol_client_iface_status_text:
+ * @protocol: The #PurpleProtocol instance.
+ * @buddy: The #ProtocolBuddy instance.
+ *
+ * Gets the status text for @buddy.
+ *
+ * Returns: (transfer full): The status text for @buddy or NULL.
+ */
 char *purple_protocol_client_iface_status_text(PurpleProtocol *protocol,
 		PurpleBuddy *buddy);
 
+/**
+ * purple_protocol_client_iface_tooltip_text:
+ * @protocol: The #PurpleProtocol instance.
+ * @buddy: The #PurpleBuddy instance.
+ * @user_info:
+ * @full:
+ *
+ */
 void purple_protocol_client_iface_tooltip_text(PurpleProtocol *protocol,
 		PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean full);
 
@@ -1018,18 +1053,59 @@ void purple_protocol_chat_iface_set_topic(PurpleProtocol *protocol,
  */
 GType purple_protocol_privacy_iface_get_type(void);
 
+/**
+ * purple_protocol_privacy_iface_add_permit:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ * @name: The username to permit.
+ *
+ * Adds a permit to the privacy settings for @connection to allow @name to
+ * contact the user.
+ */
 void purple_protocol_privacy_iface_add_permit(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
 
+/**
+ * purple_protocol_privacy_iface_add_deny:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ * @name: The username to deny.
+ *
+ * Adds a deny to the privacy settings for @connection to deny @name from
+ * contacting the user.
+ */
 void purple_protocol_privacy_iface_add_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
 
+/**
+ * purple_protocol_privacy_iface_rem_permit:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ * @name: The username to remove from the permit privacy settings.
+ *
+ * Removes an existing permit for @name.
+ */
 void purple_protocol_privacy_iface_rem_permit(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
 
+/**
+ * purple_protocol_privacy_iface_rem_deny:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ * @name: The username to remove from the deny privacy settings.
+ *
+ * Removes an existing deny for @name.
+ */
 void purple_protocol_privacy_iface_rem_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
 
+/**
+ * purple_protocol_privacy_iface_set_permit_deny:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ *
+ * Forces a sync of the privacy settings with server.
+ */
 void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection);
 
@@ -1044,15 +1120,49 @@ void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
  */
 GType purple_protocol_roomlist_iface_get_type(void);
 
+/**
+ * purple_protocol_roomlist_iface_get_list:
+ * @protocol: The #PurpleProtocol instance.
+ * @gc: The #PurpleAccount to get the roomlist for.
+ *
+ * Get's the list of rooms for @gc.
+ *
+ * Returns: (transfer full): The roomlist for @gc.
+ */
 PurpleRoomlist *purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
 		PurpleConnection *gc);
 
+/**
+ * purple_protocol_roomlist_iface_cancel:
+ * @protocol: The #PurpleProtocol instance.
+ * @list: The #PurpleRoomlist instance.
+ *
+ * Requesting a roomlist can take a long time.  This function cancels a request
+ * that's already in progress.
+ */
 void purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
 		PurpleRoomlist *list);
 
+/**
+ * purple_protocol_roomlist_iface_expand_category:
+ * @protocol: The #PurpleProtocol instance.
+ * @list: The #PurpleRoomlist instance.
+ * @category: The category to expand.
+ *
+ * Expands the given @category for @list.
+ */
 void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
 		PurpleRoomlist *list, PurpleRoomlistRoom *category);
 
+/**
+ * purple_protocol_roomlist_iface_room_serialize:
+ * @protocol: The #PurpleProtocol instance.
+ * @room: The #PurpleRoomlistRoom instance.
+ *
+ * Serializes @room into a string that will be displayed in a user interface.
+ *
+ * Returns: (transfer full): The serialized form of @room.
+ */
 char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 		PurpleRoomlistRoom *room);
 
@@ -1067,12 +1177,49 @@ char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
  */
 GType purple_protocol_media_iface_get_type(void);
 
+/**
+ * purple_protocol_media_iface_initiate_session:
+ * @protocol: The #PurpleProtocol instance.
+ * @account: The #PurpleAccount instance.
+ * @who: The user to initiate a media session with.
+ * @type: The type of media session to create.
+ *
+ * Initiates a media connection of @type to @who.
+ *
+ * Returns: TRUE if successful, FALSE otherwise.
+ */
 gboolean purple_protocol_media_iface_initiate_session(PurpleProtocol *protocol,
 		PurpleAccount *account, const char *who, PurpleMediaSessionType type);
 
+/**
+ * purple_protocol_media_iface_get_caps:
+ * @protocol: The #PurpleProtocol instance.
+ * @account: The #PurpleAccount instance.
+ * @who: The user to get the media capabilites for.
+ *
+ * Returns the #PurpleMediaCaps for @who which determine what types of media
+ * are available.
+ *
+ * Returns the media capabilities of @who.
+ */
 PurpleMediaCaps purple_protocol_media_iface_get_caps(PurpleProtocol *protocol,
 		PurpleAccount *account, const char *who);
 
+/**
+ * purple_protocol_media_iface_send_dtmf:
+ * @protocol: The #PurpleProtocol instance.
+ * @media: The #PurpleMedia instance.
+ * @dtmf: A DTMF to send.
+ * @volume: The volume to send @dtmf at.
+ * @duration: The duration to send @dtmf (in ms?)
+ *
+ * Sends a DTMF (dual-tone multi-frequency) signal via the established @media
+ * for the given @duration at the given @volume.
+ *
+ * It is up to the specific implementation if DTMF is send in or out of band.
+ *
+ * Returns: TRUE if successful, FALSE otherwise.
+ */
 gboolean purple_protocol_media_iface_send_dtmf(PurpleProtocol *protocol,
 		PurpleMedia *media, gchar dtmf, guint8 volume, guint8 duration);
 
