@@ -38,53 +38,11 @@
 
 G_BEGIN_DECLS
 
-#define PURPLE_TYPE_QUEUED_OUTPUT_STREAM		(purple_queued_output_stream_get_type())
-#define PURPLE_QUEUED_OUTPUT_STREAM(o)			(G_TYPE_CHECK_INSTANCE_CAST((o), PURPLE_TYPE_QUEUED_OUTPUT_STREAM, PurpleQueuedOutputStream))
-#define PURPLE_QUEUED_OUTPUT_STREAM_CLASS(k)		(G_TYPE_CHECK_CLASS_CAST((k), PURPLE_TYPE_QUEUED_OUTPUT_STREAM, PurpleQueuedOutputStreamClass))
-#define PURPLE_IS_QUEUED_OUTPUT_STREAM(o)		(G_TYPE_CHECK_INSTANCE_TYPE((o), PURPLE_TYPE_QUEUED_OUTPUT_STREAM))
-#define PURPLE_IS_QUEUED_OUTPUT_STREAM_CLASS(k)		(G_TYPE_CHECK_CLASS_TYPE((k), PURPLE_TYPE_QUEUED_OUTPUT_STREAM))
-#define PURPLE_IS_QUEUED_OUTPUT_STREAM_GET_CLASS(o)	(G_TYPE_INSTANCE_GET_CLASS((o), PURPLE_TYPE_QUEUED_OUTPUT_STREAM, PurpleQueuedOutputStreamClass))
+#define PURPLE_TYPE_QUEUED_OUTPUT_STREAM  purple_queued_output_stream_get_type()
 
-/**
- * PurpleQueuedOutputStream:
- *
- * An implementation of #GFilterOutputStream which allows queuing data for
- * output. This allows data to be queued while other data is being output.
- * Therefore, data doesn't have to be manually stored while waiting for
- * stream operations to finish.
- *
- * To create a queued output stream, use #purple_queued_output_stream_new().
- *
- * To queue data, use #purple_queued_output_stream_push_bytes_async().
- *
- * If there's a fatal stream error, it's suggested to clear the remaining
- * bytes queued with #purple_queued_output_stream_clear_queue() to avoid
- * excessive errors returned in
- * #purple_queued_output_stream_push_bytes_async()'s async callback.
- */
-typedef struct _PurpleQueuedOutputStream	PurpleQueuedOutputStream;
-typedef struct _PurpleQueuedOutputStreamClass	PurpleQueuedOutputStreamClass;
-typedef struct _PurpleQueuedOutputStreamPrivate	PurpleQueuedOutputStreamPrivate;
-
-struct _PurpleQueuedOutputStream
-{
-	GFilterOutputStream parent_instance;
-
-	/*< protected >*/
-	PurpleQueuedOutputStreamPrivate *priv;
-};
-
-struct _PurpleQueuedOutputStreamClass
-{
-	GFilterOutputStreamClass parent_class;
-
-	/*< private >*/
-	/* Padding for future expansion */
-	void (*_g_reserved1)(void);
-	void (*_g_reserved2)(void);
-};
-
-GType purple_queued_output_stream_get_type(void) G_GNUC_CONST;
+G_DECLARE_FINAL_TYPE(PurpleQueuedOutputStream,
+		purple_queued_output_stream, PURPLE,
+		QUEUED_OUTPUT_STREAM, GFilterOutputStream)
 
 /*
  * purple_queued_output_stream_new
