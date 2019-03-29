@@ -22,38 +22,16 @@
 #ifndef PIDGIN_DEBUG_PLUGIN_INFO_H
 #define PIDGIN_DEBUG_PLUGIN_INFO_H
 
-#include <gtk/gtk.h>
-
-#define PIDGIN_TYPE_DEBUG_PLUGIN_INFO            (pidgin_debug_plugin_info_get_type())
-#define PIDGIN_DEBUG_PLUGIN_INFO(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_DEBUG_PLUGIN_INFO, PidginDebugPluginInfo))
-#define PIDGIN_DEBUG_PLUGIN_INFO_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PIDGIN_TYPE_DEBUG_PLUGIN_INFO, PidginDebugPluginInfoClass))
-#define PIDGIN_IS_DEBUG_PLUGIN_INFO(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PIDGIN_TYPE_DEBUG_PLUGIN_INFO))
-#define PIDGIN_IS_DEBUG_PLUGIN_INFO_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PIDGIN_TYPE_DEBUG_PLUGIN_INFO))
-#define PIDGIN_DEBUG_PLUGIN_INFO_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PIDGIN_TYPE_DEBUG_PLUGIN_INFO, PidginDebugPluginInfoClass))
-
-typedef struct _PidginDebugPluginInfo            PidginDebugPluginInfo;
-typedef struct _PidginDebugPluginInfoClass       PidginDebugPluginInfoClass;
-
 #include <glib.h>
 #include <glib-object.h>
 
 #include <gtk/gtk.h>
 
-struct _PidginDebugPluginInfo {
-	GtkDialog parent;
-
-	gpointer reserved[4];
-};
-
-struct _PidginDebugPluginInfoClass {
-	GtkDialogClass parent;
-
-	gpointer reserved[4];
-};
-
 G_BEGIN_DECLS
 
-GType pidgin_debug_plugin_info_get_type(void);
+#define PIDGIN_TYPE_DEBUG_PLUGIN_INFO  pidgin_debug_plugin_info_get_type()
+G_DECLARE_FINAL_TYPE(PidginDebugPluginInfo, pidgin_debug_plugin_info, PIDGIN,
+		DEBUG_PLUGIN_INFO, GtkDialog)
 
 GtkWidget *pidgin_debug_plugin_info_new(void);
 
