@@ -60,6 +60,16 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurplePresence, purple_presence, G_TYPE_OBJECT)
  * PurpleAccountPresence
  **************************************************************************/
 
+/**
+ * PurpleAccountPresence:
+ *
+ * A presence for an account
+ */
+struct _PurpleAccountPresence
+{
+	PurplePresence parent;
+};
+
 /** Private data for an account presence */
 typedef struct _PurpleAccountPresencePrivate
 {
@@ -82,6 +92,16 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleAccountPresence, purple_account_presence,
 /**************************************************************************
  * PurpleBuddyPresence
  **************************************************************************/
+
+/**
+ * PurpleBuddyPresence:
+ *
+ * A presence for a buddy
+ */
+struct _PurpleBuddyPresence
+{
+	PurplePresence parent;
+};
 
 /** Private data for a buddy presence */
 typedef struct _PurpleBuddyPresencePrivate
