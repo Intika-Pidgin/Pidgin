@@ -33,6 +33,16 @@
 #define PIDGIN_SMILEY_THEME_MAX_LINES 1024
 #define PIDGIN_SMILEY_THEME_MAX_TOKENS 1024
 
+/**
+ * PidginSmileyTheme:
+ *
+ * An implementation of a smiley theme.
+ */
+struct _PidginSmileyTheme
+{
+	PurpleSmileyTheme parent;
+};
+
 typedef struct
 {
 	gchar *path;
