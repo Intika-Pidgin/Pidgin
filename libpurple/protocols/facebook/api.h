@@ -41,12 +41,7 @@
 #include "id.h"
 #include "mqtt.h"
 
-#define FB_TYPE_API  (fb_api_get_type())
-#define FB_API(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_API, FbApi))
-#define FB_API_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_API, FbApiClass))
-#define FB_IS_API(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_API))
-#define FB_IS_API_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_API))
-#define FB_API_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_API, FbApiClass))
+#define FB_TYPE_API  fb_api_get_type()
 
 /**
  * FB_API_AHOST:
@@ -388,9 +383,6 @@
  */
 #define FB_API_ERROR  fb_api_error_quark()
 
-typedef struct _FbApi FbApi;
-typedef struct _FbApiClass FbApiClass;
-typedef struct _FbApiPrivate FbApiPrivate;
 typedef struct _FbApiEvent FbApiEvent;
 typedef struct _FbApiMessage FbApiMessage;
 typedef struct _FbApiPresence FbApiPresence;
@@ -444,29 +436,6 @@ typedef enum
 	FB_API_MESSAGE_FLAG_IMAGE = 1 << 1,
 	FB_API_MESSAGE_FLAG_SELF = 1 << 2
 } FbApiMessageFlags;
-
-/**
- * FbApi:
- *
- * Represents a Facebook Messenger connection.
- */
-struct _FbApi
-{
-	/*< private >*/
-	GObject parent;
-	FbApiPrivate *priv;
-};
-
-/**
- * FbApiClass:
- *
- * The base class for all #FbApi's.
- */
-struct _FbApiClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
 
 /**
  * FbApiEvent:
@@ -567,8 +536,7 @@ struct _FbApiUser
  *
  * Returns: The #GType for an #FbApi.
  */
-GType
-fb_api_get_type(void);
+G_DECLARE_FINAL_TYPE(FbApi, fb_api, FB, API, GObject)
 
 /**
  * fb_api_error_quark:
