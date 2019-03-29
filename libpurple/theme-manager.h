@@ -36,29 +36,7 @@
 
 typedef void (*PurpleThemeFunc) (PurpleTheme *theme);
 
-typedef struct _PurpleThemeManager PurpleThemeManager;
-typedef struct _PurpleThemeManagerClass PurpleThemeManagerClass;
-
-#define PURPLE_TYPE_THEME_MANAGER            (purple_theme_manager_get_type())
-#define PURPLE_THEME_MANAGER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_THEME_MANAGER, PurpleThemeManager))
-#define PURPLE_THEME_MANAGER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_THEME_MANAGER, PurpleThemeManagerClass))
-#define PURPLE_IS_THEME_MANAGER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_THEME_MANAGER))
-#define PURPLE_IS_THEME_MANAGER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_THEME_MANAGER))
-#define PURPLE_GET_THEME_MANAGER_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_THEME_MANAGER, PurpleThemeManagerClass))
-
-struct _PurpleThemeManager {
-	GObject parent;
-};
-
-struct _PurpleThemeManagerClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
+#define PURPLE_TYPE_THEME_MANAGER  purple_theme_manager_get_type()
 
 /**************************************************************************/
 /* Purple Theme Manager API                                               */
@@ -70,7 +48,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for theme manager.
  */
-GType purple_theme_manager_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleThemeManager, purple_theme_manager, PURPLE,
+		THEME_MANAGER, GObject)
 
 /**
  * purple_theme_manager_init:

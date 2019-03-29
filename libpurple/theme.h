@@ -31,26 +31,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
-typedef struct _PurpleTheme        PurpleTheme;
-typedef struct _PurpleThemeClass   PurpleThemeClass;
-
-#define PURPLE_TYPE_THEME            (purple_theme_get_type ())
-#define PURPLE_THEME(obj)            (G_TYPE_CHECK_INSTANCE_CAST ((obj), PURPLE_TYPE_THEME, PurpleTheme))
-#define PURPLE_THEME_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST ((klass), PURPLE_TYPE_THEME, PurpleThemeClass))
-#define PURPLE_IS_THEME(obj)         (G_TYPE_CHECK_INSTANCE_TYPE ((obj), PURPLE_TYPE_THEME))
-#define PURPLE_IS_THEME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE ((klass), PURPLE_TYPE_THEME))
-#define PURPLE_THEME_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS ((obj), PURPLE_TYPE_THEME, PurpleThemeClass))
-
-/**
- * PurpleTheme:
- *
- * A purple theme.
- * This is an abstract class for Purple to use with the Purple theme manager.
- */
-struct _PurpleTheme
-{
-	GObject parent;
-};
+#define PURPLE_TYPE_THEME  purple_theme_get_type()
 
 struct _PurpleThemeClass
 {
@@ -73,7 +54,7 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for a theme.
  */
-GType purple_theme_get_type(void);
+G_DECLARE_DERIVABLE_TYPE(PurpleTheme, purple_theme, PURPLE, THEME, GObject)
 
 /**
  * purple_theme_get_name:
