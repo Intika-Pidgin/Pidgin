@@ -43,6 +43,16 @@ typedef struct _PurpleTrieRecord PurpleTrieRecord;
 typedef struct _PurpleTrieState PurpleTrieState;
 typedef struct _PurpleTrieRecordList PurpleTrieRecordList;
 
+/**
+ * PurpleTrie:
+ *
+ * The trie object instance.
+ */
+struct _PurpleTrie
+{
+	GObject parent;
+};
+
 typedef struct
 {
 	gboolean reset_on_match;
