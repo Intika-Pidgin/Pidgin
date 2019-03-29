@@ -35,52 +35,16 @@
 
 #include <glib-object.h>
 
-typedef struct _PurpleMessage PurpleMessage;
-typedef struct _PurpleMessageClass PurpleMessageClass;
-
-#define PURPLE_TYPE_MESSAGE            (purple_message_get_type())
-#define PURPLE_MESSAGE(smiley)         (G_TYPE_CHECK_INSTANCE_CAST((smiley), PURPLE_TYPE_MESSAGE, PurpleMessage))
-#define PURPLE_MESSAGE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_MESSAGE, PurpleMessageClass))
-#define PURPLE_IS_MESSAGE(smiley)      (G_TYPE_CHECK_INSTANCE_TYPE((smiley), PURPLE_TYPE_MESSAGE))
-#define PURPLE_IS_MESSAGE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MESSAGE))
-#define PURPLE_MESSAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MESSAGE, PurpleMessageClass))
-
-/**
- * PurpleMessage:
- *
- * A message data container.
- */
-struct _PurpleMessage
-{
-	/*< private >*/
-	GObject parent;
-};
-
-/**
- * PurpleMessageClass:
- *
- * Base class for #PurpleMessage objects.
- */
-struct _PurpleMessageClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
+
+#define PURPLE_TYPE_MESSAGE  purple_message_get_type()
 
 /**
  * purple_message_get_type:
  *
  * Returns: the #GType for a message.
  */
-GType
-purple_message_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleMessage, purple_message, PURPLE, MESSAGE, GObject)
 
 /**
  * purple_message_new_outgoing:
