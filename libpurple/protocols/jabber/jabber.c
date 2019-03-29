@@ -634,15 +634,17 @@ static gboolean jabber_keepalive_timeout(PurpleConnection *gc)
 void jabber_keepalive(PurpleConnection *gc)
 {
 	JabberStream *js = purple_connection_get_protocol_data(gc);
-	time_t now = time(NULL);
 
-	if (js->keepalive_timeout == 0 && (now - js->last_ping) >= PING_TIMEOUT) {
-		js->last_ping = now;
-
+	if (js->keepalive_timeout == 0) {
 		jabber_keepalive_ping(js);
 		js->keepalive_timeout = g_timeout_add_seconds(120,
 				(GSourceFunc)(jabber_keepalive_timeout), gc);
 	}
+}
+
+static int jabber_get_keepalive_interval(void)
+{
+	return PING_TIMEOUT;
 }
 
 static void
@@ -4133,20 +4135,21 @@ jabber_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 static void
 jabber_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 {
-	server_iface->register_user   = jabber_register_account;
-	server_iface->unregister_user = jabber_unregister_account;
-	server_iface->set_info        = jabber_set_info;
-	server_iface->get_info        = jabber_buddy_get_info;
-	server_iface->set_status      = jabber_set_status;
-	server_iface->set_idle        = jabber_idle_set;
-	server_iface->add_buddy       = jabber_roster_add_buddy;
-	server_iface->remove_buddy    = jabber_roster_remove_buddy;
-	server_iface->keepalive       = jabber_keepalive;
-	server_iface->alias_buddy     = jabber_roster_alias_change;
-	server_iface->group_buddy     = jabber_roster_group_change;
-	server_iface->rename_group    = jabber_roster_group_rename;
-	server_iface->set_buddy_icon  = jabber_set_buddy_icon;
-	server_iface->send_raw        = jabber_protocol_send_raw;
+	server_iface->register_user          = jabber_register_account;
+	server_iface->unregister_user        = jabber_unregister_account;
+	server_iface->set_info               = jabber_set_info;
+	server_iface->get_info               = jabber_buddy_get_info;
+	server_iface->set_status             = jabber_set_status;
+	server_iface->set_idle               = jabber_idle_set;
+	server_iface->add_buddy              = jabber_roster_add_buddy;
+	server_iface->remove_buddy           = jabber_roster_remove_buddy;
+	server_iface->keepalive              = jabber_keepalive;
+	server_iface->get_keepalive_interval = jabber_get_keepalive_interval;
+	server_iface->alias_buddy            = jabber_roster_alias_change;
+	server_iface->group_buddy            = jabber_roster_group_change;
+	server_iface->rename_group           = jabber_roster_group_rename;
+	server_iface->set_buddy_icon         = jabber_set_buddy_icon;
+	server_iface->send_raw               = jabber_protocol_send_raw;
 }
 
 static void

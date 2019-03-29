@@ -500,6 +500,12 @@ purple_protocol_server_iface_keepalive(PurpleProtocol *protocol,
 	DEFINE_PROTOCOL_FUNC(protocol, keepalive, gc);
 }
 
+int
+purple_protocol_server_iface_get_keepalive_interval(PurpleProtocol *protocol)
+{
+	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, 30, get_keepalive_interval);
+}
+
 void
 purple_protocol_server_iface_alias_buddy(PurpleProtocol *protocol,
 		PurpleConnection *gc, const char *who, const char *alias)
