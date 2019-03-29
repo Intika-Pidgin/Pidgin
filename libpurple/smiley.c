@@ -21,8 +21,15 @@
 
 #include "smiley.h"
 
-#define PURPLE_SMILEY_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_SMILEY, PurpleSmileyPrivate))
+/**
+ * PurpleSmiley:
+ *
+ * A generic smiley. It can either be a theme smiley, or a custom smiley.
+ */
+struct _PurpleSmiley {
+	/*< private >*/
+	PurpleImage parent;
+};
 
 typedef struct {
 	gchar *shortcut;
@@ -37,12 +44,14 @@ enum
 
 static GParamSpec *properties[PROP_LAST];
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleSmiley, purple_smiley, PURPLE_TYPE_IMAGE);
+
 /*******************************************************************************
  * Helpers
  ******************************************************************************/
 static void
 _purple_smiley_set_shortcut(PurpleSmiley *smiley, const gchar *shortcut) {
-	PurpleSmileyPrivate *priv = PURPLE_SMILEY_GET_PRIVATE(smiley);
+	PurpleSmileyPrivate *priv = purple_smiley_get_instance_private(smiley);
 
 	g_free(priv->shortcut);
 
@@ -54,7 +63,6 @@ _purple_smiley_set_shortcut(PurpleSmiley *smiley, const gchar *shortcut) {
 /*******************************************************************************
  * Object stuff
  ******************************************************************************/
-G_DEFINE_TYPE_WITH_PRIVATE(PurpleSmiley, purple_smiley, PURPLE_TYPE_IMAGE);
 
 static void
 purple_smiley_init(PurpleSmiley *smiley) {
@@ -62,7 +70,8 @@ purple_smiley_init(PurpleSmiley *smiley) {
 
 static void
 purple_smiley_finalize(GObject *obj) {
-	PurpleSmileyPrivate *priv = PURPLE_SMILEY_GET_PRIVATE(obj);
+	PurpleSmiley *smiley = PURPLE_SMILEY(obj);
+	PurpleSmileyPrivate *priv = purple_smiley_get_instance_private(smiley);
 
 	g_free(priv->shortcut);
 
@@ -190,12 +199,13 @@ purple_smiley_new_remote(const gchar *shortcut) {
 }
 
 const gchar *
-purple_smiley_get_shortcut(const PurpleSmiley *smiley) {
+purple_smiley_get_shortcut(PurpleSmiley *smiley)
+{
 	PurpleSmileyPrivate *priv = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_SMILEY(smiley), NULL);
 
-	priv = PURPLE_SMILEY_GET_PRIVATE(smiley);
+	priv = purple_smiley_get_instance_private(smiley);
 
 	return priv->shortcut;
 }
