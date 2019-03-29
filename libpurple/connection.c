@@ -40,8 +40,6 @@
 
 G_DEFINE_QUARK(purple-connection-error-quark, purple_connection_error);
 
-#define KEEPALIVE_INTERVAL 30
-
 typedef struct _PurpleConnectionPrivate  PurpleConnectionPrivate;
 
 /* Private data for a connection */
@@ -62,7 +60,7 @@ struct _PurpleConnectionPrivate
 	void *proto_data;             /* Protocol-specific data.           */
 
 	char *display_name;           /* How you appear to other people.   */
-	guint keepalive;              /* Keep-alive.                       */
+	GSource *keepalive;           /* Keep-alive.                       */
 
 	/* Wants to Die state.  This is set when the user chooses to log out, or
 	 * when the protocol is disconnected and should not be automatically
@@ -79,8 +77,6 @@ struct _PurpleConnectionPrivate
 	PurpleConnectionErrorInfo *error_info;
 
 	guint disconnect_timeout;  /* Timer used for nasty stack tricks         */
-	time_t last_received;      /* When we last received a packet. Set by the
-	                              protocols to avoid sending unneeded keepalives */
 };
 
 /* GObject property enums */
@@ -119,12 +115,6 @@ send_keepalive(gpointer data)
 	PurpleConnection *gc = data;
 	PurpleConnectionPrivate *priv = purple_connection_get_instance_private(gc);
 
-	/* Only send keep-alives if we haven't heard from the
-	 * server in a while.
-	 */
-	if ((time(NULL) - priv->last_received) < KEEPALIVE_INTERVAL)
-		return TRUE;
-
 	purple_protocol_server_iface_keepalive(priv->protocol, gc);
 
 	return TRUE;
@@ -142,14 +132,15 @@ update_keepalive(PurpleConnection *gc, gboolean on)
 
 	if (on && !priv->keepalive)
 	{
-		purple_debug_info("connection", "Activating keepalive.\n");
-		priv->keepalive = g_timeout_add_seconds(KEEPALIVE_INTERVAL, send_keepalive, gc);
+		int interval = purple_protocol_server_iface_get_keepalive_interval(priv->protocol);
+		purple_debug_info("connection", "Activating keepalive to %d seconds.", interval);
+		priv->keepalive = g_main_context_find_source_by_id(NULL, g_timeout_add_seconds(interval, send_keepalive, gc));
 	}
-	else if (!on && priv->keepalive > 0)
+	else if (!on && priv->keepalive)
 	{
 		purple_debug_info("connection", "Deactivating keepalive.\n");
-		g_source_remove(priv->keepalive);
-		priv->keepalive = 0;
+		g_source_destroy(priv->keepalive);
+		priv->keepalive = NULL;
 	}
 }
 
@@ -625,7 +616,13 @@ void purple_connection_update_last_received(PurpleConnection *gc)
 
 	g_return_if_fail(priv != NULL);
 
-	priv->last_received = time(NULL);
+	/*
+	 * For safety, actually this function shouldn't be called when the
+	 * keepalive mechanism is inactive.
+	 */
+	if (priv->keepalive) {
+		purple_timeout_reset(priv->keepalive, purple_protocol_server_iface_get_keepalive_interval(priv->protocol));
+	}
 }
 
 static PurpleConnectionErrorInfo *
