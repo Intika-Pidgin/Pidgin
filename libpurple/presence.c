@@ -23,17 +23,12 @@
 #include "debug.h"
 #include "presence.h"
 
-/** @copydoc _PurplePresencePrivate */
-typedef struct _PurplePresencePrivate  PurplePresencePrivate;
-
-/** @copydoc _PurpleAccountPresencePrivate */
-typedef struct _PurpleAccountPresencePrivate  PurpleAccountPresencePrivate;
-
-/** @copydoc _PurpleBuddyPresencePrivate */
-typedef struct _PurpleBuddyPresencePrivate  PurpleBuddyPresencePrivate;
+/**************************************************************************
+ * PurplePresence
+ **************************************************************************/
 
 /** Private data for a presence */
-struct _PurplePresencePrivate
+typedef struct _PurplePresencePrivate
 {
 	gboolean idle;
 	time_t idle_time;
@@ -43,7 +38,7 @@ struct _PurplePresencePrivate
 	GHashTable *status_table;
 
 	PurpleStatus *active_status;
-};
+} PurplePresencePrivate;
 
 /* Presence property enums */
 enum
@@ -57,11 +52,19 @@ enum
 	PRES_PROP_LAST
 };
 
+static GParamSpec *properties[PRES_PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurplePresence, purple_presence, G_TYPE_OBJECT)
+
+/**************************************************************************
+ * PurpleAccountPresence
+ **************************************************************************/
+
 /** Private data for an account presence */
-struct _PurpleAccountPresencePrivate
+typedef struct _PurpleAccountPresencePrivate
 {
 	PurpleAccount *account;
-};
+} PurpleAccountPresencePrivate;
 
 /* Account presence property enums */
 enum
@@ -71,11 +74,20 @@ enum
 	ACPRES_PROP_LAST
 };
 
+static GParamSpec *ap_properties[ACPRES_PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleAccountPresence, purple_account_presence,
+		PURPLE_TYPE_PRESENCE)
+
+/**************************************************************************
+ * PurpleBuddyPresence
+ **************************************************************************/
+
 /** Private data for a buddy presence */
-struct _PurpleBuddyPresencePrivate
+typedef struct _PurpleBuddyPresencePrivate
 {
 	PurpleBuddy *buddy;
-};
+} PurpleBuddyPresencePrivate;
 
 /* Buddy presence property enums */
 enum
@@ -85,13 +97,8 @@ enum
 	BUDPRES_PROP_LAST
 };
 
-static GParamSpec *properties[PRES_PROP_LAST];
-static GParamSpec *ap_properties[ACPRES_PROP_LAST];
 static GParamSpec *bp_properties[BUDPRES_PROP_LAST];
 
-G_DEFINE_TYPE_WITH_PRIVATE(PurplePresence, purple_presence, G_TYPE_OBJECT)
-G_DEFINE_TYPE_WITH_PRIVATE(PurpleAccountPresence, purple_account_presence,
-		PURPLE_TYPE_PRESENCE)
 G_DEFINE_TYPE_WITH_PRIVATE(PurpleBuddyPresence, purple_buddy_presence,
 		PURPLE_TYPE_PRESENCE)
 
