@@ -39,44 +39,17 @@
 #include "smiley.h"
 #include "trie.h"
 
-typedef struct _PurpleSmileyList PurpleSmileyList;
-typedef struct _PurpleSmileyListClass PurpleSmileyListClass;
-
-#define PURPLE_TYPE_SMILEY_LIST            (purple_smiley_list_get_type())
-#define PURPLE_SMILEY_LIST(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_SMILEY_LIST, PurpleSmileyList))
-#define PURPLE_SMILEY_LIST_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_SMILEY_LIST, PurpleSmileyListClass))
-#define PURPLE_IS_SMILEY_LIST(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_SMILEY_LIST))
-#define PURPLE_IS_SMILEY_LIST_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_SMILEY_LIST))
-#define PURPLE_SMILEY_LIST_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_SMILEY_LIST, PurpleSmileyListClass))
-
-/**
- * PurpleSmileyList:
- *
- * A container for #PurpleSmiley's.
- */
-struct _PurpleSmileyList {
-	/*< private >*/
-	GObject parent;
-};
-
-struct _PurpleSmileyListClass {
-	/*< private >*/
-	GObjectClass parent_class;
-
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
+
+#define PURPLE_TYPE_SMILEY_LIST  purple_smiley_list_get_type()
 
 /**
  * purple_smiley_list_get_type:
  *
  * Returns: the #GType for a smiley list.
  */
-GType purple_smiley_list_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleSmileyList, purple_smiley_list, PURPLE,
+		SMILEY_LIST, GObject)
 
 /**
  * purple_smiley_list_new:
@@ -124,7 +97,7 @@ void purple_smiley_list_remove(PurpleSmileyList *list, PurpleSmiley *smiley);
  *
  * Returns: %TRUE if the @list is empty, %FALSE otherwise.
  */
-gboolean purple_smiley_list_is_empty(const PurpleSmileyList *list);
+gboolean purple_smiley_list_is_empty(PurpleSmileyList *list);
 
 /**
  * purple_smiley_list_get_by_shortcut:
