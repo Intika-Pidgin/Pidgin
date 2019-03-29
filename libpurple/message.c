@@ -26,6 +26,16 @@
 #include "enums.h"
 #include "message.h"
 
+/**
+ * PurpleMessage:
+ *
+ * A message data container.
+ */
+struct _PurpleMessage
+{
+	GObject parent;
+};
+
 typedef struct {
 	guint id;
 	gchar *author;
