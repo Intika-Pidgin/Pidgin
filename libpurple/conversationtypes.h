@@ -52,15 +52,7 @@ typedef struct _PurpleIMConversationClass    PurpleIMConversationClass;
 typedef struct _PurpleChatConversation       PurpleChatConversation;
 typedef struct _PurpleChatConversationClass  PurpleChatConversationClass;
 
-#define PURPLE_TYPE_CHAT_USER                    (purple_chat_user_get_type())
-#define PURPLE_CHAT_USER(obj)                    (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_CHAT_USER, PurpleChatUser))
-#define PURPLE_CHAT_USER_CLASS(klass)            (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_CHAT_USER, PurpleChatUserClass))
-#define PURPLE_IS_CHAT_USER(obj)                 (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_CHAT_USER))
-#define PURPLE_IS_CHAT_USER_CLASS(klass)         (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_CHAT_USER))
-#define PURPLE_CHAT_USER_GET_CLASS(obj)          (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_CHAT_USER, PurpleChatUserClass))
-
 typedef struct _PurpleChatUser       PurpleChatUser;
-typedef struct _PurpleChatUserClass  PurpleChatUserClass;
 
 /**
  * PurpleIMTypingState:
@@ -152,39 +144,6 @@ struct _PurpleChatConversation
  */
 struct _PurpleChatConversationClass {
 	PurpleConversationClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
-/**************************************************************************/
-/* PurpleChatUser                                                         */
-/**************************************************************************/
-/**
- * PurpleChatUser:
- * @ui_data: The UI data associated with this chat user. This is a convenience
- *           field provided to the UIs -- it is not used by the libpurple core.
- *
- * Structure representing a chat user instance.
- */
-struct _PurpleChatUser
-{
-	GObject gparent;
-
-	/*< public >*/
-	gpointer ui_data;
-};
-
-/**
- * PurpleChatUserClass:
- *
- * Base class for all #PurpleChatUser's
- */
-struct _PurpleChatUserClass {
-	GObjectClass parent_class;
 
 	/*< private >*/
 	void (*_purple_reserved1)(void);
@@ -688,12 +647,15 @@ gboolean purple_chat_conversation_has_left(PurpleChatConversation *chat);
 /* Chat Conversation User API                                             */
 /**************************************************************************/
 
+#define PURPLE_TYPE_CHAT_USER  purple_chat_user_get_type()
+
 /**
  * purple_chat_user_get_type:
  *
  * Returns: The #GType for the ChatConversationBuddy object.
  */
-GType purple_chat_user_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleChatUser, purple_chat_user, PURPLE, CHAT_USER,
+		GObject)
 
 /**
  * purple_chat_user_set_chat:
