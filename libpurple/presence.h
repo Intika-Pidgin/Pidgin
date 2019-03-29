@@ -159,82 +159,6 @@ struct _PurpleBuddyPresenceClass {
 G_BEGIN_DECLS
 
 /**************************************************************************/
-/* PurpleAccountPresence API                                              */
-/**************************************************************************/
-
-/**
- * purple_account_presence_get_type:
- *
- * Returns: The #GType for the #PurpleAccountPresence object.
- */
-GType purple_account_presence_get_type(void);
-
-/**
- * purple_account_presence_new:
- * @account: The account to associate with the presence.
- *
- * Creates a presence for an account.
- *
- * Returns: The new presence.
- */
-PurpleAccountPresence *purple_account_presence_new(PurpleAccount *account);
-
-/**
- * purple_account_presence_get_account:
- * @presence: The presence.
- *
- * Returns an account presence's account.
- *
- * Returns: The presence's account.
- */
-PurpleAccount *purple_account_presence_get_account(PurpleAccountPresence *presence);
-
-/**************************************************************************/
-/* PurpleBuddyPresence API                                                */
-/**************************************************************************/
-
-/**
- * purple_buddy_presence_get_type:
- *
- * Returns: The #GType for the #PurpleBuddyPresence object.
- */
-GType purple_buddy_presence_get_type(void);
-
-/**
- * purple_buddy_presence_new:
- * @buddy: The buddy to associate with the presence.
- *
- * Creates a presence for a buddy.
- *
- * Returns: The new presence.
- */
-PurpleBuddyPresence *purple_buddy_presence_new(PurpleBuddy *buddy);
-
-/**
- * purple_buddy_presence_get_buddy:
- * @presence: The presence.
- *
- * Returns the buddy presence's buddy.
- *
- * Returns: The presence's buddy.
- */
-PurpleBuddy *purple_buddy_presence_get_buddy(PurpleBuddyPresence *presence);
-
-/**
- * purple_buddy_presence_compare:
- * @buddy_presence1: The first presence.
- * @buddy_presence2: The second presence.
- *
- * Compares two buddy presences for availability.
- *
- * Returns: -1 if @buddy_presence1 is more available than @buddy_presence2.
- *           0 if @buddy_presence1 is equal to @buddy_presence2.
- *           1 if @buddy_presence1 is less available than @buddy_presence2.
- */
-gint purple_buddy_presence_compare(PurpleBuddyPresence *buddy_presence1,
-						   PurpleBuddyPresence *buddy_presence2);
-
-/**************************************************************************/
 /* PurplePresence API                                                     */
 /**************************************************************************/
 
@@ -410,6 +334,82 @@ time_t purple_presence_get_idle_time(PurplePresence *presence);
  * Returns: The presence's login time.
  */
 time_t purple_presence_get_login_time(PurplePresence *presence);
+
+/**************************************************************************/
+/* PurpleAccountPresence API                                              */
+/**************************************************************************/
+
+/**
+ * purple_account_presence_get_type:
+ *
+ * Returns: The #GType for the #PurpleAccountPresence object.
+ */
+GType purple_account_presence_get_type(void);
+
+/**
+ * purple_account_presence_new:
+ * @account: The account to associate with the presence.
+ *
+ * Creates a presence for an account.
+ *
+ * Returns: The new presence.
+ */
+PurpleAccountPresence *purple_account_presence_new(PurpleAccount *account);
+
+/**
+ * purple_account_presence_get_account:
+ * @presence: The presence.
+ *
+ * Returns an account presence's account.
+ *
+ * Returns: The presence's account.
+ */
+PurpleAccount *purple_account_presence_get_account(PurpleAccountPresence *presence);
+
+/**************************************************************************/
+/* PurpleBuddyPresence API                                                */
+/**************************************************************************/
+
+/**
+ * purple_buddy_presence_get_type:
+ *
+ * Returns: The #GType for the #PurpleBuddyPresence object.
+ */
+GType purple_buddy_presence_get_type(void);
+
+/**
+ * purple_buddy_presence_new:
+ * @buddy: The buddy to associate with the presence.
+ *
+ * Creates a presence for a buddy.
+ *
+ * Returns: The new presence.
+ */
+PurpleBuddyPresence *purple_buddy_presence_new(PurpleBuddy *buddy);
+
+/**
+ * purple_buddy_presence_get_buddy:
+ * @presence: The presence.
+ *
+ * Returns the buddy presence's buddy.
+ *
+ * Returns: The presence's buddy.
+ */
+PurpleBuddy *purple_buddy_presence_get_buddy(PurpleBuddyPresence *presence);
+
+/**
+ * purple_buddy_presence_compare:
+ * @buddy_presence1: The first presence.
+ * @buddy_presence2: The second presence.
+ *
+ * Compares two buddy presences for availability.
+ *
+ * Returns: -1 if @buddy_presence1 is more available than @buddy_presence2.
+ *           0 if @buddy_presence1 is equal to @buddy_presence2.
+ *           1 if @buddy_presence1 is less available than @buddy_presence2.
+ */
+gint purple_buddy_presence_compare(PurpleBuddyPresence *buddy_presence1,
+						   PurpleBuddyPresence *buddy_presence2);
 
 G_END_DECLS
 
