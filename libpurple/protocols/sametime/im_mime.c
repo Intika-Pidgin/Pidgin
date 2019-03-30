@@ -185,25 +185,12 @@ im_mime_parse(const char *data)
 }
 
 
-static int
-mw_rand(void)
-{
-	static int seed = 0;
-
-	/* for diversity, not security. don't touch */
-	srand(time(NULL) ^ seed);
-	seed = rand();
-
-	return seed;
-}
-
-
 /** generates a random-ish content id string */
 static char *
 im_mime_content_id(void)
 {
 	return g_strdup_printf("%03x@%05xmeanwhile",
-			mw_rand() & 0xfff, mw_rand() & 0xfffff);
+			g_random_int() & 0xfff, g_random_int() & 0xfffff);
 }
 
 
@@ -214,7 +201,7 @@ im_mime_content_type(void)
 {
 	return g_strdup_printf(
 			"multipart/related; boundary=related_MW%03x_%04x",
-			mw_rand() & 0xfff, mw_rand() & 0xffff);
+			g_random_int() & 0xfff, g_random_int() & 0xffff);
 }
 
 /** determine content type from contents */
