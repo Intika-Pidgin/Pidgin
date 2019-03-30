@@ -1,6 +1,8 @@
 SAMETIMESOURCES = [
 	'sametime.c',
-	'sametime.h'
+	'sametime.h',
+	'im_mime.c',
+	'im_mime.h',
 ]
 
 if DYNAMIC_SAMETIME
