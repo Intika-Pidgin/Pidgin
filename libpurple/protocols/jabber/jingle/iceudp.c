@@ -31,6 +31,11 @@
 
 #include <string.h>
 
+struct _JingleIceUdp
+{
+	JingleTransport parent;
+};
+
 typedef struct
 {
 	GList *local_candidates;

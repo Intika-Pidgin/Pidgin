@@ -38,36 +38,15 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_RTP            (jingle_rtp_get_type())
-#define JINGLE_RTP(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_RTP, JingleRtp))
-#define JINGLE_RTP_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_RTP, JingleRtpClass))
-#define JINGLE_IS_RTP(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_RTP))
-#define JINGLE_IS_RTP_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_RTP))
-#define JINGLE_RTP_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_RTP, JingleRtpClass))
-
-/** @copydoc _JingleRtp */
-typedef struct _JingleRtp JingleRtp;
-/** @copydoc _JingleRtpClass */
-typedef struct _JingleRtpClass JingleRtpClass;
-
-/** The rtp class */
-struct _JingleRtpClass
-{
-	JingleContentClass parent_class;     /**< The parent class. */
-};
-
-/** The rtp class's private data */
-struct _JingleRtp
-{
-	JingleContent parent;                /**< The parent of this object. */
-};
+#define JINGLE_TYPE_RTP  jingle_rtp_get_type()
 
 /**
  * Gets the rtp class's GType
  *
  * @return The rtp class's GType.
  */
-G_MODULE_EXPORT GType jingle_rtp_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_FINAL_TYPE(JingleRtp, jingle_rtp, JINGLE, RTP, JingleContent)
 
 /**
  * Registers the JingleRtp type in the type system.

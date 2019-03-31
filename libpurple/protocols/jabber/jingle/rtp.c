@@ -40,6 +40,11 @@
 
 #include <string.h>
 
+struct _JingleRtp
+{
+	JingleContent parent;
+};
+
 typedef struct
 {
 	gchar *media_type;
