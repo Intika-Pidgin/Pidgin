@@ -24,10 +24,10 @@
 #include "internal.h"
 
 #include <glib.h>
+#include <gmime/gmime.h>
 
 /* purple includes */
 #include "image-store.h"
-#include "mime.h"
 
 /* plugin includes */
 #include "sametime.h"
@@ -38,19 +38,35 @@
 static char *
 make_cid(const char *cid)
 {
-	gsize n;
-	char *c, *d;
-
 	g_return_val_if_fail(cid != NULL, NULL);
 
-	n = strlen(cid);
-	g_return_val_if_fail(n > 2, NULL);
+	return g_strdup_printf("cid:%s", cid);
+}
 
-	c = g_strndup(cid+1, n-2);
-	d = g_strdup_printf("cid:%s", c);
 
-	g_free(c);
-	return d;
+/* Create a MIME parser from some input data. */
+static GMimeParser *
+create_parser(const char *data)
+{
+	GMimeStream *stream;
+	GMimeFilter *filter;
+	GMimeStream *filtered_stream;
+	GMimeParser *parser;
+
+	stream = g_mime_stream_mem_new_with_buffer(data, strlen(data));
+
+	filtered_stream = g_mime_stream_filter_new(stream);
+	g_object_unref(G_OBJECT(stream));
+
+	/* Add a dos2unix filter so in-message newlines are simplified. */
+	filter = g_mime_filter_dos2unix_new(FALSE);
+	g_mime_stream_filter_add(GMIME_STREAM_FILTER(filtered_stream), filter);
+	g_object_unref(G_OBJECT(filter));
+
+	parser = g_mime_parser_new_with_stream(filtered_stream);
+	g_object_unref(G_OBJECT(filtered_stream));
+
+	return parser;
 }
 
 
@@ -61,8 +77,9 @@ im_mime_parse(const char *data)
 
 	GString *str;
 
-	PurpleMimeDocument *doc;
-	GList *parts;
+	GMimeParser *parser;
+	GMimeObject *doc;
+	int i, count;
 
 	img_by_cid = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
 			g_object_unref);
@@ -70,57 +87,66 @@ im_mime_parse(const char *data)
 	/* don't want the contained string to ever be NULL */
 	str = g_string_new("");
 
-	doc = purple_mime_document_parse(data);
+	parser = create_parser(data);
+	doc = g_mime_parser_construct_part(parser, NULL);
+	if (!GMIME_IS_MULTIPART(doc)) {
+		g_object_unref(G_OBJECT(doc));
+		g_object_unref(G_OBJECT(parser));
+		return g_string_free(str, FALSE);
+	}
 
 	/* handle all the MIME parts */
-	parts = purple_mime_document_get_parts(doc);
-	for (; parts; parts = parts->next) {
-		PurpleMimePart *part = parts->data;
-		const char *type;
-
-		type = purple_mime_part_get_field(part, "content-type");
-		purple_debug_info("sametime", "MIME part Content-Type: %s\n",
-				type);
+	count = g_mime_multipart_get_count(GMIME_MULTIPART(doc));
+	for (i = 0; i < count; i++) {
+		GMimeObject *obj = g_mime_multipart_get_part(GMIME_MULTIPART(doc), i);
+		GMimeContentType *type = g_mime_object_get_content_type(obj);
 
 		if (!type) {
 			; /* feh */
 
-		} else if (purple_str_has_prefix(type, "image")) {
+		} else if (g_mime_content_type_is_type(type, "image", "*")) {
 			/* put images into the image store */
 
-			guchar *d_dat;
-			gsize d_len;
+			GMimePart *part = GMIME_PART(obj);
+			GMimeDataWrapper *wrapper;
+			GMimeStream *stream;
+			GByteArray *bytearray;
+			GBytes *data;
 			char *cid;
 			PurpleImage *image;
 
 			/* obtain and unencode the data */
-			purple_mime_part_get_data_decoded(part, &d_dat, &d_len);
+			bytearray = g_byte_array_new();
+			stream = g_mime_stream_mem_new_with_byte_array(bytearray);
+			g_mime_stream_mem_set_owner(GMIME_STREAM_MEM(stream), FALSE);
+			wrapper = g_mime_part_get_content(part);
+			g_mime_data_wrapper_write_to_stream(wrapper, stream);
+			data = g_byte_array_free_to_bytes(bytearray);
+			g_clear_object(&stream);
 
 			/* look up the content id */
-			cid = (char *)purple_mime_part_get_field(part,
-					"Content-ID");
-			cid = make_cid(cid);
+			cid = make_cid(g_mime_part_get_content_id(part));
 
 			/* add image to the purple image store */
-			image = purple_image_new_from_data(d_dat, d_len);
+			image = purple_image_new_from_bytes(data);
 			purple_image_set_friendly_filename(image, cid);
+			g_bytes_unref(data);
 
 			/* map the cid to the image store identifier */
 			g_hash_table_insert(img_by_cid, cid, image);
 
-		} else if (purple_str_has_prefix(type, "text")) {
-
+		} else if (GMIME_IS_TEXT_PART(obj)) {
 			/* concatenate all the text parts together */
-			guchar *data;
-			gsize len;
+			char *data;
 
-			purple_mime_part_get_data_decoded(part, &data, &len);
-			g_string_append(str, (const char *)data);
+			data = g_mime_text_part_get_text(GMIME_TEXT_PART(obj));
+			g_string_append(str, data);
 			g_free(data);
 		}
 	}
 
-	purple_mime_document_free(doc);
+	g_object_unref(G_OBJECT(doc));
+	g_object_unref(G_OBJECT(parser));
 
 	/* @todo should put this in its own function */
 	{ /* replace each IMG tag's SRC attribute with an ID attribute. This
@@ -194,37 +220,46 @@ im_mime_content_id(void)
 }
 
 
-/** generates a multipart/related content type with a random-ish
-    boundary value */
+/** generates a random-ish boundary value */
 static char *
-im_mime_content_type(void)
+im_mime_boundary(void)
 {
-	return g_strdup_printf(
-			"multipart/related; boundary=related_MW%03x_%04x",
+	return g_strdup_printf("related_MW%03x_%04x",
 			g_random_int() & 0xfff, g_random_int() & 0xffff);
 }
 
-/** determine content type from contents */
-static gchar *
-im_mime_img_content_type(PurpleImage *img)
+/** create MIME image from purple image */
+static GMimePart *
+im_mime_img_to_part(PurpleImage *img)
 {
 	const gchar *mimetype;
+	GMimePart *part;
+	GByteArray *data;
+	GMimeStream *stream;
+	GMimeDataWrapper *wrapper;
 
 	mimetype = purple_image_get_mimetype(img);
-	if (!mimetype) {
-		mimetype = "image";
+	if (mimetype && g_str_has_prefix(mimetype, "image/")) {
+		mimetype += sizeof("image/") - 1;
 	}
 
-	return g_strdup_printf("%s; name=\"%s\"", mimetype,
-			purple_image_get_friendly_filename(img));
-}
+	part = g_mime_part_new_with_type("image", mimetype);
+	g_mime_object_set_disposition(GMIME_OBJECT(part),
+			GMIME_DISPOSITION_ATTACHMENT);
+	g_mime_part_set_content_encoding(part, GMIME_CONTENT_ENCODING_BASE64);
+	g_mime_part_set_filename(part, purple_image_get_friendly_filename(img));
 
+	data = g_bytes_unref_to_array(purple_image_get_contents(img));
+	stream = g_mime_stream_mem_new_with_byte_array(data);
 
-static char *
-im_mime_img_content_disp(PurpleImage *img)
-{
-	return g_strdup_printf("attachment; filename=\"%s\"",
-		purple_image_get_friendly_filename(img));
+	wrapper = g_mime_data_wrapper_new_with_stream(stream,
+			GMIME_CONTENT_ENCODING_BINARY);
+	g_object_unref(G_OBJECT(stream));
+
+	g_mime_part_set_content(part, wrapper);
+	g_object_unref(G_OBJECT(wrapper));
+
+	return part;
 }
 
 
@@ -232,21 +267,22 @@ gchar *
 im_mime_generate(const char *message)
 {
 	GString *str;
-	PurpleMimeDocument *doc;
-	PurpleMimePart *part;
+	GMimeMultipart *doc;
+	GMimeFormatOptions *opts;
+	GMimeTextPart *text;
 
 	GData *attr;
 	char *tmp, *start, *end;
 
 	str = g_string_new(NULL);
 
-	doc = purple_mime_document_new();
+	doc = g_mime_multipart_new_with_subtype("related");
 
-	purple_mime_document_set_field(doc, "Mime-Version", "1.0");
-	purple_mime_document_set_field(doc, "Content-Disposition", "inline");
+	g_mime_object_set_header(GMIME_OBJECT(doc), "Mime-Version", "1.0", NULL);
+	g_mime_object_set_disposition(GMIME_OBJECT(doc), GMIME_DISPOSITION_INLINE);
 
-	tmp = im_mime_content_type();
-	purple_mime_document_set_field(doc, "Content-Type", tmp);
+	tmp = im_mime_boundary();
+	g_mime_multipart_set_boundary(doc, tmp);
 	g_free(tmp);
 
 	tmp = (char *)message;
@@ -269,35 +305,14 @@ im_mime_generate(const char *message)
 		}
 
 		if (img) {
+			GMimePart *part;
 			char *cid;
-			gpointer data;
-			gsize size;
-
-			part = purple_mime_part_new(doc);
-
-			data = im_mime_img_content_disp(img);
-			purple_mime_part_set_field(part, "Content-Disposition",
-					data);
-			g_free(data);
-
-			data = im_mime_img_content_type(img);
-			purple_mime_part_set_field(part, "Content-Type", data);
-			g_free(data);
 
 			cid = im_mime_content_id();
-			data = g_strdup_printf("<%s>", cid);
-			purple_mime_part_set_field(part, "Content-ID", data);
-			g_free(data);
-
-			purple_mime_part_set_field(part,
-					"Content-transfer-encoding", "base64");
-
-			/* obtain and base64 encode the image data, and put it
-			   in the mime part */
-			size = purple_image_get_data_size(img);
-			data = g_base64_encode(purple_image_get_data(img), size);
-			purple_mime_part_set_data(part, data);
-			g_free(data);
+			part = im_mime_img_to_part(img);
+			g_mime_part_set_content_id(part, cid);
+			g_mime_multipart_add(doc, GMIME_OBJECT(part));
+			g_object_unref(G_OBJECT(part));
 
 			/* append the modified tag */
 			g_string_append_printf(str, "<img src=\"cid:%s\">", cid);
@@ -318,18 +333,22 @@ im_mime_generate(const char *message)
 	g_string_append(str, tmp);
 
 	/* add the text/html part */
-	part = purple_mime_part_new(doc);
-	purple_mime_part_set_field(part, "Content-Disposition", "inline");
+	text = g_mime_text_part_new_with_subtype("html");
+	g_mime_object_set_disposition(GMIME_OBJECT(text),
+			GMIME_DISPOSITION_INLINE);
 
 	tmp = purple_utf8_ncr_encode(str->str);
-	purple_mime_part_set_field(part, "Content-Type", "text/html");
-	purple_mime_part_set_field(part, "Content-Transfer-Encoding", "7bit");
-	purple_mime_part_set_data(part, tmp);
+	g_mime_text_part_set_text(text, tmp);
 	g_free(tmp);
 
+	g_mime_multipart_insert(doc, 0, GMIME_OBJECT(text));
+	g_object_unref(G_OBJECT(text));
 	g_string_free(str, TRUE);
 
-	str = g_string_new(NULL);
-	purple_mime_document_write(doc, str);
-	return g_string_free(str, FALSE);
+	opts = g_mime_format_options_new();
+	g_mime_format_options_set_newline_format(opts, GMIME_NEWLINE_FORMAT_DOS);
+	tmp = g_mime_object_to_string(GMIME_OBJECT(doc), opts);
+	g_mime_format_options_free(opts);
+	g_object_unref(G_OBJECT(doc));
+	return tmp;
 }

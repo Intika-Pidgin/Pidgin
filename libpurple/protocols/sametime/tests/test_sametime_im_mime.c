@@ -22,6 +22,7 @@
  */
 
 #include <glib.h>
+#include <gmime/gmime.h>
 
 #include "image.h"
 #include "image-store.h"
@@ -176,6 +177,7 @@ main(gint argc, gchar **argv)
 	gchar *name;
 
 	g_test_init(&argc, &argv, NULL);
+	g_mime_init();
 	_purple_image_store_init();
 
 	g_test_set_nonfatal_assertions();
@@ -197,5 +199,6 @@ main(gint argc, gchar **argv)
 	i = g_test_run();
 
 	_purple_image_store_uninit();
+	g_mime_shutdown();
 	return i;
 }

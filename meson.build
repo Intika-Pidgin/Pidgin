@@ -467,7 +467,8 @@ endif
 #######################################################################
 if get_option('meanwhile')
 	meanwhile = dependency('meanwhile', version : ['>= 1.0.0', '< 2.0.0'], required : force_deps)
-	enable_meanwhile = meanwhile.found()
+	gmime = dependency('gmime-3.0', version : '>= 3.0.0', required : force_deps)
+	enable_meanwhile = meanwhile.found() and gmime.found()
 else
 	enable_meanwhile = false
 	meanwhile = []

@@ -3,20 +3,19 @@
 .name = "utf8-hello",
 .html = "Hello world, Καλημέρα κόσμε, コンニチハ.",
 .mime =
-	"content-disposition: inline\r\n"
-	"mime-version: 1.0\r\n"
-	"content-type: multipart/related; boundary=related_MWa2f_0aac\r\n"
+	"Content-Type: multipart/related; boundary=related_MWa2f_0aac\r\n"
+	"Mime-Version: 1.0\r\n"
+	"Content-Disposition: inline\r\n"
 	"\r\n"
 	"--related_MWa2f_0aac\r\n"
-	"content-transfer-encoding: 7bit\r\n"
-	"content-disposition: inline\r\n"
-	"content-type: text/html\r\n"
+	"Content-Type: text/html; charset=us-ascii\r\n"
+	"Content-Disposition: inline\r\n"
+	"Content-Transfer-Encoding: 7bit\r\n"
 	"\r\n"
 	"Hello world, "
 		"&#922;&#945;&#955;&#951;&#956;&#8051;&#961;&#945; "
 		"&#954;&#8057;&#963;&#956;&#949;, "
 		"&#12467;&#12531;&#12491;&#12481;&#12495;.\r\n"
-	"\r\n"
 	"--related_MWa2f_0aac--\r\n"
 },
 {
@@ -28,14 +27,14 @@
 	"–—‘“”„†•…‰™œŠŸž€ ΑΒΓΔΩαβγδω АБВГДабвгд "
 	"∀∂∈ℝ∧∪≡∞ ↑↗↨↻⇣ ┐┼╔╘░►☺♀ ﬁ�⑀₂ἠḂӥẄɐː⍎אԱა",
 .mime =
-	"content-disposition: inline\r\n"
-	"mime-version: 1.0\r\n"
-	"content-type: multipart/related; boundary=related_MWa2f_0aac\r\n"
+	"Content-Type: multipart/related; boundary=related_MWa2f_0aac\r\n"
+	"Mime-Version: 1.0\r\n"
+	"Content-Disposition: inline\r\n"
 	"\r\n"
 	"--related_MWa2f_0aac\r\n"
-	"content-transfer-encoding: 7bit\r\n"
-	"content-disposition: inline\r\n"
-	"content-type: text/html\r\n"
+	"Content-Type: text/html; charset=us-ascii\r\n"
+	"Content-Disposition: inline\r\n"
+	"Content-Transfer-Encoding: 7bit\r\n"
 	"\r\n"
 	"ABCDEFGHIJKLMNOPQRSTUVWXYZ /0123456789 abcdefghijklmnopqrstuvwxyz "
 	"&#163;&#169;&#181;&#192;&#198;&#214;&#222;&#223;&#233;&#246;&#255; "
@@ -46,6 +45,5 @@
 	"&#8593;&#8599;&#8616;&#8635;&#8675; "
 	"&#9488;&#9532;&#9556;&#9560;&#9617;&#9658;&#9786;&#9792; "
 	"&#64257;&#65533;&#9280;&#8322;&#7968;&#7682;&#1253;&#7812;&#592;&#720;&#9038;&#1488;&#1329;&#4304;\r\n"
-	"\r\n"
 	"--related_MWa2f_0aac--\r\n"
 },
