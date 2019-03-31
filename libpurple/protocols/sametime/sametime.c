@@ -29,6 +29,7 @@
 
 /* glib includes */
 #include <glib.h>
+#include <gmime/gmime.h>
 
 /* purple includes */
 #include "account.h"
@@ -5361,6 +5362,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
   log_handler[1] = g_log_set_handler("meanwhile", logflags,
              mw_log_handler, NULL);
 
+  g_mime_init();
+
   return TRUE;
 }
 
@@ -5368,6 +5371,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
+  g_mime_shutdown();
+
   g_log_remove_handler(G_LOG_DOMAIN, log_handler[0]);
   g_log_remove_handler("meanwhile", log_handler[1]);
 
