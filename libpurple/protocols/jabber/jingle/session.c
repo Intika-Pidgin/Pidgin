@@ -32,6 +32,11 @@
 
 #include <string.h>
 
+struct _JingleSession
+{
+	GObject parent;
+};
+
 typedef struct
 {
 	gchar *sid;
