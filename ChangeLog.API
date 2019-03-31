@@ -432,6 +432,19 @@ version 3.0.0 (??/??/????):
 		* PurpleEventLoopUiOps. Manually drive the GLib event loop
 		  yourself. See GLib Main Event Loop docs.
 		* purple_get_tzoff_str(). Use g_date_time_format, instead.
+		* PurpleMimeDocument, PurpleMimePart,
+		  purple_mime_document_new, purple_mime_document_free,
+		  purple_mime_document_parse, purple_mime_document_parsen,
+		  purple_mime_document_write, purple_mime_document_get_fields,
+		  purple_mime_document_get_field,
+		  purple_mime_document_set_field,
+		  purple_mime_document_get_parts, purple_mime_part_new,
+		  purple_mime_part_get_fields, purple_mime_part_get_field,
+		  purple_mime_part_get_field_decoded,
+		  purple_mime_part_set_field, purple_mime_part_get_data,
+		  purple_mime_part_get_data_decoded,
+		  purple_mime_part_get_length, purple_mime_part_set_data, and
+		  purple_mime_decode_field. Use the GMime library, instead.
 		* purple_network_convert_idn_to_ascii. Use g_hostname_to_ascii,
 		  instead.
 		* purple_network_listen_family. Use purple_network_listen, instead.
@@ -480,6 +493,7 @@ version 3.0.0 (??/??/????):
 		* purple_print_utf8_to_console
 		* PurplePluginProtocolInfo
 		* purple_proxy_connect_socks5
+		* purple_quotedp_decode. See the GMime library if needed.
 		* purple_request_field_list_add
 		* purple_srv_cancel
 		* purple_srv_resolve_account

@@ -497,16 +497,6 @@ test_util_utf8_strip_unprintables(void) {
 }
 
 /******************************************************************************
- * MIME tests
- *****************************************************************************/
-static void
-test_util_mime_decode_field(void) {
-	gchar *result = purple_mime_decode_field("=?ISO-8859-1?Q?Keld_J=F8rn_Simonsen?=");
-	g_assert_cmpstr("Keld Jørn Simonsen", ==, result);
-	g_free(result);
-}
-
-/******************************************************************************
  * strdup_withhtml tests
  *****************************************************************************/
 static void
@@ -583,9 +573,6 @@ main(gint argc, gchar **argv) {
 
 	g_test_add_func("/util/utf8/strip unprintables",
 	                test_util_utf8_strip_unprintables);
-
-	g_test_add_func("/util/mime/decode field",
-	                test_util_mime_decode_field);
 
 	g_test_add_func("/util/test_strdup_withhtml",
 	                test_util_strdup_withhtml);

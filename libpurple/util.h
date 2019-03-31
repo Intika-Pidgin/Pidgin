@@ -158,52 +158,6 @@ guchar *purple_base16_decode(const char *str, gsize *ret_len);
 gchar *purple_base16_encode_chunked(const guchar *data, gsize len);
 
 /**************************************************************************/
-/* Quoted Printable Functions                                             */
-/**************************************************************************/
-
-/**
- * purple_quotedp_decode:
- * @str:     The quoted printable ASCII string to convert to raw data.
- * @ret_len: The length of the returned data.
- *
- * Converts a quoted printable string back to its readable equivalent.
- * What is a quoted printable string, you ask?  It's an encoding used
- * to transmit binary data as ASCII.  It's intended purpose is to send
- * emails containing non-ASCII characters.  Wikipedia has a pretty good
- * explanation.  Also see RFC 2045.
- *
- * Returns: The readable string.  Must be g_free'd when no longer needed.
- */
-guchar *purple_quotedp_decode(const char *str, gsize *ret_len);
-
-/**************************************************************************/
-/* MIME Functions                                                         */
-/**************************************************************************/
-
-/**
- * purple_mime_decode_field:
- * @str: The ASCII string, possibly containing any number of
- *            encoded-word sections.
- *
- * Converts a MIME header field string back to its readable equivalent
- * according to RFC 2047.  Basically, a header is plain ASCII and can
- * contain any number of sections called "encoded-words."  The format
- * of an encoded word is =?ISO-8859-1?Q?Keld_J=F8rn_Simonsen?=
- * =? designates the beginning of the encoded-word
- * ?= designates the end of the encoded-word
- *
- * An encoded word is segmented into three pieces by the use of a
- * question mark.  The first piece is the character set, the second
- * piece is the encoding, and the third piece is the encoded text.
- *
- * Returns: The string, with any encoded-word sections decoded and
- *         converted to UTF-8.  Must be g_free'd when no longer
- *         needed.
- */
-char *purple_mime_decode_field(const char *str);
-
-
-/**************************************************************************/
 /* Date/Time Functions                                                    */
 /**************************************************************************/
 
