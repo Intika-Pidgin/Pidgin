@@ -98,6 +98,6 @@ void jabber_presence_parse(JabberStream *js, PurpleXmlNode *packet);
 void jabber_presence_subscription_set(JabberStream *js, const char *who,
 		const char *type);
 void jabber_presence_fake_to_self(JabberStream *js, PurpleStatus *status);
-void purple_status_to_jabber(const PurpleStatus *status, JabberBuddyState *state, char **msg, int *priority);
+void purple_status_to_jabber(PurpleStatus *status, JabberBuddyState *state, char **msg, int *priority);
 
 #endif /* PURPLE_JABBER_PRESENCE_H_ */

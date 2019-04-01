@@ -343,7 +343,7 @@ static char *
 bonjour_status_text(PurpleBuddy *buddy)
 {
 	PurplePresence *presence;
-	const PurpleStatus *status;
+	PurpleStatus *status;
 	const char *message;
 	gchar *ret = NULL;
 
