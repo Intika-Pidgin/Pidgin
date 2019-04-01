@@ -28,6 +28,12 @@
 
 #include "gtk3compat.h"
 
+struct _PidginCellRendererExpander {
+	GtkCellRenderer parent;
+
+	gboolean is_expander;
+};
+
 static void pidgin_cell_renderer_expander_get_property  (GObject                    *object,
 						      guint                       param_id,
 						      GValue                     *value,
@@ -69,37 +75,10 @@ enum {
 	PROP_IS_EXPANDER
 };
 
-static gpointer parent_class;
 /* static guint expander_cell_renderer_signals [LAST_SIGNAL]; */
 
-GType  pidgin_cell_renderer_expander_get_type (void)
-{
-	static GType cell_expander_type = 0;
-
-	if (!cell_expander_type)
-		{
-			static const GTypeInfo cell_expander_info =
-				{
-					sizeof (PidginCellRendererExpanderClass),
-					NULL,           /* base_init */
-					NULL,           /* base_finalize */
-					(GClassInitFunc) pidgin_cell_renderer_expander_class_init,
-					NULL,           /* class_finalize */
-					NULL,           /* class_data */
-					sizeof (PidginCellRendererExpander),
-					0,              /* n_preallocs */
-					(GInstanceInitFunc) pidgin_cell_renderer_expander_init,
-					NULL		/* value_table */
-				};
-
-			cell_expander_type =
-				g_type_register_static (GTK_TYPE_CELL_RENDERER,
-										"PidginCellRendererExpander",
-										&cell_expander_info, 0);
-		}
-
-	return cell_expander_type;
-}
+G_DEFINE_TYPE(PidginCellRendererExpander, pidgin_cell_renderer_expander,
+		GTK_TYPE_CELL_RENDERER)
 
 static void pidgin_cell_renderer_expander_init (PidginCellRendererExpander *cellexpander)
 {
@@ -113,9 +92,7 @@ static void pidgin_cell_renderer_expander_class_init (PidginCellRendererExpander
 	GObjectClass *object_class = G_OBJECT_CLASS(class);
 	GtkCellRendererClass *cell_class = GTK_CELL_RENDERER_CLASS(class);
 
-	parent_class = g_type_class_peek_parent (class);
 	object_class->finalize = pidgin_cell_renderer_expander_finalize;
-
 	object_class->get_property = pidgin_cell_renderer_expander_get_property;
 	object_class->set_property = pidgin_cell_renderer_expander_set_property;
 
@@ -138,7 +115,7 @@ static void pidgin_cell_renderer_expander_finalize (GObject *object)
 	PidginCellRendererExpander *cellexpander = PIDGIN_CELL_RENDERER_EXPANDER(object);
 */
 
-	(* G_OBJECT_CLASS (parent_class)->finalize) (object);
+	G_OBJECT_CLASS(pidgin_cell_renderer_expander_parent_class)->finalize(object);
 }
 
 static void pidgin_cell_renderer_expander_get_property (GObject    *object,
