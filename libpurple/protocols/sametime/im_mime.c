@@ -85,7 +85,7 @@ replace_img_src_by_id(GString *str, GHashTable *img_by_cid)
 			&attribs)) {
 
 		char *alt, *align, *border, *src;
-		int img = 0;
+		guint img = 0;
 
 		alt = g_datalist_get_data(&attribs, "alt");
 		align = g_datalist_get_data(&attribs, "align");
@@ -93,7 +93,7 @@ replace_img_src_by_id(GString *str, GHashTable *img_by_cid)
 		src = g_datalist_get_data(&attribs, "src");
 
 		if (src) {
-			img = GPOINTER_TO_INT(g_hash_table_lookup(img_by_cid, src));
+			img = GPOINTER_TO_UINT(g_hash_table_lookup(img_by_cid, src));
 		}
 
 		if (img) {
@@ -136,8 +136,7 @@ im_mime_parse(const char *data)
 	GMimeObject *doc;
 	int i, count;
 
-	img_by_cid = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-			g_object_unref);
+	img_by_cid = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
 	/* don't want the contained string to ever be NULL */
 	str = g_string_new("");
@@ -169,6 +168,7 @@ im_mime_parse(const char *data)
 			GBytes *data;
 			char *cid;
 			PurpleImage *image;
+			guint imgid;
 
 			/* obtain and unencode the data */
 			bytearray = g_byte_array_new();
@@ -188,7 +188,8 @@ im_mime_parse(const char *data)
 			g_bytes_unref(data);
 
 			/* map the cid to the image store identifier */
-			g_hash_table_insert(img_by_cid, cid, image);
+			imgid = purple_image_store_add(image);
+			g_hash_table_insert(img_by_cid, cid, GUINT_TO_POINTER(imgid));
 
 		} else if (GMIME_IS_TEXT_PART(obj)) {
 			/* concatenate all the text parts together */
