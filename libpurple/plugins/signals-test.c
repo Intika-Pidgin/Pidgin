@@ -598,7 +598,7 @@ ft_send_complete_cb(PurpleXfer *xfer, gpointer data) {
  * Sound signal callbacks
  **************************************************************************/
 static int
-sound_playing_event_cb(PurpleSoundEventID event, const PurpleAccount *account) {
+sound_playing_event_cb(PurpleSoundEventID event, PurpleAccount *account) {
 	if (account != NULL)
 		purple_debug_misc("signals test", "sound playing event: %d for account: %s\n",
 	    	            event, purple_account_get_username(account));

@@ -1082,7 +1082,7 @@ void jabber_presence_subscription_set(JabberStream *js, const char *who, const c
 	purple_xmlnode_free(presence);
 }
 
-void purple_status_to_jabber(const PurpleStatus *status, JabberBuddyState *state, char **msg, int *priority)
+void purple_status_to_jabber(PurpleStatus *status, JabberBuddyState *state, char **msg, int *priority)
 {
 	const char *status_id = NULL;
 	const char *formatted_msg = NULL;

@@ -4509,7 +4509,7 @@ char *oscar_status_text(PurpleBuddy *b)
 	PurpleAccount *account;
 	OscarData *od;
 	PurplePresence *presence;
-	const PurpleStatus *status;
+	PurpleStatus *status;
 	const char *message;
 	gchar *ret = NULL;
 
