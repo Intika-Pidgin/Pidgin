@@ -70,6 +70,61 @@ create_parser(const char *data)
 }
 
 
+/* Replace each IMG tag's SRC attribute with an ID attribute. This
+   actually modifies the contents of str */
+static void
+replace_img_src_by_id(GString *str, GHashTable *img_by_cid)
+{
+	GData *attribs;
+	char *start, *end;
+	char *tmp = str->str;
+
+	while (*tmp &&
+		purple_markup_find_tag("img", tmp,
+			(const char **) &start, (const char **) &end,
+			&attribs)) {
+
+		char *alt, *align, *border, *src;
+		int img = 0;
+
+		alt = g_datalist_get_data(&attribs, "alt");
+		align = g_datalist_get_data(&attribs, "align");
+		border = g_datalist_get_data(&attribs, "border");
+		src = g_datalist_get_data(&attribs, "src");
+
+		if (src) {
+			img = GPOINTER_TO_INT(g_hash_table_lookup(img_by_cid, src));
+		}
+
+		if (img) {
+			GString *atstr;
+			gsize len = (end - start);
+			gsize mov;
+
+			atstr = g_string_new("");
+			if (alt) {
+				g_string_append_printf(atstr, " alt=\"%s\"", alt);
+			}
+			if (align) {
+				g_string_append_printf(atstr, " align=\"%s\"", align);
+			}
+			if (border) {
+				g_string_append_printf(atstr, " border=\"%s\"", border);
+			}
+
+			mov = g_snprintf(start, len,
+					"<img src=\"" PURPLE_IMAGE_STORE_PROTOCOL
+					"%u\"%s", img, atstr->str);
+			while (mov < len) start[mov++] = ' ';
+
+			g_string_free(atstr, TRUE);
+		}
+
+		g_datalist_clear(&attribs);
+		tmp = end + 1;
+	}
+}
+
 gchar *
 im_mime_parse(const char *data)
 {
@@ -148,61 +203,7 @@ im_mime_parse(const char *data)
 	g_object_unref(G_OBJECT(doc));
 	g_object_unref(G_OBJECT(parser));
 
-	/* @todo should put this in its own function */
-	{ /* replace each IMG tag's SRC attribute with an ID attribute. This
-	     actually modifies the contents of str */
-		GData *attribs;
-		char *start, *end;
-		char *tmp = str->str;
-
-		while (*tmp &&
-			purple_markup_find_tag("img", tmp,
-				(const char **) &start, (const char **) &end,
-				&attribs)) {
-
-			char *alt, *align, *border, *src;
-			int img = 0;
-
-			alt = g_datalist_get_data(&attribs, "alt");
-			align = g_datalist_get_data(&attribs, "align");
-			border = g_datalist_get_data(&attribs, "border");
-			src = g_datalist_get_data(&attribs, "src");
-
-			if (src) {
-				img = GPOINTER_TO_INT(g_hash_table_lookup(img_by_cid, src));
-			}
-
-			if (img) {
-				GString *atstr;
-				gsize len = (end - start);
-				gsize mov;
-
-				atstr = g_string_new("");
-				if (alt) {
-					g_string_append_printf(atstr,
-							" alt=\"%s\"", alt);
-				}
-				if (align) {
-					g_string_append_printf(atstr,
-							" align=\"%s\"", align);
-				}
-				if (border) {
-					g_string_append_printf(atstr,
-							" border=\"%s\"", border);
-				}
-
-				mov = g_snprintf(start, len,
-						"<img src=\"" PURPLE_IMAGE_STORE_PROTOCOL
-						"%u\"%s", img, atstr->str);
-				while (mov < len) start[mov++] = ' ';
-
-				g_string_free(atstr, TRUE);
-			}
-
-			g_datalist_clear(&attribs);
-			tmp = end + 1;
-		}
-	}
+	replace_img_src_by_id(str, img_by_cid);
 
 	/* clean up the cid table */
 	g_hash_table_destroy(img_by_cid);
