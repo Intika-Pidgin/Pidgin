@@ -31,12 +31,12 @@
 #define AIM_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), AIM_TYPE_PROTOCOL))
 #define AIM_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), AIM_TYPE_PROTOCOL, AIMProtocolClass))
 
-typedef struct _AIMProtocol
+typedef struct
 {
 	OscarProtocol parent;
 } AIMProtocol;
 
-typedef struct _AIMProtocolClass
+typedef struct
 {
 	OscarProtocolClass parent_class;
 } AIMProtocolClass;

@@ -34,20 +34,20 @@
 
 static GSList *pending_buddies = NULL;
 
-typedef struct _dnssd_service_ref_handler {
+typedef struct {
 	DNSServiceRef sdRef;
 	PurpleAccount *account;
 	guint input_handler;
 } DnsSDServiceRefHandlerData;
 
 /* data used by win32 bonjour implementation */
-typedef struct _win32_session_impl_data {
+typedef struct {
 	DnsSDServiceRefHandlerData *presence_query;
 	DnsSDServiceRefHandlerData *browser_query;
 	DNSRecordRef buddy_icon_rec;
 } Win32SessionImplData;
 
-typedef struct _win32_buddy_service_resolver_data {
+typedef struct {
 	DnsSDServiceRefHandlerData *txt_query;
 	uint32_t if_idx;
 	gchar *name;
@@ -57,13 +57,13 @@ typedef struct _win32_buddy_service_resolver_data {
 	const char *ip;
 } Win32SvcResolverData;
 
-typedef struct _win32_buddy_impl_data {
+typedef struct {
 	GSList *resolvers;
 	DnsSDServiceRefHandlerData *null_query;
 } Win32BuddyImplData;
 
 /* data structure for the resolve callback */
-typedef struct _ResolveCallbackArgs {
+typedef struct {
 	DnsSDServiceRefHandlerData *resolver_query;
 	PurpleAccount *account;
 	BonjourBuddy *bb;

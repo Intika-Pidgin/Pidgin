@@ -27,7 +27,7 @@
 #include "api.h"
 #include "data.h"
 
-typedef struct _FbDataPrivate
+typedef struct
 {
 	FbApi *api;
 	FbHttpConns *cons;
@@ -50,7 +50,7 @@ struct _FbData
 	FbDataPrivate *priv;
 };
 
-typedef struct _FbDataImagePrivate
+typedef struct
 {
 	FbData *fata;
 	gchar *url;

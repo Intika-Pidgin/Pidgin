@@ -28,7 +28,7 @@ struct _PurpleMediaCodec
 	GObject parent;
 };
 
-typedef struct _PurpleMediaCodecPrivate
+typedef struct
 {
 	gint id;
 	char *encoding_name;

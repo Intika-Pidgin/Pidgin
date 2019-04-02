@@ -32,7 +32,7 @@ struct _PurpleMediaCandidate
 	GObject parent;
 };
 
-typedef struct _PurpleMediaCandidatePrivate
+typedef struct
 {
 	gchar *foundation;
 	guint component_id;

@@ -51,17 +51,17 @@
 #define BONJOUR_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), BONJOUR_TYPE_PROTOCOL))
 #define BONJOUR_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), BONJOUR_TYPE_PROTOCOL, BonjourProtocolClass))
 
-typedef struct _BonjourProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } BonjourProtocol;
 
-typedef struct _BonjourProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } BonjourProtocolClass;
 
-typedef struct _BonjourData
+typedef struct
 {
 	BonjourDnsSd *dns_sd_data;
 	BonjourJabber *jabber_data;

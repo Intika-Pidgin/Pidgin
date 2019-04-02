@@ -42,7 +42,7 @@
 #define STREAMHOST_CONNECT_TIMEOUT 15
 #define ENABLE_FT_THUMBNAILS 0
 
-typedef struct _JabberSIXfer {
+typedef struct {
 	JabberStream *js;
 
 	PurpleProxyConnectData *connect_data;

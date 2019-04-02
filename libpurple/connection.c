@@ -51,7 +51,7 @@ struct _PurpleConnection
 };
 
 /* Private data for a connection */
-typedef struct _PurpleConnectionPrivate
+typedef struct
 {
 	PurpleProtocol *protocol;     /* The protocol.                     */
 	PurpleConnectionFlags flags;  /* Connection flags.                 */

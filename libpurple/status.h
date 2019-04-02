@@ -54,7 +54,7 @@ typedef struct _PurpleStatusAttribute  PurpleStatusAttribute;
 
 #define PURPLE_TYPE_MOOD               (purple_mood_get_type())
 
-typedef struct _PurpleMood {
+typedef struct {
 	const char *mood;
 	const char *description;
 	gpointer *padding;

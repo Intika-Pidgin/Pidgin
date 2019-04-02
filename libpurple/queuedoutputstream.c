@@ -46,7 +46,7 @@ struct _PurpleQueuedOutputStream
 	GFilterOutputStream parent;
 };
 
-typedef struct _PurpleQueuedOutputStreamPrivate
+typedef struct
 {
 	GAsyncQueue *queue;
 	gboolean pending_queued;

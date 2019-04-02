@@ -37,7 +37,7 @@ struct _FbJsonValue
 	GValue value;
 };
 
-typedef struct _FbJsonValuesPrivate
+typedef struct
 {
 	JsonNode *root;
 	GQueue *queue;

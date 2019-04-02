@@ -31,12 +31,12 @@
 #define XMPP_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), XMPP_TYPE_PROTOCOL))
 #define XMPP_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), XMPP_TYPE_PROTOCOL, XMPPProtocolClass))
 
-typedef struct _XMPPProtocol
+typedef struct
 {
 	JabberProtocol parent;
 } XMPPProtocol;
 
-typedef struct _XMPPProtocolClass
+typedef struct
 {
 	JabberProtocolClass parent_class;
 } XMPPProtocolClass;

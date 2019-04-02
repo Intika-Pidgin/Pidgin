@@ -1243,7 +1243,7 @@ jabber_unregistration_result_cb(JabberStream *js, const char *from,
 	g_free(to);
 }
 
-typedef struct _JabberRegisterCBData {
+typedef struct {
 	JabberStream *js;
 	char *who;
 } JabberRegisterCBData;

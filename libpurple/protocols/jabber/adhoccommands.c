@@ -34,7 +34,7 @@ static void do_adhoc_ignoreme(JabberStream *js, ...) {
 	/* we don't have to do anything */
 }
 
-typedef struct _JabberAdHocActionInfo {
+typedef struct {
 	char *sessionid;
 	char *who;
 	char *node;

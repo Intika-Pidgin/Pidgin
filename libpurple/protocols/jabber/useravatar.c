@@ -235,7 +235,7 @@ void jabber_avatar_fetch_mine(JabberStream *js)
 	}
 }
 
-typedef struct _JabberBuddyAvatarUpdateURLInfo {
+typedef struct {
 	JabberStream *js;
 	char *from;
 	char *id;

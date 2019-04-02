@@ -26,7 +26,7 @@
 
 #include "jabber.h"
 
-typedef struct _JabberDiscoItem {
+typedef struct {
 	const char *jid;  /* MUST */
 	const char *node; /* SHOULD */
 	const char *name; /* MAY */

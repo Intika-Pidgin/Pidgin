@@ -106,12 +106,12 @@ typedef enum {
 	JABBER_STREAM_CONNECTED
 } JabberStreamState;
 
-typedef struct _JabberProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } JabberProtocol;
 
-typedef struct _JabberProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } JabberProtocolClass;
@@ -293,13 +293,13 @@ struct _JabberStream
 
 typedef gboolean (JabberFeatureEnabled)(JabberStream *js, const gchar *namespace);
 
-typedef struct _JabberFeature
+typedef struct
 {
 	gchar *namespace;
 	JabberFeatureEnabled *is_enabled;
 } JabberFeature;
 
-typedef struct _JabberIdentity
+typedef struct
 {
 	gchar *category;
 	gchar *type;
@@ -307,7 +307,7 @@ typedef struct _JabberIdentity
 	gchar *lang;
 } JabberIdentity;
 
-typedef struct _JabberBytestreamsStreamhost {
+typedef struct {
 	char *jid;
 	char *host;
 	guint16 port;

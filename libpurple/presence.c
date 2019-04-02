@@ -28,7 +28,7 @@
  **************************************************************************/
 
 /** Private data for a presence */
-typedef struct _PurplePresencePrivate
+typedef struct
 {
 	gboolean idle;
 	time_t idle_time;
@@ -71,7 +71,7 @@ struct _PurpleAccountPresence
 };
 
 /** Private data for an account presence */
-typedef struct _PurpleAccountPresencePrivate
+typedef struct
 {
 	PurpleAccount *account;
 } PurpleAccountPresencePrivate;
@@ -104,7 +104,7 @@ struct _PurpleBuddyPresence
 };
 
 /** Private data for a buddy presence */
-typedef struct _PurpleBuddyPresencePrivate
+typedef struct
 {
 	PurpleBuddy *buddy;
 } PurpleBuddyPresencePrivate;

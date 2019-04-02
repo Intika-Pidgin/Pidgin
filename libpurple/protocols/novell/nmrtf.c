@@ -84,7 +84,7 @@ typedef enum
 	NMRTF_KWD_SPEC
 } NMRtfKeywordType;
 
-typedef struct _NMRTFCharProp
+typedef struct
 {
 	/* All we care about for now is the font.
 	 * bold, italic, underline, etc. should be
@@ -94,14 +94,14 @@ typedef struct _NMRTFCharProp
 	int	font_charset;
 } NMRtfCharProp;
 
-typedef struct _NMRtfStateSave
+typedef struct
 {
     NMRtfCharProp chp;
     NMRtfState rds;
     NMRtfState ris;
 } NMRtfStateSave;
 
-typedef struct _NMRtfSymbol
+typedef struct
 {
     char *keyword;          	/* RTF keyword */
     int  default_val;          	/* default value to use */
@@ -113,7 +113,7 @@ typedef struct _NMRtfSymbol
 } NMRtfSymbol;
 
 
-typedef struct _NMRtfFont
+typedef struct
 {
 	int number;
 	char *name;

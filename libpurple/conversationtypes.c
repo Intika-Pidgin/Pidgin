@@ -34,7 +34,7 @@
 /*
  * Data specific to Instant Messages.
  */
-typedef struct _PurpleIMConversationPrivate
+typedef struct
 {
 	PurpleIMTypingState typing_state;  /* The current typing state.    */
 	guint  typing_timeout;             /* The typing timer handle.     */
@@ -63,7 +63,7 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleIMConversation, purple_im_conversation,
 /*
  * Data specific to Chats.
  */
-typedef struct _PurpleChatConversationPrivate
+typedef struct
 {
 	GList *ignored;     /* Ignored users.                            */
 	char  *who;         /* The person who set the topic.             */
@@ -111,7 +111,7 @@ struct _PurpleChatUser
 /*
  * Data for "Chat Buddies"
  */
-typedef struct _PurpleChatUserPrivate
+typedef struct
 {
 	PurpleChatConversation *chat;  /* The chat                              */
 	char *name;                    /* The chat participant's name in the

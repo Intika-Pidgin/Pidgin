@@ -47,7 +47,7 @@ enum
 	PROP_N
 };
 
-typedef struct _FbApiPrivate
+typedef struct
 {
 	FbMqtt *mqtt;
 	FbHttpConns *cons;

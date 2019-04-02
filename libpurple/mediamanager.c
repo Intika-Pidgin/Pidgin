@@ -58,7 +58,7 @@ struct _PurpleMediaOutputWindow
 #endif
 };
 
-typedef struct _PurpleMediaManagerPrivate
+typedef struct
 {
 #ifdef USE_GSTREAMER
 	GstElement *pipeline;

@@ -30,7 +30,7 @@
 #include "iq.h"
 #include "oob.h"
 
-typedef struct _JabberOOBXfer {
+typedef struct {
 	JabberStream *js;
 	gchar *iq_id;
 	gchar *url;

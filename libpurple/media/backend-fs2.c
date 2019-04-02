@@ -146,7 +146,7 @@ struct _PurpleMediaBackendFs2Session
 	PurpleMediaSessionType type;
 };
 
-typedef struct _PurpleMediaBackendFs2Private
+typedef struct
 {
 	PurpleMedia *media;
 	GstElement *confbin;
