@@ -32,13 +32,13 @@
 
 #include "jabber.h"
 
-typedef struct _JabberChatMember {
+typedef struct {
 	char *handle;
 	char *jid;
 } JabberChatMember;
 
 
-typedef struct _JabberChat {
+typedef struct {
 	JabberStream *js;
 	char *room;
 	char *server;

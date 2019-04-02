@@ -31,12 +31,12 @@
 #define NULL_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), NULL_TYPE_PROTOCOL))
 #define NULL_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), NULL_TYPE_PROTOCOL, NullProtocolClass))
 
-typedef struct _NullProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } NullProtocol;
 
-typedef struct _NullProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } NullProtocolClass;

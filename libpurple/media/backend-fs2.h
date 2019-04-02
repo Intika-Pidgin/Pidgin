@@ -35,19 +35,7 @@
 
 G_BEGIN_DECLS
 
-#define PURPLE_TYPE_MEDIA_BACKEND_FS2            (purple_media_backend_fs2_get_type())
-#define PURPLE_IS_MEDIA_BACKEND_FS2(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_MEDIA_BACKEND_FS2))
-#define PURPLE_IS_MEDIA_BACKEND_FS2_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MEDIA_BACKEND_FS2))
-#define PURPLE_MEDIA_BACKEND_FS2(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_MEDIA_BACKEND_FS2, PurpleMediaBackendFs2))
-#define PURPLE_MEDIA_BACKEND_FS2_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_MEDIA_BACKEND_FS2, PurpleMediaBackendFs2))
-#define PURPLE_MEDIA_BACKEND_FS2_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MEDIA_BACKEND_FS2, PurpleMediaBackendFs2))
-
-/**
- * PurpleMediaBackendFs2:
- *
- * An opaque structure representing the Farstream media backend.
- */
-typedef struct _PurpleMediaBackendFs2 PurpleMediaBackendFs2;
+#define PURPLE_TYPE_MEDIA_BACKEND_FS2  purple_media_backend_fs2_get_type()
 
 /**
  * purple_media_backend_fs2_get_type:
@@ -56,7 +44,8 @@ typedef struct _PurpleMediaBackendFs2 PurpleMediaBackendFs2;
  *
  * Returns: The Farstream media backend's GType
  */
-GType purple_media_backend_fs2_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleMediaBackendFs2, purple_media_backend_fs2,
+		PURPLE, MEDIA_BACKEND_FS2, GObject)
 
 /*
  * Temporary function in order to be able to test while

@@ -80,7 +80,7 @@ enum
 
 static GParamSpec *properties[LAST_PROPERTY];
 
-typedef struct _PidginMiniDialogPrivate
+typedef struct
 {
 	GtkImage *icon;
 	GtkBox *title_box;

@@ -34,20 +34,7 @@
 
 G_BEGIN_DECLS
 
-#define PURPLE_TYPE_MEDIA_CANDIDATE            (purple_media_candidate_get_type())
-#define PURPLE_IS_MEDIA_CANDIDATE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_MEDIA_CANDIDATE))
-#define PURPLE_IS_MEDIA_CANDIDATE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_MEDIA_CANDIDATE))
-#define PURPLE_MEDIA_CANDIDATE(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_MEDIA_CANDIDATE, PurpleMediaCandidate))
-#define PURPLE_MEDIA_CANDIDATE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_MEDIA_CANDIDATE, PurpleMediaCandidate))
-#define PURPLE_MEDIA_CANDIDATE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_MEDIA_CANDIDATE, PurpleMediaCandidate))
-
-/**
- * PurpleMediaCandidate:
- *
- * An opaque structure representing a network candidate (IP Address and port
- * pair).
- */
-typedef struct _PurpleMediaCandidate PurpleMediaCandidate;
+#define PURPLE_TYPE_MEDIA_CANDIDATE  purple_media_candidate_get_type()
 
 /**
  * purple_media_candidate_get_type:
@@ -56,7 +43,8 @@ typedef struct _PurpleMediaCandidate PurpleMediaCandidate;
  *
  * Returns: The media canditate's GType
  */
-GType purple_media_candidate_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleMediaCandidate, purple_media_candidate, PURPLE,
+		MEDIA_CANDIDATE, GObject)
 
 /**
  * purple_media_candidate_new:

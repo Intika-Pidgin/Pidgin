@@ -25,7 +25,7 @@
  * SECTION:sound-theme
  * @section_id: libpurple-sound-theme
  * @short_description: <filename>sound-theme.h</filename>
- * @title: Sound Theme Abstact Class
+ * @title: Sound Theme Class
  */
 
 #include <glib.h>
@@ -33,38 +33,7 @@
 #include "theme.h"
 #include "sound.h"
 
-typedef struct _PurpleSoundTheme        PurpleSoundTheme;
-typedef struct _PurpleSoundThemeClass   PurpleSoundThemeClass;
-
-#define PURPLE_TYPE_SOUND_THEME             (purple_sound_theme_get_type())
-#define PURPLE_SOUND_THEME(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_SOUND_THEME, PurpleSoundTheme))
-#define PURPLE_SOUND_THEME_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_SOUND_THEME, PurpleSoundThemeClass))
-#define PURPLE_IS_SOUND_THEME(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_SOUND_THEME))
-#define PURPLE_IS_SOUND_THEME_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_SOUND_THEME))
-#define PURPLE_SOUND_THEME_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_SOUND_THEME, PurpleSoundThemeClass))
-
-/**
- * PurpleSoundTheme:
- *
- * A purple sound theme.
- * This is an object for Purple to represent a sound theme.
- */
-struct _PurpleSoundTheme
-{
-	/*< private >*/
-	PurpleTheme parent;
-};
-
-struct _PurpleSoundThemeClass
-{
-	/*< private >*/
-	PurpleThemeClass parent_class;
-
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
+#define PURPLE_TYPE_SOUND_THEME  purple_sound_theme_get_type()
 
 /**************************************************************************/
 /* Purple Sound Theme API                                                 */
@@ -76,7 +45,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for a sound theme.
  */
-GType purple_sound_theme_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleSoundTheme, purple_sound_theme, PURPLE, SOUND_THEME,
+		PurpleTheme)
 
 /**
  * purple_sound_theme_get_file:

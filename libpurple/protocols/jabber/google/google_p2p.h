@@ -32,37 +32,11 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_GOOGLE_P2P            (jingle_google_p2p_get_type())
-#define JINGLE_GOOGLE_P2P(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_GOOGLE_P2P, JingleGoogleP2P))
-#define JINGLE_GOOGLE_P2P_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_GOOGLE_P2P, JingleGoogleP2PClass))
-#define JINGLE_IS_GOOGLE_P2P(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_GOOGLE_P2P))
-#define JINGLE_IS_GOOGLE_P2P_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_GOOGLE_P2P))
-#define JINGLE_GOOGLE_P2P_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_GOOGLE_P2P, JingleGoogleP2PClass))
-
-/** @copydoc _JingleGoogleP2P */
-typedef struct _JingleGoogleP2P JingleGoogleP2P;
-/** @copydoc _JingleGoogleP2PClass */
-typedef struct _JingleGoogleP2PClass JingleGoogleP2PClass;
-
-#define JINGLE_TYPE_GOOGLE_P2P_CANDIDATE  (jingle_google_p2p_candidate_get_type())
+#define JINGLE_TYPE_GOOGLE_P2P  jingle_google_p2p_get_type()
+#define JINGLE_TYPE_GOOGLE_P2P_CANDIDATE  jingle_google_p2p_candidate_get_type()
 
 /** @copydoc _JingleGoogleP2PCandidate */
 typedef struct _JingleGoogleP2PCandidate JingleGoogleP2PCandidate;
-
-/** The Google P2P class */
-struct _JingleGoogleP2PClass
-{
-	JingleTransportClass parent_class;  /**< The parent class. */
-
-	PurpleXmlNode *(*to_xml) (JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
-	JingleTransport *(*parse) (PurpleXmlNode *transport);
-};
-
-/** The Google P2P class's private data */
-struct _JingleGoogleP2P
-{
-	JingleTransport parent;         /**< The parent of this object. */
-};
 
 struct _JingleGoogleP2PCandidate
 {
@@ -88,7 +62,9 @@ GType jingle_google_p2p_candidate_get_type(void);
  *
  * @return The Google P2P class's GType.
  */
-G_MODULE_EXPORT GType jingle_google_p2p_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_FINAL_TYPE(JingleGoogleP2P, jingle_google_p2p, JINGLE, GOOGLE_P2P,
+		JingleTransport)
 
 /**
  * Registers the JingleGoogleP2P type in the type system.

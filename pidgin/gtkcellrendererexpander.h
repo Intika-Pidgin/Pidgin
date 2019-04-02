@@ -30,29 +30,12 @@
 
 #include <gtk/gtk.h>
 
-#define PIDGIN_TYPE_CELL_RENDERER_EXPANDER         (pidgin_cell_renderer_expander_get_type())
-#define PIDGIN_CELL_RENDERER_EXPANDER(obj)         (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_CELL_RENDERER_EXPANDER, PidginCellRendererExpander))
-#define PIDGIN_CELL_RENDERER_EXPANDER_CLASS(klass)	(G_TYPE_CHECK_CLASS_CAST ((klass), PURPLE_TYPE_GTK_CELL_RENDERER_EXPANDER, PidginCellRendererExpanderClass))
-#define PIDGIN_IS_CELL_RENDERER_EXPANDER(obj)		(G_TYPE_CHECK_INSTANCE_TYPE ((obj), PIDGIN_TYPE_CELL_RENDERER_EXPANDER))
-#define PIDGIN_IS_CELL_RENDERER_EXPANDER_CLASS(klass)	(G_TYPE_CHECK_CLASS_TYPE ((klass), PIDGIN_TYPE_CELL_RENDERER_EXPANDER))
-#define PIDGIN_CELL_RENDERER_EXPANDER_GET_CLASS(obj)         (G_TYPE_INSTANCE_GET_CLASS ((obj), PIDGIN_TYPE_CELL_RENDERER_EXPANDER, PidginCellRendererExpanderClass))
-
-typedef struct _PidginCellRendererExpander PidginCellRendererExpander;
-typedef struct _PidginCellRendererExpanderClass PidginCellRendererExpanderClass;
-
-struct _PidginCellRendererExpander {
-	GtkCellRenderer parent;
-
-	gboolean is_expander;
-};
-
-struct _PidginCellRendererExpanderClass {
-	GtkCellRendererClass parent_class;
-};
+#define PIDGIN_TYPE_CELL_RENDERER_EXPANDER  pidgin_cell_renderer_expander_get_type()
 
 G_BEGIN_DECLS
 
-GType            pidgin_cell_renderer_expander_get_type     (void);
+G_DECLARE_FINAL_TYPE(PidginCellRendererExpander, pidgin_cell_renderer_expander,
+		PIDGIN, CELL_RENDERER_EXPANDER, GtkCellRenderer)
 GtkCellRenderer  *pidgin_cell_renderer_expander_new          (void);
 
 G_END_DECLS

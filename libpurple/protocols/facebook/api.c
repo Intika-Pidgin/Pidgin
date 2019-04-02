@@ -47,7 +47,7 @@ enum
 	PROP_N
 };
 
-struct _FbApiPrivate
+typedef struct
 {
 	FbMqtt *mqtt;
 	FbHttpConns *cons;
@@ -68,6 +68,17 @@ struct _FbApiPrivate
 	guint unread;
 	FbId lastmid;
 	gchar *contacts_delta;
+} FbApiPrivate;
+
+/**
+ * FbApi:
+ *
+ * Represents a Facebook Messenger connection.
+ */
+struct _FbApi
+{
+	GObject parent;
+	FbApiPrivate *priv;
 };
 
 struct _FbApiData

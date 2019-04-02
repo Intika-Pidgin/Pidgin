@@ -40,19 +40,8 @@
 #include "http.h"
 #include "id.h"
 
-#define FB_TYPE_DATA  (fb_data_get_type())
-#define FB_DATA(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA, FbData))
-#define FB_DATA_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_DATA, FbDataClass))
-#define FB_IS_DATA(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_DATA))
-#define FB_IS_DATA_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_DATA))
-#define FB_DATA_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_DATA, FbDataClass))
-
-#define FB_TYPE_DATA_IMAGE  (fb_data_image_get_type())
-#define FB_DATA_IMAGE(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_DATA_IMAGE, FbDataImage))
-#define FB_DATA_IMAGE_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_DATA_IMAGE, FbDataImageClass))
-#define FB_IS_DATA_IMAGE(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_DATA_IMAGE))
-#define FB_IS_DATA_IMAGE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_DATA_IMAGE))
-#define FB_DATA_IMAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_DATA_IMAGE, FbDataImageClass))
+#define FB_TYPE_DATA  fb_data_get_type()
+#define FB_TYPE_DATA_IMAGE  fb_data_image_get_type()
 
 /**
  * FB_DATA_ICON_MAX:
@@ -68,12 +57,19 @@
  */
 #define FB_DATA_ICON_SIZE_MAX  0xa00000 /* 10MiB */
 
-typedef struct _FbData FbData;
-typedef struct _FbDataClass FbDataClass;
-typedef struct _FbDataPrivate FbDataPrivate;
-typedef struct _FbDataImage FbDataImage;
-typedef struct _FbDataImageClass FbDataImageClass;
-typedef struct _FbDataImagePrivate FbDataImagePrivate;
+/**
+ * fb_data_get_type:
+ *
+ * Returns: The #GType for an #FbData.
+ */
+G_DECLARE_FINAL_TYPE(FbData, fb_data, FB, DATA, GObject)
+
+/**
+ * fb_data_image_get_type:
+ *
+ * Returns: The #GType for an #FbDataImage.
+ */
+G_DECLARE_FINAL_TYPE(FbDataImage, fb_data_image, FB, DATA_IMAGE, GObject)
 
 /**
  * FbDataImageFunc:
@@ -83,68 +79,6 @@ typedef struct _FbDataImagePrivate FbDataImagePrivate;
  * The callback for a fetched #FbDataImage.
  */
 typedef void (*FbDataImageFunc) (FbDataImage *img, GError *error);
-
-/**
- * FbData:
- *
- * Represents the connection data used by #FacebookProtocol.
- */
-struct _FbData
-{
-	/*< private >*/
-	GObject parent;
-	FbDataPrivate *priv;
-};
-
-/**
- * FbDataClass:
- *
- * The base class for all #FbData's.
- */
-struct _FbDataClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
-
-/**
- * FbDataImage:
- *
- * Represents the data used for fetching images.
- */
-struct _FbDataImage
-{
-	/*< private >*/
-	GObject parent;
-	FbDataImagePrivate *priv;
-};
-
-/**
- * FbDataImageClass:
- *
- * The base class for all #FbDataImage's.
- */
-struct _FbDataImageClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
-
-/**
- * fb_data_get_type:
- *
- * Returns: The #GType for an #FbData.
- */
-GType
-fb_data_get_type(void);
-
-/**
- * fb_data_image_get_type:
- *
- * Returns: The #GType for an #FbDataImage.
- */
-GType
-fb_data_image_get_type(void);
 
 /**
  * fb_data_new:

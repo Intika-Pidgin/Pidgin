@@ -27,7 +27,7 @@
 #include "jabber.h"
 #include "xmlnode.h"
 
-typedef struct _JabberXDataAction {
+typedef struct {
 	char *name;
 	char *handle;
 } JabberXDataAction;

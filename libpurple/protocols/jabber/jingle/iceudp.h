@@ -32,37 +32,11 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_ICEUDP            (jingle_iceudp_get_type())
-#define JINGLE_ICEUDP(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_ICEUDP, JingleIceUdp))
-#define JINGLE_ICEUDP_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_ICEUDP, JingleIceUdpClass))
-#define JINGLE_IS_ICEUDP(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_ICEUDP))
-#define JINGLE_IS_ICEUDP_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_ICEUDP))
-#define JINGLE_ICEUDP_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_ICEUDP, JingleIceUdpClass))
-
-/** @copydoc _JingleIceUdp */
-typedef struct _JingleIceUdp JingleIceUdp;
-/** @copydoc _JingleIceUdpClass */
-typedef struct _JingleIceUdpClass JingleIceUdpClass;
-
-#define JINGLE_TYPE_ICEUDP_CANDIDATE  (jingle_iceudp_candidate_get_type())
+#define JINGLE_TYPE_ICEUDP  jingle_iceudp_get_type()
+#define JINGLE_TYPE_ICEUDP_CANDIDATE  jingle_iceudp_candidate_get_type()
 
 /** @copydoc _JingleIceUdpCandidate */
 typedef struct _JingleIceUdpCandidate JingleIceUdpCandidate;
-
-/** The iceudp class */
-struct _JingleIceUdpClass
-{
-	JingleTransportClass parent_class;     /**< The parent class. */
-
-	PurpleXmlNode *(*to_xml) (JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
-	JingleTransport *(*parse) (PurpleXmlNode *transport);
-};
-
-/** The iceudp class's private data */
-struct _JingleIceUdp
-{
-	JingleTransport parent;                /**< The parent of this object. */
-};
 
 struct _JingleIceUdpCandidate
 {
@@ -93,7 +67,9 @@ GType jingle_iceudp_candidate_get_type(void);
  *
  * @return The iceudp class's GType.
  */
-G_MODULE_EXPORT GType jingle_iceudp_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_FINAL_TYPE(JingleIceUdp, jingle_iceudp, JINGLE, ICEUDP,
+		JingleTransport)
 
 /**
  * Registers the JingleIceUdp type in the type system.

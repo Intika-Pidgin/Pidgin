@@ -36,19 +36,8 @@
 
 #include "connection.h"
 
-#define FB_TYPE_MQTT  (fb_mqtt_get_type())
-#define FB_MQTT(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_MQTT, FbMqtt))
-#define FB_MQTT_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_MQTT, FbMqttClass))
-#define FB_IS_MQTT(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_MQTT))
-#define FB_IS_MQTT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_MQTT))
-#define FB_MQTT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_MQTT, FbMqttClass))
-
-#define FB_TYPE_MQTT_MESSAGE  (fb_mqtt_message_get_type())
-#define FB_MQTT_MESSAGE(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_MQTT_MESSAGE, FbMqttMessage))
-#define FB_MQTT_MESSAGE_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_MQTT_MESSAGE, FbMqttMessageClass))
-#define FB_IS_MQTT_MESSAGE(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_MQTT_MESSAGE))
-#define FB_IS_MQTT_MESSAGE_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_MQTT_MESSAGE))
-#define FB_MQTT_MESSAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_MQTT_MESSAGE, FbMqttMessageClass))
+#define FB_TYPE_MQTT  fb_mqtt_get_type()
+#define FB_TYPE_MQTT_MESSAGE  fb_mqtt_message_get_type()
 
 /**
  * FB_MQTT_NAME:
@@ -106,13 +95,6 @@
  * The #GQuark of the domain of MQTT errors.
  */
 #define FB_MQTT_ERROR  fb_mqtt_error_quark()
-
-typedef struct _FbMqtt FbMqtt;
-typedef struct _FbMqttClass FbMqttClass;
-typedef struct _FbMqttPrivate FbMqttPrivate;
-typedef struct _FbMqttMessage FbMqttMessage;
-typedef struct _FbMqttMessageClass FbMqttMessageClass;
-typedef struct _FbMqttMessagePrivate FbMqttMessagePrivate;
 
 /**
  * FbMqttConnectFlags:
@@ -219,66 +201,19 @@ typedef enum
 } FbMqttMessageType;
 
 /**
- * FbMqtt:
- *
- * Represents an MQTT connection.
- */
-struct _FbMqtt
-{
-	/*< private >*/
-	GObject parent;
-	FbMqttPrivate *priv;
-};
-
-/**
- * FbMqttClass:
- *
- * The base class for all #FbMqtt's.
- */
-struct _FbMqttClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
-
-/**
- * FbMqttMessage:
- *
- * Represents a reader/writer for an MQTT message.
- */
-struct _FbMqttMessage
-{
-	/*< private >*/
-	GObject parent;
-	FbMqttMessagePrivate *priv;
-};
-
-/**
- * FbMqttMessageClass:
- *
- * The base class for all #FbMqttMessageClass's.
- */
-struct _FbMqttMessageClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
-
-/**
  * fb_mqtt_get_type:
  *
  * Returns: The #GType for an #FbMqtt.
  */
-GType
-fb_mqtt_get_type(void);
+G_DECLARE_FINAL_TYPE(FbMqtt, fb_mqtt, FB, MQTT, GObject)
 
 /**
  * fb_mqtt_message_get_type:
  *
  * Returns: The #GType for an #FbMqttMessage.
  */
-GType
-fb_mqtt_message_get_type(void);
+G_DECLARE_FINAL_TYPE(FbMqttMessage, fb_mqtt_message, FB, MQTT_MESSAGE,
+		GObject)
 
 /**
  * fb_mqtt_error_quark:

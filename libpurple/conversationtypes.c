@@ -27,16 +27,43 @@
 
 #define SEND_TYPED_TIMEOUT_SECONDS 5
 
-typedef struct _PurpleChatConversationPrivate     PurpleChatConversationPrivate;
+/**************************************************************************/
+/* PurpleIMConversation                                                   */
+/**************************************************************************/
 
-typedef struct _PurpleIMConversationPrivate       PurpleIMConversationPrivate;
+/*
+ * Data specific to Instant Messages.
+ */
+typedef struct
+{
+	PurpleIMTypingState typing_state;  /* The current typing state.    */
+	guint  typing_timeout;             /* The typing timer handle.     */
+	time_t type_again;                 /* The type again time.         */
+	guint  send_typed_timeout;         /* The type again timer handle. */
+	PurpleBuddyIcon *icon;             /* The buddy icon.              */
+} PurpleIMConversationPrivate;
 
-typedef struct _PurpleChatUserPrivate  PurpleChatUserPrivate;
+/* IM Property enums */
+enum {
+	IM_PROP_0,
+	IM_PROP_TYPING_STATE,
+	IM_PROP_ICON,
+	IM_PROP_LAST
+};
+
+static GParamSpec *im_properties[IM_PROP_LAST];
+
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleIMConversation, purple_im_conversation,
+		PURPLE_TYPE_CONVERSATION);
+
+/**************************************************************************/
+/* PurpleChatConversation                                                 */
+/**************************************************************************/
 
 /*
  * Data specific to Chats.
  */
-struct _PurpleChatConversationPrivate
+typedef struct
 {
 	GList *ignored;     /* Ignored users.                            */
 	char  *who;         /* The person who set the topic.             */
@@ -45,7 +72,7 @@ struct _PurpleChatConversationPrivate
 	char *nick;         /* Your nick in this chat.                   */
 	gboolean left;      /* We left the chat and kept the window open */
 	GHashTable *users;  /* Hash table of the users in the room.      */
-};
+} PurpleChatConversationPrivate;
 
 /* Chat Property enums */
 enum {
@@ -58,30 +85,33 @@ enum {
 	CHAT_PROP_LAST
 };
 
-/*
- * Data specific to Instant Messages.
- */
-struct _PurpleIMConversationPrivate
-{
-	PurpleIMTypingState typing_state;  /* The current typing state.    */
-	guint  typing_timeout;             /* The typing timer handle.     */
-	time_t type_again;                 /* The type again time.         */
-	guint  send_typed_timeout;         /* The type again timer handle. */
-	PurpleBuddyIcon *icon;             /* The buddy icon.              */
-};
+static GParamSpec *chat_properties[CHAT_PROP_LAST];
 
-/* IM Property enums */
-enum {
-	IM_PROP_0,
-	IM_PROP_TYPING_STATE,
-	IM_PROP_ICON,
-	IM_PROP_LAST
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleChatConversation, purple_chat_conversation,
+		PURPLE_TYPE_CONVERSATION);
+
+/**************************************************************************/
+/* PurpleChatUser                                                         */
+/**************************************************************************/
+
+/**
+ * PurpleChatUser:
+ * @ui_data: The UI data associated with this chat user.
+ *
+ * Structure representing a chat user instance.
+ */
+struct _PurpleChatUser
+{
+	GObject gparent;
+
+	/*< public >*/
+	gpointer ui_data;
 };
 
 /*
  * Data for "Chat Buddies"
  */
-struct _PurpleChatUserPrivate
+typedef struct
 {
 	PurpleChatConversation *chat;  /* The chat                              */
 	char *name;                    /* The chat participant's name in the
@@ -97,7 +127,7 @@ struct _PurpleChatUserPrivate
 	PurpleChatUserFlags flags;     /* A bitwise OR of flags for this
 	                                  participant, such as whether they
 	                                  are a channel operator.               */
-};
+} PurpleChatUserPrivate;
 
 /* Chat User Property enums */
 enum {
@@ -109,14 +139,8 @@ enum {
 	CU_PROP_LAST
 };
 
-static GParamSpec *chat_properties[CHAT_PROP_LAST];
-static GParamSpec *im_properties[IM_PROP_LAST];
 static GParamSpec *cu_properties[CU_PROP_LAST];
 
-G_DEFINE_TYPE_WITH_PRIVATE(PurpleChatConversation, purple_chat_conversation,
-		PURPLE_TYPE_CONVERSATION);
-G_DEFINE_TYPE_WITH_PRIVATE(PurpleIMConversation, purple_im_conversation,
-		PURPLE_TYPE_CONVERSATION);
 G_DEFINE_TYPE_WITH_PRIVATE(PurpleChatUser, purple_chat_user,
 		G_TYPE_OBJECT);
 

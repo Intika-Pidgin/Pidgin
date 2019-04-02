@@ -36,12 +36,12 @@
 /* ISO-8859-1 */
 
 
-typedef struct _mwProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } mwProtocol;
 
-typedef struct _mwProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } mwProtocolClass;

@@ -25,9 +25,6 @@
 #include "debug.h"
 #include "image.h"
 
-#define PURPLE_IMAGE_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_IMAGE, PurpleImagePrivate))
-
 typedef struct {
 	gchar *path;
 
@@ -49,12 +46,14 @@ enum {
 
 static GParamSpec *properties[PROP_LAST];
 
+G_DEFINE_TYPE_WITH_PRIVATE(PurpleImage, purple_image, G_TYPE_OBJECT);
+
 /******************************************************************************
  * Helpers
  ******************************************************************************/
 static void
 _purple_image_set_path(PurpleImage *image, const gchar *path) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = purple_image_get_instance_private(image);
 
 	g_free(priv->path);
 
@@ -63,7 +62,7 @@ _purple_image_set_path(PurpleImage *image, const gchar *path) {
 
 static void
 _purple_image_set_contents(PurpleImage *image, GBytes *bytes) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = purple_image_get_instance_private(image);
 
 	if(priv->contents)
 		g_bytes_unref(priv->contents);
@@ -74,15 +73,14 @@ _purple_image_set_contents(PurpleImage *image, GBytes *bytes) {
 /******************************************************************************
  * Object stuff
  ******************************************************************************/
-G_DEFINE_TYPE_WITH_PRIVATE(PurpleImage, purple_image, G_TYPE_OBJECT);
-
 static void
 purple_image_init(PurpleImage *image) {
 }
 
 static void
 purple_image_finalize(GObject *obj) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(obj);
+	PurpleImage *image = PURPLE_IMAGE(obj);
+	PurpleImagePrivate *priv = purple_image_get_instance_private(image);
 
 	if(priv->contents)
 		g_bytes_unref(priv->contents);
@@ -239,15 +237,16 @@ purple_image_new_take_data(guint8 *data, gsize length) {
 
 gboolean
 purple_image_save(PurpleImage *image, const gchar *path) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = NULL;
 	gconstpointer data;
 	gsize len;
 	gboolean succ;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_IMAGE(image), FALSE);
 	g_return_val_if_fail(path != NULL, FALSE);
 	g_return_val_if_fail(path[0] != '\0', FALSE);
 
+	priv = purple_image_get_instance_private(image);
 	data = purple_image_get_data(image);
 	len = purple_image_get_data_size(image);
 
@@ -262,12 +261,13 @@ purple_image_save(PurpleImage *image, const gchar *path) {
 }
 
 GBytes *
-purple_image_get_contents(const PurpleImage *image) {
+purple_image_get_contents(PurpleImage *image)
+{
 	PurpleImagePrivate *priv = NULL;
 
 	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
 
-	priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	priv = purple_image_get_instance_private(image);
 
 	if(priv->contents)
 		return g_bytes_ref(priv->contents);
@@ -277,9 +277,11 @@ purple_image_get_contents(const PurpleImage *image) {
 
 const gchar *
 purple_image_get_path(PurpleImage *image) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
+
+	priv = purple_image_get_instance_private(image);
 
 	return priv->path ? priv->path : purple_image_generate_filename(image);
 }
@@ -290,7 +292,7 @@ purple_image_get_data_size(PurpleImage *image) {
 
 	g_return_val_if_fail(PURPLE_IS_IMAGE(image), 0);
 
-	priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	priv = purple_image_get_instance_private(image);
 
 	if(priv->contents)
 		return g_bytes_get_size(priv->contents);
@@ -304,7 +306,7 @@ purple_image_get_data(PurpleImage *image) {
 
 	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
 
-	priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	priv = purple_image_get_instance_private(image);
 
 	if(priv->contents)
 		return g_bytes_get_data(priv->contents, NULL);
@@ -314,10 +316,12 @@ purple_image_get_data(PurpleImage *image) {
 
 const gchar *
 purple_image_get_extension(PurpleImage *image) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = NULL;
 	gconstpointer data;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
+
+	priv = purple_image_get_instance_private(image);
 
 	if (priv->extension)
 		return priv->extension;
@@ -348,10 +352,12 @@ purple_image_get_extension(PurpleImage *image) {
 
 const gchar *
 purple_image_get_mimetype(PurpleImage *image) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = NULL;
 	const gchar *ext = purple_image_get_extension(image);
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
+
+	priv = purple_image_get_instance_private(image);
 
 	if (priv->mime)
 		return priv->mime;
@@ -384,7 +390,7 @@ purple_image_generate_filename(PurpleImage *image) {
 
 	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
 
-	priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	priv = purple_image_get_instance_private(image);
 
 	if (priv->gen_filename)
 		return priv->gen_filename;
@@ -410,11 +416,13 @@ purple_image_generate_filename(PurpleImage *image) {
 
 void
 purple_image_set_friendly_filename(PurpleImage *image, const gchar *filename) {
-	PurpleImagePrivate *priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	PurpleImagePrivate *priv = NULL;
 	gchar *newname;
 	const gchar *escaped;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_IMAGE(image));
+
+	priv = purple_image_get_instance_private(image);
 
 	newname = g_path_get_basename(filename);
 	escaped = purple_escape_filename(newname);
@@ -438,7 +446,7 @@ purple_image_get_friendly_filename(PurpleImage *image) {
 
 	g_return_val_if_fail(PURPLE_IS_IMAGE(image), NULL);
 
-	priv = PURPLE_IMAGE_GET_PRIVATE(image);
+	priv = purple_image_get_instance_private(image);
 
 	if(priv->friendly_filename) {
 		return priv->friendly_filename;

@@ -28,6 +28,17 @@
 #include "debug.h"
 #include "prefs.h"
 
+/**
+ * PidginConvThemeLoader:
+ *
+ * A pidgin conversation theme loader. Extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build conversation themes
+ */
+struct _PidginConvThemeLoader
+{
+	PurpleThemeLoader parent;
+};
+
 /*****************************************************************************
  * Conversation Theme Builder
  *****************************************************************************/

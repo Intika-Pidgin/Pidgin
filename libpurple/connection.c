@@ -40,10 +40,18 @@
 
 G_DEFINE_QUARK(purple-connection-error-quark, purple_connection_error);
 
-typedef struct _PurpleConnectionPrivate  PurpleConnectionPrivate;
+/**
+ * PurpleConnection:
+ *
+ * Represents an active connection on an account.
+ */
+struct _PurpleConnection
+{
+	GObject gparent;
+};
 
 /* Private data for a connection */
-struct _PurpleConnectionPrivate
+typedef struct
 {
 	PurpleProtocol *protocol;     /* The protocol.                     */
 	PurpleConnectionFlags flags;  /* Connection flags.                 */
@@ -77,7 +85,7 @@ struct _PurpleConnectionPrivate
 	PurpleConnectionErrorInfo *error_info;
 
 	guint disconnect_timeout;  /* Timer used for nasty stack tricks         */
-};
+} PurpleConnectionPrivate;
 
 /* GObject property enums */
 enum

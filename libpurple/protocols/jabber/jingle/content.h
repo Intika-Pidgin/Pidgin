@@ -36,17 +36,9 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_CONTENT            (jingle_content_get_type())
-#define JINGLE_CONTENT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_CONTENT, JingleContent))
-#define JINGLE_CONTENT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_CONTENT, JingleContentClass))
-#define JINGLE_IS_CONTENT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_CONTENT))
-#define JINGLE_IS_CONTENT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_CONTENT))
-#define JINGLE_CONTENT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_CONTENT, JingleContentClass))
+#define JINGLE_TYPE_CONTENT  jingle_content_get_type()
 
-/** @copydoc _JingleContent */
 typedef struct _JingleContent JingleContent;
-/** @copydoc _JingleContentClass */
-typedef struct _JingleContentClass JingleContentClass;
 
 /** The content class */
 struct _JingleContentClass
@@ -59,18 +51,14 @@ struct _JingleContentClass
 	const gchar *description_type;
 };
 
-/** The content class's private data */
-struct _JingleContent
-{
-	GObject parent;                /**< The parent of this object. */
-};
-
 /**
  * Gets the content class's GType
  *
  * @return The content class's GType.
  */
-G_MODULE_EXPORT GType jingle_content_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_DERIVABLE_TYPE(JingleContent, jingle_content, JINGLE, CONTENT,
+		GObject)
 
 /**
  * Registers the JingleContent type in the type system.

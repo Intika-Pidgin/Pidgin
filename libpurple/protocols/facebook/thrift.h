@@ -34,16 +34,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#define FB_TYPE_THRIFT  (fb_thrift_get_type())
-#define FB_THRIFT(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_THRIFT, FbThrift))
-#define FB_THRIFT_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_THRIFT, FbThriftClass))
-#define FB_IS_THRIFT(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_THRIFT))
-#define FB_IS_THRIFT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_THRIFT))
-#define FB_THRIFT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_THRIFT, FbThriftClass))
-
-typedef struct _FbThrift FbThrift;
-typedef struct _FbThriftClass FbThriftClass;
-typedef struct _FbThriftPrivate FbThriftPrivate;
+#define FB_TYPE_THRIFT  fb_thrift_get_type()
 
 /**
  * FbThriftType:
@@ -86,35 +77,11 @@ typedef enum
 } FbThriftType;
 
 /**
- * FbThrift:
- *
- * Represents a reader/writer for compact Thrift data.
- */
-struct _FbThrift
-{
-	/*< private >*/
-	GObject parent;
-	FbThriftPrivate *priv;
-};
-
-/**
- * FbThriftClass:
- *
- * The base class for all #FbThrift's.
- */
-struct _FbThriftClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
-
-/**
  * fb_thrift_get_type:
  *
  * Returns: The #GType for an #FbThrift.
  */
-GType
-fb_thrift_get_type(void);
+G_DECLARE_FINAL_TYPE(FbThrift, fb_thrift, FB, THRIFT, GObject)
 
 /**
  * fb_thrift_new:

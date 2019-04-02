@@ -25,7 +25,7 @@
 /**
  * Data to be used by the dns-sd connection.
  */
-typedef struct _BonjourDnsSd {
+typedef struct {
 	gpointer mdns_impl_data;
 	PurpleAccount *account;
 	gchar *first;

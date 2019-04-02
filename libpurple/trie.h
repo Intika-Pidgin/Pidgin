@@ -51,47 +51,7 @@
 
 #include <glib-object.h>
 
-#define PURPLE_TYPE_TRIE (purple_trie_get_type())
-#define PURPLE_TRIE(obj) \
-	(G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_TRIE, PurpleTrie))
-#define PURPLE_TRIE_CLASS(klass) \
-	(G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_TRIE, PurpleTrieClass))
-#define PURPLE_IS_TRIE(obj) \
-	(G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_TRIE))
-#define PURPLE_IS_TRIE_CLASS(klass) \
-	(G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_TRIE))
-#define PURPLE_TRIE_GET_CLASS(obj) \
-	(G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_TRIE, PurpleTrieClass))
-
-typedef struct _PurpleTrie PurpleTrie;
-typedef struct _PurpleTrieClass PurpleTrieClass;
-
-/**
- * PurpleTrie:
- *
- * The trie object instance.
- */
-struct _PurpleTrie
-{
-	/*< private >*/
-	GObject parent_instance;
-};
-
-/**
- * PurpleTrieClass:
- *
- * Base class for #PurpleTrie objects.
- */
-struct _PurpleTrieClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
+#define PURPLE_TYPE_TRIE  purple_trie_get_type()
 
 /**
  * PurpleTrieReplaceCb:
@@ -141,8 +101,7 @@ G_BEGIN_DECLS
  *
  * Returns: the #GType for a #PurpleTrie.
  */
-GType
-purple_trie_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleTrie, purple_trie, PURPLE, TRIE, GObject)
 
 /**
  * purple_trie_new:

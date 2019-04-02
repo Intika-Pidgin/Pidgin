@@ -39,7 +39,7 @@
 #endif
 
 /* data used by avahi bonjour implementation */
-typedef struct _avahi_session_impl_data {
+typedef struct {
 	AvahiClient *client;
 	AvahiGLibPoll *glib_poll;
 	AvahiServiceBrowser *sb;
@@ -47,7 +47,7 @@ typedef struct _avahi_session_impl_data {
 	AvahiEntryGroup *buddy_icon_group;
 } AvahiSessionImplData;
 
-typedef struct _avahi_buddy_service_resolver_data {
+typedef struct {
 	AvahiServiceResolver *resolver;
 	AvahiIfIndex interface;
 	AvahiProtocol protocol;
@@ -58,7 +58,7 @@ typedef struct _avahi_buddy_service_resolver_data {
 	const char *ip;
 } AvahiSvcResolverData;
 
-typedef struct _avahi_buddy_impl_data {
+typedef struct {
 	GSList *resolvers;
 	AvahiRecordBrowser *buddy_icon_rec_browser;
 } AvahiBuddyImplData;

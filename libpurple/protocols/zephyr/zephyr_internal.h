@@ -77,7 +77,7 @@ typedef enum {
 extern ZCONST char *ZNoticeKinds[9];
 
 /* Unique ID format */
-typedef struct _ZUnique_Id_t {
+typedef struct {
     struct	in_addr zuid_addr;
     struct	timeval	tv;
 } ZUnique_Id_t;
@@ -86,7 +86,7 @@ typedef struct _ZUnique_Id_t {
 typedef unsigned long ZChecksum_t;
 
 /* Notice definition */
-typedef struct _ZNotice_t {
+typedef struct {
     char		*z_packet;
     char		*z_version;
     ZNotice_Kind_t	z_kind;
@@ -114,7 +114,7 @@ typedef struct _ZNotice_t {
 } ZNotice_t;
 
 /* Subscription structure */
-typedef struct _ZSubscriptions_t {
+typedef struct {
     char	*zsub_recipient;
     char	*zsub_class;
     char	*zsub_classinst;
@@ -124,13 +124,13 @@ typedef struct _ZSubscriptions_t {
 typedef int Code_t;
 
 /* Locations structure */
-typedef struct _ZLocations_t {
+typedef struct {
     char	*host;
     char	*time;
     char	*tty;
 } ZLocations_t;
 
-typedef struct _ZAsyncLocateData_t {
+typedef struct {
     char		*user;
     ZUnique_Id_t	uid;
     char		*version;

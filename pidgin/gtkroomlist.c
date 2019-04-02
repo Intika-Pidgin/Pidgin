@@ -33,7 +33,7 @@
 #include "gtk3compat.h"
 #include "gtkroomlist.h"
 
-typedef struct _PidginRoomlistDialog {
+typedef struct {
 	GtkWidget *window;
 	GtkWidget *account_widget;
 	GtkWidget *progress;
@@ -52,7 +52,7 @@ typedef struct _PidginRoomlistDialog {
 	guint pg_update_to;
 } PidginRoomlistDialog;
 
-typedef struct _PidginRoomlist {
+typedef struct {
 	PidginRoomlistDialog *dialog;
 	GtkTreeStore *model;
 	GtkWidget *tree;

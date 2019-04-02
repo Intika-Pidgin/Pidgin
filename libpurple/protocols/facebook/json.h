@@ -34,12 +34,7 @@
 #include <glib.h>
 #include <json-glib/json-glib.h>
 
-#define FB_TYPE_JSON_VALUES  (fb_json_values_get_type())
-#define FB_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_CAST((obj), FB_TYPE_JSON_VALUES, FbJsonValues))
-#define FB_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_CAST((klass), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
-#define FB_IS_JSON_VALUES(obj)  (G_TYPE_CHECK_INSTANCE_TYPE((obj), FB_TYPE_JSON_VALUES))
-#define FB_IS_JSON_VALUES_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), FB_TYPE_JSON_VALUES))
-#define FB_JSON_VALUES_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), FB_TYPE_JSON_VALUES, FbJsonValuesClass))
+#define FB_TYPE_JSON_VALUES  fb_json_values_get_type()
 
 /**
  * FB_JSON_ERROR:
@@ -47,10 +42,6 @@
  * The #GQuark of the domain of JSON errors.
  */
 #define FB_JSON_ERROR  fb_json_error_quark()
-
-typedef struct _FbJsonValues FbJsonValues;
-typedef struct _FbJsonValuesClass FbJsonValuesClass;
-typedef struct _FbJsonValuesPrivate FbJsonValuesPrivate;
 
 /**
  * FbJsonError:
@@ -93,35 +84,12 @@ typedef enum
 } FbJsonType;
 
 /**
- * FbJsonValues:
- *
- * Represents a JSON value handler.
- */
-struct _FbJsonValues
-{
-	/*< private >*/
-	GObject parent;
-	FbJsonValuesPrivate *priv;
-};
-
-/**
- * FbJsonValuesClass:
- *
- * The base class for all #FbJsonValues's.
- */
-struct _FbJsonValuesClass
-{
-	/*< private >*/
-	GObjectClass parent_class;
-};
-
-/**
  * fb_json_values_get_type:
  *
  * Returns: The #GType for an #FbJsonValues.
  */
-GType
-fb_json_values_get_type(void);
+G_DECLARE_FINAL_TYPE(FbJsonValues, fb_json_values, FB, JSON_VALUES,
+		GObject)
 
 /**
  * fb_json_error_quark:
