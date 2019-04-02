@@ -33,7 +33,7 @@
 #include "account.h"
 #include "circularbuffer.h"
 
-typedef struct _BonjourJabber
+typedef struct
 {
 	gint port;
 	gint socket;
@@ -44,7 +44,7 @@ typedef struct _BonjourJabber
 	GSList *pending_conversations;
 } BonjourJabber;
 
-typedef struct _BonjourJabberConversation
+typedef struct
 {
 	gint socket;
 	guint rx_handler;
@@ -99,7 +99,7 @@ typedef enum {
 	XEP_IQ_NONE
 } XepIqType;
 
-typedef struct _XepIq {
+typedef struct {
 	XepIqType type;
 	char *id;
 	PurpleXmlNode *node;

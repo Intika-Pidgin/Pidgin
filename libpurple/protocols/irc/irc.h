@@ -62,12 +62,12 @@
 enum { IRC_USEROPT_SERVER, IRC_USEROPT_PORT, IRC_USEROPT_CHARSET };
 enum irc_state { IRC_STATE_NEW, IRC_STATE_ESTABLISHED };
 
-typedef struct _IRCProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } IRCProtocol;
 
-typedef struct _IRCProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } IRCProtocolClass;

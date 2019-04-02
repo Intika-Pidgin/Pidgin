@@ -228,12 +228,12 @@ typedef enum
 #define OSCAR_STATUS_ID_ATWORK      "atwork"
 #define OSCAR_STATUS_ID_LUNCH       "lunch"
 
-typedef struct _OscarProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } OscarProtocol;
 
-typedef struct _OscarProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } OscarProtocolClass;

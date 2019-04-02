@@ -23,7 +23,7 @@
 
 #include "thrift.h"
 
-typedef struct _FbThriftPrivate
+typedef struct
 {
 	GByteArray *bytes;
 	gboolean internal;

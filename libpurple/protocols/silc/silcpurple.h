@@ -66,12 +66,12 @@
 #define SILCPURPLE_STATUS_ID_INDISPOSED "indisposed"
 #define SILCPURPLE_STATUS_ID_PAGE		"page"
 
-typedef struct _SilcProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } SilcProtocol;
 
-typedef struct _SilcProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } SilcProtocolClass;

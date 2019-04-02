@@ -34,7 +34,7 @@
 #include "mqtt.h"
 #include "util.h"
 
-typedef struct _FbMqttPrivate
+typedef struct
 {
 	PurpleConnection *gc;
 	GIOStream *conn;
@@ -63,7 +63,7 @@ struct _FbMqtt
 
 G_DEFINE_TYPE_WITH_PRIVATE(FbMqtt, fb_mqtt, G_TYPE_OBJECT);
 
-typedef struct _FbMqttMessagePrivate
+typedef struct
 {
 	FbMqttMessageType type;
 	FbMqttMessageFlags flags;

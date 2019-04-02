@@ -26,7 +26,7 @@ static PurpleCommandsUiOps *cmds_ui_ops = NULL;
 static GList *cmds = NULL;
 static guint next_id = 1;
 
-typedef struct _PurpleCmd {
+typedef struct {
 	PurpleCmdId id;
 	gchar *cmd;
 	gchar *args;

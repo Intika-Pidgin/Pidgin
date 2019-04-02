@@ -28,7 +28,7 @@
 #include "jabber.h"
 #include "xmlnode.h"
 
-typedef struct _JabberMessage {
+typedef struct {
 	JabberStream *js;
 	enum {
 		JABBER_MESSAGE_NORMAL,

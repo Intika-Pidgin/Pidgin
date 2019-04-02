@@ -33,12 +33,12 @@
 #define ZEPHYR_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), ZEPHYR_TYPE_PROTOCOL))
 #define ZEPHYR_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), ZEPHYR_TYPE_PROTOCOL, ZephyrProtocolClass))
 
-typedef struct _ZephyrProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } ZephyrProtocol;
 
-typedef struct _ZephyrProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } ZephyrProtocolClass;

@@ -472,7 +472,7 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
 	}
 }
 
-typedef struct _JabberPresenceCapabilities {
+typedef struct {
 	JabberStream *js;
 	JabberBuddy *jb;
 	char *from;

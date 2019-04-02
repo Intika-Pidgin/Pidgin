@@ -31,12 +31,12 @@
 #define GTALK_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), GTALK_TYPE_PROTOCOL))
 #define GTALK_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), GTALK_TYPE_PROTOCOL, GTalkProtocolClass))
 
-typedef struct _GTalkProtocol
+typedef struct
 {
 	JabberProtocol parent;
 } GTalkProtocol;
 
-typedef struct _GTalkProtocolClass
+typedef struct
 {
 	JabberProtocolClass parent_class;
 } GTalkProtocolClass;

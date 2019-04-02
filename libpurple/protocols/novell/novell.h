@@ -33,12 +33,12 @@
 #define NOVELL_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), NOVELL_TYPE_PROTOCOL))
 #define NOVELL_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), NOVELL_TYPE_PROTOCOL, NovellProtocolClass))
 
-typedef struct _NovellProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } NovellProtocol;
 
-typedef struct _NovellProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } NovellProtocolClass;
