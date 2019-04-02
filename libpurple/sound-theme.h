@@ -25,7 +25,7 @@
  * SECTION:sound-theme
  * @section_id: libpurple-sound-theme
  * @short_description: <filename>sound-theme.h</filename>
- * @title: Sound Theme Abstract Class
+ * @title: Sound Theme Class
  */
 
 #include <glib.h>
