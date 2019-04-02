@@ -52,12 +52,12 @@
 #define SIMPLE_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), SIMPLE_TYPE_PROTOCOL))
 #define SIMPLE_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), SIMPLE_TYPE_PROTOCOL, SIMPLEProtocolClass))
 
-typedef struct _SIMPLEProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } SIMPLEProtocol;
 
-typedef struct _SIMPLEProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } SIMPLEProtocolClass;

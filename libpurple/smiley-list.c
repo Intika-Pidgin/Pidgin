@@ -27,9 +27,14 @@
 
 #include <string.h>
 
-#define PURPLE_SMILEY_LIST_GET_PRIVATE(obj) \
-	(G_TYPE_INSTANCE_GET_PRIVATE((obj), PURPLE_TYPE_SMILEY_LIST, \
-	PurpleSmileyListPrivate))
+/**
+ * PurpleSmileyList:
+ *
+ * A container for #PurpleSmiley's.
+ */
+struct _PurpleSmileyList {
+	GObject parent;
+};
 
 typedef struct {
 	GList *smileys;
@@ -57,7 +62,7 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleSmileyList, purple_smiley_list, G_TYPE_OBJECT);
 
 static void
 purple_smiley_list_init(PurpleSmileyList *list) {
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	PurpleSmileyListPrivate *priv = purple_smiley_list_get_instance_private(list);
 
 	priv->trie = purple_trie_new();
 	priv->path_map = g_hash_table_new_full(g_str_hash, g_str_equal,
@@ -69,7 +74,7 @@ purple_smiley_list_init(PurpleSmileyList *list) {
 static void
 purple_smiley_list_finalize(GObject *obj) {
 	PurpleSmileyList *sl = PURPLE_SMILEY_LIST(obj);
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(sl);
+	PurpleSmileyListPrivate *priv = purple_smiley_list_get_instance_private(sl);
 	GList *it;
 
 	g_object_unref(priv->trie);
@@ -92,7 +97,7 @@ purple_smiley_list_get_property(GObject *obj, guint param_id, GValue *value,
                                 GParamSpec *pspec)
 {
 	PurpleSmileyList *sl = PURPLE_SMILEY_LIST(obj);
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(sl);
+	PurpleSmileyListPrivate *priv = purple_smiley_list_get_instance_private(sl);
 
 	switch (param_id) {
 		case PROP_DROP_FAILED_REMOTES:
@@ -109,7 +114,7 @@ purple_smiley_list_set_property(GObject *obj, guint param_id,
                                 const GValue *value, GParamSpec *pspec)
 {
 	PurpleSmileyList *sl = PURPLE_SMILEY_LIST(obj);
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(sl);
+	PurpleSmileyListPrivate *priv = purple_smiley_list_get_instance_private(sl);
 
 	switch (param_id) {
 		case PROP_DROP_FAILED_REMOTES:
@@ -196,14 +201,16 @@ purple_smiley_list_new(void) {
 
 gboolean
 purple_smiley_list_add(PurpleSmileyList *list, PurpleSmiley *smiley) {
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	PurpleSmileyListPrivate *priv = NULL;
 	const gchar *smiley_path;
 	gboolean succ;
 	gchar *shortcut_escaped;
 	const gchar *shortcut;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_SMILEY_LIST(list), FALSE);
 	g_return_val_if_fail(PURPLE_IS_SMILEY(smiley), FALSE);
+
+	priv = purple_smiley_list_get_instance_private(list);
 
 	if (g_object_get_data(G_OBJECT(smiley), "purple-smiley-list") != NULL) {
 		purple_debug_warning("smiley-list",
@@ -258,13 +265,15 @@ purple_smiley_list_add(PurpleSmileyList *list, PurpleSmiley *smiley) {
 
 void
 purple_smiley_list_remove(PurpleSmileyList *list, PurpleSmiley *smiley) {
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	PurpleSmileyListPrivate *priv = NULL;
 	GList *list_elem, *it;
 	const gchar *shortcut, *path;
 	gchar *shortcut_escaped;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_SMILEY_LIST(list));
 	g_return_if_fail(PURPLE_IS_SMILEY(smiley));
+
+	priv = purple_smiley_list_get_instance_private(list);
 
 	if (g_object_get_data(G_OBJECT(smiley), "purple-smiley-list") != list) {
 		purple_debug_warning("smiley-list", "remove: invalid list");
@@ -304,10 +313,13 @@ purple_smiley_list_remove(PurpleSmileyList *list, PurpleSmiley *smiley) {
 }
 
 gboolean
-purple_smiley_list_is_empty(const PurpleSmileyList *list) {
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+purple_smiley_list_is_empty(PurpleSmileyList *list)
+{
+	PurpleSmileyListPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, TRUE);
+	g_return_val_if_fail(PURPLE_IS_SMILEY_LIST(list), TRUE);
+
+	priv = purple_smiley_list_get_instance_private(list);
 
 	return (priv->smileys == NULL);
 }
@@ -316,18 +328,22 @@ PurpleSmiley *
 purple_smiley_list_get_by_shortcut(PurpleSmileyList *list,
 	                               const gchar *shortcut)
 {
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	PurpleSmileyListPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_SMILEY_LIST(list), NULL);
+
+	priv = purple_smiley_list_get_instance_private(list);
 
 	return g_hash_table_lookup(priv->shortcut_map, shortcut);
 }
 
 PurpleTrie *
 purple_smiley_list_get_trie(PurpleSmileyList *list) {
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	PurpleSmileyListPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_SMILEY_LIST(list), NULL);
+
+	priv = purple_smiley_list_get_instance_private(list);
 
 	return priv->trie;
 }
@@ -336,9 +352,11 @@ GList *
 purple_smiley_list_get_unique(PurpleSmileyList *list) {
 	GList *unique = NULL, *it;
 	GHashTable *unique_map;
-	PurpleSmileyListPrivate *priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	PurpleSmileyListPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_SMILEY_LIST(list), NULL);
+
+	priv = purple_smiley_list_get_instance_private(list);
 
 	/* We could just return g_hash_table_get_values(priv->path_map) here,
 	 * but it won't be in order. */
@@ -367,7 +385,7 @@ purple_smiley_list_get_all(PurpleSmileyList *list) {
 
 	g_return_val_if_fail(PURPLE_IS_SMILEY_LIST(list), NULL);
 
-	priv = PURPLE_SMILEY_LIST_GET_PRIVATE(list);
+	priv = purple_smiley_list_get_instance_private(list);
 
 	return g_hash_table_get_values(priv->shortcut_map);
 }

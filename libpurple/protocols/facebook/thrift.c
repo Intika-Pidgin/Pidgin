@@ -23,13 +23,24 @@
 
 #include "thrift.h"
 
-struct _FbThriftPrivate
+typedef struct
 {
 	GByteArray *bytes;
 	gboolean internal;
 	guint offset;
 	guint pos;
 	guint lastbool;
+} FbThriftPrivate;
+
+/**
+ * FbThrift:
+ *
+ * Represents a reader/writer for compact Thrift data.
+ */
+struct _FbThrift
+{
+	GObject parent;
+	FbThriftPrivate *priv;
 };
 
 G_DEFINE_TYPE_WITH_PRIVATE(FbThrift, fb_thrift, G_TYPE_OBJECT);

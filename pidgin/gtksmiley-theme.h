@@ -37,52 +37,17 @@
 #include "conversation.h"
 #include "smiley-theme.h"
 
-typedef struct _PidginSmileyTheme PidginSmileyTheme;
-typedef struct _PidginSmileyThemeClass PidginSmileyThemeClass;
-
-#define PIDGIN_TYPE_SMILEY_THEME            (pidgin_smiley_theme_get_type())
-#define PIDGIN_SMILEY_THEME(smiley)         (G_TYPE_CHECK_INSTANCE_CAST((smiley), PIDGIN_TYPE_SMILEY_THEME, PidginSmileyTheme))
-#define PIDGIN_SMILEY_THEME_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PIDGIN_TYPE_SMILEY_THEME, PidginSmileyThemeClass))
-#define PIDGIN_IS_SMILEY_THEME(smiley)      (G_TYPE_CHECK_INSTANCE_TYPE((smiley), PIDGIN_TYPE_SMILEY_THEME))
-#define PIDGIN_IS_SMILEY_THEME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PIDGIN_TYPE_SMILEY_THEME))
-#define PIDGIN_SMILEY_THEME_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PIDGIN_TYPE_SMILEY_THEME, PidginSmileyThemeClass))
-
-/**
- * PidginSmileyTheme:
- *
- * An implementation of a smiley theme.
- */
-struct _PidginSmileyTheme
-{
-	/*< private >*/
-	PurpleSmileyTheme parent;
-};
-
-/**
- * PidginSmileyThemeClass:
- *
- * Base class for #PidginSmileyTheme objects.
- */
-struct _PidginSmileyThemeClass
-{
-	/*< private >*/
-	PurpleSmileyThemeClass parent_class;
-
-	void (*pidgin_reserved1)(void);
-	void (*pidgin_reserved2)(void);
-	void (*pidgin_reserved3)(void);
-	void (*pidgin_reserved4)(void);
-};
-
 G_BEGIN_DECLS
+
+#define PIDGIN_TYPE_SMILEY_THEME  pidgin_smiley_theme_get_type()
 
 /**
  * pidgin_smiley_theme_get_type:
  *
  * Returns: the #GType for a smiley list.
  */
-GType
-pidgin_smiley_theme_get_type(void);
+G_DECLARE_FINAL_TYPE(PidginSmileyTheme, pidgin_smiley_theme, PIDGIN,
+		SMILEY_THEME, PurpleSmileyTheme)
 
 /**
  * pidgin_smiley_theme_get_name:

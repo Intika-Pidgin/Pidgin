@@ -39,26 +39,17 @@
 #include "smiley.h"
 #include "smiley-list.h"
 
-typedef struct _PurpleSmileyTheme PurpleSmileyTheme;
-typedef struct _PurpleSmileyThemeClass PurpleSmileyThemeClass;
+G_BEGIN_DECLS
 
-#define PURPLE_TYPE_SMILEY_THEME            (purple_smiley_theme_get_type())
-#define PURPLE_SMILEY_THEME(smiley)         (G_TYPE_CHECK_INSTANCE_CAST((smiley), PURPLE_TYPE_SMILEY_THEME, PurpleSmileyTheme))
-#define PURPLE_SMILEY_THEME_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_SMILEY_THEME, PurpleSmileyThemeClass))
-#define PURPLE_IS_SMILEY_THEME(smiley)      (G_TYPE_CHECK_INSTANCE_TYPE((smiley), PURPLE_TYPE_SMILEY_THEME))
-#define PURPLE_IS_SMILEY_THEME_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_SMILEY_THEME))
-#define PURPLE_SMILEY_THEME_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_SMILEY_THEME, PurpleSmileyThemeClass))
+#define PURPLE_TYPE_SMILEY_THEME  purple_smiley_theme_get_type()
 
 /**
- * PurpleSmileyTheme:
+ * purple_smiley_theme_get_type:
  *
- * An abstract class for smiley theme.
+ * Returns: the #GType for a smiley list.
  */
-struct _PurpleSmileyTheme
-{
-	/*< private >*/
-	GObject parent;
-};
+G_DECLARE_DERIVABLE_TYPE(PurpleSmileyTheme, purple_smiley_theme, PURPLE,
+		SMILEY_THEME, GObject)
 
 /**
  * PurpleSmileyThemeClass:
@@ -86,16 +77,6 @@ struct _PurpleSmileyThemeClass
 	void (*purple_reserved3)(void);
 	void (*purple_reserved4)(void);
 };
-
-G_BEGIN_DECLS
-
-/**
- * purple_smiley_theme_get_type:
- *
- * Returns: the #GType for a smiley list.
- */
-GType
-purple_smiley_theme_get_type(void);
 
 /**
  * purple_smiley_theme_get_smileys:

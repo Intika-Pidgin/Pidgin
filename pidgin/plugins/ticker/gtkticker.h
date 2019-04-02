@@ -32,36 +32,11 @@
 
 G_BEGIN_DECLS
 
-#define GTK_TYPE_TICKER            (gtk_ticker_get_type())
-#define GTK_TICKER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), GTK_TYPE_TICKER, GtkTicker))
-#define GTK_TICKER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), GTK_TYPE_TICKER, GtkTickerClass))
-#define GTK_IS_TICKER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), GTK_TYPE_TICKER))
-#define GTK_IS_TICKER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), GTK_TYPE_TICKER))
+#define GTK_TYPE_TICKER  gtk_ticker_get_type()
 
-
-typedef struct _GtkTicker        GtkTicker;
-typedef struct _GtkTickerClass   GtkTickerClass;
 typedef struct _GtkTickerChild   GtkTickerChild;
 
 /* XXX children move from right to left, should be able to go other way */
-
-struct _GtkTicker
-{
-  GtkContainer container;
-  guint interval;	/* how often to scootch */
-  gint spacing;	/* inter-child horizontal spacing */
-  guint scootch;	/* how many pixels to move each scootch */
-  gint timer;		/* timer object */
-  gint total;		/* total width of widgets */
-  gint width;		/* width of containing window */
-  gboolean dirty;
-  GList *children;
-};
-
-struct _GtkTickerClass
-{
-  GtkContainerClass parent_class;
-};
 
 struct _GtkTickerChild
 {
@@ -72,7 +47,7 @@ struct _GtkTickerChild
 
 
 G_MODULE_EXPORT
-GType      gtk_ticker_get_type          (void);
+G_DECLARE_FINAL_TYPE(GtkTicker, gtk_ticker, GTK, TICKER, GtkContainer)
 void       gtk_ticker_register_type     (PurplePlugin *plugin);
 
 GtkWidget* gtk_ticker_new               (void);

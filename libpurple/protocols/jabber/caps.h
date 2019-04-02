@@ -32,7 +32,7 @@ typedef struct _JabberCapsClientInfo JabberCapsClientInfo;
 
 typedef struct _JabberCapsNodeExts JabberCapsNodeExts;
 
-typedef struct _JabberCapsTuple {
+typedef struct {
 	const char *node;
 	const char *ver;
 	const char *hash;

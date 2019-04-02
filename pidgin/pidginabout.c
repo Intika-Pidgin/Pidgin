@@ -32,6 +32,8 @@
 #include "meson-config.h"
 #endif
 
+typedef struct _PidginAboutDialogPrivate PidginAboutDialogPrivate;
+
 struct _PidginAboutDialog {
 	GtkDialog parent;
 

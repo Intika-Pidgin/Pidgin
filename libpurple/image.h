@@ -40,25 +40,7 @@
 
 #include <glib-object.h>
 
-typedef struct _PurpleImage      PurpleImage;
-typedef struct _PurpleImageClass PurpleImageClass;
-
-#define PURPLE_TYPE_IMAGE            (purple_image_get_type())
-#define PURPLE_IMAGE(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_IMAGE, PurpleImage))
-#define PURPLE_IMAGE_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_IMAGE, PurpleImageClass))
-#define PURPLE_IS_IMAGE(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_IMAGE))
-#define PURPLE_IS_IMAGE_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_IMAGE))
-#define PURPLE_IMAGE_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_IMAGE, PurpleImageClass))
-
-/**
- * PurpleImage:
- *
- * An image data container.
- */
-struct _PurpleImage {
-	/*< private >*/
-	GObject parent;
-};
+#define PURPLE_TYPE_IMAGE  purple_image_get_type()
 
 struct _PurpleImageClass {
 	GObjectClass parent_class;
@@ -76,7 +58,7 @@ G_BEGIN_DECLS
  *
  * Returns: the #GType for an image.
  */
-GType purple_image_get_type(void);
+G_DECLARE_DERIVABLE_TYPE(PurpleImage, purple_image, PURPLE, IMAGE, GObject)
 
 /**
  * purple_image_new_from_bytes:
@@ -149,7 +131,7 @@ gboolean purple_image_save(PurpleImage *image, const gchar *path);
  *
  * Returns: (transfer full): A #GBytes containing the image data.
  */
-GBytes *purple_image_get_contents(const PurpleImage *image);
+GBytes *purple_image_get_contents(PurpleImage *image);
 
 
 /**

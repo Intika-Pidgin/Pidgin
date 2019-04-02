@@ -33,17 +33,9 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_TRANSPORT            (jingle_transport_get_type())
-#define JINGLE_TRANSPORT(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_TRANSPORT, JingleTransport))
-#define JINGLE_TRANSPORT_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_TRANSPORT, JingleTransportClass))
-#define JINGLE_IS_TRANSPORT(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_TRANSPORT))
-#define JINGLE_IS_TRANSPORT_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_TRANSPORT))
-#define JINGLE_TRANSPORT_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_TRANSPORT, JingleTransportClass))
+#define JINGLE_TYPE_TRANSPORT  jingle_transport_get_type()
 
-/** @copydoc _JingleTransport */
 typedef struct _JingleTransport JingleTransport;
-/** @copydoc _JingleTransportClass */
-typedef struct _JingleTransportClass JingleTransportClass;
 
 /** The transport class */
 struct _JingleTransportClass
@@ -57,18 +49,14 @@ struct _JingleTransportClass
 	GList *(*get_remote_candidates) (JingleTransport *transport);
 };
 
-/** The transport class's private data */
-struct _JingleTransport
-{
-	GObject parent;                /**< The parent of this object. */
-};
-
 /**
  * Gets the transport class's GType
  *
  * @return The transport class's GType.
  */
-G_MODULE_EXPORT GType jingle_transport_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_DERIVABLE_TYPE(JingleTransport, jingle_transport, JINGLE, TRANSPORT,
+		GObject)
 
 /**
  * Registers the JingleTransport type in the type system.

@@ -24,7 +24,7 @@
 #ifndef PURPLE_JABBER_JUTIL_H_
 #define PURPLE_JABBER_JUTIL_H_
 
-typedef struct _JabberID {
+typedef struct {
 	char *node;
 	char *domain;
 	char *resource;

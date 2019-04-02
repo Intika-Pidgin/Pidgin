@@ -32,37 +32,11 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_RAWUDP            (jingle_rawudp_get_type())
-#define JINGLE_RAWUDP(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_RAWUDP, JingleRawUdp))
-#define JINGLE_RAWUDP_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_RAWUDP, JingleRawUdpClass))
-#define JINGLE_IS_RAWUDP(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_RAWUDP))
-#define JINGLE_IS_RAWUDP_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_RAWUDP))
-#define JINGLE_RAWUDP_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_RAWUDP, JingleRawUdpClass))
-
-/** @copydoc _JingleRawUdp */
-typedef struct _JingleRawUdp JingleRawUdp;
-/** @copydoc _JingleRawUdpClass */
-typedef struct _JingleRawUdpClass JingleRawUdpClass;
-
-#define JINGLE_TYPE_RAWUDP_CANDIDATE  (jingle_rawudp_candidate_get_type())
+#define JINGLE_TYPE_RAWUDP  jingle_rawudp_get_type()
+#define JINGLE_TYPE_RAWUDP_CANDIDATE  jingle_rawudp_candidate_get_type()
 
 /** @copydoc _JingleRawUdpCandidate */
 typedef struct _JingleRawUdpCandidate JingleRawUdpCandidate;
-
-/** The rawudp class */
-struct _JingleRawUdpClass
-{
-	JingleTransportClass parent_class;     /**< The parent class. */
-
-	PurpleXmlNode *(*to_xml) (JingleTransport *transport, PurpleXmlNode *content, JingleActionType action);
-	JingleTransport *(*parse) (PurpleXmlNode *transport);
-};
-
-/** The rawudp class's private data */
-struct _JingleRawUdp
-{
-	JingleTransport parent;                /**< The parent of this object. */
-};
 
 struct _JingleRawUdpCandidate
 {
@@ -83,7 +57,9 @@ GType jingle_rawudp_candidate_get_type(void);
  *
  * @return The rawudp class's GType.
  */
-G_MODULE_EXPORT GType jingle_rawudp_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_FINAL_TYPE(JingleRawUdp, jingle_rawudp, JINGLE, RAWUDP,
+		JingleTransport)
 
 /**
  * Registers the JingleRawUdp type in the type system.

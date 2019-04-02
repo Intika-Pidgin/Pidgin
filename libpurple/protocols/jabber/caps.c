@@ -32,7 +32,7 @@
 
 #define JABBER_CAPS_FILENAME "xmpp-caps.xml"
 
-typedef struct _JabberDataFormField {
+typedef struct {
 	gchar *var;
 	GList *values;
 } JabberDataFormField;
@@ -367,7 +367,7 @@ gboolean jabber_caps_exts_known(const JabberCapsClientInfo *info,
 	return TRUE;
 }
 
-typedef struct _jabber_caps_cbplususerdata {
+typedef struct {
 	guint ref;
 
 	jabber_caps_get_info_cb cb;

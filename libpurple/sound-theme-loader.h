@@ -32,37 +32,7 @@
 #include <glib-object.h>
 #include "theme-loader.h"
 
-typedef struct _PurpleSoundThemeLoader        PurpleSoundThemeLoader;
-typedef struct _PurpleSoundThemeLoaderClass   PurpleSoundThemeLoaderClass;
-
-#define PURPLE_TYPE_SOUND_THEME_LOADER            (purple_sound_theme_loader_get_type())
-#define PURPLE_SOUND_THEME_LOADER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_SOUND_THEME_LOADER, PurpleSoundThemeLoader))
-#define PURPLE_SOUND_THEME_LOADER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_SOUND_THEME_LOADER, PurpleSoundThemeLoaderClass))
-#define PURPLE_IS_SOUND_THEME_LOADER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_SOUND_THEME_LOADER))
-#define PURPLE_IS_SOUND_THEME_LOADER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_SOUND_THEME_LOADER))
-#define PURPLE_SOUND_THEME_LOADER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_SOUND_THEME_LOADER, PurpleSoundThemeLoaderClass))
-
-/**
- * PurpleSoundThemeLoader:
- *
- * A purple sound theme loader. extends PurpleThemeLoader (theme-loader.h)
- * This is a class designed to build sound themes
- */
-struct _PurpleSoundThemeLoader
-{
-	PurpleThemeLoader parent;
-};
-
-struct _PurpleSoundThemeLoaderClass
-{
-	PurpleThemeLoaderClass parent_class;
-
-	/*< private >*/
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
+#define PURPLE_TYPE_SOUND_THEME_LOADER  purple_sound_theme_loader_get_type()
 
 /**************************************************************************/
 /* Purple Theme-Loader API                                                */
@@ -74,7 +44,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for sound theme loader.
  */
-GType purple_sound_theme_loader_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleSoundThemeLoader, purple_sound_theme_loader, PURPLE,
+		SOUND_THEME_LOADER, PurpleThemeLoader)
 
 G_END_DECLS
 #endif /* PURPLE_SOUND_THEME_LOADER_H */

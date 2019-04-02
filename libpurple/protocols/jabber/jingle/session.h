@@ -33,29 +33,7 @@
 
 G_BEGIN_DECLS
 
-#define JINGLE_TYPE_SESSION            (jingle_session_get_type())
-#define JINGLE_SESSION(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), JINGLE_TYPE_SESSION, JingleSession))
-#define JINGLE_SESSION_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), JINGLE_TYPE_SESSION, JingleSessionClass))
-#define JINGLE_IS_SESSION(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), JINGLE_TYPE_SESSION))
-#define JINGLE_IS_SESSION_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), JINGLE_TYPE_SESSION))
-#define JINGLE_SESSION_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), JINGLE_TYPE_SESSION, JingleSessionClass))
-
-/** @copydoc _JingleSession */
-typedef struct _JingleSession JingleSession;
-/** @copydoc _JingleSessionClass */
-typedef struct _JingleSessionClass JingleSessionClass;
-
-/** The session class */
-struct _JingleSessionClass
-{
-	GObjectClass parent_class;     /**< The parent class. */
-};
-
-/** The session class's private data */
-struct _JingleSession
-{
-	GObject parent;                /**< The parent of this object. */
-};
+#define JINGLE_TYPE_SESSION  jingle_session_get_type()
 
 struct _JingleContent;
 
@@ -64,7 +42,8 @@ struct _JingleContent;
  *
  * @return The session class's GType.
  */
-G_MODULE_EXPORT GType jingle_session_get_type(void);
+G_MODULE_EXPORT
+G_DECLARE_FINAL_TYPE(JingleSession, jingle_session, JINGLE, SESSION, GObject)
 
 /**
  * Registers the JingleSession type in the type system.

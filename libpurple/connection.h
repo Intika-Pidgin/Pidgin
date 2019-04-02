@@ -31,15 +31,9 @@
 
 #include <glib.h>
 
-#define PURPLE_TYPE_CONNECTION             (purple_connection_get_type())
-#define PURPLE_CONNECTION(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_CONNECTION, PurpleConnection))
-#define PURPLE_CONNECTION_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_CONNECTION, PurpleConnectionClass))
-#define PURPLE_IS_CONNECTION(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_CONNECTION))
-#define PURPLE_IS_CONNECTION_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_CONNECTION))
-#define PURPLE_CONNECTION_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_CONNECTION, PurpleConnectionClass))
+#define PURPLE_TYPE_CONNECTION  purple_connection_get_type()
 
 typedef struct _PurpleConnection PurpleConnection;
-typedef struct _PurpleConnectionClass PurpleConnectionClass;
 
 #define PURPLE_TYPE_CONNECTION_UI_OPS  (purple_connection_ui_ops_get_type())
 
@@ -273,31 +267,6 @@ struct _PurpleConnectionUiOps
 	void (*_purple_reserved4)(void);
 };
 
-/**
- * PurpleConnection:
- *
- * Represents an active connection on an account.
- */
-struct _PurpleConnection
-{
-	GObject gparent;
-};
-
-/**
- * PurpleConnectionClass:
- *
- * Base class for all #PurpleConnection's
- */
-struct _PurpleConnectionClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -309,7 +278,7 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the Connection object.
  */
-GType purple_connection_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleConnection, purple_connection, PURPLE, CONNECTION, GObject)
 
 /**
  * purple_connection_error_info_get_type:

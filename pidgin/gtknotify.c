@@ -99,7 +99,7 @@ enum
 };
 
 
-typedef struct _PidginNotifyDialog
+typedef struct
 {
 	/*
 	 * This must be first so PidginNotifyDialog can masquerade as the

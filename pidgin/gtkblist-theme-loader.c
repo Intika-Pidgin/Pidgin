@@ -32,6 +32,17 @@
 #include "gtkblist-theme-loader.h"
 #include "gtkblist-theme.h"
 
+/**
+ * PidginBlistThemeLoader:
+ *
+ * A pidgin buddy list theme loader. extends PurpleThemeLoader (theme-loader.h)
+ * This is a class designed to build sound themes
+ */
+struct _PidginBlistThemeLoader
+{
+	PurpleThemeLoader parent;
+};
+
 /******************************************************************************
  * Globals
  *****************************************************************************/

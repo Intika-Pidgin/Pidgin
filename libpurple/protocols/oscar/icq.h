@@ -31,12 +31,12 @@
 #define ICQ_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), ICQ_TYPE_PROTOCOL))
 #define ICQ_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), ICQ_TYPE_PROTOCOL, ICQProtocolClass))
 
-typedef struct _ICQProtocol
+typedef struct
 {
 	OscarProtocol parent;
 } ICQProtocol;
 
-typedef struct _ICQProtocolClass
+typedef struct
 {
 	OscarProtocolClass parent_class;
 } ICQProtocolClass;

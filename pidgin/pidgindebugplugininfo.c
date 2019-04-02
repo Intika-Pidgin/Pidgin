@@ -26,6 +26,18 @@
 
 #include "pidgindebugplugininfo.h"
 
+struct _PidginDebugPluginInfo {
+	GtkDialog parent;
+
+	gpointer reserved[4];
+};
+
+struct _PidginDebugPluginInfoClass {
+	GtkDialogClass parent;
+
+	gpointer reserved[4];
+};
+
 /**
  * SECTION:pidgindebugplugininfo
  * @Title: Debug Plugin Info

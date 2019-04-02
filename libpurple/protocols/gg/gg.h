@@ -49,12 +49,12 @@
 #define GGP_IS_PROTOCOL_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), GGP_TYPE_PROTOCOL))
 #define GGP_PROTOCOL_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), GGP_TYPE_PROTOCOL, GGPProtocolClass))
 
-typedef struct _GGPProtocol
+typedef struct
 {
 	PurpleProtocol parent;
 } GGPProtocol;
 
-typedef struct _GGPProtocolClass
+typedef struct
 {
 	PurpleProtocolClass parent_class;
 } GGPProtocolClass;

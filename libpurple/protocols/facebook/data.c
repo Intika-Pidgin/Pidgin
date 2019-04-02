@@ -27,7 +27,7 @@
 #include "api.h"
 #include "data.h"
 
-struct _FbDataPrivate
+typedef struct
 {
 	FbApi *api;
 	FbHttpConns *cons;
@@ -37,9 +37,20 @@ struct _FbDataPrivate
 	GHashTable *imgs;
 	GHashTable *unread;
 	GHashTable *evs;
+} FbDataPrivate;
+
+/**
+ * FbData:
+ *
+ * Represents the connection data used by #FacebookProtocol.
+ */
+struct _FbData
+{
+	GObject parent;
+	FbDataPrivate *priv;
 };
 
-struct _FbDataImagePrivate
+typedef struct
 {
 	FbData *fata;
 	gchar *url;
@@ -50,6 +61,17 @@ struct _FbDataImagePrivate
 	gboolean active;
 	const guint8 *image;
 	gsize size;
+} FbDataImagePrivate;
+
+/**
+ * FbDataImage:
+ *
+ * Represents the data used for fetching images.
+ */
+struct _FbDataImage
+{
+	GObject parent;
+	FbDataImagePrivate *priv;
 };
 
 static const gchar *fb_props_strs[] = {

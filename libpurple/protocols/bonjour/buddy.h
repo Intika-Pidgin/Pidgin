@@ -22,7 +22,7 @@
 #include "account.h"
 #include "jabber.h"
 
-typedef struct _BonjourBuddy
+typedef struct
 {
 	PurpleAccount *account;
 

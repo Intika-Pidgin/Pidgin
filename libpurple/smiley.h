@@ -42,50 +42,16 @@
 
 #include <glib-object.h>
 
-typedef struct _PurpleSmiley PurpleSmiley;
-typedef struct _PurpleSmileyClass PurpleSmileyClass;
-
-#define PURPLE_TYPE_SMILEY            (purple_smiley_get_type())
-#define PURPLE_SMILEY(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_SMILEY, PurpleSmiley))
-#define PURPLE_SMILEY_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
-#define PURPLE_IS_SMILEY(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_SMILEY))
-#define PURPLE_IS_SMILEY_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_SMILEY))
-#define PURPLE_SMILEY_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_SMILEY, PurpleSmileyClass))
-
-/**
- * PurpleSmiley:
- *
- * A generic smiley. It can either be a theme smiley, or a custom smiley.
- */
-struct _PurpleSmiley {
-	/*< private >*/
-	PurpleImage parent;
-};
-
-/**
- * PurpleSmileyClass:
- *
- * Base class for #PurpleSmiley objects.
- */
-struct _PurpleSmileyClass {
-	/*< private >*/
-	PurpleImageClass parent_class;
-
-	/*< private >*/
-	void (*purple_reserved1)(void);
-	void (*purple_reserved2)(void);
-	void (*purple_reserved3)(void);
-	void (*purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
+
+#define PURPLE_TYPE_SMILEY  purple_smiley_get_type()
 
 /**
  * purple_smiley_get_type:
  *
  * Returns: the #GType for a smiley.
  */
-GType purple_smiley_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleSmiley, purple_smiley, PURPLE, SMILEY, PurpleImage)
 
 /**
  * purple_smiley_new:
@@ -132,7 +98,7 @@ PurpleSmiley *purple_smiley_new_remote(const gchar *shortcut);
  *
  * Returns: the unescaped shortcut.
  */
-const gchar *purple_smiley_get_shortcut(const PurpleSmiley *smiley);
+const gchar *purple_smiley_get_shortcut(PurpleSmiley *smiley);
 
 G_END_DECLS
 

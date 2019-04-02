@@ -26,6 +26,19 @@
 
 #include "gtk3compat.h"
 
+struct _GtkTicker
+{
+	GtkContainer container;
+	guint interval;	/* how often to scootch */
+	gint spacing;	/* inter-child horizontal spacing */
+	guint scootch;	/* how many pixels to move each scootch */
+	gint timer;		/* timer object */
+	gint total;		/* total width of widgets */
+	gint width;		/* width of containing window */
+	gboolean dirty;
+	GList *children;
+};
+
 static void gtk_ticker_compute_offsets (GtkTicker    *ticker);
 static void gtk_ticker_class_init    (GtkTickerClass    *klass);
 static void gtk_ticker_init          (GtkTicker         *ticker);

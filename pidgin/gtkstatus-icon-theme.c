@@ -22,6 +22,20 @@
 
 #include "gtkstatus-icon-theme.h"
 
+/**
+ * PidginStatusIconTheme:
+ *
+ * extends PidginIconTheme (gtkicon-theme.h)
+ * A pidgin status icon theme.
+ * This object represents a Pidgin status icon theme.
+ *
+ * PidginStatusIconTheme is a PidginIconTheme Object.
+ */
+struct _PidginStatusIconTheme
+{
+	PidginIconTheme parent;
+};
+
 /******************************************************************************
  * Globals
  *****************************************************************************/

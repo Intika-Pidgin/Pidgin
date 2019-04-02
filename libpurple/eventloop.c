@@ -24,7 +24,7 @@
 #define PURPLE_GLIB_READ_COND  (G_IO_IN | G_IO_HUP | G_IO_ERR)
 #define PURPLE_GLIB_WRITE_COND (G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL)
 
-typedef struct _PurpleIOClosure {
+typedef struct {
 	PurpleInputFunction function;
 	guint result;
 	gpointer data;

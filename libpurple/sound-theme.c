@@ -27,6 +27,18 @@
  * Structs
  *****************************************************************************/
 
+/**
+ * PurpleSoundTheme:
+ *
+ * A purple sound theme.
+ * This is an object for Purple to represent a sound theme.
+ */
+struct _PurpleSoundTheme
+{
+	/*< private >*/
+	PurpleTheme parent;
+};
+
 typedef struct {
 	/* used to store filenames of diffrent sounds */
 	GHashTable *sound_files;

@@ -57,13 +57,13 @@ struct _JabberBuddy {
 	} subscription;
 };
 
-typedef struct _JabberAdHocCommands {
+typedef struct {
 	char *jid;
 	char *node;
 	char *name;
 } JabberAdHocCommands;
 
-typedef struct _JabberBuddyResource {
+typedef struct {
 	JabberBuddy *jb;
 	char *name;
 	int priority;
