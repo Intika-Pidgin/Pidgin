@@ -810,7 +810,7 @@ void finch_accounts_show_all()
 	gnt_box_add_widget(GNT_BOX(accounts.window), gnt_line_new(FALSE));
 
 	accounts.tree = gnt_tree_new_with_columns(2);
-	GNT_WIDGET_SET_FLAGS(accounts.tree, GNT_WIDGET_NO_BORDER);
+	gnt_widget_set_has_border(accounts.tree, FALSE);
 
 	for (iter = purple_accounts_get_all(); iter; iter = iter->next)
 	{

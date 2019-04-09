@@ -910,7 +910,7 @@ finch_create_conversation(PurpleConversation *conv)
 		gnt_tree_set_compare_func(GNT_TREE(tree), (GCompareFunc)g_utf8_collate);
 		gnt_tree_set_hash_fns(GNT_TREE(tree), g_str_hash, g_str_equal, g_free);
 		gnt_tree_set_search_column(GNT_TREE(tree), 1);
-		GNT_WIDGET_SET_FLAGS(tree, GNT_WIDGET_NO_BORDER);
+		gnt_widget_set_has_border(tree, FALSE);
 		gnt_box_add_widget(GNT_BOX(hbox), ggc->tv);
 		gnt_box_add_widget(GNT_BOX(hbox), tree);
 		gnt_box_add_widget(GNT_BOX(ggc->window), hbox);
@@ -1418,10 +1418,10 @@ users_command_cb(PurpleConversation *conv, const char *cmd, char **args, char **
 
 	ch = fc->u.chat;
 	gnt_widget_set_visible(ch->userlist,
-			(GNT_WIDGET_IS_FLAG_SET(ch->userlist, GNT_WIDGET_INVISIBLE)));
+	                       !gnt_widget_get_visible(ch->userlist));
 	gnt_box_readjust(GNT_BOX(fc->window));
 	gnt_box_give_focus_to_child(GNT_BOX(fc->window), fc->entry);
-	purple_prefs_set_bool(PREF_USERLIST, !(GNT_WIDGET_IS_FLAG_SET(ch->userlist, GNT_WIDGET_INVISIBLE)));
+	purple_prefs_set_bool(PREF_USERLIST, gnt_widget_get_visible(ch->userlist));
 	return PURPLE_CMD_RET_OK;
 }
 
