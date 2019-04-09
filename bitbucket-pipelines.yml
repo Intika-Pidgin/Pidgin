@@ -15,6 +15,10 @@ pipelines:
           image: pidgin/release-builder:release-2.x.y
           script:
             - set -ex
+            - hg clone https://bitbucket.org/pidgin/libgnt -b release-2.x.y
+            - meson -Dprefix=/usr libgnt libgnt/build
+            - ninja -C libgnt/build install
+            - ldconfig
             - ./autogen.sh --enable-debug
             - make -s -j$(nproc)
             - make -s -j$(nproc) check
