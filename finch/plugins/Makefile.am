@@ -28,11 +28,11 @@ gntclipboard_la_CFLAGS = $(X11_CFLAGS)
 gntgf_la_CFLAGS = $(X11_CFLAGS)
 
 gntclipboard_la_LIBADD = $(GLIB_LIBS) $(X11_LIBS)
-gntgf_la_LIBADD       = $(GLIB_LIBS) $(X11_LIBS) $(top_builddir)/finch/libgnt/libgnt.la
+gntgf_la_LIBADD       = $(GLIB_LIBS) $(X11_LIBS) $(LIBGNT_LIBS)
 gnthistory_la_LIBADD  = $(GLIB_LIBS)
 gntlastlog_la_LIBADD  = $(GLIB_LIBS)
 gnttinyurl_la_LIBADD  = $(GLIB_LIBS)
-grouping_la_LIBADD    = $(GLIB_LIBS) $(top_builddir)/finch/libgnt/libgnt.la
+grouping_la_LIBADD    = $(GLIB_LIBS) $(LIBGNT_LIBS)
 
 endif # PLUGINS
 
@@ -44,7 +44,7 @@ AM_CPPFLAGS = \
 	-I$(top_srcdir)/libpurple \
 	-I$(top_srcdir) \
 	-I$(top_srcdir)/finch \
-	-I$(top_srcdir)/finch/libgnt \
+	$(LIBGNT_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(GNT_CFLAGS) \
