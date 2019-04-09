@@ -336,28 +336,28 @@ void finch_debug_window_show()
 	 */
 	wid = gnt_button_new(_("Clear"));
 	g_signal_connect(G_OBJECT(wid), "activate", G_CALLBACK(clear_debug_win), debug.tview);
-	GNT_WIDGET_SET_FLAGS(wid, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(wid, TRUE);
 	gnt_box_add_widget(GNT_BOX(box), wid);
 
 	wid = gnt_button_new(_("Save"));
 	g_signal_connect(G_OBJECT(wid), "activate", G_CALLBACK(save_debug_win), debug.tview);
-	GNT_WIDGET_SET_FLAGS(wid, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(wid, TRUE);
 	gnt_box_add_widget(GNT_BOX(box), wid);
 
 	debug.search = gnt_entry_new(purple_prefs_get_string(PREF_ROOT "/filter"));
 	label = gnt_label_new(_("Filter:"));
-	GNT_WIDGET_UNSET_FLAGS(label, GNT_WIDGET_GROW_X);
+	gnt_widget_set_grow_x(label, FALSE);
 	gnt_box_add_widget(GNT_BOX(box), label);
 	gnt_box_add_widget(GNT_BOX(box), debug.search);
 	g_signal_connect(G_OBJECT(debug.search), "text_changed", G_CALLBACK(update_filter_string), NULL);
 
 	wid = gnt_check_box_new(_("Pause"));
 	g_signal_connect(G_OBJECT(wid), "toggled", G_CALLBACK(toggle_pause), NULL);
-	GNT_WIDGET_SET_FLAGS(wid, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(wid, TRUE);
 	gnt_box_add_widget(GNT_BOX(box), wid);
 
 	gnt_box_add_widget(GNT_BOX(debug.window), box);
-	GNT_WIDGET_SET_FLAGS(box, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(box, TRUE);
 
 	gnt_widget_set_name(debug.window, "debug-window");
 
