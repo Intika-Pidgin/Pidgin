@@ -1726,7 +1726,7 @@ draw_tooltip_real(FinchBlist *ggblist)
 	tree = GNT_TREE(widget);
 
 	if (!gnt_widget_has_focus(ggblist->tree) ||
-			(ggblist->context && !GNT_WIDGET_IS_FLAG_SET(ggblist->context, GNT_WIDGET_INVISIBLE)))
+			(ggblist->context && gnt_widget_get_visible(ggblist->context)))
 		return FALSE;
 
 	if (ggblist->tooltip)
@@ -1752,7 +1752,7 @@ draw_tooltip_real(FinchBlist *ggblist)
 
 	box = gnt_box_new(FALSE, FALSE);
 	gnt_box_set_toplevel(GNT_BOX(box), TRUE);
-	GNT_WIDGET_SET_FLAGS(box, GNT_WIDGET_NO_SHADOW);
+	gnt_widget_set_has_shadow(box, FALSE);
 	gnt_box_set_title(GNT_BOX(box), title);
 
 	str = make_sure_text_fits(str);
@@ -1766,8 +1766,8 @@ draw_tooltip_real(FinchBlist *ggblist)
 	if (x + w >= getmaxx(stdscr))
 		x -= w + width + 2;
 	gnt_widget_set_position(box, x, y);
-	GNT_WIDGET_UNSET_FLAGS(box, GNT_WIDGET_CAN_TAKE_FOCUS);
-	GNT_WIDGET_SET_FLAGS(box, GNT_WIDGET_TRANSIENT);
+	gnt_widget_set_take_focus(box, FALSE);
+	gnt_widget_set_transient(box, TRUE);
 	gnt_widget_draw(box);
 
 	gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(tv), str->str, GNT_TEXT_FLAG_NORMAL);
@@ -3028,7 +3028,7 @@ blist_show(PurpleBuddyList *list)
 
 	ggblist->tree = gnt_tree_new();
 
-	GNT_WIDGET_SET_FLAGS(ggblist->tree, GNT_WIDGET_NO_BORDER);
+	gnt_widget_set_has_border(ggblist->tree, FALSE);
 	gnt_widget_set_size(ggblist->tree, purple_prefs_get_int(PREF_ROOT "/size/width"),
 			purple_prefs_get_int(PREF_ROOT "/size/height"));
 	gnt_widget_set_position(ggblist->window, purple_prefs_get_int(PREF_ROOT "/position/x"),

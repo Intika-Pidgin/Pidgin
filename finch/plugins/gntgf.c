@@ -181,8 +181,8 @@ notify(PurpleConversation *conv, const char *fmt, ...)
 #endif
 
 	window = gnt_vbox_new(FALSE);
-	GNT_WIDGET_SET_FLAGS(window, GNT_WIDGET_TRANSIENT);
-	GNT_WIDGET_UNSET_FLAGS(window, GNT_WIDGET_NO_BORDER);
+	gnt_widget_set_transient(window, TRUE);
+	gnt_widget_set_has_border(window, TRUE);
 
 	va_start(args, fmt);
 	str = g_strdup_vprintf(fmt, args);
