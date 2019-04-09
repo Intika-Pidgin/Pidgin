@@ -465,9 +465,6 @@
 /* Use GNU Libidn for stringprep and IDN */
 /* #define USE_IDN 1 */
 
-/* Define if python headers are available. */
-/* #undef USE_PYTHON */
-
 /* Define if we're using XScreenSaver. */
 #define USE_SCREENSAVER 1
 

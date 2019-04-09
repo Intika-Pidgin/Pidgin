@@ -591,7 +591,6 @@ WARN_LOGFILE           =
 
 INPUT                  = @top_srcdir@/libpurple \
                          @top_srcdir@/finch \
-                         @top_srcdir@/finch/libgnt \
                          @top_srcdir@/pidgin \
                          @top_srcdir@/doc
 
