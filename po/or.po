@@ -1476,12 +1476,12 @@ msgid "History Plugin Requires Logging"
 msgstr "ଇତିହାସ ପ୍ଲଗ-ଇନ ଲଗିଙ୍ଗ ଆବଶ୍ଯକରେ"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"ଟୁଲ୍‌ଗୁଡିକଠାରୁ ଲଗିଙ୍ଗ ସକ୍ଷମ ହୋଇ ପାରିବ -> ପସନ୍ଦଗୁଡିକ -> ଲଗିଙ୍ଗ।\n"
+"ଟୁଲ୍‌ଗୁଡିକଠାରୁ ଲଗିଙ୍ଗ ସକ୍ଷମ ହୋଇ ପାରିବ ⇨ ପସନ୍ଦଗୁଡିକ ⇨ ଲଗିଙ୍ଗ।\n"
 "\n"
 "ଶୀଘ୍ର ସଂଦେଶଗୁଡିକ ପାଇଁ ଲଗ ସକ୍ଷମ ହେଉଛି ଏବଂ / କିମ୍ବା ସେହି ସମ୍ଭାଷଣ ପ୍ରକାର (ଗୁଡିକ)ପାଇଁ ଚାଟ ଗୁଡିକ "
 "ଇତିହାସକୁ ସକ୍ରିଯ କରିବ ।ଗ/or chats will activate history for the same conversation "
@@ -8457,7 +8457,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s ରେ ଆପଣଙ୍କୁ ସ୍ୱାଗତ!</span>\n"
 "\n"
@@ -8466,7 +8466,7 @@ msgstr ""
 "IM ଖାତା ସହିତ ସଂଯୁକ୍ତ ହେଉ, ତେବେ ସମସ୍ତଙ୍କୁ ବିନ୍ୟାସ କରିବା ପାଇଁ <b>ଯୋଗ କରନ୍ତୁ...</b> କୁ ପୁଣିଥରେ "
 "ଦବାନ୍ତୁ।\n"
 "\n"
-"ସାଥୀ ତାଲିକା ୱିଣ୍ଡୋରେ <b>Accounts->Manage Accounts</b> ଯୋଗ କରିବା, ସମ୍ପାଦନ କରିବା, "
+"ସାଥୀ ତାଲିକା ୱିଣ୍ଡୋରେ <b>Accounts⇨Manage Accounts</b> ଯୋଗ କରିବା, ସମ୍ପାଦନ କରିବା, "
 "ଅଥବା ବାହାର କରିବା ପାଇଁ ଆପଣ ଏହି ୱିଣ୍ଡୋକୁ ଫେରି ପାରିବେ"
 
 #, c-format
@@ -8989,18 +8989,18 @@ msgstr "ଲଗଇନ (_L)"
 msgid "/Accounts"
 msgstr "/ଆକାଉଣ୍ଟଗୁଡିକ"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s ରେ ଆପଣଙ୍କୁ ସ୍ୱାଗତ!</span>\n"
 "\n"
-"ଆପଣଙ୍କ ପାଖରେ କୌଣସି ଖାତା ବିନ୍ୟାସିତ ନାହିଁ। ଆପଣଙ୍କର IM ଖାତାକୁ <b>Accounts-> Manage "
+"ଆପଣଙ୍କ ପାଖରେ କୌଣସି ଖାତା ବିନ୍ୟାସିତ ନାହିଁ। ଆପଣଙ୍କର IM ଖାତାକୁ <b>Accounts⇨ Manage "
 "Accounts</b> ରେ ଥିବା <b>Accounts</b> ୱିଣ୍ଡୋରୁ ସକ୍ରିୟ କରନ୍ତୁ। ଥରେ ଆପଣ ଖାତାକୁ ସକ୍ରିୟ "
 "କରିସାରିବା ପରେ, ଆପଣ ସାଇନ ଅନ କରିବାରେ ସମର୍ଥ ହେବେ, ଆପଣଙ୍କର ସ୍ଥିତି ସେଟ କରିପାରିବେ, ଏବଂ ଆପଣଙ୍କ "
 "ସାଙ୍ଗମାନଙ୍କ ସହିତ ବାର୍ତ୍ତାଳାପ କରିପାରିବେ।"
@@ -9268,7 +9268,7 @@ msgstr "/ବିକଳ୍ପଗୁଡ଼ିକ"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

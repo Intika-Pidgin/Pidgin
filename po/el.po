@@ -1523,12 +1523,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Το πρόσθετο ιστορικού απαιτεί την ενεργοποίηση καταγραφής"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Η καταγραφή μπορεί να ενεργοποιηθεί από το Εργαλεία -> Προτιμήσεις -> "
+"Η καταγραφή μπορεί να ενεργοποιηθεί από το Εργαλεία ⇨ Προτιμήσεις ⇨ "
 "Καταγραφή.\n"
 "\n"
 "Η ενεργοποίηση των καταγραφών για τα άμεσα μηνύματα και/ή τις συζητήσεις θα "
@@ -8764,7 +8764,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Καλώς Ήρθατε στο %s!</span>\n"
 "\n"
@@ -9308,13 +9308,13 @@ msgstr "_Καταγραφή"
 msgid "/Accounts"
 msgstr "/Λογαριασμοί"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Καλώς Ήρθατε στο %s!</span>\n"
@@ -9591,7 +9591,7 @@ msgstr "/Επιλογές"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

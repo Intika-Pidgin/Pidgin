@@ -1507,12 +1507,12 @@ msgid "History Plugin Requires Logging"
 msgstr "L'empeuton d'istoric necessita l'activacion dels archius."
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Los archius pòdon èsser activats dins Aisinas -> Preferéncias -> Archius.\n"
+"Los archius pòdon èsser activats dins Aisinas ⇨ Preferéncias ⇨ Archius.\n"
 "\n"
 "L'activacion dels archius pels messatges instantanèus e/o los salons de "
 "discussions permetrà l'utilizacion de l'istoric per aqueles tipes de "
@@ -8678,7 +8678,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Benvenguda dins %s !</span>\n"
 "\n"
@@ -8688,7 +8688,7 @@ msgstr ""
 "de còps que necessari.\n"
 "\n"
 "Per retrobar aquesta fenèstra per fin d'apondre, modificar o suprimir de "
-"comptes, causissètz <b>Comptes->Gerir los comptes</b> dins la fenèstra de la "
+"comptes, causissètz <b>Comptes⇨Gerir los comptes</b> dins la fenèstra de la "
 "lista de contactes."
 
 #, c-format
@@ -9218,19 +9218,19 @@ msgstr "_Connexion"
 msgid "/Accounts"
 msgstr "/Comptes"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Benvenguda dins %s !</span>\n"
 "\n"
 "Avètz pas cap de compte actiu. Activaz vos comptes de messatjariá dempuèi la "
-"fenèstra <b>Comptes</b> dins lo menú <b>Comptes->Gerir los comptes</b>. Un "
+"fenèstra <b>Comptes</b> dins lo menú <b>Comptes⇨Gerir los comptes</b>. Un "
 "còp los comptes activats, vous pourrez vous connectar, cambiar vòstre estat "
 "e discutir amb vos contactes."
 
@@ -9501,7 +9501,7 @@ msgstr "/Opcions"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

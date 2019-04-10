@@ -1508,12 +1508,12 @@ msgid "History Plugin Requires Logging"
 msgstr "O plug-in mensagens recentes requer que os históricos estejam ativados"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Os históricos podem ser ativados em Ferramentas -> Preferências -> "
+"Os históricos podem ser ativados em Ferramentas ⇨ Preferências ⇨ "
 "Históricos.\n"
 "\n"
 "Ativar históricos para mensagens instantâneas e/ou bate-papos irá ativar as "
@@ -8676,7 +8676,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Bem vindo ao %s!</span>\n"
 "\n"
@@ -8687,7 +8687,7 @@ msgstr ""
 "novamente para configurar quantas contas quiser.\n"
 "\n"
 "Você pode voltar a esta janela para adicionar, alterar ou remover contas a "
-"partir do menu <b>Contas->Gerenciar Contas</b> na janela da Lista de Amigos"
+"partir do menu <b>Contas⇨Gerenciar Contas</b> na janela da Lista de Amigos"
 
 #, c-format
 msgid ""
@@ -9217,19 +9217,19 @@ msgstr "_Conectar"
 msgid "/Accounts"
 msgstr "/Contas"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Bem vindo ao %s!</span>\n"
 "\n"
 "Você não tem contas ativadas. Ative suas contas de mensagem instantânea (MI) "
-"a partir da janela <b>Contas</b>, localizada em <b>Contas->Gerenciar</b>. "
+"a partir da janela <b>Contas</b>, localizada em <b>Contas⇨Gerenciar</b>. "
 "Depois de ativá-las, você poderá conectar, definir seu status e falar com "
 "seus amigos."
 
@@ -9497,7 +9497,7 @@ msgstr "/Opções"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

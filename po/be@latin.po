@@ -1508,12 +1508,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Plugin historyi vymahaje viadzieńnia logaŭ"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Viadzieńnie logaŭ možna ŭklučyć praz Pryładździe -> Nałady -> Logi.\n"
+"Viadzieńnie logaŭ možna ŭklučyć praz Pryładździe ⇨ Nałady ⇨ Logi.\n"
 "\n"
 "Uklučyŭšy logi dla pryvatnych paviedamleńniaŭ i/ci hutarak, ty taksama "
 "ŭklučyš historyju dla taho ž typu kamunikacyi."
@@ -8849,7 +8849,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Zaprašajem u %s!</span>\n"
 "\n"
@@ -8859,7 +8859,7 @@ msgstr ""
 "b> jašče raz, kab skanfihuravać ich.\n"
 "\n"
 "Ty zmožaš viarnucca da hetaha vakna, kab dadać, adredahavać albo vydalić "
-"konty praz <b>Konty->Dadaj/Redahuj</b> u vaknie Śpisu siabroŭ"
+"konty praz <b>Konty⇨Dadaj/Redahuj</b> u vaknie Śpisu siabroŭ"
 
 #, fuzzy, c-format
 msgid ""
@@ -9414,19 +9414,19 @@ msgstr "_Uvajdzi"
 msgid "/Accounts"
 msgstr "/Konty"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, fuzzy, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Zaprašajem u %s!</span>\n"
 "\n"
 "Ty nia maješ uklučanych kontaŭ. Uklučy svaje konty razmovaŭ u vaknie "
-"<b>Konty</b> praz menu <b>Konty->Kiruj</b>. Kali ŭklučyš konty, ty zmožaš "
+"<b>Konty</b> praz menu <b>Konty⇨Kiruj</b>. Kali ŭklučyš konty, ty zmožaš "
 "uvajści, akreślić svoj status, razmaŭlać ź siabrami."
 
 #. set the Show Offline Buddies option. must be done
@@ -9708,7 +9708,7 @@ msgstr "/Opcyi"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

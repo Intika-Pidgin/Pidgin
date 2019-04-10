@@ -1512,13 +1512,13 @@ msgid "History Plugin Requires Logging"
 msgstr "Istorijos papildinys reikalauja žurnalų vedimo"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Žurnalų vedimas gali būti įjungtas iš meniu pasirinkus Įrankiai -> Nuostatos "
-"-> Žurnalų vedimas.\n"
+"Žurnalų vedimas gali būti įjungtas iš meniu pasirinkus Įrankiai ⇨ Nuostatos "
+"⇨ Žurnalų vedimas.\n"
 "\n"
 "Žurnalų vedimo įjungimas greitosioms žinutėms ar pokalbiams kambariuose "
 "aktyvuos ir jų istoriją."
@@ -8684,7 +8684,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Sveikiname pradėjus naudoti %s!</span>\n"
 "\n"
@@ -8694,7 +8694,7 @@ msgstr ""
 "<b>Pridėti...</b> daugiau kartų ir sukonfigūruokite visas paskyras.\n"
 "\n"
 "Vėliau galite sugrįžti į šį langą sukurti, keisti, ar pašalinti paskyrų per "
-"<b>Paskyros->Tvarkyti paskyras</b> meniu bičiulių sąrašo lange."
+"<b>Paskyros⇨Tvarkyti paskyras</b> meniu bičiulių sąrašo lange."
 
 #, c-format
 msgid ""
@@ -9221,19 +9221,19 @@ msgstr "_Prisijungti"
 msgid "/Accounts"
 msgstr "/Paskyros"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Sveikiname pradėjus naudoti %s!</span>\n"
 "\n"
 "Jūs neturite aktyvuotų paskyrų.  Aktyvuokite jas lange <b>„Paskyros“</b>, "
-"pasiekiamame per <b>Paskyros->Tvarkyti paskyras</b> meniu bičiulių sąrašo "
+"pasiekiamame per <b>Paskyros⇨Tvarkyti paskyras</b> meniu bičiulių sąrašo "
 "lange.  Aktyvavę paskyras, galėsite prisijungti, nustatyti savo būseną ir "
 "šnekėtis su draugais."
 
@@ -9503,7 +9503,7 @@ msgstr "/Parinktys"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

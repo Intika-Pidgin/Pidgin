@@ -1471,12 +1471,12 @@ msgid "History Plugin Requires Logging"
 msgstr "इतिहास प्लगईनला लॉगिंगची आवश्यकता आहे"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-" साधणे -> प्राधान्ये -> लॉगिंग कडून लॉगिंग सक्षम करू शकता.\n"
+" साधणे ⇨ प्राधान्ये ⇨ लॉगिंग कडून लॉगिंग सक्षम करू शकता.\n"
 "तात्काळ संदेशा आणि/किंवा संभाषणासाठी लॉग्जला  सक्षम केल्याने  समान प्रकारच्या संवादासाठी  "
 "इतिहासास कार्यान्वित करेल."
 
@@ -8471,7 +8471,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s वर आपले स्वागत आहे!</span>\n"
 "\n"
@@ -8479,7 +8479,7 @@ msgstr ""
 "पहिले खाते संरचीत करा. %s ने एकापेक्षा जास्त IM खात्याशी जोडणी केल्यास, सर्व संरचीत "
 "करण्यासाठी <b>समावेश करा...</b> दाबा.\n"
 "\n"
-"समावेश, संपादन, किंवा बड्डी सूचीतील पटलमधील <b>खाते->खाते व्यवस्थापीत करा</b> पर्याय "
+"समावेश, संपादन, किंवा बड्डी सूचीतील पटलमधील <b>खाते⇨खाते व्यवस्थापीत करा</b> पर्याय "
 "पासून खाते काढून टाकण्यासाठी तुम्ही या पटलाकडे पुनः येऊ शकता"
 
 #, c-format
@@ -9001,18 +9001,18 @@ msgstr "प्रवेश करा (_L)"
 msgid "/Accounts"
 msgstr "/खाते"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s वर आपले स्वागत!</span>\n"
 "\n"
-"खाते समर्थीत नाही. <b>खाते->खाते व्यवस्थापीत करा</b> येथील <b>खाते</b> पटल पासून IM "
+"खाते समर्थीत नाही. <b>खाते⇨खाते व्यवस्थापीत करा</b> येथील <b>खाते</b> पटल पासून IM "
 "खाते समर्थीत करा. खाते एकदाचे समर्थीत केल्यावर, तुम्ही प्रवेश, स्थिती सेट करू शकाल, व "
 "मित्रांसह संवाद करू शकाल."
 
@@ -9278,7 +9278,7 @@ msgstr "/पर्याय"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

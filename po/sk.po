@@ -1500,12 +1500,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Modul História vyžaduje zaznamenávanie"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Zaznamenávanie je možné zapnúť v ponuke Nástroje -> Predvoľby -> "
+"Zaznamenávanie je možné zapnúť v ponuke Nástroje ⇨ Predvoľby ⇨ "
 "Zaznamenávanie.\n"
 "\n"
 "História bude pre správy alebo chaty dostupná až po zapnutí zaznamenávania."
@@ -8599,7 +8599,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Vitajte v programe %s!</span>\n"
 "\n"
@@ -8610,7 +8610,7 @@ msgstr ""
 "ostatné.\n"
 "\n"
 "Ak budete chcieť neskôr pridať, upravovať alebo odstrániť niektoré účty, "
-"toto okno otvoríte v ponuke <b>Účty->Spravovať účty</b> v okne Zoznam "
+"toto okno otvoríte v ponuke <b>Účty⇨Spravovať účty</b> v okne Zoznam "
 "priateľov"
 
 #, c-format
@@ -9139,19 +9139,19 @@ msgstr "Prihlásiť"
 msgid "/Accounts"
 msgstr "/Účty"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Vitajte v programe %s!</span>\n"
 "\n"
 "Zatiaľ nemáte zapnuté žiadne IM účty. Zapnete ich v okne <b>Účty</b> ktoré "
-"nájdete v ponuke <b>Účty->Spravovať účty</b>. Keď aktivujete váš účet, "
+"nájdete v ponuke <b>Účty⇨Spravovať účty</b>. Keď aktivujete váš účet, "
 "budete sa môcť prihlásiť, zmeniť svoj status a písať si so svojimi priateľmi."
 
 #. set the Show Offline Buddies option. must be done
@@ -9417,7 +9417,7 @@ msgstr "/_Možnosti"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

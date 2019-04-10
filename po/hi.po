@@ -1472,12 +1472,12 @@ msgid "History Plugin Requires Logging"
 msgstr "इतिहास प्लगिन के लिए लॉगिंग जरूरी"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"औजार -> वरीयता -> लॉगिंग से लॉगिंग सक्रिय किया जा सकता है.\n"
+"औजार ⇨ वरीयता ⇨ लॉगिंग से लॉगिंग सक्रिय किया जा सकता है.\n"
 "\n"
 "इंस्टेट मेसेंजर और/अथवा बात-चीत लिए लॉग सक्रिय होने से समान बातचीत रूप में इतिहास सक्रिय "
 "कर देगा."
@@ -8442,7 +8442,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s में आपका स्वागत है!</span>\n"
 "\n"
@@ -8971,19 +8971,19 @@ msgstr "लागिन (_L)"
 msgid "/Accounts"
 msgstr "/खाता"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s में आपका स्वागत है!</span>\n"
 "\n"
 "आपके पास कोई खाता सक्रिय नहीं है. अपने IM खाता को <b>Accounts</b> window at "
-"<b>Accounts->Manage Accounts</b> से सक्रिय करें. एक बार जब आप खाता सक्रिय करते हैं, "
+"<b>Accounts⇨Manage Accounts</b> से सक्रिय करें. एक बार जब आप खाता सक्रिय करते हैं, "
 "आपको साइन ऑन करने, अपनी स्थिति सेट करने और अपने दोस्तों से बात करने में समर्थ होंगे."
 
 #. set the Show Offline Buddies option. must be done
@@ -9248,7 +9248,7 @@ msgstr "/विकल्प"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

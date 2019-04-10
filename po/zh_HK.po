@@ -1475,12 +1475,12 @@ msgid "History Plugin Requires Logging"
 msgstr "使用歷史記錄模組，先要啟用日誌功能"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"日誌功能可以從「工具」->「偏好設定」->「日誌」來啟動。\n"
+"日誌功能可以從「工具」⇨「偏好設定」⇨「日誌」來啟動。\n"
 "\n"
 "開啟即時訊息及聊天室的日誌功能將會為相同類別的交談留下歷史記錄。"
 
@@ -10298,7 +10298,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>歡迎使用 %s!</span>\n"
 "\n"
@@ -10306,7 +10306,7 @@ msgstr ""
 "設定好你的帳號即可。如果你希望 %s 使用多個即時通訊帳號，可在完成上一步後，繼"
 "續按「新增」按紐來設定其他的帳號。\n"
 "\n"
-"你如果希望新增、修改或刪除帳號，只要透過好友清單上的「帳號->管理帳號」指令，"
+"你如果希望新增、修改或刪除帳號，只要透過好友清單上的「帳號⇨管理帳號」指令，"
 "即可返回這個畫面。"
 
 #, c-format
@@ -10825,18 +10825,18 @@ msgstr "登入(_L)"
 msgid "/Accounts"
 msgstr "/帳號"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>歡迎使用 %s!</span>\n"
 "\n"
-"你未有啟動任何帳號，請透過好友清單上的「帳號->管理帳號」指令，到「帳號清單」"
+"你未有啟動任何帳號，請透過好友清單上的「帳號⇨管理帳號」指令，到「帳號清單」"
 "啟動即時訊息帳號。帳號一經啟動，就隨時可以登入或更改狀態；這樣，你就可以跟你"
 "的好友通訊了！"
 
@@ -11097,7 +11097,7 @@ msgstr "/選項"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"
