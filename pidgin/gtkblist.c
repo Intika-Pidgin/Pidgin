@@ -5726,7 +5726,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	GtkWidget *content_area;
 	GtkWidget *label;
 	GtkWidget *close;
-	char *pretty, *tmp;
+	gchar *text;
 	const char *theme_name;
 	GtkActionGroup *action_group;
 	GError *error;
@@ -5830,20 +5830,18 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	gtk_notebook_append_page(GTK_NOTEBOOK(gtkblist->notebook), kiosk_page(), NULL);
 #endif
 
-	/* Translators: Please maintain the use of -> and <- to refer to menu heirarchy */
-	tmp = g_strdup_printf(_("<span weight='bold' size='larger'>Welcome to %s!</span>\n\n"
+	/* Translators: Please maintain the use of ⇦ or ⇨ to refer to menu hierarchy */
+	text = g_strdup_printf(_("<span weight='bold' size='larger'>Welcome to %s!</span>\n\n"
 
 					       "You have no accounts enabled. Enable your IM accounts from the "
-					       "<b>Accounts</b> window at <b>Accounts->Manage Accounts</b>. Once you "
+					       "<b>Accounts</b> window at <b>Accounts⇨Manage Accounts</b>. Once you "
 					       "enable accounts, you'll be able to sign on, set your status, "
 					       "and talk to your friends."), PIDGIN_NAME);
-	pretty = pidgin_make_pretty_arrows(tmp);
-	g_free(tmp);
 	label = gtk_label_new(NULL);
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
 	gtk_label_set_yalign(GTK_LABEL(label), 0.2);
-	gtk_label_set_markup(GTK_LABEL(label), pretty);
-	g_free(pretty);
+	gtk_label_set_markup(GTK_LABEL(label), text);
+	g_free(text);
 	gtk_notebook_append_page(GTK_NOTEBOOK(gtkblist->notebook),label, NULL);
 	gtkblist->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
 	gtk_notebook_append_page(GTK_NOTEBOOK(gtkblist->notebook), gtkblist->vbox, NULL);
