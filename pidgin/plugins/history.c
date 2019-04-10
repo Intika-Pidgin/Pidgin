@@ -177,8 +177,9 @@ history_prefs_check(PurplePlugin *plugin)
 	if (!purple_prefs_get_bool("/purple/logging/log_ims") &&
 	    !purple_prefs_get_bool("/purple/logging/log_chats"))
 	{
+		/* Translators: Please maintain the use of ⇦ or ⇨ to represent the menu hierarchy */
 		purple_notify_warning(plugin, NULL, _("History Plugin Requires Logging"),
-							_("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
+							_("Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n\n"
 							  "Enabling logs for instant messages and/or chats will activate "
 							  "history for the same conversation type(s)."), NULL);
 	}

@@ -175,8 +175,9 @@ history_prefs_check(PurplePlugin *plugin)
 
 		purple_request_fields_add_group(fields, group);
 
+		/* Translators: Please maintain the use of ⇦ or ⇨ to represent the menu hierarchy */
 		purple_request_fields(plugin, NULL, _("History Plugin Requires Logging"),
-				      _("Logging can be enabled from Tools -> Preferences -> Logging.\n\n"
+				      _("Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n\n"
 				      "Enabling logs for instant messages and/or chats will activate "
 				      "history for the same conversation type(s)."),
 				      fields,
