@@ -3628,7 +3628,7 @@ setup_menubar(PidginConvWindow *win)
 	win->menu->menubar =
 		gtk_ui_manager_get_widget(win->menu->ui, "/Conversation");
 
-	/* Make sure the 'Conversation -> More' menuitems are regenerated whenever
+	/* Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 	 * the 'Conversation' menu pops up because the entries can change after the
 	 * conversation is created. */
 	menuitem = gtk_ui_manager_get_widget(win->menu->ui, "/Conversation/ConversationMenu");
