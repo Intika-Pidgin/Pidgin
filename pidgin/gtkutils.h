@@ -617,17 +617,6 @@ GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(cons
 gpointer pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *len);
 
 /**
- * pidgin_make_pretty_arrows:
- * @str:      The text to convert
- *
- * Converts "->" and "<-" in strings to Unicode arrow characters, for use in referencing
- * menu items.
- *
- * Returns:         A newly allocated string with unicode arrow characters
- */
-char *pidgin_make_pretty_arrows(const char *str);
-
-/**
  * PidginUtilMiniDialogCallback:
  *
  * The type of callbacks passed to pidgin_make_mini_dialog().

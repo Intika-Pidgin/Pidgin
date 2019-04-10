@@ -2462,21 +2462,6 @@ pidgin_convert_buddy_icon(PurpleProtocol *protocol, const char *path, size_t *le
 	return NULL;
 }
 
-char *pidgin_make_pretty_arrows(const char *str)
-{
-	char *ret;
-	char **split = g_strsplit(str, "->", -1);
-	ret = g_strjoinv("\342\207\250", split);
-	g_strfreev(split);
-
-	split = g_strsplit(ret, "<-", -1);
-	g_free(ret);
-	ret = g_strjoinv("\342\207\246", split);
-	g_strfreev(split);
-
-	return ret;
-}
-
 void pidgin_set_urgent(GtkWindow *window, gboolean urgent)
 {
 #if defined _WIN32

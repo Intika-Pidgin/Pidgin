@@ -2289,7 +2289,7 @@ create_accounts_list(AccountsWindow *dialog)
 	GtkWidget *treeview;
 	GtkTreeSelection *sel;
 	GtkTargetEntry gte[] = {{"PURPLE_ACCOUNT", GTK_TARGET_SAME_APP, 0}};
-	char *pretty, *tmp;
+	gchar *text;
 
 	frame = gtk_frame_new(NULL);
 	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
@@ -2301,8 +2301,8 @@ create_accounts_list(AccountsWindow *dialog)
 
 	/* Create a helpful first-time-use label */
 	label = gtk_label_new(NULL);
-	/* Translators: Please maintain the use of -> or <- to represent the menu heirarchy */
-	tmp = g_strdup_printf(_(
+	/* Translators: Please maintain the use of ⇦ or ⇨ to represent the menu hierarchy */
+	text = g_strdup_printf(_(
 						 "<span size='larger' weight='bold'>Welcome to %s!</span>\n\n"
 
 						 "You have no IM accounts configured. To start connecting with %s "
@@ -2311,12 +2311,10 @@ create_accounts_list(AccountsWindow *dialog)
 						 "press <b>Add...</b> again to configure them all.\n\n"
 
 						 "You can come back to this window to add, edit, or remove "
-						 "accounts from <b>Accounts->Manage Accounts</b> in the Buddy "
+						 "accounts from <b>Accounts⇨Manage Accounts</b> in the Buddy "
 						 "List window"), PIDGIN_NAME, PIDGIN_NAME, PIDGIN_NAME);
-	pretty = pidgin_make_pretty_arrows(tmp);
-	g_free(tmp);
-	gtk_label_set_markup(GTK_LABEL(label), pretty);
-	g_free(pretty);
+	gtk_label_set_markup(GTK_LABEL(label), text);
+	g_free(text);
 
 	gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
 	gtk_widget_show(label);
