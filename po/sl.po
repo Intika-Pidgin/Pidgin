@@ -1512,12 +1512,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Vtičnik za zgodovino zahteva beleženje v dnevnik"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Beleženje v dnevnik lahko omogočite v Orodja -> Nastavitve -> Beleženje v "
+"Beleženje v dnevnik lahko omogočite v Orodja ⇨ Nastavitve ⇨ Beleženje v "
 "dnevnik.\n"
 "\n"
 "Omogočanje beleženja v dnevnik za neposredna sporočila in/ali klepete "
@@ -8678,7 +8678,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Dobrodošli v programu %s!</span>\n"
 "\n"
@@ -8688,7 +8688,7 @@ msgstr ""
 "<b>Dodaj ...</b>, da jih vse nastavite.\n"
 "\n"
 "Vedno se k temu oknu lahko vrnete in dodate, uredite ali odstranite račune z "
-"<b>Računi->Upravljaj z računi</b> v oknu seznama prijateljev."
+"<b>Računi⇨Upravljaj z računi</b> v oknu seznama prijateljev."
 
 #, c-format
 msgid ""
@@ -9222,19 +9222,19 @@ msgstr "_Prijavi"
 msgid "/Accounts"
 msgstr "/Računi"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Dobrodošli v %s!</span>\n"
 "\n"
 "Nimate aktiviranih računov. Vključite svoje račune za neposredno sporočanje "
-"(IM) prek okna <b>Računi</b> z ukazom <b>Računi->Upravljaj z računi</b>. Ko "
+"(IM) prek okna <b>Računi</b> z ukazom <b>Računi⇨Upravljaj z računi</b>. Ko "
 "račune omogočite, se boste lahko prijavili, nastavili svoje stanje in "
 "klepetali s svojimi prijatelji."
 
@@ -9502,7 +9502,7 @@ msgstr "/Možnosti"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

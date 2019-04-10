@@ -1508,12 +1508,12 @@ msgid "History Plugin Requires Logging"
 msgstr "O complemento de historial require estar conectado"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Pode activar o rexistro en Ferramentas -> Preferencias -> Rexistro.\n"
+"Pode activar o rexistro en Ferramentas ⇨ Preferencias ⇨ Rexistro.\n"
 "\n"
 "A activación do rexistro das mensaxes instantáneas e/ou das conversas "
 "activará o historial para os mesmos tipos de conversa."
@@ -8665,7 +8665,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Dámoslle a benvida ao %s!</span>\n"
 "\n"
@@ -8675,7 +8675,7 @@ msgstr ""
 "instantánea, prema <b>Engadir...</b> outra vez para configuralas.\n"
 "\n"
 "Pode volver máis tarde a esta xanela para engadir, editar ou eliminar contas "
-"desde <b>Contas->Xestionar contas</b> na xanela da lista de contactos"
+"desde <b>Contas⇨Xestionar contas</b> na xanela da lista de contactos"
 
 #, c-format
 msgid ""
@@ -9204,19 +9204,19 @@ msgstr "_Inicio de sesión"
 msgid "/Accounts"
 msgstr "/Contas"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Benvida/o a %s!</span>\n"
 "\n"
 "Non ten ningunha conta activada. Active as súas contas de MI desde a xanela "
-"de <b>Contas</b> en <b>Contas->Engadir/Editar</b>. Unha vez que active as "
+"de <b>Contas</b> en <b>Contas⇨Engadir/Editar</b>. Unha vez que active as "
 "súas contas, poderá conectarse, definir o seu estado e falar cos seus amigos."
 
 #. set the Show Offline Buddies option. must be done
@@ -9484,7 +9484,7 @@ msgstr "/Opcións"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

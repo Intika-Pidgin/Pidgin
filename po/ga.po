@@ -1510,12 +1510,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Tá gá le logáil chun an breiseán staire a úsáid"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Is féidir logáil a chur ar siúl trí Uirlisí -> Sainroghanna -> Logáil.\n"
+"Is féidir logáil a chur ar siúl trí Uirlisí ⇨ Sainroghanna ⇨ Logáil.\n"
 "\n"
 "Má chuireann tú logáil ar siúl le haghaidh teachtaireachtaí meandaracha nó "
 "comhráite, cuirfear an stair ar siúl do chomhráite den chineál sin freisin."
@@ -8757,7 +8757,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Fáilte go %s!</span>\n"
 "\n"
@@ -8767,7 +8767,7 @@ msgstr ""
 "chun iad go léir a chumrú.\n"
 "\n"
 "Is féidir leat filleadh ar an bhfuinneog seo chun cuntais a chruthú, a chur "
-"in eagar, nó a scriosadh, trí <b>Cuntais->Bainistigh Cuntais</b>  san "
+"in eagar, nó a scriosadh, trí <b>Cuntais⇨Bainistigh Cuntais</b>  san "
 "fhuinneog Liosta Cairde"
 
 #, c-format
@@ -9306,19 +9306,19 @@ msgstr "_Logáil Isteach"
 msgid "/Accounts"
 msgstr "/Cuntais"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Fáilte go %s!</span>\n"
 "\n"
 "Níl aon chuntais socraithe agat. Cumasaigh cuntais TM san fhuinneog "
-"<b>Cuntais</b> ag <b>Cuntais->Bainistigh Cuntais</b>. Nuair a bheidh cuntais "
+"<b>Cuntais</b> ag <b>Cuntais⇨Bainistigh Cuntais</b>. Nuair a bheidh cuntais "
 "socraithe agat, beidh tú in ann logáil isteach, do stádas a shocrú, agus "
 "comhrá a dhéanamh le cairde."
 
@@ -9586,7 +9586,7 @@ msgstr "/Roghanna"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

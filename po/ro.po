@@ -1511,12 +1511,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Modulul „Istoric” necesită autentificare"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Înregistrarea mesajelor poate fi activată în Unelte -> Preferințe -> "
+"Înregistrarea mesajelor poate fi activată în Unelte ⇨ Preferințe ⇨ "
 "Înregistrare.\n"
 "\n"
 "Înregistrarea mesajelor pentru discuții și/sau chat-uri va activa istoricul "
@@ -8674,7 +8674,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Bun venit în %s!</span>\n"
 "\n"
@@ -8684,7 +8684,7 @@ msgstr ""
 "<b>Adaugă...</b> de câte ori doriți.\n"
 "\n"
 "Veți putea reveni la această fereastră pentru a adăuga, edita sau șterge "
-"conturi utilizând <b>Conturi->Administrare</b> în fereastra listei de "
+"conturi utilizând <b>Conturi⇨Administrare</b> în fereastra listei de "
 "contacte."
 
 #, c-format
@@ -9218,19 +9218,19 @@ msgstr "_Autentificare"
 msgid "/Accounts"
 msgstr "/Conturi"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Bun venit în %s!</span>\n"
 "\n"
 "Nu aveți niciun cont activ. Activați-vă conturile de mesagerie instant în "
-"fereastra <b>Conturi</b>, accesibilă pe calea <b>Conturi->Administrare</b>. "
+"fereastra <b>Conturi</b>, accesibilă pe calea <b>Conturi⇨Administrare</b>. "
 "Abia după activare veți putea utiliza conturile definite."
 
 #. set the Show Offline Buddies option. must be done
@@ -9498,7 +9498,7 @@ msgstr "/Opțiuni"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

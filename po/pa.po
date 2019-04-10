@@ -1471,12 +1471,12 @@ msgid "History Plugin Requires Logging"
 msgstr "ਅਤੀਤ ਪਲੱਗਇਨ ਲਈ ਲਾਗ ਲਾਜ਼ਮੀ ਹੈ"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"ਲਾਗ ਨੂੰ ਸੰਦ -> ਪਸੰਦ -> ਲਾਗ ਰੱਖੋ ਰਾਹੀਂ ਚਾਲੂ ਕੀਤਾ ਜਾ ਸਕਦਾ ਹੈ।\n"
+"ਲਾਗ ਨੂੰ ਸੰਦ ⇨ ਪਸੰਦ ⇨ ਲਾਗ ਰੱਖੋ ਰਾਹੀਂ ਚਾਲੂ ਕੀਤਾ ਜਾ ਸਕਦਾ ਹੈ।\n"
 "\n"
 "ਤੁਰੰਤ ਸੁਨੇਹਿਆਂ ਅਤੇ/ਜਾਂ ਗੱਲਬਾਤ ਲਈ ਲਾਗ ਰੱਖਣ ਨਾਲ ਉਸੇ ਸੰਵਾਦ ਕਿਸਮ ਲਈ ਅਤੀਤ ਸਰਗਰਮ ਕਰੇਗਾ।"
 
@@ -8418,7 +8418,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s ਵਲੋਂ ਜੀ ਆਇਆਂ ਨੂੰ!</span>\n"
 "\n"
@@ -8426,7 +8426,7 @@ msgstr ""
 "ਬਟਨ ਦੱਬੋ ਅਤੇ ਆਪਣਾ ਪਹਿਲਾਂ ਅਕਾਊਂਟ ਸੰਰਚਿਤ ਕਰੋ। ਜੇ ਤੁਸੀਂ %s ਨੂੰ ਕਈ IM ਅਕਾਊਂਟਾਂ ਨਾਲ ਕੁਨੈਕਟ ਕਰਨਾ "
 "ਚਾਹੁੰਦੇ ਹੋ ਤਾਂ ਸਭ ਦੀ ਸੰਰਚਨਾ ਲਈ <b>ਸ਼ਾਮਲ...</b> ਨੂੰ ਫੇਰ ਦੱਬੋ।\n"
 "\n"
-"ਤੁਸੀਂ ਇਹ ਵਿੰਡੋ ਉੱਤੇ ਬੇਲੀ (ਬੱਡੀ) ਲਿਸਟ ਵਿੰਡੋ ਵਿੱਚ <b>ਅਕਾਊਂਟ->ਅਕਾਊਂਟ ਪਰਬੰਧ</b> ਰਾਹੀਂ ਅਕਾਊਂਟ "
+"ਤੁਸੀਂ ਇਹ ਵਿੰਡੋ ਉੱਤੇ ਬੇਲੀ (ਬੱਡੀ) ਲਿਸਟ ਵਿੰਡੋ ਵਿੱਚ <b>ਅਕਾਊਂਟ⇨ਅਕਾਊਂਟ ਪਰਬੰਧ</b> ਰਾਹੀਂ ਅਕਾਊਂਟ "
 "ਸ਼ਾਮਲ, ਸੋਧਣ ਜਾਂ ਹਟਾਉਣ ਵਾਸਤੇ ਆ ਸਕਦੇ ਹੋ।"
 
 #, c-format
@@ -8948,18 +8948,18 @@ msgstr "ਲਾਗਇਨ(_L)"
 msgid "/Accounts"
 msgstr "/ਅਕਾਊਂਟ"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s ਵਲੋਂ ਜੀ ਆਇਆਂ ਨੂੰ!</span>\n"
 "\n"
-"ਤੁਹਾਡੇ ਕੋਲ ਕੋਈ ਅਕਾਊਂਟ ਯੋਗ ਨਹੀਂ ਹੈ। ਆਪਣੇ IM ਅਕਾਊਂਟ <b>ਅਕਾਊਂਟ->ਅਕਾਊਂਟ ਪਰਬੰਧ</b> ਰਾਹੀਂ "
+"ਤੁਹਾਡੇ ਕੋਲ ਕੋਈ ਅਕਾਊਂਟ ਯੋਗ ਨਹੀਂ ਹੈ। ਆਪਣੇ IM ਅਕਾਊਂਟ <b>ਅਕਾਊਂਟ⇨ਅਕਾਊਂਟ ਪਰਬੰਧ</b> ਰਾਹੀਂ "
 "<b>ਅਕਾਊਂਟ</b> ਤੋਂ ਯੋਗ ਕਰੋ। ਜਦੋਂ ਤੁਸੀਂ ਅਕਾਊਂਟ ਯੋਗ ਕੀਤੇ ਤਾਂ ਤੁਸੀਂ ਸਾਇਨ-ਆਨ ਕਰ ਸਕਦੇ ਹੋ, ਆਪਣਾ ਸਟੇਟਸ "
 "ਸੈੱਟ ਕਰ ਸਕਦੇ ਹੋ ਅਤੇ ਆਪਣੇ ਦੋਸਤਾਂ-ਮਿੱਤਰਾਂ ਨਾਲ ਗੱਲਾਂ ਮਾਰ ਸਕਦੇ ਹੋ।"
 
@@ -9224,7 +9224,7 @@ msgstr "/ਚੋਣਾਂ"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

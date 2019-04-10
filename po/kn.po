@@ -1468,7 +1468,7 @@ msgstr "ಯಾರೋ ಒಬ್ಬರು ಒಂದು ಮಾತುಕತೆಯಲ
 
 #. Translators: "toaster" here means "pop-up".
 msgid "Notify with a toaster when"
-msgstr "ಟೋಸ್ಟರ್‍ನೊಂದಿಗೆ ತಿಳಿಸಿ ->"
+msgstr "ಟೋಸ್ಟರ್‍ನೊಂದಿಗೆ ತಿಳಿಸಿ ⇨"
 
 msgid "Beep too!"
 msgstr "ಸದ್ದು ಕೂಡ!"
@@ -1491,12 +1491,12 @@ msgid "History Plugin Requires Logging"
 msgstr "ಹಿಸ್ಟರಿ ಪ್ಲಗ್ಗಿನ್ನಿಗೆ ಲಾಗಿಂಗ್ ಅವಶ್ಯ"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"ದಾಖಲಿಸುವುದನ್ನು ಶಕ್ತಗೊಳಿಸಲು ಉಪಕರಣಗಳು -> ಆದ್ಯತೆಗಳು -> ದಾಖಲಿಸುವಿಕೆ ಅನ್ನು ಬಳಸಿ.\n"
+"ದಾಖಲಿಸುವುದನ್ನು ಶಕ್ತಗೊಳಿಸಲು ಉಪಕರಣಗಳು ⇨ ಆದ್ಯತೆಗಳು ⇨ ದಾಖಲಿಸುವಿಕೆ ಅನ್ನು ಬಳಸಿ.\n"
 "\n"
 "ತಕ್ಷಣದ ಸಂದೇಶಗಳಿಗಾಗಿ ಹಾಗು/ಅಥವ ಮಾತುಕತೆಗಳಿಗಾಗಿ ದಾಖಲಿಸುವಿಕೆಯನ್ನು ಶಕ್ತಗೊಳಿಸಿದಾಗ ಅದೆ "
 "ಬಗೆಯ ಮಾತುಕತೆಗಾಗಿ ಇತಿಹಾಸವನ್ನು ಸಕ್ರಿಯಗೊಳಿಸುತ್ತದೆ."
@@ -3220,7 +3220,7 @@ msgid "Find buddies..."
 msgstr "ಸ್ನೇಹಿತರನ್ನು ಹುಡುಕಿ..."
 
 msgid "Save buddylist to file..."
-msgstr "ಗೆಳೆಯರಪಟ್ಟಿಯನ್ನು ಈ ಕಡತಕ್ಕೆ ಉಳಿಸಿ ->"
+msgstr "ಗೆಳೆಯರಪಟ್ಟಿಯನ್ನು ಈ ಕಡತಕ್ಕೆ ಉಳಿಸಿ ⇨"
 
 #. magic
 #. major_version
@@ -8570,7 +8570,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s ಗೆ ಸುಸ್ವಾಗತ!</span>\n"
 "\n"
@@ -8579,7 +8579,7 @@ msgstr ""
 "ಅನ್ನು ಅನೇಕ IM ಖಾತೆಗಳಿಗೆ ಸಂಪರ್ಕ ಹೊಂದಿಸಲು ಬಯಸಿದಲ್ಲಿ, ಅವೆಲ್ಲವನ್ನೂ ಸಹ ಸಂರಚಿಸಲು ಪುನಃ "
 "<b>ಸೇರಿಸು...</b> ಅನ್ನು ಒತ್ತಿ.\n"
 "\n"
-"ಗೆಳೆಯರ ಪಟ್ಟಿ ವಿಂಡೊದಲ್ಲಿನ  <b>ಖಾತೆಗಳು->ಖಾತೆಗಳನ್ನು ನಿರ್ವಹಿಸು</b> ಎಂಬುದಕ್ಕೆ "
+"ಗೆಳೆಯರ ಪಟ್ಟಿ ವಿಂಡೊದಲ್ಲಿನ  <b>ಖಾತೆಗಳು⇨ಖಾತೆಗಳನ್ನು ನಿರ್ವಹಿಸು</b> ಎಂಬುದಕ್ಕೆ "
 "ಖಾತೆಗಳನ್ನು ಸೇರಿಸಲು, ಸಂಪಾದಿಸಲು ಅಥವ ತೆಗೆದುಹಾಕಲು ನೀವು ಈ ವಿಂಡೊಗೆ ಮರಳಿ ಬರಬಹುದು."
 
 #, c-format
@@ -9100,18 +9100,18 @@ msgstr "ಪ್ರವೇಶ(_L)"
 msgid "/Accounts"
 msgstr "/ಖಾತೆಗಳು"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s ಗೆ ಸ್ವಾಗತ!</span>\n"
 "\n"
-"ಶಕ್ತಗೊಂಡಿರುವ ಯಾವುದೆ ಖಾತೆಗಳನ್ನು ನೀವು ಹೊಂದಿಲ್ಲ. <b>ಖಾತೆಗಳು->ಖಾತೆಗಳನ್ನು ನಿರ್ವಹಿಸಿ</"
+"ಶಕ್ತಗೊಂಡಿರುವ ಯಾವುದೆ ಖಾತೆಗಳನ್ನು ನೀವು ಹೊಂದಿಲ್ಲ. <b>ಖಾತೆಗಳು⇨ಖಾತೆಗಳನ್ನು ನಿರ್ವಹಿಸಿ</"
 "b> ಎಂಬಲ್ಲಿರುವ <b>ಖಾತೆಗಳು</b> ವಿಂಡೊವನ್ನು ಬಳಸಿಕೊಂಡು ನಿಮ್ಮ IM ಖಾತೆಗಳನ್ನು ಶಕ್ತಗೊಳಿಸಿ. "
 "ಖಾತೆಗಳನ್ನು ಶಕ್ತಗೊಳಿಸಿದ ನಂತರ, ಪ್ರವೇಶಿಸಲು, ನಿಮ್ಮ ಸ್ಥಿತಿಯನ್ನು ಹೊಂದಿಸಲು ಹಾಗು ನಿಮ್ಮ "
 "ಗೆಳಯರೊಂದಿಗೆ ಮಾತನಾಡಲು ಸಾಧ್ಯವಿರುತ್ತದೆ."
@@ -9378,7 +9378,7 @@ msgstr "/ಆಯ್ಕೆಗಳು"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

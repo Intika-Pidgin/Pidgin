@@ -1502,12 +1502,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Geçmiş Eklentisi Kayıt Tutulmasını Gerektirir"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Kayıt tutmayı etkinleştirmek için lütfen Araçlar -> Tercihler -> Kayıtlar "
+"Kayıt tutmayı etkinleştirmek için lütfen Araçlar ⇨ Tercihler ⇨ Kayıtlar "
 "yolunu takip edin.\n"
 "\n"
 "Anlık İletiler ya da sohetler için kayıt tutmayı etkinleştirmek bu "
@@ -8599,7 +8599,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s e Hoşgeldiniz!</span>\n"
 "\n"
@@ -8609,7 +8609,7 @@ msgstr ""
 "için tekrar <b>Ekle...</b> butonuna basınız.\n"
 "\n"
 "Hesap eklemek, düzenlemek veya kaldırmak için bu pencereye Kişi Listesi "
-"penceresendeki <b>Hesaplar->Hesapları Yönet</b> yolunu izleyerek tekrar geri "
+"penceresendeki <b>Hesaplar⇨Hesapları Yönet</b> yolunu izleyerek tekrar geri "
 "dönebilirsiniz"
 
 #, c-format
@@ -9138,18 +9138,18 @@ msgstr "_Giriş yap"
 msgid "/Accounts"
 msgstr "/Hesaplar"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s'e Hoşgeldiniz!</span>\n"
 "\n"
-"Etkin hesabınız yok. <b>Hesaplar->Hesapları Yönet</b>'ten <b>Hesaplar</b> "
+"Etkin hesabınız yok. <b>Hesaplar⇨Hesapları Yönet</b>'ten <b>Hesaplar</b> "
 "penceresinden Anlık İleti hesaplarınızı etkinleştirin. Hesapları "
 "etkinleştirdiğinizde, oturum açabileceksiniz, durumunuzu ayarlayın ve "
 "aradaşlarınızla konuşun."
@@ -9417,7 +9417,7 @@ msgstr "/Seçenekler"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

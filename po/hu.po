@@ -59,7 +59,7 @@ msgid ""
 "investigate and complete the migration by hand. Please report this error at "
 "http://developer.pidgin.im"
 msgstr ""
-"A(z) %s hibákat észlelt a beállításainak átköltöztetése (%s -> %s) során. Az "
+"A(z) %s hibákat észlelt a beállításainak átköltöztetése (%s ⇨ %s) során. Az "
 "átköltöztetést saját kezűleg kell befejeznie. Jelentse ezt a hibát a http://"
 "developer.pidgin.im oldalon."
 
@@ -1505,12 +1505,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Az előzmények bővítmény megköveteli a naplózást"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"A naplózás engedélyezhető az Eszközök -> Beállítások -> Naplózás alatt.\n"
+"A naplózás engedélyezhető az Eszközök ⇨ Beállítások ⇨ Naplózás alatt.\n"
 "\n"
 "Az azonnali üzenetek naplózásának engedélyezése a megfelelő társalgástípusok "
 "előzményeit is aktiválja."
@@ -8386,7 +8386,7 @@ msgstr "Hangulat"
 
 #, c-format
 msgid "%s (%s) changed status from %s to %s"
-msgstr "%s (%s) megváltoztatta az állapotát (%s -> %s)"
+msgstr "%s (%s) megváltoztatta az állapotát (%s ⇨ %s)"
 
 #, c-format
 msgid "%s (%s) is now %s"
@@ -8686,7 +8686,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Üdvözli a %s!</span>\n"
 "\n"
@@ -8695,7 +8695,7 @@ msgstr ""
 "azt szeretné hogy a %s több fiókhoz csatlakozzon, kattintson újra a "
 "<b>Hozzáadás…</b> gombra és állítsa be mindet.\n"
 "\n"
-"A Partnerlista ablak <b>Fiókok -> Fiókok kezelése</b> menüpontja "
+"A Partnerlista ablak <b>Fiókok ⇨ Fiókok kezelése</b> menüpontja "
 "segítségével visszatérhet ehhez az ablakhoz fiókok hozzáadásához, "
 "szerkesztéséhez vagy eltávolításához."
 
@@ -9224,18 +9224,18 @@ msgstr "_Bejelentkezés"
 msgid "/Accounts"
 msgstr "/Fiókok"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Üdvözli a %s!</span>\n"
 "\n"
-"Nincsenek engedélyezve fiókjai. A <b>Fiókok</b> ablak <b>Fiókok -> Fiókok "
+"Nincsenek engedélyezve fiókjai. A <b>Fiókok</b> ablak <b>Fiókok ⇨ Fiókok "
 "kezelése</b> menüpontja segítségével engedélyezze azonnali üzenő fiókjait. A "
 "fiókok engedélyezése után bejelentkezhet, beállíthatja állapotát és "
 "cseveghet barátaival."
@@ -9506,7 +9506,7 @@ msgstr "/Beállítások"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

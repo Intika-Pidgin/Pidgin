@@ -3654,11 +3654,11 @@ msgstr "जारिमिन प्लागिनाव  लगिं गो�
 #: ../finch/plugins/gnthistory.c:173
 #: ../pidgin/plugins/history.c:154
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for the same conversation type(s)."
 msgstr ""
-"आयजें आयलाफोर-> पसन्दफोर -> लगिं निफ्राय लगिंखौ हाहोनाय खालामनो हायो।\n"
+"आयजें आयलाफोर⇨ पसन्दफोर ⇨ लगिं निफ्राय लगिंखौ हाहोनाय खालामनो हायो।\n"
 "\n"
 "हरखाब खौरां आरो/एबा सावरायनायनि थाखाय लगफोरखौ हाहोनाय खालामनाया एखे रायज्लायनाय रोखोम(फोर) नि थाखाय जारिमिनखौ मावथि खालामो।"
 
@@ -18684,13 +18684,13 @@ msgid ""
 "\n"
 "You have no IM accounts configured. To start connecting with %s press the <b>Add...</b> button below and configure your first account. If you want %s to connect to multiple IM accounts, press <b>Add...</b> again to configure them all.\n"
 "\n"
-"You can come back to this window to add, edit, or remove accounts from <b>Accounts->Manage Accounts</b> in the Buddy List window"
+"You can come back to this window to add, edit, or remove accounts from <b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%s आव बरायबाय!</span>\n"
 "\n"
 "नोंथाङा जेबो IM एकाउन्टखौ बायजो महर दानाय जायाखै। %s जों फोनांजाब खालामनो जागायनो गाहायनि <b>दाजाबदेर...</b> बुथामखौ नारसिन आरो गिबियाव नोंथांनि एकाउन्टखौ बाइजो महर दा। नोंथाङा %s खौ गोबां IM एकाउन्टफोरजों फोनांजाब खालामनो लुबैयोब्ला बेफोर गासैखौबो बायजो महर दानो <b>दाजाबदेर...</b> खौ नारसिन।\n"
 "\n"
-"नोंथाङा बाडि लिस्ट उइन्ड’आव <b>एकाउन्टफोर->एकाउन्टफोरखौ सामलाय</b> एकाउन्टफोरखौ दाजाबदेरनो, सुजुनो एबा बोखारनो बे उइन्ड’आव फैफिननो हायो।"
+"नोंथाङा बाडि लिस्ट उइन्ड’आव <b>एकाउन्टफोर⇨एकाउन्टफोरखौ सामलाय</b> एकाउन्टफोरखौ दाजाबदेरनो, सुजुनो एबा बोखारनो बे उइन्ड’आव फैफिननो हायो।"
 
 #: ../pidgin/gtkaccount.c:2575
 #, c-format
@@ -19509,17 +19509,17 @@ msgstr "लगिन"
 msgid "/Accounts"
 msgstr "/एकाउन्टफोर"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #: ../pidgin/gtkblist.c:5792
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
-"You have no accounts enabled. Enable your IM accounts from the <b>Accounts</b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, you'll be able to sign on, set your status, and talk to your friends."
+"You have no accounts enabled. Enable your IM accounts from the <b>Accounts</b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%s आव बरायबाय!</span>\n"
 "\n"
-"नोंथांहा जेबो एकाउन्ट लोरबां खालामनाय गैया। <b>एकाउन्टफोर-> एकाउन्टफोरखौ मेनेज खालाम </b> <b>एकाउन्ट</b> उइन्ड’ निफ्राय नोंथांनि IM एकाउन्टफोरखौ हाहोनाय खालाम। नोंथाङा एकाउन्टफोरखौ खेब हाहोनाय खालामोब्लानो साइन-अन खालामनो हागोन, नोंथांनि थाखोमानखौ फज आरो नोंथांनि लोगोफोरजों रायज्लाय।"
+"नोंथांहा जेबो एकाउन्ट लोरबां खालामनाय गैया। <b>एकाउन्टफोर⇨ एकाउन्टफोरखौ मेनेज खालाम </b> <b>एकाउन्ट</b> उइन्ड’ निफ्राय नोंथांनि IM एकाउन्टफोरखौ हाहोनाय खालाम। नोंथाङा एकाउन्टफोरखौ खेब हाहोनाय खालामोब्लानो साइन-अन खालामनो हागोन, नोंथांनि थाखोमानखौ फज आरो नोंथांनि लोगोफोरजों रायज्लाय।"
 
 # set the Show Offline Buddies option. must be done
 # * after the treeview or faceprint gets mad. -Robot101
@@ -19972,12 +19972,12 @@ msgstr "/उफ्राफोर"
 # Conversations
 # The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 # * the 'Conversation' menu pops up.
-# Make sure the 'Conversation -> More' menuitems are regenerated whenever
+# Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 # * the 'Conversation' menu pops up because the entries can change after the
 # * conversation is created.
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 #: ../pidgin/gtkconv.c:3472

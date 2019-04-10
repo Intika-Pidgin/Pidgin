@@ -1505,12 +1505,12 @@ msgid "History Plugin Requires Logging"
 msgstr "Geskiedenis-inprop vereis boekstawing"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"Boekstawing kan geaktiveer word by Nutsgoed -> Voorkeure -> Boekstawing.\n"
+"Boekstawing kan geaktiveer word by Nutsgoed ⇨ Voorkeure ⇨ Boekstawing.\n"
 "\n"
 "Aktivering van staaflêers vir kitsboodsappe en/of geselsies sal geskiedenis "
 "aktiveer vir die selfde gesprektipe(s)."
@@ -8601,7 +8601,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>Welkom by %s!</span>\n"
 "\n"
@@ -9135,19 +9135,19 @@ msgstr "_Meld aan"
 msgid "/Accounts"
 msgstr "Rekeninge"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>Welkom by %s!</span>\n"
 "\n"
 "Daar is geen rekeninge geaktiveer nie. Aktiveer die kitsboodskaprekeninge op "
-"die <b>Rekeninge</b>-venster by <b>Rekeninge->Bestuur rekeninge</b>. Sodra "
+"die <b>Rekeninge</b>-venster by <b>Rekeninge⇨Bestuur rekeninge</b>. Sodra "
 "rekeninge geaktiveer is, kan mens aanmeld, mens se status stel en met "
 "vriende gesels."
 
@@ -9414,7 +9414,7 @@ msgstr "Opsies"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

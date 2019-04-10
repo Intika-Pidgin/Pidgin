@@ -1487,12 +1487,12 @@ msgid "History Plugin Requires Logging"
 msgstr "வரலாறு சொருகுபொருளுக்கு உள்நுழைவு தேவை"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"நுழைவை இங்கே பெறலாம். கருவிகள் ->  விருப்பங்கள் -> நுழைவு.\n"
+"நுழைவை இங்கே பெறலாம். கருவிகள் ⇨  விருப்பங்கள் ⇨ நுழைவு.\n"
 "\n"
 "உடனடி தகவல்கள் மற்றும்/அல்லது  அரட்டை பதிவேடுகளை செயல்படுத்துவதன் மூலம் அதே "
 "உரையாடலுக்கான வரலாறும் செயல்படுத்தப்படும்."
@@ -8522,7 +8522,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>%sக்கு வருக!</span>\n"
 "\n"
@@ -8532,7 +8532,7 @@ msgstr ""
 "அழுத்தவும்.\n"
 "\n"
 "நண்பர்பட்டியல் சாளரத்தில் நீங்கள் மீண்டும் வந்து சாளரத்தில் சேர்க்க, திருத்த, அல்லது  "
-"<b>கணக்குகள்->மேலாண்மை கணக்குகள்</b>இதிலிருந்து கணக்குகளை நீக்கலாம்"
+"<b>கணக்குகள்⇨மேலாண்மை கணக்குகள்</b>இதிலிருந்து கணக்குகளை நீக்கலாம்"
 
 #, c-format
 msgid ""
@@ -9056,19 +9056,19 @@ msgstr "உள்நுழை (_L)"
 msgid "/Accounts"
 msgstr "/கணக்குகள்"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>%sக்கு வருக!</span>\n"
 "\n"
 "உங்களுக்கு செயல்படுத்தக்கூடிய கணக்கு இல்லை. உங்கள் IM கணக்குகளை <b>கணக்குகள்</b> "
-"சாளரத்தில் <b>கணக்குகள்->கணக்குகளை மேலாண்மை செய்</b> என்பதில் செயல்படுத்துகிறது. உங்கள் "
+"சாளரத்தில் <b>கணக்குகள்⇨கணக்குகளை மேலாண்மை செய்</b> என்பதில் செயல்படுத்துகிறது. உங்கள் "
 "கணக்குகளை செயல்படுத்த துவங்கிவிட்டால், உங்களால் உள் நுழைய முடியும், உங்கள் நிலைகளை "
 "அமைக்கலாம், மற்றும் உங்கள் நண்பர்களுடன் பேசலாம்."
 
@@ -9334,7 +9334,7 @@ msgstr "/விருப்பங்கள்"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"

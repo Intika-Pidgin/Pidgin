@@ -1466,12 +1466,12 @@ msgid "History Plugin Requires Logging"
 msgstr "កម្មវិធី​ជំនួយ​ប្រវត្តិ​តម្រូវ​ឲ្យ​ចូល​សិន"
 
 msgid ""
-"Logging can be enabled from Tools -> Preferences -> Logging.\n"
+"Logging can be enabled from Tools ⇨ Preferences ⇨ Logging.\n"
 "\n"
 "Enabling logs for instant messages and/or chats will activate history for "
 "the same conversation type(s)."
 msgstr ""
-"ការ​ចូល​អាច​ត្រូ​វបាន​បើកតាមរយៈ​ម៉ឺនុយ ឧបករណ៍ -> ចំណូល​ចិត្ត -> ការ​ចូល ។\n"
+"ការ​ចូល​អាច​ត្រូ​វបាន​បើកតាមរយៈ​ម៉ឺនុយ ឧបករណ៍ ⇨ ចំណូល​ចិត្ត ⇨ ការ​ចូល ។\n"
 "\n"
 "ការ​បើក​កំណត់​ហេតុ​សម្រាប់​សារ​បន្ទាន់ និង​/ឬ​កា​រជជែក​នឹង​ធ្វើ​ឲ្យ​ប្រវត្តិ​សកម្ម​សម្រាប់​ប្រភេទ​ការ​សន្ទនា​"
 "ដូចគ្នា ។"
@@ -8394,7 +8394,7 @@ msgid ""
 "them all.\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 msgstr ""
 "<span size='larger' weight='bold'>សូម​ស្វាគមន៍​មកកាន់ %s!</span>\n"
 "\n"
@@ -8403,7 +8403,7 @@ msgstr ""
 "គណនី IM ជា​ច្រើន ចុច​ <b>បន្ថែម...</b> ដើម្បី​កំណត់​រចនាសម្ព័ន្ធ​ពួកវា​ទាំង​អស់ ។\n"
 "\n"
 "You can come back to this window to add, edit, or remove accounts from "
-"<b>Accounts->Manage Accounts</b> in the Buddy List window"
+"<b>Accounts⇨Manage Accounts</b> in the Buddy List window"
 
 #, c-format
 msgid ""
@@ -8918,18 +8918,18 @@ msgstr "ចូល"
 msgid "/Accounts"
 msgstr "/គណនី"
 
-#. Translators: Please maintain the use of -> and <- to refer to menu heirarchy
+#. Translators: Please maintain the use of ⇨ and ⇦ to refer to menu heirarchy
 #, c-format
 msgid ""
 "<span weight='bold' size='larger'>Welcome to %s!</span>\n"
 "\n"
 "You have no accounts enabled. Enable your IM accounts from the <b>Accounts</"
-"b> window at <b>Accounts->Manage Accounts</b>. Once you enable accounts, "
+"b> window at <b>Accounts⇨Manage Accounts</b>. Once you enable accounts, "
 "you'll be able to sign on, set your status, and talk to your friends."
 msgstr ""
 "<span weight='bold' size='larger'>សូម​ស្វាគមន៍​មក​កាន់ %s !</span>\n"
 "\n"
-"អ្នក​​គ្មាន​គណនី​បាន​បើក​ទេ ។ បើកគណនី IM របស់​អ្នកពី​បង្អួច <b>គណនី</b> នៅ <b>គណនី->គ្រប់គ្រង​គណនី</"
+"អ្នក​​គ្មាន​គណនី​បាន​បើក​ទេ ។ បើកគណនី IM របស់​អ្នកពី​បង្អួច <b>គណនី</b> នៅ <b>គណនី⇨គ្រប់គ្រង​គណនី</"
 "b> ។ នៅពេល​អ្នកបើក​គណនី អ្នក​នឹង​អាច​ចូល កំណត់​ស្ថានភាព​របស់​អ្នក ហើយ​និយាយាជា​មួយមិត្តភក្ដិ ។"
 
 #. set the Show Offline Buddies option. must be done
@@ -9194,7 +9194,7 @@ msgstr "/ជម្រើស​"
 
 #. The menubar has been deactivated. Make sure the 'More' submenu is regenerated next time
 #. * the 'Conversation' menu pops up.
-#. Make sure the 'Conversation -> More' menuitems are regenerated whenever
+#. Make sure the 'Conversation ⇨ More' menuitems are regenerated whenever
 #. * the 'Conversation' menu pops up because the entries can change after the
 #. * conversation is created.
 msgid "/Conversation"
