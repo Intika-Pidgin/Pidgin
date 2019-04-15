@@ -562,7 +562,7 @@ setup_tree(PidginXferDialog *dialog)
 
 	/* Build the tree model */
 	/* Transfer type, Progress Bar, Filename, Size, Remaining */
-	model = gtk_list_store_new(NUM_COLUMNS, GDK_TYPE_PIXBUF, G_TYPE_INT,
+	model = gtk_list_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_INT,
 							   G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
 							   G_TYPE_POINTER);
 	dialog->model = model;
