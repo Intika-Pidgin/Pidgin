@@ -165,7 +165,7 @@ if enable_consoleui
 	libfinch_inc = include_directories('.')
 	libfinch = shared_library('finch3',
 	    libfinch_SOURCES,
-	    c_args : ['-DSTANDALONE', ncurses_header],
+	    c_args : ['-DSTANDALONE', '-DGNTSEAL_ENABLE', ncurses_header],
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
 	    dependencies : [libpurple_dep, libgnt_dep, ncurses, glib],
@@ -177,7 +177,7 @@ if enable_consoleui
 
 	finch = executable('finch3',
 	    finch_SOURCES,
-	    c_args : '-DSTANDALONE',
+	    c_args : ['-DSTANDALONE', '-DGNTSEAL_ENABLE'],
 	    dependencies : [libpurple_dep, libgnt_dep, libfinch_dep],
 	    install : true)
 
