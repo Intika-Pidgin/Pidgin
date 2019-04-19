@@ -79,6 +79,7 @@ finch_LDADD = \
 
 AM_CPPFLAGS = \
 	-DSTANDALONE \
+	-DGNTSEAL_ENABLE \
 	-DDATADIR=\"$(datadir)\" \
 	-DLIBDIR=\"$(libdir)/finch/\" \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
