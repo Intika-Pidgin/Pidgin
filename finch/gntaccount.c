@@ -1107,10 +1107,12 @@ finch_request_authorize(PurpleAccount *account,
 		gnt_box_add_widget(GNT_BOX(uihandle), gnt_hline_new());
 
 		widget = finch_retrieve_user_info(purple_account_get_connection(account), remote_user);
-		for (iter = GNT_BOX(widget)->list; iter; iter = iter->next) {
+		for (iter = gnt_box_get_children(GNT_BOX(widget)); iter;
+		     iter = g_list_delete_link(iter, iter)) {
 			if (GNT_IS_BUTTON(iter->data)) {
 				gnt_widget_destroy(iter->data);
 				gnt_box_remove(GNT_BOX(widget), iter->data);
+				g_list_free(iter);
 				break;
 			}
 		}
