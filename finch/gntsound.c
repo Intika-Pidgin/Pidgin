@@ -755,7 +755,7 @@ choose_cb(GntWidget *button, gpointer null)
 			(event && event->file) ? (path = g_path_get_dirname(event->file))
 				: purple_home_dir());
 
-	g_signal_connect_swapped(G_OBJECT(sel->cancel), "activate", G_CALLBACK(gnt_widget_destroy), sel);
+	g_signal_connect(G_OBJECT(sel), "cancelled", G_CALLBACK(gnt_widget_destroy), NULL);
 	g_signal_connect(G_OBJECT(sel), "file_selected", G_CALLBACK(file_cb), event);
 	g_signal_connect_swapped(G_OBJECT(sel), "destroy", G_CALLBACK(g_nullify_pointer), &pref_dialog->selector);
 
