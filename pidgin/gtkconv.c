@@ -67,6 +67,7 @@
 #include "gtkutils.h"
 #include "gtkwebview.h"
 #include "pidgingdkpixbuf.h"
+#include "pidgininvitedialog.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
 
@@ -160,16 +161,6 @@ static const GtkTargetEntry dnd_targets[] =
 };
 
 static GtkTargetList *webkit_dnd_targets = NULL;
-
-typedef struct {
-	GtkWidget *window;
-
-	GtkWidget *entry;
-	GtkWidget *message;
-
-	PurpleChatConversation *chat;
-
-} InviteBuddyInfo;
 
 static GtkWidget *invite_dialog = NULL;
 static GtkWidget *warn_close_dialog = NULL;
@@ -805,245 +796,44 @@ chat_invite_filter(const PidginBuddyCompletionEntry *entry, gpointer data)
 }
 
 static void
-do_invite(GtkWidget *w, int resp, InviteBuddyInfo *info)
+do_invite(GtkWidget *w, int resp, PurpleChatConversation *chat)
 {
-	const char *buddy, *message;
-	PurpleChatConversation *chat;
+	const gchar *contact, *message;
 
-	chat = info->chat;
-
-	if (resp == GTK_RESPONSE_OK) {
-		buddy   = gtk_entry_get_text(GTK_ENTRY(info->entry));
-		message = gtk_entry_get_text(GTK_ENTRY(info->message));
-
-		if (!g_ascii_strcasecmp(buddy, ""))
+	if (resp == GTK_RESPONSE_ACCEPT) {
+		contact = pidgin_invite_dialog_get_contact(PIDGIN_INVITE_DIALOG(w));
+		if (!g_ascii_strcasecmp(contact, ""))
 			return;
+
+		message = pidgin_invite_dialog_get_message(PIDGIN_INVITE_DIALOG(w));
 
 		purple_serv_chat_invite(purple_conversation_get_connection(PURPLE_CONVERSATION(chat)),
 						 purple_chat_conversation_get_id(chat),
-						 message, buddy);
+						 message, contact);
 	}
 
-	gtk_widget_destroy(invite_dialog);
-	invite_dialog = NULL;
-
-	g_free(info);
-}
-
-static void
-invite_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
-				GtkSelectionData *sd, guint dnd_info, guint t, gpointer data)
-{
-	InviteBuddyInfo *info = (InviteBuddyInfo *)data;
-	const char *convprotocol;
-	gboolean success = TRUE;
-
-	convprotocol = purple_account_get_protocol_id(
-			purple_conversation_get_account(PURPLE_CONVERSATION(info->chat)));
-
-	if (dnd_info == PIDGIN_DRAG_BLIST_NODE)
-	{
-		PurpleBlistNode *node = NULL;
-		PurpleBuddy *buddy;
-		const guchar *data = gtk_selection_data_get_data(sd);
-
-		memcpy(&node, data, sizeof(node));
-
-		if (PURPLE_IS_CONTACT(node))
-			buddy = purple_contact_get_priority_buddy((PurpleContact *)node);
-		else if (PURPLE_IS_BUDDY(node))
-			buddy = (PurpleBuddy *)node;
-		else
-			return;
-
-		if (!purple_strequal(convprotocol, purple_account_get_protocol_id(purple_buddy_get_account(buddy))))
-		{
-			purple_notify_error(PIDGIN_CONVERSATION(PURPLE_CONVERSATION(info->chat)),
-				NULL, _("That buddy is not on the same protocol"
-				" as this chat."), NULL,
-				purple_request_cpar_from_conversation(PURPLE_CONVERSATION(info->chat)));
-			success = FALSE;
-		}
-		else
-			gtk_entry_set_text(GTK_ENTRY(info->entry), purple_buddy_get_name(buddy));
-
-		gtk_drag_finish(dc, success,
-		                gdk_drag_context_get_actions(dc) == GDK_ACTION_MOVE, t);
-	}
-	else if (dnd_info == PIDGIN_DRAG_IM_CONTACT)
-	{
-		char *protocol = NULL;
-		char *username = NULL;
-		PurpleAccount *account;
-
-		if (pidgin_parse_x_im_contact((const char *) data, FALSE, &account,
-										&protocol, &username, NULL))
-		{
-			if (account == NULL)
-			{
-				purple_notify_error(PIDGIN_CONVERSATION(PURPLE_CONVERSATION(info->chat)), NULL,
-					_("You are not currently signed on with an account that "
-					  "can invite that buddy."), NULL, NULL);
-			}
-			else if (!purple_strequal(convprotocol, purple_account_get_protocol_id(account)))
-			{
-				purple_notify_error(
-					PIDGIN_CONVERSATION(PURPLE_CONVERSATION(info->chat)), NULL,
-					_("That buddy is not on the same "
-					"protocol as this chat."), NULL,
-					purple_request_cpar_from_account(
-						account));
-				success = FALSE;
-			}
-			else
-			{
-				gtk_entry_set_text(GTK_ENTRY(info->entry), username);
-			}
-		}
-
-		g_free(username);
-		g_free(protocol);
-
-		gtk_drag_finish(dc, success,
-		                gdk_drag_context_get_actions(dc) == GDK_ACTION_MOVE, t);
-	}
+	g_clear_pointer(&invite_dialog, gtk_widget_destroy);
 }
 
 static void
 invite_cb(GtkWidget *widget, PidginConversation *gtkconv)
 {
 	PurpleChatConversation *chat = PURPLE_CHAT_CONVERSATION(gtkconv->active_conv);
-	InviteBuddyInfo *info = NULL;
 
 	if (invite_dialog == NULL) {
-		PidginConvWindow *gtkwin;
-		GtkWidget *label;
-		GtkWidget *vbox, *hbox;
-		GtkWidget *grid;
-		GtkWidget *img;
+		invite_dialog = pidgin_invite_dialog_new();
 
-		img = gtk_image_new_from_icon_name("dialog-question",
-				GTK_ICON_SIZE_DIALOG);
-
-		info = g_new0(InviteBuddyInfo, 1);
-		info->chat = chat;
-
-		gtkwin    = pidgin_conv_get_window(gtkconv);
-
-		/* Create the new dialog. */
-		invite_dialog = gtk_dialog_new_with_buttons(
-			_("Invite Buddy Into Chat Room"),
-			GTK_WINDOW(gtkwin->window), 0,
-			GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-			PIDGIN_STOCK_INVITE, GTK_RESPONSE_OK, NULL);
-
-		gtk_dialog_set_default_response(GTK_DIALOG(invite_dialog),
-		                                GTK_RESPONSE_OK);
-		gtk_container_set_border_width(GTK_CONTAINER(invite_dialog), PIDGIN_HIG_BOX_SPACE);
-		gtk_window_set_resizable(GTK_WINDOW(invite_dialog), FALSE);
-
-		info->window = GTK_WIDGET(invite_dialog);
-
-		/* Setup the outside spacing. */
-		vbox = gtk_dialog_get_content_area(GTK_DIALOG(invite_dialog));
-
-		gtk_box_set_spacing(GTK_BOX(vbox), PIDGIN_HIG_BORDER);
-		gtk_container_set_border_width(GTK_CONTAINER(vbox), PIDGIN_HIG_BOX_SPACE);
-
-		/* Setup the inner hbox and put the dialog's icon in it. */
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BORDER);
-		gtk_container_add(GTK_CONTAINER(vbox), hbox);
-		gtk_box_pack_start(GTK_BOX(hbox), img, FALSE, FALSE, 0);
-		gtk_widget_set_halign(img, GTK_ALIGN_START);
-		gtk_widget_set_valign(img, GTK_ALIGN_START);
-
-		/* Setup the right vbox. */
-		vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-		gtk_container_add(GTK_CONTAINER(hbox), vbox);
-
-		/* Put our happy label in it. */
-		label = gtk_label_new(_("Please enter the name of the user you wish "
-								"to invite, along with an optional invite "
-								"message."));
-		gtk_widget_set_size_request(label, 350, -1);
-		gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
-		gtk_label_set_xalign(GTK_LABEL(label), 0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0);
-		gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
-
-		/* hbox for the grid, and to give it some spacing on the left. */
-		hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		gtk_container_add(GTK_CONTAINER(vbox), hbox);
-
-		/* Setup the grid we're going to use to lay stuff out. */
-		grid = gtk_grid_new();
-		gtk_grid_set_row_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
-		gtk_grid_set_column_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
-		gtk_container_set_border_width(GTK_CONTAINER(grid), PIDGIN_HIG_BORDER);
-		gtk_box_pack_start(GTK_BOX(vbox), grid, FALSE, FALSE, 0);
-
-		/* Now the Buddy label */
-		label = gtk_label_new(NULL);
-		gtk_label_set_markup_with_mnemonic(GTK_LABEL(label), _("_Buddy:"));
-		gtk_widget_set_hexpand(label, TRUE);
-		gtk_widget_set_vexpand(label, TRUE);
-		gtk_label_set_xalign(GTK_LABEL(label), 0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0);
-		gtk_grid_attach(GTK_GRID(grid), label, 0, 0, 1, 1);
-
-		/* Now the Buddy drop-down entry field. */
-		info->entry = gtk_entry_new();
+		/*
 		pidgin_setup_screenname_autocomplete(info->entry, NULL, chat_invite_filter,
 				purple_conversation_get_account(PURPLE_CONVERSATION(chat)));
-		gtk_widget_set_hexpand(info->entry, TRUE);
-		gtk_widget_set_vexpand(info->entry, TRUE);
-		gtk_grid_attach(GTK_GRID(grid), info->entry, 1, 0, 1, 1);
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), info->entry);
-
-		/* Now the label for "Message" */
-		label = gtk_label_new(NULL);
-		gtk_label_set_markup_with_mnemonic(GTK_LABEL(label), _("_Message:"));
-		gtk_widget_set_hexpand(label, TRUE);
-		gtk_widget_set_vexpand(label, TRUE);
-		gtk_label_set_xalign(GTK_LABEL(label), 0);
-		gtk_label_set_yalign(GTK_LABEL(label), 0);
-		gtk_grid_attach(GTK_GRID(grid), label, 0, 1, 1, 1);
-
-		/* And finally, the Message entry field. */
-		info->message = gtk_entry_new();
-		gtk_entry_set_activates_default(GTK_ENTRY(info->message), TRUE);
-		gtk_widget_set_hexpand(info->message, TRUE);
-		gtk_widget_set_vexpand(info->message, TRUE);
-		gtk_grid_attach(GTK_GRID(grid), info->message, 1, 1, 1, 1);
-		gtk_label_set_mnemonic_widget(GTK_LABEL(label), info->message);
+		*/
 
 		/* Connect the signals. */
 		g_signal_connect(G_OBJECT(invite_dialog), "response",
-						 G_CALLBACK(do_invite), info);
-		/* Setup drag-and-drop */
-		gtk_drag_dest_set(info->window,
-						  GTK_DEST_DEFAULT_MOTION |
-						  GTK_DEST_DEFAULT_DROP,
-						  dnd_targets,
-						  sizeof(dnd_targets) / sizeof(GtkTargetEntry),
-						  GDK_ACTION_COPY);
-		gtk_drag_dest_set(info->entry,
-						  GTK_DEST_DEFAULT_MOTION |
-						  GTK_DEST_DEFAULT_DROP,
-						  dnd_targets,
-						  sizeof(dnd_targets) / sizeof(GtkTargetEntry),
-						  GDK_ACTION_COPY);
-
-		g_signal_connect(G_OBJECT(info->window), "drag_data_received",
-						 G_CALLBACK(invite_dnd_recv), info);
-		g_signal_connect(G_OBJECT(info->entry), "drag_data_received",
-						 G_CALLBACK(invite_dnd_recv), info);
+						 G_CALLBACK(do_invite), chat);
 	}
 
 	gtk_widget_show_all(invite_dialog);
-
-	if (info != NULL)
-		gtk_widget_grab_focus(info->entry);
 }
 
 static void
