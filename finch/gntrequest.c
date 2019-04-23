@@ -682,29 +682,34 @@ finch_request_fields(const char *title, const char *primary,
 }
 
 static void
-file_cancel_cb(gpointer fq, GntWidget *wid)
+file_cancel_cb(GntWidget *wid, gpointer fq)
 {
 	FinchFileRequest *data = fq;
+	if (data->dialog == NULL) {
+		/* We've already handled this request, and are in the destroy handler. */
+		return;
+	}
+
 	if (data->cbs[1] != NULL)
 		((PurpleRequestFileCb)data->cbs[1])(data->user_data, NULL);
 
 	purple_request_close(PURPLE_REQUEST_FILE, data->dialog);
+	data->dialog = NULL;
 }
 
 static void
-file_ok_cb(gpointer fq, GntWidget *widget)
+file_ok_cb(GntWidget *widget, const char *path, const char *file, gpointer fq)
 {
 	FinchFileRequest *data = fq;
-	char *file = gnt_file_sel_get_selected_file(GNT_FILE_SEL(data->dialog));
-	char *dir = g_path_get_dirname(file);
+	char *dir = g_path_get_dirname(path);
 	if (data->cbs[0] != NULL)
 		((PurpleRequestFileCb)data->cbs[0])(data->user_data, file);
-	g_free(file);
 	purple_prefs_set_path(data->save ? "/finch/filelocations/last_save_folder" :
 			"/finch/filelocations/last_open_folder", dir);
 	g_free(dir);
 
 	purple_request_close(PURPLE_REQUEST_FILE, data->dialog);
+	data->dialog = NULL;
 }
 
 static void
@@ -732,16 +737,13 @@ finch_file_request_window(const char *title, const char *path,
 
 	gnt_file_sel_set_current_location(sel, (path && *path) ? path : purple_home_dir());
 
-	g_signal_connect(G_OBJECT(sel->cancel), "activate",
-			G_CALLBACK(action_performed), window);
-	g_signal_connect(G_OBJECT(sel->select), "activate",
-			G_CALLBACK(action_performed), window);
-	g_signal_connect_swapped(G_OBJECT(sel->cancel), "activate",
+	g_signal_connect(G_OBJECT(sel), "destroy",
 			G_CALLBACK(file_cancel_cb), data);
-	g_signal_connect_swapped(G_OBJECT(sel->select), "activate",
+	g_signal_connect(G_OBJECT(sel), "cancelled",
+			G_CALLBACK(file_cancel_cb), data);
+	g_signal_connect(G_OBJECT(sel), "file_selected",
 			G_CALLBACK(file_ok_cb), data);
 
-	setup_default_callback(window, file_cancel_cb, data);
 	g_object_set_data_full(G_OBJECT(window), "filerequestdata", data,
 			(GDestroyNotify)file_request_destroy);
 
