@@ -285,12 +285,6 @@ file_save(GntFileSel *fs, const char *path, const char *file, GntTextView *tv)
 }
 
 static void
-file_cancel(GntWidget *w, GntFileSel *fs)
-{
-	gnt_widget_destroy(GNT_WIDGET(fs));
-}
-
-static void
 save_debug_win(GntWidget *w, GntTextView *tv)
 {
 	GntWidget *window = gnt_file_sel_new();
@@ -298,7 +292,7 @@ save_debug_win(GntWidget *w, GntTextView *tv)
 	gnt_file_sel_set_current_location(sel, purple_home_dir());
 	gnt_file_sel_set_suggested_filename(sel, "debug.txt");
 	g_signal_connect(G_OBJECT(sel), "file_selected", G_CALLBACK(file_save), tv);
-	g_signal_connect(G_OBJECT(sel->cancel), "activate", G_CALLBACK(file_cancel), sel);
+	g_signal_connect(G_OBJECT(sel), "cancelled", G_CALLBACK(gnt_widget_destroy), NULL);
 	gnt_widget_show(window);
 }
 
