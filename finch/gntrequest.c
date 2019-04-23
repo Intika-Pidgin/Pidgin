@@ -146,14 +146,13 @@ notify_input_cb(GntWidget *button, GntWidget *entry)
 	PurpleRequestInputCb callback = g_object_get_data(G_OBJECT(button), "activate-callback");
 	gpointer data = g_object_get_data(G_OBJECT(button), "activate-userdata");
 	const char *text = gnt_entry_get_text(GNT_ENTRY(entry));
+	GntWidget *window;
 
 	if (callback)
 		callback(data, text);
 
-	while (button->parent)
-		button = button->parent;
-
-	purple_request_close(PURPLE_REQUEST_INPUT, button);
+	window = gnt_widget_get_toplevel(button);
+	purple_request_close(PURPLE_REQUEST_INPUT, window);
 }
 
 static void *
@@ -193,8 +192,7 @@ finch_close_request(PurpleRequestType type, gpointer ui_handle)
 		purple_request_fields_destroy(fields);
 	}
 
-	while (widget->parent)
-		widget = widget->parent;
+	widget = gnt_widget_get_toplevel(widget);
 	gnt_widget_destroy(widget);
 }
 
@@ -204,14 +202,13 @@ request_choice_cb(GntWidget *button, GntComboBox *combo)
 	PurpleRequestChoiceCb callback = g_object_get_data(G_OBJECT(button), "activate-callback");
 	gpointer data = g_object_get_data(G_OBJECT(button), "activate-userdata");
 	int choice = GPOINTER_TO_INT(gnt_combo_box_get_selected_data(GNT_COMBO_BOX(combo))) - 1;
+	GntWidget *window;
 
 	if (callback)
 		callback(data, choice);
 
-	while (button->parent)
-		button = button->parent;
-
-	purple_request_close(PURPLE_REQUEST_INPUT, button);
+	window = gnt_widget_get_toplevel(button);
+	purple_request_close(PURPLE_REQUEST_INPUT, window);
 }
 
 static void *
@@ -304,6 +301,7 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 	PurpleRequestFieldsCb callback = g_object_get_data(G_OBJECT(button), "activate-callback");
 	gpointer data = g_object_get_data(G_OBJECT(button), "activate-userdata");
 	GList *list;
+	GntWidget *window;
 
 	/* Update the data of the fields. Pidgin does this differently. Instead of
 	 * updating the fields at the end like here, it updates the appropriate field
@@ -404,10 +402,8 @@ request_fields_cb(GntWidget *button, PurpleRequestFields *fields)
 	if (callback)
 		callback(data, fields);
 
-	while (button->parent)
-		button = button->parent;
-
-	purple_request_close(PURPLE_REQUEST_FIELDS, button);
+	window = gnt_widget_get_toplevel(button);
+	purple_request_close(PURPLE_REQUEST_FIELDS, window);
 }
 
 static void
