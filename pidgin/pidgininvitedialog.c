@@ -24,8 +24,8 @@ struct _PidginInviteDialog {
 };
 
 typedef struct {
-	gchar *contact;
-	gchar *message;
+	GtkWidget *contact;
+	GtkWidget *message;
 } PidginInviteDialogPrivate;
 
 enum {
@@ -119,6 +119,17 @@ pidgin_invite_dialog_class_init(PidginInviteDialogClass *klass) {
 		"/im/pidgin/Pidgin/Conversations/invite_dialog.ui"
 	);
 
+	gtk_widget_class_bind_template_child_private(
+		widget_class,
+		PidginInviteDialog,
+		contact
+	);
+	gtk_widget_class_bind_template_child_private(
+		widget_class,
+		PidginInviteDialog,
+		message
+	);
+
 	properties[PROP_CONTACT] = g_param_spec_string(
 		"contact",
 		"contact",
@@ -139,6 +150,11 @@ pidgin_invite_dialog_class_init(PidginInviteDialogClass *klass) {
 /******************************************************************************
  * Public API
  *****************************************************************************/
+GtkWidget *
+pidgin_invite_dialog_new(void) {
+	return GTK_WIDGET(g_object_new(PIDGIN_TYPE_INVITE_DIALOG, NULL));
+}
+
 const gchar *
 pidgin_invite_dialog_get_contact(PidginInviteDialog *dialog) {
 	PidginInviteDialogPrivate *priv = NULL;
@@ -147,7 +163,7 @@ pidgin_invite_dialog_get_contact(PidginInviteDialog *dialog) {
 
 	priv = pidgin_invite_dialog_get_instance_private(dialog);
 
-	return priv->contact;
+	return gtk_entry_get_text(GTK_ENTRY(priv->contact));
 }
 
 void
@@ -160,13 +176,11 @@ pidgin_invite_dialog_set_contact(PidginInviteDialog *dialog,
 
 	priv = pidgin_invite_dialog_get_instance_private(dialog);
 
-	g_clear_pointer(&priv->contact, g_free);
-
 	if(contact != NULL) {
-		priv->contact = g_strdup(contact);
-	}
+		gtk_entry_set_text(GTK_ENTRY(priv->contact), contact);
 
-	g_object_notify_by_pspec(G_OBJECT(dialog), properties[PROP_CONTACT]);
+		g_object_notify_by_pspec(G_OBJECT(dialog), properties[PROP_CONTACT]);
+	}
 }
 
 const gchar *
@@ -177,7 +191,7 @@ pidgin_invite_dialog_get_message(PidginInviteDialog *dialog) {
 
 	priv = pidgin_invite_dialog_get_instance_private(dialog);
 
-	return priv->message;
+	return gtk_entry_get_text(GTK_ENTRY(priv->message));
 }
 
 void
@@ -190,12 +204,10 @@ pidgin_invite_dialog_set_message(PidginInviteDialog *dialog,
 
 	priv = pidgin_invite_dialog_get_instance_private(dialog);
 
-	g_clear_pointer(&priv->message, g_free);
-
 	if(message != NULL) {
-		priv->message = g_strdup(message);
-	}
+		gtk_entry_set_text(GTK_ENTRY(priv->message), message);
 
-	g_object_notify_by_pspec(G_OBJECT(dialog), properties[PROP_MESSAGE]);
+		g_object_notify_by_pspec(G_OBJECT(dialog), properties[PROP_MESSAGE]);
+	}
 }
 

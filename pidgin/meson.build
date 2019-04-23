@@ -45,6 +45,7 @@ libpidgin_SOURCES = [
 	'pidgindebug.c',
 	'pidgindebugplugininfo.c',
 	'pidgingdkpixbuf.c',
+	'pidgininvitedialog.c',
 	'pidgintalkatu.c',
 	'pidgintooltip.c',
 ]
@@ -98,6 +99,7 @@ libpidgin_headers = [
 	'pidgindebugplugininfo.h',
 	'pidgingdkpixbuf.h',
 	'pidginicon.h',
+	'pidgininvitedialog.h',
 	'pidgintalkatu.h',
 	'pidgintooltip.h',
 	'pidgin.h',
