@@ -705,7 +705,7 @@ gained_focus_cb(GntWindow *window, FinchConv *fc)
 static void
 completion_cb(GntEntry *entry, const char *start, const char *end)
 {
-	if (start == entry->start && *start != '/')
+	if (start == gnt_entry_get_text(entry) && *start != '/')
 		gnt_widget_key_pressed(GNT_WIDGET(entry), ": ");
 }
 
