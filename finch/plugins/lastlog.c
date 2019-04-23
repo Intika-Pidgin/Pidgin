@@ -61,7 +61,8 @@ static PurpleCmdRet
 lastlog_cb(PurpleConversation *conv, const char *cmd, char **args, char **error, gpointer null)
 {
 	FinchConv *ggconv = FINCH_CONV(conv);
-	char **strings = g_strsplit(GNT_TEXT_VIEW(ggconv->tv)->string->str, "\n", 0);
+	char **strings = g_strsplit(gnt_text_view_get_text(GNT_TEXT_VIEW(ggconv->tv)),
+	                            "\n", 0);
 	GntWidget *win, *tv;
 	int i, j;
 
