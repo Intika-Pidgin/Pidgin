@@ -53,6 +53,7 @@
 #include "pidginstock.h"
 #include "gtkstatusbox.h"
 #include "gtkutils.h"
+#include "pidgingdkpixbuf.h"
 
 #include "gtk3compat.h"
 
