@@ -951,7 +951,8 @@ finch_sounds_show_all(void)
 	gnt_box_set_pad(GNT_BOX(box), 0);
 
 	pref_dialog->method = cmbox = gnt_combo_box_new();
-	gnt_tree_set_hash_fns(GNT_TREE(GNT_COMBO_BOX(cmbox)->dropdown), g_str_hash, g_str_equal, NULL);
+	gnt_tree_set_hash_fns(GNT_TREE(gnt_combo_box_get_dropdown(GNT_COMBO_BOX(cmbox))),
+			g_str_hash, g_str_equal, NULL);
 	gnt_combo_box_add_data(GNT_COMBO_BOX(cmbox), "automatic", _("Automatic"));
 	gnt_combo_box_add_data(GNT_COMBO_BOX(cmbox), "alsa", "ALSA");
 	gnt_combo_box_add_data(GNT_COMBO_BOX(cmbox), "esd", "ESD");
