@@ -18,6 +18,7 @@
  */
 
 #include "pidgininvitedialog.h"
+#include "pidgincontactcompletion.h"
 
 struct _PidginInviteDialog {
 	GtkDialog parent;
@@ -26,18 +27,39 @@ struct _PidginInviteDialog {
 typedef struct {
 	GtkWidget *contact;
 	GtkWidget *message;
+
+	PurpleChatConversation *conversation;
 } PidginInviteDialogPrivate;
 
 enum {
 	PROP_ZERO,
 	PROP_CONTACT,
 	PROP_MESSAGE,
+	PROP_CONVERSATION,
 	N_PROPERTIES,
 };
 
 static GParamSpec *properties[N_PROPERTIES] = {};
 
 G_DEFINE_TYPE_WITH_PRIVATE(PidginInviteDialog, pidgin_invite_dialog, GTK_TYPE_DIALOG);
+
+/******************************************************************************
+ * Helpers
+ *****************************************************************************/
+static void
+pidgin_invite_dialog_set_conversation(PidginInviteDialog *dialog,
+                                      PurpleChatConversation *conversation)
+{
+	PidginInviteDialogPrivate *priv = NULL;
+
+	g_return_if_fail(PIDGIN_IS_INVITE_DIALOG(dialog));
+
+	priv = pidgin_invite_dialog_get_instance_private(dialog);
+
+	priv->conversation = g_object_ref(conversation);
+
+	g_object_notify_by_pspec(G_OBJECT(dialog), properties[PROP_CONVERSATION]);
+}
 
 /******************************************************************************
  * GObject Stuff
@@ -58,6 +80,10 @@ pidgin_invite_dialog_get_property(GObject *obj,
 		case PROP_MESSAGE:
 			g_value_set_string(value,
 			                   pidgin_invite_dialog_get_message(dialog));
+			break;
+		case PROP_CONVERSATION:
+			g_value_set_object(value,
+			                   pidgin_invite_dialog_get_conversation(dialog));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -81,6 +107,10 @@ pidgin_invite_dialog_set_property(GObject *obj,
 		case PROP_MESSAGE:
 			pidgin_invite_dialog_set_message(dialog,
 			                                 g_value_get_string(value));
+			break;
+		case PROP_CONVERSATION:
+			pidgin_invite_dialog_set_conversation(dialog,
+			                                      g_value_get_object(value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -106,6 +136,34 @@ pidgin_invite_dialog_init(PidginInviteDialog *dialog) {
 }
 
 static void
+pidgin_invite_dialog_constructed(GObject *obj) {
+	PidginInviteDialog *dialog = PIDGIN_INVITE_DIALOG(obj);
+	PidginInviteDialogPrivate *priv = NULL;
+	GtkEntryCompletion *completion = NULL;
+
+	priv = pidgin_invite_dialog_get_instance_private(dialog);
+
+	completion = pidgin_contact_completion_new();
+
+	/* constructed is called after all properties are set, so we set the
+	 * account for the completion from the conversation we were created with.
+	 */
+	if(priv->conversation) {
+		PurpleAccount *account = purple_conversation_get_account(PURPLE_CONVERSATION(priv->conversation));
+
+		if(account != NULL) {
+			pidgin_contact_completion_set_account(
+				PIDGIN_CONTACT_COMPLETION(completion),
+				account
+			);
+		}
+	}
+
+	gtk_entry_set_completion(GTK_ENTRY(priv->contact), completion);
+	g_object_unref(completion);
+}
+
+static void
 pidgin_invite_dialog_class_init(PidginInviteDialogClass *klass) {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
@@ -113,6 +171,7 @@ pidgin_invite_dialog_class_init(PidginInviteDialogClass *klass) {
 	obj_class->get_property = pidgin_invite_dialog_get_property;
 	obj_class->set_property = pidgin_invite_dialog_set_property;
 	obj_class->finalize = pidgin_invite_dialog_finalize;
+	obj_class->constructed = pidgin_invite_dialog_constructed;
 
 	gtk_widget_class_set_template_from_resource(
 		widget_class,
@@ -144,6 +203,13 @@ pidgin_invite_dialog_class_init(PidginInviteDialogClass *klass) {
 		NULL,
 		G_PARAM_READWRITE | G_PARAM_CONSTRUCT);
 
+	properties[PROP_CONVERSATION] = g_param_spec_object(
+		"conversation",
+		"conversation",
+		"The conversation that someone is being invited to",
+		PURPLE_TYPE_CHAT_CONVERSATION,
+		G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY);
+
 	g_object_class_install_properties(obj_class, N_PROPERTIES, properties);
 }
 
@@ -151,8 +217,11 @@ pidgin_invite_dialog_class_init(PidginInviteDialogClass *klass) {
  * Public API
  *****************************************************************************/
 GtkWidget *
-pidgin_invite_dialog_new(void) {
-	return GTK_WIDGET(g_object_new(PIDGIN_TYPE_INVITE_DIALOG, NULL));
+pidgin_invite_dialog_new(PurpleChatConversation *conversation) {
+	return GTK_WIDGET(g_object_new(
+		PIDGIN_TYPE_INVITE_DIALOG,
+		"conversation", conversation,
+		NULL));
 }
 
 const gchar *
@@ -211,3 +280,13 @@ pidgin_invite_dialog_set_message(PidginInviteDialog *dialog,
 	}
 }
 
+PurpleChatConversation *
+pidgin_invite_dialog_get_conversation(PidginInviteDialog *dialog) {
+	PidginInviteDialogPrivate *priv = NULL;
+
+	g_return_val_if_fail(PIDGIN_IS_INVITE_DIALOG(dialog), NULL);
+
+	priv = pidgin_invite_dialog_get_instance_private(dialog);
+
+	return priv->conversation;
+}
