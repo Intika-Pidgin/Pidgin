@@ -1859,6 +1859,41 @@ void purple_blist_remove_account(PurpleAccount *account)
 }
 
 void
+purple_blist_walk(PurpleBlistWalkFunc group_func,
+                  PurpleBlistWalkFunc chat_func,
+                  PurpleBlistWalkFunc meta_contact_func,
+                  PurpleBlistWalkFunc contact_func,
+                  gpointer data)
+{
+	PurpleBlistNode *group = NULL, *meta_contact = NULL, *contact = NULL;
+
+	for(group = purplebuddylist->root; group != NULL; group = group->next) {
+		if(group_func != NULL) {
+			group_func(group, data);
+		}
+
+		for(meta_contact = group->child; meta_contact != NULL; meta_contact = meta_contact->next) {
+			if(PURPLE_IS_CONTACT(meta_contact)) {
+				if(meta_contact_func != NULL) {
+					meta_contact_func(meta_contact, data);
+				}
+
+				if(contact_func != NULL) {
+					for(contact = meta_contact->child; contact != NULL; contact = contact->next) {
+						contact_func(contact, data);
+					}
+				}
+			} else {
+				if(PURPLE_IS_CHAT(meta_contact) && chat_func != NULL) {
+					chat_func(meta_contact, data);
+				}
+			}
+		}
+	}
+}
+
+
+void
 purple_blist_request_add_buddy(PurpleAccount *account, const char *username,
 							 const char *group, const char *alias)
 {
