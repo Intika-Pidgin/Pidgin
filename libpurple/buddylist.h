@@ -51,6 +51,15 @@ typedef struct _PurpleBlistUiOps PurpleBlistUiOps;
 
 #include "chat.h"
 
+/**
+ * PurpleBlistWalkFunc:
+ * @node: The node that's being iterated
+ * @data: User supplied data.
+ *
+ * A callback function for purple_blist_walk.
+ */
+typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer);
+
 /**************************************************************************/
 /* Data Structures                                                        */
 /**************************************************************************/
@@ -432,6 +441,19 @@ void purple_blist_add_account(PurpleAccount *account);
  * and tells the UI to update them.
  */
 void purple_blist_remove_account(PurpleAccount *account);
+
+/**
+ * purple_blist_walk:
+ * @group_func: (scope call): The callback for groups
+ * @chat_func: (scope call): The callback for chats
+ * @meta_contact_func: (scope call): The callback for meta-contacts
+ * @contact_func: (scope call): The callback for contacts
+ * @data: User supplied data.
+ *
+ * Walks the buddy list and calls the appropriate function for each node.  If
+ * a callback function is omitted iteration will continue without it.
+ */
+void purple_blist_walk(PurpleBlistWalkFunc group_func, PurpleBlistWalkFunc chat_func, PurpleBlistWalkFunc meta_contact_func, PurpleBlistWalkFunc contact_func, gpointer data);
 
 /****************************************************************************************/
 /* Buddy list file management API                                                       */
