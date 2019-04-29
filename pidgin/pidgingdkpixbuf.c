@@ -67,8 +67,9 @@ void pidgin_gdk_pixbuf_make_round(GdkPixbuf *pixbuf) {
 	rowstride = gdk_pixbuf_get_rowstride(pixbuf);
 	pixels = gdk_pixbuf_get_pixels(pixbuf);
 
-	if (width < 6 || height < 6)
+	if (width < 6 || height < 6) {
 		return;
+	}
 
 	/* The following code will conver the alpha of the pixel data in all
 	 * corners to look something like the following diagram.
@@ -118,8 +119,9 @@ pidgin_gdk_pixbuf_is_opaque(GdkPixbuf *pixbuf) {
 	guchar *pixels;
 	guchar *row;
 
-	if (!gdk_pixbuf_get_has_alpha(pixbuf))
+	if (!gdk_pixbuf_get_has_alpha(pixbuf)) {
 		return TRUE;
+	}
 
 	height = gdk_pixbuf_get_height (pixbuf);
 	rowstride = gdk_pixbuf_get_rowstride (pixbuf);
@@ -128,8 +130,9 @@ pidgin_gdk_pixbuf_is_opaque(GdkPixbuf *pixbuf) {
 	/* check the top row */
 	row = pixels;
 	for (i = 3; i < rowstride; i+=4) {
-		if (row[i] < 0xfe)
+		if (row[i] < 0xfe) {
 			return FALSE;
+		}
 	}
 
 	/* check the left and right sides */
@@ -137,14 +140,15 @@ pidgin_gdk_pixbuf_is_opaque(GdkPixbuf *pixbuf) {
 		row = pixels + (i * rowstride);
 		if (row[3] < 0xfe || row[rowstride - 1] < 0xfe) {
 			return FALSE;
-	    }
+		}
 	}
 
 	/* check the bottom */
 	row = pixels + ((height - 1) * rowstride);
 	for (i = 3; i < rowstride; i += 4) {
-		if (row[i] < 0xfe)
+		if (row[i] < 0xfe) {
 			return FALSE;
+		}
 	}
 
 	return TRUE;
