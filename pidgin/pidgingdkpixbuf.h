@@ -42,7 +42,7 @@ GdkPixbuf *pidgin_gdk_pixbuf_new_from_image(PurpleImage *image, GError **error);
  * pidgin_gdk_pixbuf_make_round:
  * @pixbuf:  The buddy icon to transform
  *
- * Rounds the corners of a 32x32 GdkPixbuf in place
+ * Rounds the corners of a GdkPixbuf in place.
  */
 void pidgin_gdk_pixbuf_make_round(GdkPixbuf *pixbuf);
 
