@@ -776,36 +776,19 @@ unblock_cb(GtkWidget *widget, PidginConversation *gtkconv)
 	gtk_widget_grab_focus(PIDGIN_CONVERSATION(conv)->entry);
 }
 
-static gboolean
-chat_invite_filter(const PidginBuddyCompletionEntry *entry, gpointer data)
-{
-	PurpleAccount *filter_account = data;
-	PurpleAccount *account = NULL;
-
-	if (entry->is_buddy) {
-		if (PURPLE_BUDDY_IS_ONLINE(entry->entry.buddy))
-			account = purple_buddy_get_account(entry->entry.buddy);
-		else
-			return FALSE;
-	} else {
-		account = entry->entry.logged_buddy->account;
-	}
-	if (account == filter_account)
-		return TRUE;
-	return FALSE;
-}
-
 static void
-do_invite(GtkWidget *w, int resp, PurpleChatConversation *chat)
+do_invite(GtkWidget *w, int resp, gpointer data)
 {
+	PidginInviteDialog *dialog = PIDGIN_INVITE_DIALOG(w);
+	PurpleChatConversation *chat = pidgin_invite_dialog_get_conversation(dialog);
 	const gchar *contact, *message;
 
 	if (resp == GTK_RESPONSE_ACCEPT) {
-		contact = pidgin_invite_dialog_get_contact(PIDGIN_INVITE_DIALOG(w));
+		contact = pidgin_invite_dialog_get_contact(dialog);
 		if (!g_ascii_strcasecmp(contact, ""))
 			return;
 
-		message = pidgin_invite_dialog_get_message(PIDGIN_INVITE_DIALOG(w));
+		message = pidgin_invite_dialog_get_message(dialog);
 
 		purple_serv_chat_invite(purple_conversation_get_connection(PURPLE_CONVERSATION(chat)),
 						 purple_chat_conversation_get_id(chat),
@@ -821,16 +804,11 @@ invite_cb(GtkWidget *widget, PidginConversation *gtkconv)
 	PurpleChatConversation *chat = PURPLE_CHAT_CONVERSATION(gtkconv->active_conv);
 
 	if (invite_dialog == NULL) {
-		invite_dialog = pidgin_invite_dialog_new();
-
-		/*
-		pidgin_setup_screenname_autocomplete(info->entry, NULL, chat_invite_filter,
-				purple_conversation_get_account(PURPLE_CONVERSATION(chat)));
-		*/
+		invite_dialog = pidgin_invite_dialog_new(chat);
 
 		/* Connect the signals. */
 		g_signal_connect(G_OBJECT(invite_dialog), "response",
-						 G_CALLBACK(do_invite), chat);
+						 G_CALLBACK(do_invite), NULL);
 	}
 
 	gtk_widget_show_all(invite_dialog);
