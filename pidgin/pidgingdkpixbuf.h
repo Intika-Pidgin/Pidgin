@@ -36,6 +36,16 @@
 
 G_BEGIN_DECLS
 
+/**
+ * pidgin_gdk_pixbuf_new_from_image:
+ * @image: A #PurpleImage instance.
+ * @error: (out) (nullable): A return address for a #GError.
+ *
+ * Creates a new #GdkPixbuf from the #PurpleImage @image.  If provided Sets
+ * @error on error.
+ *
+ * Returns: (transfer full) (nullable): The new #GdkPixbuf or %NULL or error.
+ */
 GdkPixbuf *pidgin_gdk_pixbuf_new_from_image(PurpleImage *image, GError **error);
 
 /**
