@@ -558,6 +558,7 @@ version 3.0.0 (??/??/????):
 		Added:
 		* pidgin_create_webview
 		* PidginDockletFlag
+		* pidgin_gdk_pixbuf_new_from_image
 		* PidginPluginInfo, inherits PurplePluginInfo
 		* Various WebKit-related functions in gtkwebview.h
 
