@@ -734,14 +734,6 @@ int pidgin_start(int argc, char *argv[])
 #endif
 				G_APPLICATION_HANDLES_COMMAND_LINE));
 
-#if GLIB_CHECK_VERSION(2, 56, 0)
-	{
-		gchar *summary = g_strdup_printf("%s %s", PIDGIN_NAME, DISPLAY_VERSION);
-		g_application_set_option_context_summary(app, summary);
-		g_free(summary);
-	}
-#endif
-
 	g_application_add_main_option_entries(app, option_entries);
 	g_application_add_option_group(app, purple_get_option_group());
 	g_application_add_option_group(app, gplugin_get_option_group());
