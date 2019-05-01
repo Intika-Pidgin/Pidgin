@@ -707,25 +707,6 @@ gboolean pidgin_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 void pidgin_set_urgent(GtkWindow *window, gboolean urgent);
 
 /**
- * pidgin_gdk_pixbuf_is_opaque:
- * @pixbuf:  The pixbug
- *
- * Returns TRUE if the GdkPixbuf is opaque, as determined by no
- * alpha at any of the edge pixels.
- *
- * Returns: TRUE if the pixbuf is opaque around the edges, FALSE otherwise
- */
-gboolean pidgin_gdk_pixbuf_is_opaque(GdkPixbuf *pixbuf);
-
-/**
- * pidgin_gdk_pixbuf_make_round:
- * @pixbuf:  The buddy icon to transform
- *
- * Rounds the corners of a 32x32 GdkPixbuf in place
- */
-void pidgin_gdk_pixbuf_make_round(GdkPixbuf *pixbuf);
-
-/**
  * pidgin_get_dim_grey_string:
  * @widget:  The widget to return dim grey for
  *
