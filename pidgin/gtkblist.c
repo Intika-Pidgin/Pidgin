@@ -62,6 +62,7 @@
 #include "pidgin/pidginabout.h"
 #include "pidgin/pidgindebug.h"
 #include "pidgin/pidgindebugplugininfo.h"
+#include "pidgin/pidgingdkpixbuf.h"
 #include "pidgin/pidgintooltip.h"
 
 #include <gdk/gdkkeysyms.h>

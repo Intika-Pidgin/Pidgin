@@ -66,6 +66,7 @@
 #include "gtkstyle.h"
 #include "gtkutils.h"
 #include "gtkwebview.h"
+#include "pidgingdkpixbuf.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
 
