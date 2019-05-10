@@ -31,7 +31,7 @@ struct _PidginContactCompletion {
 enum {
 	PIDGIN_CONTACT_COMPLETION_COLUMN_CONTACT,
 	PIDGIN_CONTACT_COMPLETION_COLUMN_ACCOUNT,
-	PIDGIN_CONTACT_COMPLETION_N_COLMUNS,
+	PIDGIN_CONTACT_COMPLETION_N_COLUMNS,
 };
 
 enum {
@@ -75,7 +75,7 @@ pidgin_contact_completion_create_model(void) {
 	GtkListStore *store = NULL;
 
 	store = gtk_list_store_new(
-		PIDGIN_CONTACT_COMPLETION_N_COLMUNS,
+		PIDGIN_CONTACT_COMPLETION_N_COLUMNS,
 		G_TYPE_STRING,
 		PURPLE_TYPE_ACCOUNT
 	);
