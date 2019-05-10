@@ -251,15 +251,6 @@ pidgin_contact_completion_new(void) {
 	return GTK_ENTRY_COMPLETION(g_object_new(PIDGIN_TYPE_CONTACT_COMPLETION, NULL));
 }
 
-/**
- * pidgin_contact_completion_get_account:
- * @completion: The #PidginContactCompletion instance.
- *
- * Gets the #PurpleAccount who's contacts we're filtering for, or %NULL if
- * there is no filtering.
- *
- * Returns: (transfer full): The #PurpleAccount.
- */
 PurpleAccount *
 pidgin_contact_completion_get_account(PidginContactCompletion *completion) {
 	g_return_val_if_fail(PIDGIN_IS_CONTACT_COMPLETION(completion), NULL);
@@ -267,28 +258,14 @@ pidgin_contact_completion_get_account(PidginContactCompletion *completion) {
 	return g_object_ref(completion->account);
 }
 
-/**
- * pidgin_contact_completion_set_account:
- * @completion: The #PidginContactCompletion instance.
- * @account: The #PurpleAccount to filter for.
- *
- * Sets the #PurpleAccount who's contacts should be shown or %NULL
- * to show contacts from all accounts.
- */
 void
 pidgin_contact_completion_set_account(PidginContactCompletion *completion,
                                       PurpleAccount *account)
 {
 	g_return_if_fail(PIDGIN_IS_CONTACT_COMPLETION(completion));
 
-	if(completion->account != NULL) {
-		g_clear_pointer(&completion->account, g_object_unref);
+	if(g_set_object(&completion->account, account)) {
+		g_object_notify_by_pspec(G_OBJECT(completion),
+		                         properties[PROP_ACCOUNT]);
 	}
-
-	if(PURPLE_IS_ACCOUNT(account)) {
-		completion->account = g_object_ref(account);
-	}
-
-	g_object_notify_by_pspec(G_OBJECT(completion),
-	                         properties[PROP_ACCOUNT]);
 }
