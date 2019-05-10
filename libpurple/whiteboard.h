@@ -193,7 +193,7 @@ PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who,
  *
  * Returns the whiteboard's account.
  *
- * Returns: The whiteboard's account.
+ * Returns: (transfer none): The whiteboard's account.
  */
 PurpleAccount *purple_whiteboard_get_account(PurpleWhiteboard *wb);
 
@@ -241,13 +241,13 @@ void purple_whiteboard_start(PurpleWhiteboard *wb);
  *
  * Finds a whiteboard from an account and user.
  *
- * Returns: The whiteboard if found, otherwise %NULL.
+ * Returns: (transfer none): The whiteboard if found, otherwise %NULL.
  */
 PurpleWhiteboard *purple_whiteboard_get_session(const PurpleAccount *account, const char *who);
 
 /**
  * purple_whiteboard_draw_list_destroy:
- * @draw_list: The drawing list.
+ * @draw_list: (element-type gint): The drawing list.
  *
  * Destorys a drawing list for a whiteboard
  */
@@ -289,8 +289,8 @@ void purple_whiteboard_draw_point(PurpleWhiteboard *wb, int x, int y, int color,
 
 /**
  * purple_whiteboard_send_draw_list:
- * @wb:	The whiteboard
- * @list:	A GList of points
+ * @wb:	                       The whiteboard
+ * @list: (element-type gint): A GList of points
  *
  * Send a list of points to draw to the buddy.
  */
@@ -364,14 +364,14 @@ void purple_whiteboard_set_brush(PurpleWhiteboard *wb, int size, int color);
  *
  * Return the drawing list.
  *
- * Returns: The drawing list
+ * Returns: (transfer none) (element-type gint): The drawing list
  */
 GList *purple_whiteboard_get_draw_list(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_draw_list:
- * @wb:			The whiteboard
- * @draw_list:		The drawing list.
+ * @wb:			                    The whiteboard
+ * @draw_list: (element-type gint): The drawing list.
  *
  * Set the drawing list.
  */

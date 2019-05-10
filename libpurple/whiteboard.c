@@ -132,7 +132,7 @@ const char *purple_whiteboard_get_who(PurpleWhiteboard *wb)
 
 	g_return_val_if_fail(priv != NULL, NULL);
 
-	return priv->who;	
+	return priv->who;
 }
 
 void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state)
