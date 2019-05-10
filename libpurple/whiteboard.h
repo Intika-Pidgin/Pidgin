@@ -189,7 +189,7 @@ PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who,
 
 /**
  * purple_whiteboard_get_account:
- * @wb:		The whiteboard.
+ * @wb: The whiteboard.
  *
  * Returns the whiteboard's account.
  *
@@ -199,7 +199,7 @@ PurpleAccount *purple_whiteboard_get_account(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_get_who:
- * @wb:		The whiteboard
+ * @wb: The whiteboard
  *
  * Return who you're drawing with.
  *
@@ -209,8 +209,8 @@ const char *purple_whiteboard_get_who(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_state:
- * @wb:		The whiteboard.
- * @state:		The state
+ * @wb:    The whiteboard.
+ * @state: The state
  *
  * Set the state of the whiteboard.
  */
@@ -218,7 +218,7 @@ void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state);
 
 /**
  * purple_whiteboard_get_state:
- * @wb:		The whiteboard.
+ * @wb: The whiteboard.
  *
  * Return the state of the whiteboard.
  *
@@ -255,9 +255,9 @@ void purple_whiteboard_draw_list_destroy(GList *draw_list);
 
 /**
  * purple_whiteboard_get_dimensions:
- * @wb:		The whiteboard.
- * @width:		The width to be set.
- * @height:	The height to be set.
+ * @wb:     The whiteboard.
+ * @width:  The width to be set.
+ * @height: The height to be set.
  *
  * Gets the dimension of a whiteboard.
  *
@@ -289,7 +289,7 @@ void purple_whiteboard_draw_point(PurpleWhiteboard *wb, int x, int y, int color,
 
 /**
  * purple_whiteboard_send_draw_list:
- * @wb:	                       The whiteboard
+ * @wb:                        The whiteboard
  * @list: (element-type gint): A GList of points
  *
  * Send a list of points to draw to the buddy.
@@ -328,9 +328,9 @@ void purple_whiteboard_send_clear(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_send_brush:
- * @wb:	The whiteboard
- * @size:	The size of the brush
- * @color:	The color of the brush
+ * @wb:    The whiteboard
+ * @size:  The size of the brush
+ * @color: The color of the brush
  *
  * Sends a request to change the size and color of the brush.
  */
@@ -338,9 +338,9 @@ void purple_whiteboard_send_brush(PurpleWhiteboard *wb, int size, int color);
 
 /**
  * purple_whiteboard_get_brush:
- * @wb:	The whiteboard
- * @size:	The size of the brush
- * @color:	The color of the brush
+ * @wb:    The whiteboard
+ * @size:  The size of the brush
+ * @color: The color of the brush
  *
  * Gets the size and color of the brush.
  *
@@ -350,9 +350,9 @@ gboolean purple_whiteboard_get_brush(PurpleWhiteboard *wb, int *size, int *color
 
 /**
  * purple_whiteboard_set_brush:
- * @wb:	The whiteboard
- * @size:	The size of the brush
- * @color:	The color of the brush
+ * @wb:    The whiteboard
+ * @size:  The size of the brush
+ * @color: The color of the brush
  *
  * Sets the size and color of the brush.
  */
@@ -360,7 +360,7 @@ void purple_whiteboard_set_brush(PurpleWhiteboard *wb, int size, int color);
 
 /**
  * purple_whiteboard_get_draw_list:
- * @wb:			The whiteboard.
+ * @wb: The whiteboard.
  *
  * Return the drawing list.
  *
@@ -370,7 +370,7 @@ GList *purple_whiteboard_get_draw_list(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_draw_list:
- * @wb:			                    The whiteboard
+ * @wb:                             The whiteboard
  * @draw_list: (element-type gint): The drawing list.
  *
  * Set the drawing list.
@@ -379,8 +379,8 @@ void purple_whiteboard_set_draw_list(PurpleWhiteboard *wb, GList* draw_list);
 
 /**
  * purple_whiteboard_set_protocol_data:
- * @wb:			The whiteboard.
- * @proto_data:	The protocol data to set for the whiteboard.
+ * @wb:         The whiteboard.
+ * @proto_data: The protocol data to set for the whiteboard.
  *
  * Sets the protocol data for a whiteboard.
  */
@@ -388,7 +388,7 @@ void purple_whiteboard_set_protocol_data(PurpleWhiteboard *wb, gpointer proto_da
 
 /**
  * purple_whiteboard_get_protocol_data:
- * @wb:			The whiteboard.
+ * @wb: The whiteboard.
  *
  * Gets the protocol data for a whiteboard.
  *
@@ -398,8 +398,8 @@ gpointer purple_whiteboard_get_protocol_data(PurpleWhiteboard *wb);
 
 /**
  * purple_whiteboard_set_ui_data:
- * @wb:			The whiteboard.
- * @ui_data:		A pointer to associate with this whiteboard.
+ * @wb:      The whiteboard.
+ * @ui_data: A pointer to associate with this whiteboard.
  *
  * Set the UI data associated with this whiteboard.
  */
@@ -407,7 +407,7 @@ void purple_whiteboard_set_ui_data(PurpleWhiteboard *wb, gpointer ui_data);
 
 /**
  * purple_whiteboard_get_ui_data:
- * @wb:			The whiteboard..
+ * @wb: The whiteboard..
  *
  * Get the UI data associated with this whiteboard.
  *
