@@ -34,7 +34,7 @@
  *
  * |[<!-- language="C" -->
  * static void
- * do_invite(GtkWidget *widget, int resp, gpointer data) {
+ * invite_response(GtkWidget *widget, int resp, gpointer data) {
  *     PidginInviteDialog *dialog = PIDGIN_INVITE_DIALOG(widget);
  *
  *     if(resp == GTK_RESPONSE_ACCEPT) {
@@ -47,10 +47,10 @@
  * }
  *
  * static void
- * do_invite(PurpleChatConversation *conv) {
+ * invite_prompt(PurpleChatConversation *conv) {
  *     GtkWidget *dialog = pidgin_invite_dialog_new(conv);
  *     g_signal_connect(G_OBJECT(dialog), "response",
- *                      G_CALLBACK(do_invite), NULL);
+ *                      G_CALLBACK(invite_response), NULL);
  *
  * }
  * ]|
