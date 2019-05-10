@@ -59,6 +59,8 @@ G_DECLARE_FINAL_TYPE(PidginContactCompletion, pidgin_contact_completion, PIDGIN,
  * Creates a new #GtkEntryCompletion for looking up contacts.
  *
  * Returns: (transfer full): The new #GtkEntryCompletion instance.
+ *
+ * Since: 3.0.0
  */
 GtkEntryCompletion *pidgin_contact_completion_new(void);
 
@@ -71,6 +73,8 @@ GtkEntryCompletion *pidgin_contact_completion_new(void);
  *
  * Returns: (transfer full) (nullable): The #PurpleAccount that's being
  *          filtered for.
+ *
+ * Since: 3.0.0
  */
 PurpleAccount *pidgin_contact_completion_get_account(PidginContactCompletion *completion);
 
@@ -81,6 +85,8 @@ PurpleAccount *pidgin_contact_completion_get_account(PidginContactCompletion *co
  *
  * Set the #PurpleAccount that @completion should filter for.  If @account is
  * %NULL, all filtering will be disabled.
+ *
+ * Since: 3.0.0
  */
 void pidgin_contact_completion_set_account(PidginContactCompletion *completion, PurpleAccount *account);
 

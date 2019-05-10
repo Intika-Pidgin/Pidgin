@@ -556,10 +556,6 @@ version 3.0.0 (??/??/????):
 
 	Pidgin:
 		Added:
-		* PidginContactCompletion
-		* pidgin_contact_completion_new
-		* pidgin_contact_completion_get_account
-		* pidgin_contact_completion_set_account
 		* pidgin_create_webview
 		* PidginDockletFlag
 		* pidgin_gdk_pixbuf_new_from_image
