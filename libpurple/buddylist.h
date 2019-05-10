@@ -57,8 +57,10 @@ typedef struct _PurpleBlistUiOps PurpleBlistUiOps;
  * @data: User supplied data.
  *
  * A callback function for purple_blist_walk.
+ *
+ * Since: 3.0.0
  */
-typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer);
+typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
 
 /**************************************************************************/
 /* Data Structures                                                        */
@@ -452,6 +454,8 @@ void purple_blist_remove_account(PurpleAccount *account);
  *
  * Walks the buddy list and calls the appropriate function for each node.  If
  * a callback function is omitted iteration will continue without it.
+ *
+ * Since: 3.0.0
  */
 void purple_blist_walk(PurpleBlistWalkFunc group_func, PurpleBlistWalkFunc chat_func, PurpleBlistWalkFunc meta_contact_func, PurpleBlistWalkFunc contact_func, gpointer data);
 
