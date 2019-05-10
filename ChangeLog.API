@@ -113,15 +113,11 @@ version 3.0.0 (??/??/????):
 		* PurpleProtocolFactoryIface
 		* purple_protocol_get_* for PurpleProtocol members
 		* purple_protocol_class_* for class methods
-		* purple_protocol_client_iface_* for client interface methods
 		* purple_protocol_server_iface_* for server interface methods
 		* purple_protocol_im_iface_* for IM interface methods
-		* purple_protocol_chat_iface_* for chat interface methods
 		* purple_protocol_privacy_iface_* for privacy interface methods
 		* purple_protocol_xfer_iface_* for xfer interface methods
-		* purple_protocol_roomlist_iface_* for roomlist interface methods
 		* purple_protocol_attention_iface_* for attention interface methods
-		* purple_protocol_media_iface_* for media interface methods
 		* purple_protocol_factory_iface_* for factory interface methods
 		* purple_protocol_action_new
 		* purple_protocol_action_free

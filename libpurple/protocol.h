@@ -1173,6 +1173,8 @@ void purple_protocol_chat_iface_set_topic(PurpleProtocol *protocol,
  * purple_protocol_privacy_iface_get_type:
  *
  * Returns: The #GType for the protocol privacy interface.
+ *
+ * Since: 3.0.0
  */
 GType purple_protocol_privacy_iface_get_type(void);
 
@@ -1184,6 +1186,8 @@ GType purple_protocol_privacy_iface_get_type(void);
  *
  * Adds a permit to the privacy settings for @connection to allow @name to
  * contact the user.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_privacy_iface_add_permit(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
@@ -1196,6 +1200,8 @@ void purple_protocol_privacy_iface_add_permit(PurpleProtocol *protocol,
  *
  * Adds a deny to the privacy settings for @connection to deny @name from
  * contacting the user.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_privacy_iface_add_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
@@ -1207,6 +1213,8 @@ void purple_protocol_privacy_iface_add_deny(PurpleProtocol *protocol,
  * @name: The username to remove from the permit privacy settings.
  *
  * Removes an existing permit for @name.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_privacy_iface_rem_permit(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
@@ -1218,6 +1226,8 @@ void purple_protocol_privacy_iface_rem_permit(PurpleProtocol *protocol,
  * @name: The username to remove from the deny privacy settings.
  *
  * Removes an existing deny for @name.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_privacy_iface_rem_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *name);
@@ -1228,6 +1238,8 @@ void purple_protocol_privacy_iface_rem_deny(PurpleProtocol *protocol,
  * @connection: The #PurpleConnection instance.
  *
  * Forces a sync of the privacy settings with server.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection);
@@ -1240,6 +1252,8 @@ void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
  * purple_protocol_roomlist_iface_get_type:
  *
  * Returns: The #GType for the protocol roomlist interface.
+ *
+ * Since: 3.0.0
  */
 GType purple_protocol_roomlist_iface_get_type(void);
 
@@ -1251,6 +1265,8 @@ GType purple_protocol_roomlist_iface_get_type(void);
  * Get's the list of rooms for @gc.
  *
  * Returns: (transfer full): The roomlist for @gc.
+ *
+ * Since: 3.0.0
  */
 PurpleRoomlist *purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
 		PurpleConnection *gc);
@@ -1262,6 +1278,8 @@ PurpleRoomlist *purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol
  *
  * Requesting a roomlist can take a long time.  This function cancels a request
  * that's already in progress.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
 		PurpleRoomlist *list);
@@ -1273,6 +1291,8 @@ void purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
  * @category: The category to expand.
  *
  * Expands the given @category for @list.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
 		PurpleRoomlist *list, PurpleRoomlistRoom *category);
@@ -1285,6 +1305,8 @@ void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
  * Serializes @room into a string that will be displayed in a user interface.
  *
  * Returns: (transfer full): The serialized form of @room.
+ *
+ * Since: 3.0.0
  */
 char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
 		PurpleRoomlistRoom *room);
@@ -1297,6 +1319,8 @@ char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
  * purple_protocol_media_iface_get_type:
  *
  * Returns: The #GType for the protocol media interface.
+ *
+ * Since: 3.0.0
  */
 GType purple_protocol_media_iface_get_type(void);
 
@@ -1310,6 +1334,8 @@ GType purple_protocol_media_iface_get_type(void);
  * Initiates a media connection of @type to @who.
  *
  * Returns: TRUE if successful, FALSE otherwise.
+ *
+ * Since: 3.0.0
  */
 gboolean purple_protocol_media_iface_initiate_session(PurpleProtocol *protocol,
 		PurpleAccount *account, const char *who, PurpleMediaSessionType type);
@@ -1324,6 +1350,8 @@ gboolean purple_protocol_media_iface_initiate_session(PurpleProtocol *protocol,
  * are available.
  *
  * Returns the media capabilities of @who.
+ *
+ * Since: 3.0.0
  */
 PurpleMediaCaps purple_protocol_media_iface_get_caps(PurpleProtocol *protocol,
 		PurpleAccount *account, const char *who);
@@ -1342,6 +1370,8 @@ PurpleMediaCaps purple_protocol_media_iface_get_caps(PurpleProtocol *protocol,
  * It is up to the specific implementation if DTMF is send in or out of band.
  *
  * Returns: TRUE if successful, FALSE otherwise.
+ *
+ * Since: 3.0.0
  */
 gboolean purple_protocol_media_iface_send_dtmf(PurpleProtocol *protocol,
 		PurpleMedia *media, gchar dtmf, guint8 volume, guint8 duration);
