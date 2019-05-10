@@ -39,7 +39,7 @@ enum {
 	N_PROPERTIES,
 };
 
-static GParamSpec *properties[N_PROPERTIES] = {};
+static GParamSpec *properties[N_PROPERTIES] = {0, };
 
 G_DEFINE_TYPE_WITH_PRIVATE(PidginInviteDialog, pidgin_invite_dialog, GTK_TYPE_DIALOG);
 
@@ -126,6 +126,7 @@ pidgin_invite_dialog_finalize(GObject *obj) {
 
 	g_clear_pointer(&priv->contact, g_free);
 	g_clear_pointer(&priv->message, g_free);
+	g_clear_object(&priv->conversation);
 
 	G_OBJECT_CLASS(pidgin_invite_dialog_parent_class)->finalize(obj);
 }
