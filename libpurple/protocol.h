@@ -857,9 +857,11 @@ char *purple_protocol_client_iface_status_text(PurpleProtocol *protocol,
  * purple_protocol_client_iface_tooltip_text:
  * @protocol: The #PurpleProtocol instance.
  * @buddy: The #PurpleBuddy instance.
- * @user_info:
- * @full:
+ * @user_info: The #PurpleNotifyUserInfo instance.
+ * @full: Whether or not additional info should be added.
  *
+ * Asks @protocol to update @user_info for @buddy.  If @full is %TRUE then
+ * more detailed information will added.
  */
 void purple_protocol_client_iface_tooltip_text(PurpleProtocol *protocol,
 		PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean full);
@@ -1019,8 +1021,8 @@ GType purple_protocol_chat_iface_get_type(void);
  * @protocol: The #PurpleProtocol instance.
  * @connection: The #PurpleConnection instance.
  *
- * Returns the list of #PurpleProtocolChatEntry's that should be used to join
- * a multi user chat.
+ * Gets the list of #PurpleProtocolChatEntry's that are required to join a
+ * multi user chat.
  *
  * Returns: (transfer full) (element-type PurpleProtocolChatEntry): The list
  *          of #PurpleProtocolChatEntry's that are used to join a chat.
