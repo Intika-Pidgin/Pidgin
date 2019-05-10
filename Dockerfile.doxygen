@@ -1,0 +1,15 @@
+FROM pidgin/release-builder:release-2.x.y as build
+
+COPY . /pidgin
+
+RUN set -ex && \
+	cd /pidgin && \
+	./autogen.sh --enable-debug && \
+	make -s -j$(nproc) docs
+
+FROM rwgrim/goserve
+
+EXPOSE 3000
+
+COPY --from=build /pidgin/doc/html html
+
