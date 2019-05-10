@@ -74,6 +74,8 @@ G_DECLARE_FINAL_TYPE(PidginInviteDialog, pidgin_invite_dialog, PIDGIN,
  * Creates a new #PidginInviteDialog to invite someone to @conversation.
  *
  * Returns: (transfer full): The new #PidginInviteDialog instance.
+ *
+ * Since: 3.0.0
  */
 GtkWidget *pidgin_invite_dialog_new(PurpleChatConversation *conversation);
 
@@ -85,6 +87,8 @@ GtkWidget *pidgin_invite_dialog_new(PurpleChatConversation *conversation);
  * Sets the contact that should be invited.  This function is intended to be
  * used to prepopulate the dialog in cases where you just need to prompt the
  * user for an invite message.
+ *
+ * Since: 3.0.0
  */
 void pidgin_invite_dialog_set_contact(PidginInviteDialog *dialog, const gchar *contact);
 
@@ -96,6 +100,8 @@ void pidgin_invite_dialog_set_contact(PidginInviteDialog *dialog, const gchar *c
  * long as @dialog exists.
  *
  * Returns: (transfer none): The contact that was entered.
+ *
+ * Since: 3.0.0
  */
 const gchar *pidgin_invite_dialog_get_contact(PidginInviteDialog *dialog);
 
@@ -106,6 +112,8 @@ const gchar *pidgin_invite_dialog_get_contact(PidginInviteDialog *dialog);
  *
  * Sets the message to be displayed in @dialog.  The main use case is to
  * prepopulate the message.
+ *
+ * Since: 3.0.0
  */
 void pidgin_invite_dialog_set_message(PidginInviteDialog *dialog, const gchar *message);
 
@@ -117,6 +125,8 @@ void pidgin_invite_dialog_set_message(PidginInviteDialog *dialog, const gchar *m
  * valid as long as @dialog exists.
  *
  * Returns: (transfer none): The message that was entered in @dialog.
+ *
+ * Since: 3.0.0
  */
 const gchar *pidgin_invite_dialog_get_message(PidginInviteDialog *dialog);
 
@@ -128,6 +138,8 @@ const gchar *pidgin_invite_dialog_get_message(PidginInviteDialog *dialog);
  *
  * Returns: (transfer none): The #PurpleChatConversation that @dialog was
  *          created with.
+ *
+ * Since: 3.0.0
  */
 PurpleChatConversation *pidgin_invite_dialog_get_conversation(PidginInviteDialog *dialog);
 
