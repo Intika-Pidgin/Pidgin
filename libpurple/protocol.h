@@ -834,9 +834,9 @@ GList *purple_protocol_client_iface_get_actions(PurpleProtocol *protocol,
  * @protocol: The #PurpleProtocol instance.
  * @buddy: The #PurpleBuddy instance.
  *
- * Gets the icon name the emblem that should be used for @buddy.
+ * Gets the icon name of the emblem that should be used for @buddy.
  *
- * Returns: (transfer none): The icon name of the emblem or NULL.
+ * Returns: The icon name of the emblem or NULL.
  */
 const char *purple_protocol_client_iface_list_emblem(PurpleProtocol *protocol,
 		PurpleBuddy *buddy);
@@ -1082,7 +1082,7 @@ void purple_protocol_chat_iface_reject(PurpleProtocol *protocol,
  * @components: (element-type utf8 utf8): The protocol dependent join
  *              components
  *
- * Get's the name from @components.
+ * Gets the name from @components.
  *
  * Returns: (transfer full): The chat name from @components.
  *
@@ -1120,7 +1120,7 @@ void purple_protocol_chat_iface_leave(PurpleProtocol *protocol, PurpleConnection
 		int id);
 
 /**
- * purple_protocol_chat_iface_leave:
+ * purple_protocol_chat_iface_send:
  * @protocol: The #PurpleProtocol instance
  * @connection: The #PurpleConnection instance
  * @id: The id of the chat
@@ -1262,7 +1262,7 @@ GType purple_protocol_roomlist_iface_get_type(void);
  * @protocol: The #PurpleProtocol instance.
  * @gc: The #PurpleAccount to get the roomlist for.
  *
- * Get's the list of rooms for @gc.
+ * Gets the list of rooms for @gc.
  *
  * Returns: (transfer full): The roomlist for @gc.
  *
@@ -1346,10 +1346,10 @@ gboolean purple_protocol_media_iface_initiate_session(PurpleProtocol *protocol,
  * @account: The #PurpleAccount instance.
  * @who: The user to get the media capabilites for.
  *
- * Returns the #PurpleMediaCaps for @who which determine what types of media
- * are available.
+ * Gets the #PurpleMediaCaps for @who which determine what types of media are
+ * available.
  *
- * Returns the media capabilities of @who.
+ * Returns: the media capabilities of @who.
  *
  * Since: 3.0.0
  */
