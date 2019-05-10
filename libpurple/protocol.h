@@ -1009,36 +1009,159 @@ unsigned int purple_protocol_im_iface_send_typing(PurpleProtocol *protocol,
  * purple_protocol_chat_iface_get_type:
  *
  * Returns: The #GType for the protocol chat interface.
+ *
+ * Since: 3.0.0
  */
 GType purple_protocol_chat_iface_get_type(void);
 
+/**
+ * purple_protocol_chat_iface_info:
+ * @protocol: The #PurpleProtocol instance.
+ * @connection: The #PurpleConnection instance.
+ *
+ * Returns the list of #PurpleProtocolChatEntry's that should be used to join
+ * a multi user chat.
+ *
+ * Returns: (transfer full) (element-type PurpleProtocolChatEntry): The list
+ *          of #PurpleProtocolChatEntry's that are used to join a chat.
+ *
+ * Since: 3.0.0
+ */
 GList *purple_protocol_chat_iface_info(PurpleProtocol *protocol,
 		PurpleConnection *connection);
 
+/**
+ * purple_protocol_chat_iface_info_defaults:
+ * @protocol: The #PurpleProtocol instance
+ * @connection: The #PurpleConnection instance
+ * @chat_name: The name of the chat
+ *
+ * Returns a #GHashTable of the default protocol dependent components that will
+ * be passed to #purple_protocol_chat_iface_join.
+ *
+ * Returns: (transfer full) (element-type utf8 utf8): The values that will be
+ *          used to join the chat.
+ *
+ * Since: 3.0.0
+ */
 GHashTable *purple_protocol_chat_iface_info_defaults(PurpleProtocol *protocol,
 		PurpleConnection *connection, const char *chat_name);
 
+/**
+ * purple_protocol_chat_iface_join:
+ * @protocol: The #PurpleProtocol instance
+ * @connection: The #PurpleConnection instance
+ * @components: (element-type utf8 utf8): The protocol dependent join
+ *              components
+ *
+ * Joins the chat described in @components.
+ *
+ * Since: 3.0.0
+ */
 void purple_protocol_chat_iface_join(PurpleProtocol *protocol, PurpleConnection *connection,
 		GHashTable *components);
 
+/**
+ * purple_protocol_chat_iface_reject:
+ * @protocol: The #PurpleProtocol instance
+ * @connection: The #PurpleConnection instance
+ * @components: (element-type utf8 utf8): The protocol dependent join
+ *              components
+ *
+ * Not quite sure exactly what this does or where it's used.  Please fill in
+ * the details if you know.
+ *
+ * Since: 3.0.0
+ */
 void purple_protocol_chat_iface_reject(PurpleProtocol *protocol,
 		PurpleConnection *connection, GHashTable *components);
 
+/**
+ * purple_protocol_chat_iface_get_name:
+ * @protocol: The #PurpleProtocol instance
+ * @components: (element-type utf8 utf8): The protocol dependent join
+ *              components
+ *
+ * Get's the name from @components.
+ *
+ * Returns: (transfer full): The chat name from @components.
+ *
+ * Since: 3.0.0
+ */
 char *purple_protocol_chat_iface_get_name(PurpleProtocol *protocol,
 		GHashTable *components);
 
+/**
+ * purple_protocol_chat_iface_invite:
+ * @protocol: The #PurpleProtocol instance
+ * @connection: The #PurpleConnection instance
+ * @id: The id of the chat
+ * @message: The invite message
+ * @who: The target of the invite
+ *
+ * Sends an invite to @who with @message.
+ *
+ * Since: 3.0.0
+ */
 void purple_protocol_chat_iface_invite(PurpleProtocol *protocol,
 		PurpleConnection *connection, int id, const char *message, const char *who);
 
+/**
+ * purple_protocol_chat_iface_leave:
+ * @protocol: The #PurpleProtocol instance
+ * @connection: The #PurpleConnection instance
+ * @id: The id of the chat
+ *
+ * Leaves the chat identified by @id.
+ *
+ * Since: 3.0.0
+ */
 void purple_protocol_chat_iface_leave(PurpleProtocol *protocol, PurpleConnection *connection,
 		int id);
 
+/**
+ * purple_protocol_chat_iface_leave:
+ * @protocol: The #PurpleProtocol instance
+ * @connection: The #PurpleConnection instance
+ * @id: The id of the chat
+ * @msg: The message to send
+ *
+ * Sends @msg to the chat identified by @id.
+ *
+ * Returns: 0 on success, non-zero on failure.
+ *
+ * Since: 3.0.0
+ */
 int  purple_protocol_chat_iface_send(PurpleProtocol *protocol, PurpleConnection *connection,
 		int id, PurpleMessage *msg);
 
+/**
+ * purple_protocol_chat_iface_get_user_real_name:
+ * @protocol: The #PurpleProtocol instance
+ * @gc: The #PurpleConnection instance
+ * @id: The id of the chat
+ * @who: The username
+ *
+ * Gets the real name of @who.
+ *
+ * Returns: (transfer full): The realname of @who.
+ *
+ * Since: 3.0.0
+ */
 char *purple_protocol_chat_iface_get_user_real_name(PurpleProtocol *protocol,
 		PurpleConnection *gc, int id, const char *who);
 
+/**
+ * purple_protocol_chat_iface_set_topic:
+ * @protocol: The #PurpleProtocol instance
+ * @gc: The #PurpleConnection instance
+ * @id: The id of the chat
+ * @topic: The new topic
+ *
+ * Sets the topic for the chat with id @id to @topic.
+ *
+ * Since: 3.0.0
+ */
 void purple_protocol_chat_iface_set_topic(PurpleProtocol *protocol,
 		PurpleConnection *gc, int id, const char *topic);
 
