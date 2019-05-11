@@ -814,6 +814,8 @@ const char *purple_protocol_class_list_icon(PurpleProtocol *protocol,
  * purple_protocol_client_iface_get_type:
  *
  * Returns: The #GType for the protocol client interface.
+ *
+ * Since: 3.0.0
  */
 GType purple_protocol_client_iface_get_type(void);
 
@@ -825,6 +827,8 @@ GType purple_protocol_client_iface_get_type(void);
  * Gets a list of actions for @connection.
  *
  * Returns: (transfer full) (element-type PurpleProtocolAction): The list of actions for @connection.
+ *
+ * Since: 3.0.0
  */
 GList *purple_protocol_client_iface_get_actions(PurpleProtocol *protocol,
 		PurpleConnection *connection);
@@ -837,6 +841,8 @@ GList *purple_protocol_client_iface_get_actions(PurpleProtocol *protocol,
  * Gets the icon name of the emblem that should be used for @buddy.
  *
  * Returns: The icon name of the emblem or NULL.
+ *
+ * Since: 3.0.0
  */
 const char *purple_protocol_client_iface_list_emblem(PurpleProtocol *protocol,
 		PurpleBuddy *buddy);
@@ -849,6 +855,8 @@ const char *purple_protocol_client_iface_list_emblem(PurpleProtocol *protocol,
  * Gets the status text for @buddy.
  *
  * Returns: (transfer full): The status text for @buddy or NULL.
+ *
+ * Since: 3.0.0
  */
 char *purple_protocol_client_iface_status_text(PurpleProtocol *protocol,
 		PurpleBuddy *buddy);
@@ -862,6 +870,8 @@ char *purple_protocol_client_iface_status_text(PurpleProtocol *protocol,
  *
  * Asks @protocol to update @user_info for @buddy.  If @full is %TRUE then
  * more detailed information will added.
+ *
+ * Since: 3.0.0
  */
 void purple_protocol_client_iface_tooltip_text(PurpleProtocol *protocol,
 		PurpleBuddy *buddy, PurpleNotifyUserInfo *user_info, gboolean full);
