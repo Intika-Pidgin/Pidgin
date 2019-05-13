@@ -23,6 +23,7 @@
 
 #include <glib.h>
 #include <gmime/gmime.h>
+#include <string.h>
 
 #include "image.h"
 #include "image-store.h"
