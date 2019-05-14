@@ -67,18 +67,17 @@ static struct _irc_msg {
 	{ "311", "nnvvv:", 6, irc_msg_whois },		/* Whois user			*/
 	{ "312", "nnv:", 4, irc_msg_whois },		/* Whois server			*/
 	{ "313", "nn:", 2, irc_msg_whois },		/* Whois ircop			*/
+	{ "314", "nnnvv:", 6, irc_msg_whois },		/* Whowas user			*/
+	{ "315", "nt:", 0, irc_msg_who },		/* end of WHO channel		*/
 	{ "317", "nnvv", 3, irc_msg_whois },		/* Whois idle			*/
 	{ "318", "nt:", 2, irc_msg_endwhois },		/* End of WHOIS			*/
 	{ "319", "nn:", 3, irc_msg_whois },		/* Whois channels		*/
 	{ "320", "nn:", 2, irc_msg_whois },		/* Whois (fn ident)		*/
-	{ "330", "nnv:", 4, irc_msg_whois },		/* Whois (fn login)		*/
-	{ "314", "nnnvv:", 6, irc_msg_whois },		/* Whowas user			*/
-	{ "315", "nt:", 0, irc_msg_who },		/* end of WHO channel		*/
-	{ "369", "nt:", 2, irc_msg_endwhois },		/* End of WHOWAS		*/
 	{ "321", "*", 0, irc_msg_list },		/* Start of list		*/
 	{ "322", "ncv:", 4, irc_msg_list },		/* List.			*/
 	{ "323", ":", 0, irc_msg_list },		/* End of list.			*/
 	{ "324", "ncv:", 3, irc_msg_chanmode },		/* Channel modes		*/
+	{ "330", "nnv:", 4, irc_msg_whois },		/* Whois (fn login)		*/
 	{ "331", "nc:", 3, irc_msg_topic },		/* No channel topic		*/
 	{ "332", "nc:", 3, irc_msg_topic },		/* Channel topic		*/
 	{ "333", "ncvv", 4, irc_msg_topicinfo },	/* Topic setter stuff		*/
@@ -87,14 +86,15 @@ static struct _irc_msg {
 	{ "366", "nc:", 2, irc_msg_names },		/* End of names			*/
 	{ "367", "ncnnv", 3, irc_msg_ban },		/* Ban list			*/
 	{ "368", "nc:", 2, irc_msg_ban },		/* End of ban list		*/
+	{ "369", "nt:", 2, irc_msg_endwhois },		/* End of WHOWAS		*/
 	{ "372", "n:", 1, irc_msg_motd },		/* MOTD				*/
 	{ "375", "n:", 1, irc_msg_motd },		/* Start MOTD			*/
 	{ "376", "n:", 1, irc_msg_motd },		/* End of MOTD			*/
 	{ "391", "nv:", 3, irc_msg_time },		/* Time reply			*/
 	{ "401", "nt:", 2, irc_msg_nonick },		/* No such nick/chan		*/
-	{ "406", "nt:", 2, irc_msg_nonick },		/* No such nick for WHOWAS	*/
 	{ "403", "nc:", 2, irc_msg_nochan },		/* No such channel		*/
 	{ "404", "nt:", 3, irc_msg_nosend },		/* Cannot send to chan		*/
+	{ "406", "nt:", 2, irc_msg_nonick },		/* No such nick for WHOWAS	*/
 	{ "421", "nv:", 2, irc_msg_unknown },		/* Unknown command		*/
 	{ "422", "n:", 1, irc_msg_motd },		/* MOTD file missing		*/
 	{ "432", "vn:", 0, irc_msg_badnick },		/* Erroneous nickname		*/
