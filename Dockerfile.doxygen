@@ -1,4 +1,4 @@
-FROM pidgin/release-builder:release-2.x.y as build
+FROM pidgin/release-builder:release-2.x.y AS build
 
 COPY . /pidgin
 
