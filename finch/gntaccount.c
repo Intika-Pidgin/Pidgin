@@ -1108,9 +1108,12 @@ finch_request_authorize(PurpleAccount *account,
 			aa, 2,
 			_("Authorize"), authorize_and_add_cb,
 			_("Deny"), deny_no_add_cb);
-		gnt_screen_release(widget);
+		/* Since GntWindow is a GntBox, hide it so it's unmapped, then
+		 * add it to the outer window, and make it visible again. */
+		gnt_widget_hide(widget);
 		gnt_box_set_toplevel(GNT_BOX(widget), FALSE);
 		gnt_box_add_widget(GNT_BOX(uihandle), widget);
+		gnt_widget_set_visible(widget, TRUE);
 
 		gnt_box_add_widget(GNT_BOX(uihandle), gnt_hline_new());
 
@@ -1124,9 +1127,13 @@ finch_request_authorize(PurpleAccount *account,
 				break;
 			}
 		}
+		/* Since GntWindow is a GntBox, hide it so it's unmapped, then
+		 * add it to the outer window, and make it visible again. */
+		gnt_widget_hide(widget);
 		gnt_box_set_toplevel(GNT_BOX(widget), FALSE);
-		gnt_screen_release(widget);
 		gnt_box_add_widget(GNT_BOX(uihandle), widget);
+		gnt_widget_set_visible(widget, TRUE);
+
 		gnt_widget_show(uihandle);
 
 		g_signal_connect_swapped(G_OBJECT(uihandle), "destroy", G_CALLBACK(free_auth_and_add), aa);
