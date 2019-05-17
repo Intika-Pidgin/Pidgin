@@ -587,11 +587,11 @@ dnl #######################################################################
 dnl # Check for ncurses and other things used by the console UI
 dnl #######################################################################
 if test "x$enable_consoleui" = "xyes"; then
-PKG_CHECK_MODULES(LIBGNT, [gnt >= 2.9.0], , [
+PKG_CHECK_MODULES(LIBGNT, [gnt >= 2.14.0], , [
 	if test "x$force_finch" = "xyes"; then
 		AC_MSG_ERROR([
 
-Finch will not be built. You must have libgnt >= 2.9.0 development headers installed to build.
+Finch will not be built. You must have libgnt >= 2.14.0 development headers installed to build.
 
 ])
 	fi
