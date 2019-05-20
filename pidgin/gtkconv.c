@@ -58,7 +58,6 @@
 #include "gtkconv-theme.h"
 #include "gtkconv-theme-loader.h"
 #include "gtkdialogs.h"
-#include "gtklog.h"
 #include "gtkmenutray.h"
 #include "gtkpounce.h"
 #include "gtkprefs.h"
@@ -68,6 +67,7 @@
 #include "gtkwebview.h"
 #include "pidgingdkpixbuf.h"
 #include "pidgininvitedialog.h"
+#include "pidginlog.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
 

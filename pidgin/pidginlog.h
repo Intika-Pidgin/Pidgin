@@ -19,14 +19,14 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PIDGINLOG_H_
-#define _PIDGINLOG_H_
+#ifndef PIDGIN_LOG_H
+#define PIDGIN_LOG_H
 /**
- * SECTION:gtklog
- * @section_id: pidgin-gtklog
- * @short_description: <filename>gtklog.h</filename>
+ * SECTION:pidginlog
+ * @section_id: pidgin-log
+ * @short_description: <filename>pidginlog.h</filename>
  * @title: Log Viewer
- * @see_also: <link linkend="chapter-signals-gtklog">Log signals</link>
+ * @see_also: <link linkend="chapter-signals-pidginlog">Log signals</link>
  */
 
 #include "pidgin.h"
@@ -48,7 +48,7 @@ typedef struct _PidginLogViewer PidginLogViewer;
  * @search:    The string currently being searched for
  * @label:     The label at the top of the log viewer
  *
- * A GTK+ Log Viewer.  You can look at logs with it.
+ * A Pidgin Log Viewer.  You can look at logs with it.
  */
 struct _PidginLogViewer {
 	GList *logs;
@@ -73,32 +73,32 @@ void pidgin_log_show_contact(PurpleContact *contact);
 void pidgin_syslog_show(void);
 
 /**************************************************************************/
-/* GTK+ Log Subsystem                                                     */
+/* Pidgin Log Subsystem                                                   */
 /**************************************************************************/
 
 /**
  * pidgin_log_init:
  *
- * Initializes the GTK+ log subsystem.
+ * Initializes the Pidgin log subsystem.
  */
 void pidgin_log_init(void);
 
 /**
  * pidgin_log_get_handle:
  *
- * Returns the GTK+ log subsystem handle.
+ * Returns the Pidgin log subsystem handle.
  *
- * Returns: The GTK+ log subsystem handle.
+ * Returns: The Pidgin log subsystem handle.
  */
 void *pidgin_log_get_handle(void);
 
 /**
  * pidgin_log_uninit:
  *
- * Uninitializes the GTK+ log subsystem.
+ * Uninitializes the Pidgin log subsystem.
  */
 void pidgin_log_uninit(void);
 
 G_END_DECLS
 
-#endif
+#endif /* PIDGIN_LOG_H */

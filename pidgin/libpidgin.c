@@ -51,7 +51,6 @@
 #include "gtkdocklet.h"
 #include "gtkxfer.h"
 #include "gtkidle.h"
-#include "gtklog.h"
 #include "gtkmedia.h"
 #include "gtknotify.h"
 #include "gtkplugin.h"
@@ -67,6 +66,7 @@
 #include "pidginstock.h"
 #include "gtkwhiteboard.h"
 #include "pidgindebug.h"
+#include "pidginlog.h"
 
 #ifndef _WIN32
 #include <signal.h>

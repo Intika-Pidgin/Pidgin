@@ -30,9 +30,9 @@
 
 #include "pidginstock.h"
 #include "gtkblist.h"
-#include "gtklog.h"
 #include "gtkutils.h"
 #include "gtkwebview.h"
+#include "pidginlog.h"
 
 #include "gtk3compat.h"
 
@@ -838,7 +838,7 @@ void pidgin_syslog_show()
 }
 
 /****************************************************************************
- * GTK+ LOG SUBSYSTEM *******************************************************
+ * PIDGIN LOG SUBSYSTEM *****************************************************
  ****************************************************************************/
 
 void *

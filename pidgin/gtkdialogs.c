@@ -39,8 +39,8 @@
 
 #include "gtkblist.h"
 #include "gtkdialogs.h"
-#include "gtklog.h"
 #include "gtkutils.h"
+#include "pidginlog.h"
 #include "pidginstock.h"
 
 #ifdef USE_GSTREAMER
