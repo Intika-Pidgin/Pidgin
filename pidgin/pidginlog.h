@@ -34,37 +34,6 @@
 
 #include "account.h"
 
-typedef struct _PidginLogViewer PidginLogViewer;
-
-/**
- * PidginLogViewer:
- * @logs:      The list of logs viewed in this viewer
- * @window:    The viewer's window
- * @treestore: The treestore containing said logs
- * @treeview:  The treeview representing said treestore
- * @web_view:  The webkit web view to display said logs
- * @entry:     The search entry, in which search terms are entered
- * @flags:     The most recently used log flags
- * @search:    The string currently being searched for
- * @label:     The label at the top of the log viewer
- *
- * A Pidgin Log Viewer.  You can look at logs with it.
- */
-struct _PidginLogViewer {
-	GList *logs;
-
-	GtkWidget        *window;
-	GtkTreeStore     *treestore;
-	GtkWidget        *treeview;
-	GtkWidget        *web_view;
-	GtkWidget        *entry;
-
-	PurpleLogReadFlags flags;
-	char             *search;
-	GtkLabel         *label;
-};
-
-
 G_BEGIN_DECLS
 
 void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *account);
