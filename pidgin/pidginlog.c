@@ -42,7 +42,7 @@
  * @logs:      The list of logs viewed in this viewer
  * @treestore: The treestore containing said logs
  * @treeview:  The treeview representing said treestore
- * @web_view:  The webkit web view to display said logs
+ * @log_view:  The webkit web view to display said logs
  * @entry:     The search entry, in which search terms are entered
  * @flags:     The most recently used log flags
  * @search:    The string currently being searched for
@@ -59,7 +59,7 @@ struct _PidginLogViewer {
 
 	GtkTreeStore     *treestore;
 	GtkWidget        *treeview;
-	GtkWidget        *web_view;
+	GtkWidget        *log_view;
 	GtkWidget        *entry;
 
 	PurpleLogReadFlags flags;
@@ -162,7 +162,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 		populate_log_tree(lv);
 		g_free(lv->search);
 		lv->search = NULL;
-		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(lv->web_view));
+		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(lv->log_view));
 		select_first_log(lv);
 		return;
 	}
@@ -170,7 +170,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 	if (lv->search != NULL && purple_strequal(lv->search, search_term))
 	{
 		/* Searching for the same term acts as "Find Next" */
-		webkit_web_view_search_text(WEBKIT_WEB_VIEW(lv->web_view), lv->search, FALSE, TRUE, TRUE);
+		webkit_web_view_search_text(WEBKIT_WEB_VIEW(lv->log_view), lv->search, FALSE, TRUE, TRUE);
 		return;
 	}
 
@@ -180,7 +180,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 	lv->search = g_strdup(search_term);
 
 	gtk_tree_store_clear(lv->treestore);
-	webkit_web_view_open(WEBKIT_WEB_VIEW(lv->web_view), "about:blank"); /* clear the view */
+	webkit_web_view_open(WEBKIT_WEB_VIEW(lv->log_view), "about:blank"); /* clear the view */
 
 	for (logs = lv->logs; logs != NULL; logs = logs->next) {
 		char *read = purple_log_read((PurpleLog*)logs->data, NULL);
@@ -449,9 +449,9 @@ static gboolean log_popup_menu_cb(GtkWidget *treeview, PidginLogViewer *lv)
 static gboolean search_find_cb(gpointer data)
 {
 	PidginLogViewer *viewer = data;
-	webkit_web_view_mark_text_matches(WEBKIT_WEB_VIEW(viewer->web_view), viewer->search, FALSE, 0);
-	webkit_web_view_set_highlight_text_matches(WEBKIT_WEB_VIEW(viewer->web_view), TRUE);
-	webkit_web_view_search_text(WEBKIT_WEB_VIEW(viewer->web_view), viewer->search, FALSE, TRUE, TRUE);
+	webkit_web_view_mark_text_matches(WEBKIT_WEB_VIEW(viewer->log_view), viewer->search, FALSE, 0);
+	webkit_web_view_set_highlight_text_matches(WEBKIT_WEB_VIEW(viewer->log_view), TRUE);
+	webkit_web_view_search_text(WEBKIT_WEB_VIEW(viewer->log_view), viewer->search, FALSE, TRUE, TRUE);
 	return FALSE;
 }
 
@@ -494,7 +494,7 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	read = purple_log_read(log, &flags);
 	viewer->flags = flags;
 
-	webkit_web_view_open(WEBKIT_WEB_VIEW(viewer->web_view), "about:blank");
+	webkit_web_view_open(WEBKIT_WEB_VIEW(viewer->log_view), "about:blank");
 
 	purple_signal_emit(pidgin_log_get_handle(), "log-displaying", viewer, log);
 	
@@ -506,11 +506,11 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 		read = newRead;
 	}
 
-	webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(viewer->web_view), read, "");
+	webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(viewer->log_view), read, "");
 	g_free(read);
 
 	if (viewer->search != NULL) {
-		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(viewer->web_view));
+		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(viewer->log_view));
 		g_idle_add(search_find_cb, viewer);
 	}
 
@@ -699,9 +699,9 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	gtk_paned_add2(GTK_PANED(pane), vbox);
 
 	/* Viewer ************/
-	frame = pidgin_create_webview(FALSE, &lv->web_view, NULL);
-	gtk_widget_set_name(lv->web_view, "pidgin_log_web_view");
-	gtk_widget_set_size_request(lv->web_view, 320, 200);
+	frame = pidgin_create_webview(FALSE, &lv->log_view, NULL);
+	gtk_widget_set_name(lv->log_view, "pidgin_log_log_view");
+	gtk_widget_set_size_request(lv->log_view, 320, 200);
 	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
 	gtk_widget_show(frame);
 
