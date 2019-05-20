@@ -36,6 +36,39 @@
 
 #include "gtk3compat.h"
 
+#define PIDGIN_TYPE_LOG_VIEWER pidgin_log_viewer_get_type()
+/**
+ * PidginLogViewer:
+ * @logs:      The list of logs viewed in this viewer
+ * @treestore: The treestore containing said logs
+ * @treeview:  The treeview representing said treestore
+ * @web_view:  The webkit web view to display said logs
+ * @entry:     The search entry, in which search terms are entered
+ * @flags:     The most recently used log flags
+ * @search:    The string currently being searched for
+ * @label:     The label at the top of the log viewer
+ *
+ * A Pidgin Log Viewer.  You can look at logs with it.
+ */
+G_DECLARE_FINAL_TYPE(PidginLogViewer, pidgin_log_viewer, PIDGIN, LOG_VIEWER, GtkDialog)
+
+struct _PidginLogViewer {
+	GtkDialog parent;
+
+	GList *logs;
+
+	GtkTreeStore     *treestore;
+	GtkWidget        *treeview;
+	GtkWidget        *web_view;
+	GtkWidget        *entry;
+
+	PurpleLogReadFlags flags;
+	char             *search;
+	GtkLabel         *label;
+};
+
+G_DEFINE_TYPE(PidginLogViewer, pidgin_log_viewer, GTK_TYPE_DIALOG)
+
 static GHashTable *log_viewers = NULL;
 static void populate_log_tree(PidginLogViewer *lv);
 static PidginLogViewer *syslog_viewer = NULL;
@@ -141,7 +174,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 		return;
 	}
 
-	pidgin_set_cursor(lv->window, GDK_WATCH);
+	pidgin_set_cursor(GTK_WIDGET(lv), GDK_WATCH);
 
 	g_free(lv->search);
 	lv->search = g_strdup(search_term);
@@ -166,7 +199,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 	}
 
 	select_first_log(lv);
-	pidgin_clear_cursor(lv->window);
+	pidgin_clear_cursor(GTK_WIDGET(lv));
 }
 
 static void destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash_t *ht) {
@@ -221,7 +254,6 @@ static void destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash_t *ht) {
 	g_list_free(lv->logs);
 
 	g_free(lv->search);
-	g_free(lv);
 
 	gtk_widget_destroy(w);
 }
@@ -442,7 +474,7 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	if (log == NULL)
 		return;
 
-	pidgin_set_cursor(viewer->window, GDK_WATCH);
+	pidgin_set_cursor(GTK_WIDGET(viewer), GDK_WATCH);
 
 	if (log->type != PURPLE_LOG_SYSTEM) {
 		gchar *log_date = log_get_date(log);
@@ -482,7 +514,7 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 		g_idle_add(search_find_cb, viewer);
 	}
 
-	pidgin_clear_cursor(viewer->window);
+	pidgin_clear_cursor(GTK_WIDGET(viewer));
 }
 
 /* I want to make this smarter, but haven't come up with a cool algorithm to do so, yet.
@@ -574,35 +606,36 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		return NULL;
 	}
 
-	lv = g_new0(PidginLogViewer, 1);
+	/* Window ***********/
+	lv = g_object_new(PIDGIN_TYPE_LOG_VIEWER, NULL);
+	gtk_window_set_title(GTK_WINDOW(lv), title);
+	gtk_dialog_add_buttons(GTK_DIALOG(lv), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE, NULL);
+
 	lv->logs = logs;
 
 	if (ht != NULL)
 		g_hash_table_insert(log_viewers, ht, lv);
 
-	/* Window ***********/
-	lv->window = gtk_dialog_new_with_buttons(title, NULL, 0,
-					     GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE, NULL);
 #ifdef _WIN32
 	/* Steal the "HELP" response and use it to trigger browsing to the logs folder */
-	gtk_dialog_add_button(GTK_DIALOG(lv->window), _("_Browse logs folder"), GTK_RESPONSE_HELP);
+	gtk_dialog_add_button(GTK_DIALOG(lv), _("_Browse logs folder"), GTK_RESPONSE_HELP);
 #endif
-	gtk_container_set_border_width (GTK_CONTAINER(lv->window), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))), 0);
-	g_signal_connect(G_OBJECT(lv->window), "response",
+	gtk_container_set_border_width(GTK_CONTAINER(lv), PIDGIN_HIG_BOX_SPACE);
+	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))), 0);
+	g_signal_connect(G_OBJECT(lv), "response",
 					 G_CALLBACK(destroy_cb), ht);
-	gtk_window_set_role(GTK_WINDOW(lv->window), "log_viewer");
+	gtk_window_set_role(GTK_WINDOW(lv), "log_viewer");
 
 	/* Icon *************/
 	if (icon != NULL) {
 		title_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
 		gtk_container_set_border_width(GTK_CONTAINER(title_box), PIDGIN_HIG_BOX_SPACE);
-		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))),
 		                   title_box, FALSE, FALSE, 0);
 
 		gtk_box_pack_start(GTK_BOX(title_box), icon, FALSE, FALSE, 0);
 	} else
-		title_box = gtk_dialog_get_content_area(GTK_DIALOG(lv->window));
+		title_box = gtk_dialog_get_content_area(GTK_DIALOG(lv));
 
 	/* Label ************/
 	lv->label = GTK_LABEL(gtk_label_new(NULL));
@@ -618,7 +651,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	/* Pane *************/
 	pane = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
 	gtk_container_set_border_width(GTK_CONTAINER(pane), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))),
 	                   pane, TRUE, TRUE, 0);
 
 	/* List *************/
@@ -655,7 +688,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 		/*		gtk_paned_add1(GTK_PANED(pane), size_label); */
 		gtk_label_set_xalign(GTK_LABEL(size_label), 0);
 		gtk_label_set_yalign(GTK_LABEL(size_label), 0);
-		gtk_box_pack_end(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv->window))),
+		gtk_box_pack_end(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))),
 		                 size_label, FALSE, FALSE, 0);
 		g_free(sz_txt);
 		g_free(text);
@@ -684,10 +717,27 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 
 	select_first_log(lv);
 
-	gtk_widget_show_all(lv->window);
+	gtk_widget_show_all(GTK_WIDGET(lv));
 
 	return lv;
 }
+
+/****************************************************************************
+ * GObject Implementation
+ ****************************************************************************/
+static void
+pidgin_log_viewer_class_init(PidginLogViewerClass *klass)
+{
+}
+
+static void
+pidgin_log_viewer_init(PidginLogViewer *self)
+{
+}
+
+/****************************************************************************
+ * Public API
+ ****************************************************************************/
 
 void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *account) {
 	struct log_viewer_hash_t *ht;
@@ -708,7 +758,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 	if (log_viewers == NULL) {
 		log_viewers = g_hash_table_new(log_viewer_hash, log_viewer_equal);
 	} else if ((lv = g_hash_table_lookup(log_viewers, ht))) {
-		gtk_window_present(GTK_WINDOW(lv->window));
+		gtk_window_present(GTK_WINDOW(lv));
 		g_free(ht->buddyname);
 		g_free(ht);
 		return;
@@ -763,7 +813,7 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 	if (log_viewers == NULL) {
 		log_viewers = g_hash_table_new(log_viewer_hash, log_viewer_equal);
 	} else if ((lv = g_hash_table_lookup(log_viewers, ht))) {
-		gtk_window_present(GTK_WINDOW(lv->window));
+		gtk_window_present(GTK_WINDOW(lv));
 		g_free(ht);
 		return;
 	}
@@ -820,7 +870,7 @@ void pidgin_syslog_show()
 	GList *logs = NULL;
 
 	if (syslog_viewer != NULL) {
-		gtk_window_present(GTK_WINDOW(syslog_viewer->window));
+		gtk_window_present(GTK_WINDOW(syslog_viewer));
 		return;
 	}
 
