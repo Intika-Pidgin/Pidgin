@@ -44,7 +44,6 @@
 #include "gtkconv.h"
 #include "gtkdialogs.h"
 #include "gtkxfer.h"
-#include "gtklog.h"
 #include "gtkmenutray.h"
 #include "gtkpounce.h"
 #include "gtkplugin.h"
@@ -63,6 +62,7 @@
 #include "pidgin/pidgindebug.h"
 #include "pidgin/pidgindebugplugininfo.h"
 #include "pidgin/pidgingdkpixbuf.h"
+#include "pidgin/pidginlog.h"
 #include "pidgin/pidgintooltip.h"
 
 #include <gdk/gdkkeysyms.h>
