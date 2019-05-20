@@ -44,7 +44,6 @@
  * @treeview:  The treeview representing said treestore
  * @log_view:  The webkit web view to display said logs
  * @entry:     The search entry, in which search terms are entered
- * @flags:     The most recently used log flags
  * @search:    The string currently being searched for
  * @label:     The label at the top of the log viewer
  *
@@ -62,7 +61,6 @@ struct _PidginLogViewer {
 	GtkWidget        *log_view;
 	GtkWidget        *entry;
 
-	PurpleLogReadFlags flags;
 	char             *search;
 	GtkLabel         *label;
 };
@@ -492,7 +490,6 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	}
 
 	read = purple_log_read(log, &flags);
-	viewer->flags = flags;
 
 	webkit_web_view_open(WEBKIT_WEB_VIEW(viewer->log_view), "about:blank");
 
