@@ -29,7 +29,9 @@
  */
 
 #include <gtk/gtk.h>
-#include "gtkwebview.h"
+
+#include <talkatu.h>
+
 #include "account.h"
 #include "savedstatuses.h"
 #include "status.h"
@@ -87,8 +89,11 @@ struct _PidginStatusBox
 
 	PurpleAccount *token_status_account;
 
-	GtkWidget *vbox, *sw;
-	GtkWidget *webview;
+	GtkWidget *vbox;
+	gboolean editor_visible;
+	GtkWidget *editor;
+	GtkWidget *view;
+	GtkTextBuffer *buffer;
 
 	PurpleImage *buddy_icon_img;
 	GdkPixbuf *buddy_icon;
@@ -102,7 +107,6 @@ struct _PidginStatusBox
 	int icon_size;
 	gboolean icon_opaque;
 
-	gboolean webview_visible;
 
 	GtkWidget *cell_view;
 	GtkCellRenderer *icon_rend;
