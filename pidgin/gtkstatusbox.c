@@ -60,8 +60,6 @@
 /* Timeout for typing notifications in seconds */
 #define TYPING_TIMEOUT 4
 
-static void webview_changed_cb(PidginWebView *webview, void *data);
-static void webview_format_changed_cb(PidginWebView *webview, PidginWebViewButtons buttons, void *data);
 static void remove_typing_cb(PidginStatusBox *box);
 static void update_size (PidginStatusBox *box);
 static gint get_statusbox_index(PidginStatusBox *box, PurpleSavedStatus *saved_status);
@@ -257,12 +255,6 @@ update_to_reflect_account_status(PidginStatusBox *status_box, PurpleAccount *acc
 			break;
 	}
 
-#if 0
-	/* TODO WebKit: Doesn't do this? */
-	pidgin_webview_set_populate_primary_clipboard(
-		PIDGIN_WEBVIEW(status_box->webview), TRUE);
-#endif
-
 	if (status_no != -1) {
 		GtkTreePath *path;
 		gtk_widget_set_sensitive(GTK_WIDGET(status_box), FALSE);
@@ -277,13 +269,13 @@ update_to_reflect_account_status(PidginStatusBox *status_box, PurpleAccount *acc
 		if (!message || !*message)
 		{
 			gtk_widget_hide(status_box->vbox);
-			status_box->webview_visible = FALSE;
+			status_box->editor_visible = FALSE;
 		}
 		else
 		{
 			gtk_widget_show_all(status_box->vbox);
-			status_box->webview_visible = TRUE;
-			pidgin_webview_load_html_string(PIDGIN_WEBVIEW(status_box->webview), message);
+			status_box->editor_visible = TRUE;
+			talkatu_markup_set_html(TALKATU_BUFFER(status_box->buffer), message, -1);
 		}
 		gtk_widget_set_sensitive(GTK_WIDGET(status_box), TRUE);
 		pidgin_status_box_refresh(status_box);
@@ -852,7 +844,7 @@ status_menu_refresh_iter(PidginStatusBox *status_box, gboolean status_changed)
 		message = purple_savedstatus_get_message(saved_status);
 
 		/*
-		 * If we are going to hide the webview, don't retain the
+		 * If we are going to hide the editor, don't retain the
 		 * message because showing the old message later is
 		 * confusing. If we are going to set the message to a pre-set,
 		 * then we need to do this anyway
@@ -860,25 +852,24 @@ status_menu_refresh_iter(PidginStatusBox *status_box, gboolean status_changed)
 		 * Suppress the "changed" signal because the status
 		 * was changed programmatically.
 		 */
-		gtk_widget_set_sensitive(GTK_WIDGET(status_box->webview), FALSE);
+		gtk_widget_set_sensitive(GTK_WIDGET(status_box->view), FALSE);
 
-		pidgin_webview_load_html_string(PIDGIN_WEBVIEW(status_box->webview), "");
-		pidgin_webview_clear_formatting(PIDGIN_WEBVIEW(status_box->webview));
+		talkatu_markup_set_html(TALKATU_BUFFER(status_box->buffer), "", -1);
 
 		if (!purple_savedstatus_is_transient(saved_status) || !message || !*message)
 		{
-			status_box->webview_visible = FALSE;
+			status_box->editor_visible = FALSE;
 			gtk_widget_hide(status_box->vbox);
 		}
 		else
 		{
-			status_box->webview_visible = TRUE;
+			status_box->editor_visible = TRUE;
 			gtk_widget_show_all(status_box->vbox);
 
-			pidgin_webview_load_html_string(PIDGIN_WEBVIEW(status_box->webview), message);
+			talkatu_markup_set_html(TALKATU_BUFFER(status_box->buffer), message, -1);
 		}
 
-		gtk_widget_set_sensitive(GTK_WIDGET(status_box->webview), TRUE);
+		gtk_widget_set_sensitive(GTK_WIDGET(status_box->view), TRUE);
 		update_size(status_box);
 	}
 
@@ -1056,21 +1047,21 @@ pidgin_status_box_regenerate(PidginStatusBox *status_box, gboolean status_change
 }
 
 static gboolean
-combo_box_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, PidginWebView *webview)
+combo_box_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, gpointer data)
 {
 	pidgin_status_box_popup(PIDGIN_STATUS_BOX(w), (GdkEvent *)event);
 	return TRUE;
 }
 
-static gboolean
-webview_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, PidginWebView *webview)
-{
-	if (event->direction == GDK_SCROLL_UP)
-		pidgin_webview_page_up(webview);
-	else if (event->direction == GDK_SCROLL_DOWN)
-		pidgin_webview_page_down(webview);
-	return TRUE;
-}
+// static gboolean
+// webview_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, PidginWebView *webview)
+// {
+// 	if (event->direction == GDK_SCROLL_UP)
+// 		pidgin_webview_page_up(webview);
+// 	else if (event->direction == GDK_SCROLL_DOWN)
+// 		pidgin_webview_page_down(webview);
+// 	return TRUE;
+// }
 
 static gboolean
 webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_box)
@@ -1096,11 +1087,7 @@ webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_b
 	{
 		g_source_remove(status_box->typing);
 		status_box->typing = 0;
-#if 0
-	/* TODO WebKit: Doesn't do this? */
-		pidgin_webview_set_populate_primary_clipboard(
-			PIDGIN_WEBVIEW(status_box->webview), TRUE);
-#endif
+
 		if (status_box->account != NULL)
 			update_to_reflect_account_status(status_box, status_box->account,
 							purple_account_get_active_status(status_box->account));
@@ -1194,41 +1181,6 @@ saved_status_updated_cb(PurpleSavedStatus *status, PidginStatusBox *status_box)
 	pidgin_status_box_regenerate(status_box,
 		purple_savedstatus_get_current() == status);
 }
-
-static void
-spellcheck_prefs_cb(const char *name, PurplePrefType type,
-					gconstpointer value, gpointer data)
-{
-	PidginStatusBox *status_box = (PidginStatusBox *)data;
-
-	pidgin_webview_set_spellcheck(PIDGIN_WEBVIEW(status_box->webview),
-	                              (gboolean)GPOINTER_TO_INT(value));
-}
-
-#if 0
-static gboolean button_released_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
-{
-
-	if (event->button != GDK_BUTTOM_PRIMARY)
-		return FALSE;
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), FALSE);
-	if (!box->webview_visible)
-		g_signal_emit_by_name(G_OBJECT(box), "changed", NULL, NULL);
-	return TRUE;
-}
-
-static gboolean button_pressed_cb(GtkWidget *widget, GdkEventButton *event, PidginStatusBox *box)
-{
-	if (event->button != GDK_BUTTOM_PRIMARY)
-		return FALSE;
-	gtk_combo_box_popup(GTK_COMBO_BOX(box));
-	/* Disabled until button_released_cb works */
-#if 0
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), TRUE);
-#endif
-	return TRUE;
-}
-#endif
 
 static void
 pidgin_status_box_list_position (PidginStatusBox *status_box, int *x, int *y, int *width, int *height)
@@ -1637,16 +1589,6 @@ treeview_key_press_event(GtkWidget *widget,
 }
 
 static void
-webview_cursor_moved_cb(gpointer data, PidginWebView *webview)
-{
-	/* Restart the typing timeout if arrow keys are pressed while editing the message */
-	PidginStatusBox *status_box = data;
-	if (status_box->typing == 0)
-		return;
-	webview_changed_cb(NULL, status_box);
-}
-
-static void
 treeview_cursor_changed_cb(GtkTreeView *treeview, gpointer data)
 {
 	GtkTreeSelection *sel = gtk_tree_view_get_selection (treeview);
@@ -1689,6 +1631,20 @@ treeview_cursor_changed_cb(GtkTreeView *treeview, gpointer data)
 }
 
 static void
+pidgin_status_box_buffer_changed_cb(GtkTextBuffer *buffer, gpointer data) {
+	PidginStatusBox *status_box = (PidginStatusBox*)data;
+	if (gtk_widget_get_sensitive(GTK_WIDGET(status_box)))
+	{
+		if (status_box->typing != 0) {
+			pidgin_status_box_pulse_typing(status_box);
+			g_source_remove(status_box->typing);
+		}
+		status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
+	}
+	pidgin_status_box_refresh(status_box);
+}
+
+static void
 pidgin_status_box_init (PidginStatusBox *status_box)
 {
 	GtkCellRenderer *text_rend;
@@ -1698,7 +1654,7 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 	GtkTreeSelection *sel;
 
 	gtk_widget_set_has_window(GTK_WIDGET(status_box), FALSE);
-	status_box->webview_visible = FALSE;
+	status_box->editor_visible = FALSE;
 	status_box->network_available = purple_network_is_available();
 	status_box->connecting = FALSE;
 	status_box->typing = 0;
@@ -1795,40 +1751,30 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 	g_object_set(status_box->text_rend, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
 
 	status_box->vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, FALSE);
-	status_box->sw = pidgin_create_webview(TRUE, &status_box->webview, NULL);
-	pidgin_webview_hide_toolbar(PIDGIN_WEBVIEW(status_box->webview));
+	status_box->editor = talkatu_editor_new();
+	status_box->view = talkatu_editor_get_view(TALKATU_EDITOR(status_box->editor));
+	status_box->buffer = talkatu_html_buffer_new();
+	gtk_text_view_set_buffer(GTK_TEXT_VIEW(status_box->view), status_box->buffer);
 
-#if 0
-	g_signal_connect(G_OBJECT(status_box->toggle_button), "button-press-event",
-			 G_CALLBACK(button_pressed_cb), status_box);
-	g_signal_connect(G_OBJECT(status_box->toggle_button), "button-release-event",
-			 G_CALLBACK(button_released_cb), status_box);
-#endif
+	g_signal_connect(G_OBJECT(status_box->buffer), "changed",
+	                 G_CALLBACK(pidgin_status_box_buffer_changed_cb),
+	                 status_box);
+
 	g_signal_connect(G_OBJECT(status_box->toggle_button), "key-press-event",
 	                 G_CALLBACK(toggle_key_press_cb), status_box);
 	g_signal_connect(G_OBJECT(status_box->toggle_button), "button-press-event",
 	                 G_CALLBACK(toggled_cb), status_box);
-	g_signal_connect(G_OBJECT(status_box->webview), "changed",
-	                 G_CALLBACK(webview_changed_cb), status_box);
-	g_signal_connect(G_OBJECT(status_box->webview), "format-toggled",
-	                 G_CALLBACK(webview_format_changed_cb), status_box);
-	g_signal_connect_swapped(G_OBJECT(status_box->webview), "selection-changed",
-	                         G_CALLBACK(webview_cursor_moved_cb), status_box);
-	g_signal_connect(G_OBJECT(status_box->webview), "key-press-event",
+	g_signal_connect(G_OBJECT(status_box->view), "key-press-event",
 	                 G_CALLBACK(webview_remove_focus), status_box);
 
-	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
-		pidgin_webview_set_spellcheck(PIDGIN_WEBVIEW(status_box->webview), TRUE);
 	gtk_widget_set_parent(status_box->vbox, GTK_WIDGET(status_box));
 	gtk_widget_show_all(status_box->vbox);
 
 	gtk_widget_set_parent(status_box->toggle_button, GTK_WIDGET(status_box));
 
-	gtk_box_pack_start(GTK_BOX(status_box->vbox), status_box->sw, TRUE, TRUE, 0);
+	gtk_box_pack_start(GTK_BOX(status_box->vbox), status_box->editor, TRUE, TRUE, 0);
 
 	g_signal_connect(G_OBJECT(status_box), "scroll-event", G_CALLBACK(combo_box_scroll_event_cb), NULL);
-	g_signal_connect(G_OBJECT(status_box->webview), "scroll-event",
-	                 G_CALLBACK(webview_scroll_event_cb), status_box->webview);
 	g_signal_connect(G_OBJECT(status_box->popup_window), "button_release_event", G_CALLBACK(treeview_button_release_cb), status_box);
 	g_signal_connect(G_OBJECT(status_box->popup_window), "key_press_event", G_CALLBACK(treeview_key_press_event), status_box);
 	g_signal_connect(G_OBJECT(status_box->tree_view), "cursor-changed",
@@ -1864,8 +1810,6 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 						PURPLE_CALLBACK(account_status_changed_cb),
 						status_box);
 
-	purple_prefs_connect_callback(status_box, PIDGIN_PREFS_ROOT "/conversations/spellcheck",
-								spellcheck_prefs_cb, status_box);
 	purple_prefs_connect_callback(status_box, PIDGIN_PREFS_ROOT "/accounts/buddyicon",
 	                            update_buddyicon_cb, status_box);
 
@@ -1885,7 +1829,7 @@ pidgin_status_box_get_preferred_height(GtkWidget *widget, gint *minimum_height,
 	*natural_height = MAX(*natural_height, 34) + border_width * 2;
 
 	/* If the gtkwebview is visible, then add some additional padding */
-	if (PIDGIN_STATUS_BOX(widget)->webview_visible) {
+	if (PIDGIN_STATUS_BOX(widget)->editor_visible) {
 		gtk_widget_get_preferred_height(PIDGIN_STATUS_BOX(widget)->vbox,
 			&box_min_height, &box_nat_height);
 
@@ -2315,7 +2259,7 @@ activate_currently_selected_status(PidginStatusBox *status_box)
 	if (!message || !*message)
 	{
 		gtk_widget_hide(status_box->vbox);
-		status_box->webview_visible = FALSE;
+		status_box->editor_visible = FALSE;
 		g_free(message);
 		message = NULL;
 	}
@@ -2471,79 +2415,13 @@ activate_currently_selected_status(PidginStatusBox *status_box)
 
 static void update_size(PidginStatusBox *status_box)
 {
-#if 0
-	/* TODO WebKit Sizing */
-	GtkTextBuffer *buffer;
-	GtkTextIter iter;
-	int display_lines;
-	int lines;
-	GdkRectangle oneline;
-	int height;
-	int pad_top, pad_inside, pad_bottom;
-	gboolean interior_focus;
-	int focus_width;
-#endif
-
-	if (!status_box->webview_visible)
+	if (!status_box->editor_visible)
 	{
 		if (status_box->vbox != NULL)
 			gtk_widget_set_size_request(status_box->vbox, -1, -1);
 		return;
 	}
 
-#if 0
-	/* TODO WebKit: Entry sizing */
-	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(status_box->webview));
-
-	height = 0;
-	display_lines = 1;
-	gtk_text_buffer_get_start_iter(buffer, &iter);
-	do {
-		gtk_text_view_get_iter_location(GTK_TEXT_VIEW(status_box->webview), &iter, &oneline);
-		height += oneline.height;
-		display_lines++;
-	} while (display_lines <= 4 &&
-		gtk_text_view_forward_display_line(GTK_TEXT_VIEW(status_box->webview), &iter));
-
-	/*
-	 * This check fixes the case where the last character entered is a
-	 * newline (shift+return).  For some reason the
-	 * gtk_text_view_forward_display_line() function doesn't treat this
-	 * like a new line, and so we think the input box only needs to be
-	 * two lines instead of three, for example.  So we check if the
-	 * last character was a newline and add some extra height if so.
-	 */
-	if (display_lines <= 4
-		&& gtk_text_iter_backward_char(&iter)
-		&& gtk_text_iter_get_char(&iter) == '\n')
-	{
-		gtk_text_view_get_iter_location(GTK_TEXT_VIEW(status_box->webview), &iter, &oneline);
-		height += oneline.height;
-		display_lines++;
-	}
-
-	lines = gtk_text_buffer_get_line_count(buffer);
-
-	/* Show a maximum of 4 lines */
-	lines = MIN(lines, 4);
-	display_lines = MIN(display_lines, 4);
-
-	pad_top = gtk_text_view_get_pixels_above_lines(GTK_TEXT_VIEW(status_box->webview));
-	pad_bottom = gtk_text_view_get_pixels_below_lines(GTK_TEXT_VIEW(status_box->webview));
-	pad_inside = gtk_text_view_get_pixels_inside_wrap(GTK_TEXT_VIEW(status_box->webview));
-
-	height += (pad_top + pad_bottom) * lines;
-	height += (pad_inside) * (display_lines - lines);
-
-	gtk_widget_style_get(status_box->webview,
-	                     "interior-focus", &interior_focus,
-	                     "focus-line-width", &focus_width,
-	                     NULL);
-	if (!interior_focus)
-		height += 2 * focus_width;
-
-	gtk_widget_set_size_request(status_box->vbox, -1, height + PIDGIN_HIG_BOX_SPACE);
-#endif
 	gtk_widget_set_size_request(status_box->vbox, -1, -1);
 }
 
@@ -2555,12 +2433,6 @@ static void remove_typing_cb(PidginStatusBox *status_box)
 		status_menu_refresh_iter(status_box, FALSE);
 		return;
 	}
-
-#if 0
-	/* TODO WebKit: Doesn't do this? */
-	pidgin_webview_set_populate_primary_clipboard(
-		PIDGIN_WEBVIEW(status_box->webview), TRUE);
-#endif
 
 	g_source_remove(status_box->typing);
 	status_box->typing = 0;
@@ -2639,7 +2511,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 		accounts = g_list_prepend(accounts, status_box->account);
 	else
 		accounts = purple_accounts_get_all_active();
-	status_box->webview_visible = FALSE;
+	status_box->editor_visible = FALSE;
 	for (node = accounts; node != NULL; node = node->next)
 	{
 		PurpleAccount *account;
@@ -2650,7 +2522,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 		if ((status_type != NULL) &&
 			(purple_status_type_get_attr(status_type, "message") != NULL))
 		{
-			status_box->webview_visible = TRUE;
+			status_box->editor_visible = TRUE;
 			break;
 		}
 	}
@@ -2658,18 +2530,17 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 
 	if (gtk_widget_get_sensitive(GTK_WIDGET(status_box)))
 	{
-		if (status_box->webview_visible)
+		if (status_box->editor_visible)
 		{
+			GtkTextIter start, end;
+
 			gtk_widget_show_all(status_box->vbox);
 			status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
-			gtk_widget_grab_focus(status_box->webview);
-#if 0
-			/* TODO WebKit: Doesn't do this? */
-			pidgin_webview_set_populate_primary_clipboard(
-				PIDGIN_WEBVIEW(status_box->webview), FALSE);
-#endif
+			gtk_widget_grab_focus(status_box->view);
 
-			webkit_web_view_select_all(WEBKIT_WEB_VIEW(status_box->webview));
+			gtk_text_buffer_get_start_iter(status_box->buffer, &start);
+			gtk_text_buffer_get_end_iter(status_box->buffer, &end);
+			gtk_text_buffer_select_range(GTK_TEXT_BUFFER(status_box->buffer), &start, &end);
 		}
 		else
 		{
@@ -2710,31 +2581,10 @@ get_statusbox_index(PidginStatusBox *box, PurpleSavedStatus *saved_status)
 	return index;
 }
 
-static void
-webview_changed_cb(PidginWebView *webview, void *data)
-{
-	PidginStatusBox *status_box = (PidginStatusBox*)data;
-	if (gtk_widget_get_sensitive(GTK_WIDGET(status_box)))
-	{
-		if (status_box->typing != 0) {
-			pidgin_status_box_pulse_typing(status_box);
-			g_source_remove(status_box->typing);
-		}
-		status_box->typing = g_timeout_add_seconds(TYPING_TIMEOUT, (GSourceFunc)remove_typing_cb, status_box);
-	}
-	pidgin_status_box_refresh(status_box);
-}
-
-static void
-webview_format_changed_cb(PidginWebView *webview, PidginWebViewButtons buttons, void *data)
-{
-	webview_changed_cb(NULL, data);
-}
-
 char *pidgin_status_box_get_message(PidginStatusBox *status_box)
 {
-	if (status_box->webview_visible)
-		return g_strstrip(pidgin_webview_get_body_text(PIDGIN_WEBVIEW(status_box->webview)));
+	if (status_box->editor_visible)
+		return g_strstrip(talkatu_markup_get_html(status_box->buffer, NULL));
 	else
 		return NULL;
 }
