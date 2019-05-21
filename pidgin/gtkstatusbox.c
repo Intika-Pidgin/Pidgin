@@ -1053,18 +1053,8 @@ combo_box_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, gpointer data)
 	return TRUE;
 }
 
-// static gboolean
-// webview_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, PidginWebView *webview)
-// {
-// 	if (event->direction == GDK_SCROLL_UP)
-// 		pidgin_webview_page_up(webview);
-// 	else if (event->direction == GDK_SCROLL_DOWN)
-// 		pidgin_webview_page_down(webview);
-// 	return TRUE;
-// }
-
 static gboolean
-webview_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_box)
+editor_remove_focus(GtkWidget *w, GdkEventKey *event, PidginStatusBox *status_box)
 {
 	if (event->keyval == GDK_KEY_Return || event->keyval == GDK_KEY_KP_Enter) {
 		remove_typing_cb(status_box);
@@ -1765,7 +1755,7 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 	g_signal_connect(G_OBJECT(status_box->toggle_button), "button-press-event",
 	                 G_CALLBACK(toggled_cb), status_box);
 	g_signal_connect(G_OBJECT(status_box->view), "key-press-event",
-	                 G_CALLBACK(webview_remove_focus), status_box);
+	                 G_CALLBACK(editor_remove_focus), status_box);
 
 	gtk_widget_set_parent(status_box->vbox, GTK_WIDGET(status_box));
 	gtk_widget_show_all(status_box->vbox);
@@ -1828,7 +1818,7 @@ pidgin_status_box_get_preferred_height(GtkWidget *widget, gint *minimum_height,
 	*minimum_height = MAX(*minimum_height, 34) + border_width * 2;
 	*natural_height = MAX(*natural_height, 34) + border_width * 2;
 
-	/* If the gtkwebview is visible, then add some additional padding */
+	/* If the editor is visible, then add some additional padding */
 	if (PIDGIN_STATUS_BOX(widget)->editor_visible) {
 		gtk_widget_get_preferred_height(PIDGIN_STATUS_BOX(widget)->vbox,
 			&box_min_height, &box_nat_height);
