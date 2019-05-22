@@ -854,7 +854,7 @@ status_menu_refresh_iter(PidginStatusBox *status_box, gboolean status_changed)
 		 */
 		gtk_widget_set_sensitive(GTK_WIDGET(status_box->view), FALSE);
 
-		talkatu_markup_set_html(TALKATU_BUFFER(status_box->buffer), "", -1);
+		talkatu_buffer_clear(TALKATU_BUFFER(status_box->buffer));
 
 		if (!purple_savedstatus_is_transient(saved_status) || !message || !*message)
 		{
@@ -1047,7 +1047,7 @@ pidgin_status_box_regenerate(PidginStatusBox *status_box, gboolean status_change
 }
 
 static gboolean
-combo_box_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, gpointer data)
+combo_box_scroll_event_cb(GtkWidget *w, GdkEventScroll *event, G_GNUC_UNUSED gpointer data)
 {
 	pidgin_status_box_popup(PIDGIN_STATUS_BOX(w), (GdkEvent *)event);
 	return TRUE;
@@ -2530,7 +2530,7 @@ static void pidgin_status_box_changed(PidginStatusBox *status_box)
 
 			gtk_text_buffer_get_start_iter(status_box->buffer, &start);
 			gtk_text_buffer_get_end_iter(status_box->buffer, &end);
-			gtk_text_buffer_select_range(GTK_TEXT_BUFFER(status_box->buffer), &start, &end);
+			gtk_text_buffer_select_range(status_box->buffer, &start, &end);
 		}
 		else
 		{
