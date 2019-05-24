@@ -21,6 +21,8 @@
 #include "internal.h"
 #include "pidgin.h"
 
+#include <talkatu.h>
+
 #include "account.h"
 #include "debug.h"
 #include "log.h"
@@ -31,7 +33,6 @@
 #include "pidginstock.h"
 #include "gtkblist.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 #include "pidginlog.h"
 
 #include "gtk3compat.h"
@@ -39,13 +40,17 @@
 #define PIDGIN_TYPE_LOG_VIEWER pidgin_log_viewer_get_type()
 /**
  * PidginLogViewer:
- * @logs:      The list of logs viewed in this viewer
- * @treestore: The treestore containing said logs
- * @treeview:  The treeview representing said treestore
- * @log_view:  The webkit web view to display said logs
- * @entry:     The search entry, in which search terms are entered
- * @search:    The string currently being searched for
- * @label:     The label at the top of the log viewer
+ * @logs:          The list of logs viewed in this viewer
+ * @browse_button: The button for opening a log folder externally
+ * @treestore:     The treestore containing said logs
+ * @treeview:      The treeview representing said treestore
+ * @log_view:      The talkatu view to display said logs
+ * @log_buffer:    The talkatu buffer to hold said logs
+ * @title_box:     The box containing the title (and optional icon)
+ * @label:         The label at the top of the log viewer
+ * @size_label:    The label to show the size of the logs
+ * @entry:         The search entry, in which search terms are entered
+ * @search:        The string currently being searched for
  *
  * A Pidgin Log Viewer.  You can look at logs with it.
  */
@@ -56,13 +61,20 @@ struct _PidginLogViewer {
 
 	GList *logs;
 
+	GtkWidget *browse_button;
+
 	GtkTreeStore     *treestore;
 	GtkWidget        *treeview;
 	GtkWidget        *log_view;
-	GtkWidget        *entry;
+	TalkatuHtmlBuffer *log_buffer;
 
-	char             *search;
+	GtkWidget *title_box;
 	GtkLabel         *label;
+
+	GtkWidget *size_label;
+
+	GtkWidget *entry;
+	char *search;
 };
 
 G_DEFINE_TYPE(PidginLogViewer, pidgin_log_viewer, GTK_TYPE_DIALOG)
@@ -149,26 +161,31 @@ static gchar *log_get_date(PurpleLog *log)
 	return ret;
 }
 
-static void search_cb(GtkWidget *button, PidginLogViewer *lv)
+static void
+entry_stop_search_cb(GtkWidget *entry, PidginLogViewer *lv)
+{
+	/* reset the tree */
+	gtk_tree_store_clear(lv->treestore);
+	populate_log_tree(lv);
+	g_clear_pointer(&lv->search, g_free);
+#if 0
+	webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(lv->log_view));
+#endif
+	select_first_log(lv);
+}
+
+static void
+entry_search_changed_cb(GtkWidget *button, PidginLogViewer *lv)
 {
 	const char *search_term = gtk_entry_get_text(GTK_ENTRY(lv->entry));
 	GList *logs;
 
-	if (!(*search_term)) {
-		/* reset the tree */
-		gtk_tree_store_clear(lv->treestore);
-		populate_log_tree(lv);
-		g_free(lv->search);
-		lv->search = NULL;
-		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(lv->log_view));
-		select_first_log(lv);
-		return;
-	}
-
 	if (lv->search != NULL && purple_strequal(lv->search, search_term))
 	{
+#if 0
 		/* Searching for the same term acts as "Find Next" */
 		webkit_web_view_search_text(WEBKIT_WEB_VIEW(lv->log_view), lv->search, FALSE, TRUE, TRUE);
+#endif
 		return;
 	}
 
@@ -178,7 +195,7 @@ static void search_cb(GtkWidget *button, PidginLogViewer *lv)
 	lv->search = g_strdup(search_term);
 
 	gtk_tree_store_clear(lv->treestore);
-	webkit_web_view_open(WEBKIT_WEB_VIEW(lv->log_view), "about:blank"); /* clear the view */
+	talkatu_buffer_clear(TALKATU_BUFFER(lv->log_buffer));
 
 	for (logs = lv->logs; logs != NULL; logs = logs->next) {
 		char *read = purple_log_read((PurpleLog*)logs->data, NULL);
@@ -444,6 +461,7 @@ static gboolean log_popup_menu_cb(GtkWidget *treeview, PidginLogViewer *lv)
 	}
 }
 
+#if 0 /* FIXME: Add support in Talkatu for highlighting search terms. */
 static gboolean search_find_cb(gpointer data)
 {
 	PidginLogViewer *viewer = data;
@@ -452,6 +470,7 @@ static gboolean search_find_cb(gpointer data)
 	webkit_web_view_search_text(WEBKIT_WEB_VIEW(viewer->log_view), viewer->search, FALSE, TRUE, TRUE);
 	return FALSE;
 }
+#endif
 
 static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 	GtkTreeIter iter;
@@ -476,13 +495,14 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 
 	if (log->type != PURPLE_LOG_SYSTEM) {
 		gchar *log_date = log_get_date(log);
-		char *title;
-		if (log->type == PURPLE_LOG_CHAT)
-			title = g_strdup_printf(_("<span size='larger' weight='bold'>Conversation in %s on %s</span>"),
-									log->name, log_date);
-		else
-			title = g_strdup_printf(_("<span size='larger' weight='bold'>Conversation with %s on %s</span>"),
-									log->name, log_date);
+		gchar *title;
+		if (log->type == PURPLE_LOG_CHAT) {
+			title = g_strdup_printf(_("Conversation in %s on %s"),
+			                        log->name, log_date);
+		} else {
+			title = g_strdup_printf(_("Conversation with %s on %s"),
+			                        log->name, log_date);
+		}
 
 		gtk_label_set_markup(viewer->label, title);
 		g_free(log_date);
@@ -491,7 +511,7 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 
 	read = purple_log_read(log, &flags);
 
-	webkit_web_view_open(WEBKIT_WEB_VIEW(viewer->log_view), "about:blank");
+	talkatu_buffer_clear(TALKATU_BUFFER(viewer->log_buffer));
 
 	purple_signal_emit(pidgin_log_get_handle(), "log-displaying", viewer, log);
 	
@@ -503,12 +523,14 @@ static void log_select_cb(GtkTreeSelection *sel, PidginLogViewer *viewer) {
 		read = newRead;
 	}
 
-	webkit_web_view_load_html_string(WEBKIT_WEB_VIEW(viewer->log_view), read, "");
+	talkatu_markup_set_html(TALKATU_BUFFER(viewer->log_buffer), read, -1);
 	g_free(read);
 
 	if (viewer->search != NULL) {
+#if 0 /* FIXME: Add support in Talkatu for highlighting search terms. */
 		webkit_web_view_unmark_text_matches(WEBKIT_WEB_VIEW(viewer->log_view));
 		g_idle_add(search_find_cb, viewer);
+#endif
 	}
 
 	pidgin_clear_cursor(GTK_WIDGET(viewer));
@@ -564,17 +586,6 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 						const char *title, GtkWidget *icon, int log_size)
 {
 	PidginLogViewer *lv;
-	GtkWidget *title_box;
-	char *text;
-	GtkWidget *pane;
-	GtkCellRenderer *rend;
-	GtkTreeViewColumn *col;
-	GtkTreeSelection *sel;
-	GtkWidget *vbox;
-	GtkWidget *frame;
-	GtkWidget *hbox;
-	GtkWidget *find_button;
-	GtkWidget *size_label;
 
 	if (logs == NULL)
 	{
@@ -606,115 +617,45 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 	/* Window ***********/
 	lv = g_object_new(PIDGIN_TYPE_LOG_VIEWER, NULL);
 	gtk_window_set_title(GTK_WINDOW(lv), title);
-	gtk_dialog_add_buttons(GTK_DIALOG(lv), GTK_STOCK_CLOSE, GTK_RESPONSE_CLOSE, NULL);
 
 	lv->logs = logs;
 
 	if (ht != NULL)
 		g_hash_table_insert(log_viewers, ht, lv);
 
-#ifdef _WIN32
-	/* Steal the "HELP" response and use it to trigger browsing to the logs folder */
-	gtk_dialog_add_button(GTK_DIALOG(lv), _("_Browse logs folder"), GTK_RESPONSE_HELP);
+#ifndef _WIN32
+	gtk_widget_hide(lv->browse_button);
 #endif
-	gtk_container_set_border_width(GTK_CONTAINER(lv), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_set_spacing(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))), 0);
-	g_signal_connect(G_OBJECT(lv), "response",
-					 G_CALLBACK(destroy_cb), ht);
-	gtk_window_set_role(GTK_WINDOW(lv), "log_viewer");
+
+	g_signal_connect(G_OBJECT(lv), "response", G_CALLBACK(destroy_cb), ht);
 
 	/* Icon *************/
 	if (icon != NULL) {
-		title_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-		gtk_container_set_border_width(GTK_CONTAINER(title_box), PIDGIN_HIG_BOX_SPACE);
-		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))),
-		                   title_box, FALSE, FALSE, 0);
-
-		gtk_box_pack_start(GTK_BOX(title_box), icon, FALSE, FALSE, 0);
-	} else
-		title_box = gtk_dialog_get_content_area(GTK_DIALOG(lv));
+		gtk_box_pack_start(GTK_BOX(lv->title_box), icon, FALSE, FALSE,
+		                   0);
+	}
 
 	/* Label ************/
-	lv->label = GTK_LABEL(gtk_label_new(NULL));
-
-	text = g_strdup_printf("<span size='larger' weight='bold'>%s</span>", title);
-
-	gtk_label_set_markup(lv->label, text);
-	gtk_label_set_xalign(GTK_LABEL(lv->label), 0);
-	gtk_label_set_yalign(GTK_LABEL(lv->label), 0);
-	gtk_box_pack_start(GTK_BOX(title_box), GTK_WIDGET(lv->label), FALSE, FALSE, 0);
-	g_free(text);
-
-	/* Pane *************/
-	pane = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
-	gtk_container_set_border_width(GTK_CONTAINER(pane), PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))),
-	                   pane, TRUE, TRUE, 0);
+	gtk_label_set_markup(lv->label, title);
 
 	/* List *************/
-	lv->treestore = gtk_tree_store_new (2, G_TYPE_STRING, G_TYPE_POINTER);
-	lv->treeview = gtk_tree_view_new_with_model (GTK_TREE_MODEL (lv->treestore));
-	g_object_unref(G_OBJECT(lv->treestore));
-	rend = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes ("time", rend, "markup", 0, NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW(lv->treeview), col);
-	gtk_tree_view_set_headers_visible (GTK_TREE_VIEW (lv->treeview), FALSE);
-	gtk_paned_add1(GTK_PANED(pane),
-		pidgin_make_scrollable(lv->treeview, GTK_POLICY_NEVER, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, -1));
-
 	populate_log_tree(lv);
-
-	sel = gtk_tree_view_get_selection (GTK_TREE_VIEW (lv->treeview));
-	g_signal_connect (G_OBJECT (sel), "changed",
-			G_CALLBACK (log_select_cb),
-			lv);
-	g_signal_connect (G_OBJECT(lv->treeview), "row-activated",
-			G_CALLBACK(log_row_activated_cb),
-			lv);
-	pidgin_set_accessible_label(lv->treeview, lv->label);
-
-	g_signal_connect(lv->treeview, "button-press-event", G_CALLBACK(log_button_press_cb), lv);
-	g_signal_connect(lv->treeview, "popup-menu", G_CALLBACK(log_popup_menu_cb), lv);
 
 	/* Log size ************/
 	if(log_size) {
 		char *sz_txt = purple_str_size_to_units(log_size);
-		text = g_strdup_printf("<span weight='bold'>%s</span> %s", _("Total log size:"), sz_txt);
-		size_label = gtk_label_new(NULL);
-		gtk_label_set_markup(GTK_LABEL(size_label), text);
-		/*		gtk_paned_add1(GTK_PANED(pane), size_label); */
-		gtk_label_set_xalign(GTK_LABEL(size_label), 0);
-		gtk_label_set_yalign(GTK_LABEL(size_label), 0);
-		gtk_box_pack_end(GTK_BOX(gtk_dialog_get_content_area(GTK_DIALOG(lv))),
-		                 size_label, FALSE, FALSE, 0);
+		char *text = g_strdup_printf("<span weight='bold'>%s</span> %s",
+		                             _("Total log size:"), sz_txt);
+		gtk_label_set_markup(GTK_LABEL(lv->size_label), text);
 		g_free(sz_txt);
 		g_free(text);
+	} else {
+		gtk_widget_hide(lv->size_label);
 	}
-
-	/* A fancy little box ************/
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_paned_add2(GTK_PANED(pane), vbox);
-
-	/* Viewer ************/
-	frame = pidgin_create_webview(FALSE, &lv->log_view, NULL);
-	gtk_widget_set_name(lv->log_view, "pidgin_log_log_view");
-	gtk_widget_set_size_request(lv->log_view, 320, 200);
-	gtk_box_pack_start(GTK_BOX(vbox), frame, TRUE, TRUE, 0);
-	gtk_widget_show(frame);
-
-	/* Search box **********/
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	lv->entry = gtk_entry_new();
-	gtk_box_pack_start(GTK_BOX(hbox), lv->entry, TRUE, TRUE, 0);
-	find_button = gtk_button_new_from_stock(GTK_STOCK_FIND);
-	gtk_box_pack_start(GTK_BOX(hbox), find_button, FALSE, FALSE, 0);
-	g_signal_connect(GTK_ENTRY(lv->entry), "activate", G_CALLBACK(search_cb), lv);
-	g_signal_connect(GTK_BUTTON(find_button), "clicked", G_CALLBACK(search_cb), lv);
 
 	select_first_log(lv);
 
-	gtk_widget_show_all(GTK_WIDGET(lv));
+	gtk_widget_show(GTK_WIDGET(lv));
 
 	return lv;
 }
@@ -725,11 +666,51 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 static void
 pidgin_log_viewer_class_init(PidginLogViewerClass *klass)
 {
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	gtk_widget_class_set_template_from_resource(
+	        widget_class, "/im/pidgin/Pidgin/Log/log-viewer.ui");
+
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, browse_button);
+
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, title_box);
+	gtk_widget_class_bind_template_child_internal(widget_class,
+	                                              PidginLogViewer, label);
+
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, treeview);
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, treestore);
+	gtk_widget_class_bind_template_callback(widget_class, log_select_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        log_row_activated_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        log_button_press_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        log_popup_menu_cb);
+
+	gtk_widget_class_bind_template_child_internal(widget_class,
+	                                              PidginLogViewer, entry);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        entry_search_changed_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        entry_stop_search_cb);
+
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, log_view);
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, log_buffer);
+
+	gtk_widget_class_bind_template_child_internal(
+	        widget_class, PidginLogViewer, size_label);
 }
 
 static void
 pidgin_log_viewer_init(PidginLogViewer *self)
 {
+	gtk_widget_init_template(GTK_WIDGET(self));
 }
 
 /****************************************************************************
