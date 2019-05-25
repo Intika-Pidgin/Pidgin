@@ -435,34 +435,21 @@ setup_icon_box(PidginStatusBox *status_box)
 static void
 destroy_icon_box(PidginStatusBox *statusbox)
 {
-	if (statusbox->icon_box == NULL)
-		return;
+	g_clear_pointer(&statusbox->icon_box, gtk_widget_destroy);
 
-	gtk_widget_destroy(statusbox->icon_box);
+	g_clear_object(&statusbox->hand_cursor);
+	g_clear_object(&statusbox->arrow_cursor);
 
-	g_object_unref(statusbox->hand_cursor);
-	g_object_unref(statusbox->arrow_cursor);
+	g_clear_object(&statusbox->buddy_icon_img);
 
-	if (statusbox->buddy_icon_img)
-		g_object_unref(statusbox->buddy_icon_img);
+	g_clear_object(&statusbox->buddy_icon);
+	g_clear_object(&statusbox->buddy_icon_hover);
 
-	g_object_unref(G_OBJECT(statusbox->buddy_icon));
-	g_object_unref(G_OBJECT(statusbox->buddy_icon_hover));
+	g_clear_pointer(&statusbox->buddy_icon_sel, gtk_widget_destroy);
 
-	if (statusbox->buddy_icon_sel)
-		gtk_widget_destroy(statusbox->buddy_icon_sel);
-
-	if (statusbox->icon_box_menu)
-		gtk_widget_destroy(statusbox->icon_box_menu);
+	g_clear_pointer(&statusbox->icon_box_menu, gtk_widget_destroy);
 
 	statusbox->icon = NULL;
-	statusbox->icon_box = NULL;
-	statusbox->icon_box_menu = NULL;
-	statusbox->buddy_icon_img = NULL;
-	statusbox->buddy_icon = NULL;
-	statusbox->buddy_icon_hover = NULL;
-	statusbox->hand_cursor = NULL;
-	statusbox->arrow_cursor = NULL;
 }
 
 static void
@@ -506,6 +493,14 @@ pidgin_status_box_set_property(GObject *object, guint param_id,
 }
 
 static void
+pidgin_status_box_dispose(GObject *obj)
+{
+	PidginStatusBox *statusbox = PIDGIN_STATUS_BOX(obj);
+
+	destroy_icon_box(statusbox);
+}
+
+static void
 pidgin_status_box_finalize(GObject *obj)
 {
 	PidginStatusBox *statusbox = PIDGIN_STATUS_BOX(obj);
@@ -513,8 +508,6 @@ pidgin_status_box_finalize(GObject *obj)
 
 	purple_signals_disconnect_by_handle(statusbox);
 	purple_prefs_disconnect_by_handle(statusbox);
-
-	destroy_icon_box(statusbox);
 
 	if (statusbox->active_row)
 		gtk_tree_row_reference_free(statusbox->active_row);
@@ -560,6 +553,7 @@ pidgin_status_box_class_init (PidginStatusBoxClass *klass)
 
 	object_class = (GObjectClass *)klass;
 
+	object_class->dispose = pidgin_status_box_dispose;
 	object_class->finalize = pidgin_status_box_finalize;
 
 	object_class->get_property = pidgin_status_box_get_property;
