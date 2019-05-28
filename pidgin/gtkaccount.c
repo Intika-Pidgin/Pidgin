@@ -1618,7 +1618,7 @@ pidgin_account_dialog_show_continue(PurpleAccount *account,
 	else
 	{
 		dialog->protocol_id =
-			g_strdup(purple_account_get_protocol_id(dialog->account));
+			g_strdup(purple_account_get_protocol_id(account));
 	}
 
 	/* TODO if no protocols are loaded, this should inform the user that
