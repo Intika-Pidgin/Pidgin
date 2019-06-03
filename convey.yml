@@ -1,0 +1,43 @@
+environment:
+  - REPO=pidgin/pidgin2-docs
+  - TAG=latest
+  - REGISTRY=docker.io
+  - REGISTRY_USERNAME
+  - REGISTRY_PASSWORD
+
+tasks:
+  import:
+    type: docker/import
+    files: .:.
+
+  build:
+    type: docker/build
+    dockerfile: Dockerfile.doxygen
+    tag: ${REGISTRY}/${REPO}:${TAG}
+    files: .:.
+
+  login:
+    type: docker/login
+    username: ${REGISTRY_USERNAME}
+    password: ${REGISTRY_PASSWORD}
+    server: ${REGISTRY}
+
+  logout:
+    type: docker/logout
+    server: ${REGISTRY}
+
+  push:
+    type: docker/push
+    images: ${REGISTRY}/${REPO}:${TAG}
+
+plans:
+  default:
+    stages:
+      - tasks: [import, build]
+
+  ci:
+    stages:
+      - tasks: [import, build, login, push]
+      - tasks: [logout]
+        run: always
+
