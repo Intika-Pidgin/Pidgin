@@ -2185,12 +2185,11 @@ purple_media_manager_unregister_gst_device(PurpleMediaManager *manager,
 	GList *i;
 	gchar *name;
 	gchar *device_class;
-	gboolean done = FALSE;
 
 	name = gst_device_get_display_name(device);
 	device_class = gst_device_get_device_class(device);
 
-	for (i = manager->priv->elements; i && !done; i = i->next) {
+	for (i = manager->priv->elements; i; i = i->next) {
 		PurpleMediaElementInfo *info = i->data;
 		GstDevice *device2;
 
@@ -2215,8 +2214,7 @@ purple_media_manager_unregister_gst_device(PurpleMediaManager *manager,
 						device_class, name);
 
 				g_free(id);
-
-				done = TRUE;
+				break;
 			}
 
 			g_free(name2);
