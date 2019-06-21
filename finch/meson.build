@@ -1,6 +1,6 @@
 enable_consoleui = false
 if get_option('consoleui')
-	libgnt_dep = dependency('gnt', version : '>= 3.0.0', required : false)
+	libgnt_dep = dependency('gnt3', version : '>= 3.0.0', required : false)
 	if libgnt_dep.found()
 		libgnt_gir = ['Gnt-3.0']
 	else
