@@ -674,9 +674,6 @@ struct _PurpleProtocolFactoryIface
 
 	PurpleWhiteboard *(*whiteboard_new)(PurpleAccount *account,
 	                                    const char *who, int state);
-
-	PurpleXfer *(*xfer_new)(PurpleAccount *account, PurpleXferType type,
-	                        const char *who);
 };
 
 #define PURPLE_PROTOCOL_HAS_FACTORY_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_FACTORY_IFACE))
@@ -1416,12 +1413,6 @@ PurpleRoomlist *purple_protocol_factory_iface_roomlist_new(PurpleProtocol *proto
  */
 PurpleWhiteboard *purple_protocol_factory_iface_whiteboard_new(PurpleProtocol *protocol,
 		PurpleAccount *account, const char *who, int state);
-
-/**
- * purple_protocol_factory_iface_xfer_new: (skip)
- */
-PurpleXfer *purple_protocol_factory_iface_xfer_new(PurpleProtocol *protocol,
-		PurpleAccount *account, PurpleXferType type, const char *who);
 
 G_END_DECLS
 
