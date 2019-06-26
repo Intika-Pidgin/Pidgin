@@ -712,12 +712,13 @@ x509_import_from_file(const gchar * filename)
 	/* Next, we'll simply yank the entire contents of the file
 	   into memory */
 	/* TODO: Should I worry about very large files here? */
-	if (g_file_get_contents(filename,
+	if (!g_file_get_contents(filename,
 			&buf,
 			&buf_sz,
 			NULL      /* No error checking for now */
-		) == FALSE)
+			)) {
 		return NULL;
+	}
 
 	/* Load the datum struct */
 	dt.data = (unsigned char *) buf;
