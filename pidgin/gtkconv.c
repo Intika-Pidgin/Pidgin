@@ -8192,6 +8192,7 @@ pidgin_conversations_set_tab_colors(void)
 
 	if(tab_color_fuse) {
 		tab_color_fuse = FALSE;
+		g_string_free(str, FALSE);
 		return;
 	}
 
