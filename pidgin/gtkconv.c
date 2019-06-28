@@ -8173,7 +8173,7 @@ static void
 pidgin_conversations_set_tab_colors(void)
 {
 	/* Set default tab colors */
-	GString *str = g_string_new(NULL);
+	GString *str;
 	GtkSettings *settings = gtk_settings_get_default();
 	GtkStyle *parent = gtk_rc_get_style_by_paths(settings, "tab-container.tab-label*", NULL, G_TYPE_NONE), *now;
 	struct {
@@ -8192,9 +8192,10 @@ pidgin_conversations_set_tab_colors(void)
 
 	if(tab_color_fuse) {
 		tab_color_fuse = FALSE;
-		g_string_free(str, FALSE);
 		return;
 	}
+
+	str = g_string_new(NULL);
 
 	for (iter = 0; styles[iter].stylename; iter++) {
 		now = gtk_rc_get_style_by_paths(settings, styles[iter].labelname, NULL, G_TYPE_NONE);
