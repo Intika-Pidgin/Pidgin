@@ -1121,77 +1121,84 @@ async_bonjour_jabber_close_conversation(BonjourJabberConversation *bconv) {
 void
 bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 {
-	if (bconv != NULL) {
-		BonjourData *bd = NULL;
+	BonjourData *bd = NULL;
+	PurpleConnection *pc = NULL;
 
-		PurpleConnection *pc = purple_account_get_connection(bconv->account);
-
-		PURPLE_ASSERT_CONNECTION_IS_VALID(pc);
-
-		bd = purple_connection_get_protocol_data(pc);
-		if (bd) {
-			bd->jabber_data->pending_conversations = g_slist_remove(
-				bd->jabber_data->pending_conversations, bconv);
-		}
-
-		/* Cancel any file transfers that are waiting to begin */
-		/* There wont be any transfers if it hasn't been attached to a buddy */
-		if (bconv->pb != NULL && bd != NULL) {
-			GSList *xfers, *tmp_next;
-			xfers = bd->xfer_lists;
-			while(xfers != NULL) {
-				PurpleXfer *xfer = xfers->data;
-				tmp_next = xfers->next;
-				/* We only need to cancel this if it hasn't actually started transferring. */
-				/* This will change if we ever support IBB transfers. */
-				if (purple_strequal(purple_xfer_get_remote_user(xfer), purple_buddy_get_name(bconv->pb))
-						&& (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_NOT_STARTED
-							|| purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_UNKNOWN)) {
-					purple_xfer_cancel_remote(xfer);
-				}
-				xfers = tmp_next;
-			}
-		}
-
-		/* Close the socket and remove the watcher */
-		if (bconv->socket >= 0) {
-			/* Send the end of the stream to the other end of the conversation */
-			if (bconv->sent_stream_start == FULLY_SENT) {
-				size_t len = strlen(STREAM_END);
-				if (send(bconv->socket, STREAM_END, len, 0) != (gssize)len) {
-					purple_debug_error("bonjour",
-						"bonjour_jabber_close_conversation: "
-						"couldn't send data\n");
-				}
-			}
-			/* TODO: We're really supposed to wait for "</stream:stream>" before closing the socket */
-			close(bconv->socket);
-		}
-		if (bconv->rx_handler != 0)
-			purple_input_remove(bconv->rx_handler);
-		if (bconv->tx_handler > 0)
-			purple_input_remove(bconv->tx_handler);
-
-		/* Free all the data related to the conversation */
-		g_object_unref(G_OBJECT(bconv->tx_buf));
-		if (bconv->connect_data != NULL)
-			purple_proxy_connect_cancel(bconv->connect_data);
-		if (bconv->stream_data != NULL) {
-			struct _stream_start_data *ss = bconv->stream_data;
-			g_free(ss->msg);
-			g_free(ss);
-		}
-
-		if (bconv->context != NULL)
-			bonjour_parser_setup(bconv);
-
-		if (bconv->close_timeout != 0)
-			g_source_remove(bconv->close_timeout);
-
-		g_free(bconv->buddy_name);
-		g_free(bconv->ip);
-		g_free(bconv);
+	if (bconv == NULL) {
+		return;
 	}
+
+	pc = purple_account_get_connection(bconv->account);
+	PURPLE_ASSERT_CONNECTION_IS_VALID(pc);
+
+	bd = purple_connection_get_protocol_data(pc);
+	if (bd) {
+		bd->jabber_data->pending_conversations = g_slist_remove(
+			bd->jabber_data->pending_conversations, bconv);
+	}
+
+	/* Cancel any file transfers that are waiting to begin */
+	/* There wont be any transfers if it hasn't been attached to a buddy */
+	if (bconv->pb != NULL && bd != NULL) {
+		GSList *xfers, *tmp_next;
+		xfers = bd->xfer_lists;
+		while (xfers != NULL) {
+			PurpleXfer *xfer = xfers->data;
+			tmp_next = xfers->next;
+			/* We only need to cancel this if it hasn't actually started transferring. */
+			/* This will change if we ever support IBB transfers. */
+			if (purple_strequal(purple_xfer_get_remote_user(xfer), purple_buddy_get_name(bconv->pb))
+					&& (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_NOT_STARTED
+						|| purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_UNKNOWN)) {
+				purple_xfer_cancel_remote(xfer);
+			}
+			xfers = tmp_next;
+		}
+	}
+
+	/* Close the socket and remove the watcher */
+	if (bconv->socket >= 0) {
+		/* Send the end of the stream to the other end of the conversation */
+		if (bconv->sent_stream_start == FULLY_SENT) {
+			size_t len = strlen(STREAM_END);
+			if (send(bconv->socket, STREAM_END, len, 0) != (gssize)len) {
+				purple_debug_error("bonjour",
+					"bonjour_jabber_close_conversation: "
+					"couldn't send data\n");
+			}
+		}
+		/* TODO: We're really supposed to wait for "</stream:stream>" before closing the socket */
+		close(bconv->socket);
+	}
+	if (bconv->rx_handler != 0) {
+		purple_input_remove(bconv->rx_handler);
+	}
+	if (bconv->tx_handler > 0) {
+		purple_input_remove(bconv->tx_handler);
+	}
+
+	/* Free all the data related to the conversation */
+	g_object_unref(G_OBJECT(bconv->tx_buf));
+	if (bconv->connect_data != NULL) {
+		purple_proxy_connect_cancel(bconv->connect_data);
+	}
+	if (bconv->stream_data != NULL) {
+		struct _stream_start_data *ss = bconv->stream_data;
+		g_free(ss->msg);
+		g_free(ss);
+	}
+
+	if (bconv->context != NULL) {
+		bonjour_parser_setup(bconv);
+	}
+
+	if (bconv->close_timeout != 0) {
+		g_source_remove(bconv->close_timeout);
+	}
+
+	g_free(bconv->buddy_name);
+	g_free(bconv->ip);
+	g_free(bconv);
 }
 
 void
@@ -1350,7 +1357,6 @@ bonjour_jabber_get_local_ips(int fd)
 	int ret;
 
 #ifdef HAVE_GETIFADDRS /* This is required for IPv6 */
-	{
 	struct ifaddrs *ifap, *ifa;
 	common_sockaddr_t addr;
 	char addrstr[INET6_ADDRSTRLEN];
@@ -1392,10 +1398,7 @@ bonjour_jabber_get_local_ips(int fd)
 	}
 
 	freeifaddrs(ifap);
-
-	}
 #else
-	{
 	char *tmp;
 	struct ifconf ifc;
 	struct ifreq *ifr;
@@ -1430,8 +1433,7 @@ bonjour_jabber_get_local_ips(int fd)
 				address_text = inet_ntoa(sinptr->sin_addr);
 				ips = g_slist_prepend(ips, g_strdup(address_text));
 			}
- 		}
-	}
+		}
 	}
 #endif
 
