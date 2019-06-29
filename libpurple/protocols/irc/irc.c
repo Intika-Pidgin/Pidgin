@@ -54,7 +54,7 @@ static void irc_close(PurpleConnection *gc);
 static int irc_im_send(PurpleConnection *gc, PurpleMessage *msg);
 static int irc_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg);
 static void irc_chat_join (PurpleConnection *gc, GHashTable *data);
-static void irc_read_input(struct irc_conn *irc);
+static void irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data);
 
 static guint irc_nick_hash(const char *nick);
 static gboolean irc_nick_equal(const char *nick1, const char *nick2);
@@ -586,7 +586,9 @@ irc_login_cb(GObject *source, GAsyncResult *res, gpointer user_data)
 		irc->input = g_data_input_stream_new(
 				g_io_stream_get_input_stream(
 						G_IO_STREAM(irc->conn)));
-		irc_read_input(irc);
+		g_data_input_stream_read_line_async(irc->input,
+				G_PRIORITY_DEFAULT, irc->cancellable,
+				irc_read_input_cb, gc);
 	}
 }
 
@@ -770,14 +772,6 @@ irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data)
 		irc_parse_msg(irc, line + start);
 
 	g_free(line);
-
-	irc_read_input(irc);
-}
-
-static void
-irc_read_input(struct irc_conn *irc)
-{
-	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
 	g_data_input_stream_read_line_async(irc->input,
 			G_PRIORITY_DEFAULT, irc->cancellable,
