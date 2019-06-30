@@ -35,11 +35,8 @@
 
 typedef struct
 {
-	gint port;
-	gint socket;
-	gint socket6;
-	gint watcher_id;
-	gint watcher_id6;
+	GSocketService *service;
+	guint16 port;
 	PurpleAccount *account;
 	GSList *pending_conversations;
 } BonjourJabber;

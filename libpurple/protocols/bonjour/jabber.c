@@ -617,44 +617,39 @@ void bonjour_jabber_stream_started(BonjourJabberConversation *bconv) {
 #endif
 
 static void
-_server_socket_handler(gpointer data, int server_socket, PurpleInputCondition condition)
+_server_socket_handler(GSocketService *service, GSocketConnection *connection,
+                       GObject *source_object, gpointer data)
 {
 	BonjourJabber *jdata = data;
-	common_sockaddr_t their_addr; /* connector's address information */
-	socklen_t sin_size = sizeof(common_sockaddr_t);
-	int client_socket;
-#ifdef HAVE_INET_NTOP
-	char addrstr[INET6_ADDRSTRLEN];
-#endif
-	const char *address_text;
+	GSocketAddress *their_addr; /* connector's address information */
+	GInetAddress *their_inet_addr;
+	gchar *address_text;
 	struct _match_buddies_by_address_t *mbba;
 	BonjourJabberConversation *bconv;
 	GSList *buddies;
+	GSocket *socket;
 
-	/* Check that it is a read condition */
-	if (condition != PURPLE_INPUT_READ)
+	their_addr = g_socket_connection_get_remote_address(connection, NULL);
+	if (their_addr == NULL) {
 		return;
-
-	memset(&their_addr, 0, sin_size);
-
-	if ((client_socket = accept(server_socket, &their_addr.sa, &sin_size)) == -1)
-		return;
-	_purple_network_set_common_socket_flags(client_socket);
+	}
+	their_inet_addr = g_inet_socket_address_get_address(
+	        G_INET_SOCKET_ADDRESS(their_addr));
 
 	/* Look for the buddy that has opened the conversation and fill information */
-#ifdef HAVE_INET_NTOP
-	if (their_addr.sa.sa_family == AF_INET6) {
-		address_text = inet_ntop(their_addr.sa.sa_family,
-			&their_addr.in6.sin6_addr, addrstr, sizeof(addrstr));
-
-		append_iface_if_linklocal(addrstr, their_addr.in6.sin6_scope_id);
-	} else {
-		address_text = inet_ntop(their_addr.sa.sa_family,
-			&their_addr.in.sin_addr, addrstr, sizeof(addrstr));
+	address_text = g_inet_address_to_string(their_inet_addr);
+	if (g_inet_address_get_family(their_inet_addr) ==
+	            G_SOCKET_FAMILY_IPV6 &&
+	    g_inet_address_get_is_link_local(their_inet_addr)) {
+		gchar *tmp = g_strdup_printf(
+		        "%s%%%d", address_text,
+		        g_inet_socket_address_get_scope_id(
+		                G_INET_SOCKET_ADDRESS(their_addr)));
+		g_free(address_text);
+		address_text = tmp;
 	}
-#else
-	address_text = inet_ntoa(their_addr.in.sin_addr);
-#endif
+	g_object_unref(their_addr);
+
 	purple_debug_info("bonjour", "Received incoming connection from %s.\n", address_text);
 	mbba = g_new0(struct _match_buddies_by_address_t, 1);
 	mbba->address = address_text;
@@ -665,8 +660,8 @@ _server_socket_handler(gpointer data, int server_socket, PurpleInputCondition co
 
 	if (mbba->matched_buddies == NULL) {
 		purple_debug_info("bonjour", "We don't like invisible buddies, this is not a superheroes comic\n");
+		g_free(address_text);
 		g_free(mbba);
-		close(client_socket);
 		return;
 	}
 
@@ -679,119 +674,48 @@ _server_socket_handler(gpointer data, int server_socket, PurpleInputCondition co
 	bconv = bonjour_jabber_conv_new(NULL, jdata->account, address_text);
 
 	/* We wait for the stream start before doing anything else */
-	bconv->socket = client_socket;
-	bconv->rx_handler = purple_input_add(client_socket, PURPLE_INPUT_READ, _client_socket_handler, bconv);
-
-}
-
-static int
-start_serversocket_listening(int port, int socket, common_sockaddr_t *addr, size_t addr_size, gboolean ip6, gboolean allow_port_fallback)
-{
-	int ret_port = port;
-
-	purple_debug_info("bonjour", "Attempting to bind IPv%d socket to port %d.\n", ip6 ? 6 : 4, port);
-
-	/* Try to use the specified port - if it isn't available, use a random port */
-	if (bind(socket, &addr->sa, addr_size) != 0) {
-
-		purple_debug_info("bonjour", "Unable to bind to specified "
-				"port %i: %s\n", port, g_strerror(errno));
-
-		if (!allow_port_fallback) {
-			purple_debug_warning("bonjour", "Not attempting random port assignment.\n");
-			return -1;
-		}
-#ifdef PF_INET6
-		if (ip6)
-			addr->in6.sin6_port = 0;
-		else
-#endif
-			addr->in.sin_port = 0;
-
-		if (bind(socket, &addr->sa, addr_size) != 0) {
-			purple_debug_error("bonjour", "Unable to bind IPv%d socket to port: %s\n", ip6 ? 6 : 4, g_strerror(errno));
-			return -1;
-		}
-		ret_port = purple_network_get_port_from_fd(socket);
-	}
-
-	purple_debug_info("bonjour", "Bound IPv%d socket to port %d.\n", ip6 ? 6 : 4, ret_port);
-
-	/* Attempt to listen on the bound socket */
-	if (listen(socket, 10) != 0) {
-		purple_debug_error("bonjour", "Unable to listen on IPv%d socket: %s\n", ip6 ? 6 : 4, g_strerror(errno));
-		return -1;
-	}
-
-	return ret_port;
+	socket = g_socket_connection_get_socket(connection); /* Temporary until fully async. */
+	bconv->socket = g_socket_get_fd(socket);
+	_purple_network_set_common_socket_flags(bconv->socket);
+	bconv->rx_handler = purple_input_add(bconv->socket, PURPLE_INPUT_READ,
+	                                     _client_socket_handler, bconv);
+	g_free(address_text);
 }
 
 gint
 bonjour_jabber_start(BonjourJabber *jdata)
 {
-	int ipv6_port = -1, ipv4_port = -1;
+	GError *error = NULL;
+	guint16 port;
 
-	/* Open a listening socket for incoming conversations */
-#ifdef PF_INET6
-	jdata->socket6 = socket(PF_INET6, SOCK_STREAM, 0);
-#endif
-	jdata->socket = socket(PF_INET, SOCK_STREAM, 0);
-	if (jdata->socket == -1 && jdata->socket6 == -1) {
-		purple_debug_error("bonjour", "Unable to create socket: %s",
-				g_strerror(errno));
-		return -1;
-	}
+	purple_debug_info("bonjour", "Attempting to bind IP socket to port %d.",
+	                  jdata->port);
 
-#ifdef PF_INET6
-	if (jdata->socket6 != -1) {
-		common_sockaddr_t addr6;
-#ifdef IPV6_V6ONLY
-		int on = 1;
-		if (setsockopt(jdata->socket6, IPPROTO_IPV6, IPV6_V6ONLY, &on, sizeof(on)) != 0) {
-			purple_debug_error("bonjour", "couldn't force IPv6\n");
+	/* Open a listening server for incoming conversations */
+	jdata->service = g_socket_service_new();
+	g_socket_listener_set_backlog(G_SOCKET_LISTENER(jdata->service), 10);
+	port = jdata->port;
+	if (!g_socket_listener_add_inet_port(G_SOCKET_LISTENER(jdata->service),
+	                                     port, NULL, &error)) {
+		purple_debug_info("bonjour",
+		                  "Unable to bind to specified port %i: %s",
+		                  port, error ? error->message : "(unknown)");
+		g_clear_error(&error);
+		port = g_socket_listener_add_any_inet_port(
+		        G_SOCKET_LISTENER(jdata->service), NULL, &error);
+		if (port == 0) {
+			purple_debug_error(
+			        "bonjour", "Unable to create socket: %s",
+			        error ? error->message : "(unknown)");
+			g_clear_error(&error);
 			return -1;
 		}
-#endif
-		memset(&addr6, 0, sizeof(addr6));
-		addr6.in6.sin6_family = AF_INET6;
-		addr6.in6.sin6_port = htons(jdata->port);
-		addr6.in6.sin6_addr = in6addr_any;
-		ipv6_port = start_serversocket_listening(jdata->port,
-			jdata->socket6, &addr6, sizeof(addr6), TRUE, TRUE);
-		/* Open a watcher in the socket we have just opened */
-		if (ipv6_port > 0) {
-			jdata->watcher_id6 = purple_input_add(jdata->socket6, PURPLE_INPUT_READ, _server_socket_handler, jdata);
-			jdata->port = ipv6_port;
-		} else {
-			purple_debug_error("bonjour", "Failed to start listening on IPv6 socket.\n");
-			close(jdata->socket6);
-			jdata->socket6 = -1;
-		}
 	}
-#endif
-	if (jdata->socket != -1) {
-		common_sockaddr_t addr4;
-		memset(&addr4, 0, sizeof(addr4));
-		addr4.in.sin_family = AF_INET;
-		addr4.in.sin_port = htons(jdata->port);
-		ipv4_port = start_serversocket_listening(jdata->port, jdata->socket,
-			&addr4, sizeof(addr4), FALSE, TRUE);
-		/* Open a watcher in the socket we have just opened */
-		if (ipv4_port > 0) {
-			jdata->watcher_id = purple_input_add(jdata->socket, PURPLE_INPUT_READ, _server_socket_handler, jdata);
-			jdata->port = ipv4_port;
-		} else {
-			purple_debug_error("bonjour", "Failed to start listening on IPv4 socket.\n");
-			close(jdata->socket);
-			jdata->socket = -1;
-		}
-	}
+	purple_debug_info("bonjour", "Bound IP socket to port %u.", port);
+	jdata->port = port;
 
-	if (!(ipv6_port > 0 || ipv4_port > 0)) {
-		purple_debug_error("bonjour", "Unable to listen on socket: %s",
-				g_strerror(errno));
-		return -1;
-	}
+	g_signal_connect(G_OBJECT(jdata->service), "incoming",
+	                 G_CALLBACK(_server_socket_handler), jdata);
 
 	return jdata->port;
 }
@@ -1205,14 +1129,11 @@ void
 bonjour_jabber_stop(BonjourJabber *jdata)
 {
 	/* Close the server socket and remove the watcher */
-	if (jdata->socket >= 0)
-		close(jdata->socket);
-	if (jdata->watcher_id > 0)
-		purple_input_remove(jdata->watcher_id);
-	if (jdata->socket6 >= 0)
-		close(jdata->socket6);
-	if (jdata->watcher_id6 > 0)
-		purple_input_remove(jdata->watcher_id6);
+	if (jdata->service) {
+		g_socket_service_stop(jdata->service);
+		g_socket_listener_close(G_SOCKET_LISTENER(jdata->service));
+		g_clear_object(&jdata->service);
+	}
 
 	/* Close all the conversation sockets and remove all the watchers after sending end streams */
 	if (!purple_account_is_disconnected(jdata->account)) {
