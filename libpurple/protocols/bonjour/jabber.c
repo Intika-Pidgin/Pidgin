@@ -330,7 +330,6 @@ _send_data(PurpleBuddy *pb, char *message)
 
 	/* If we're not ready to actually send, append it to the buffer */
 	if (bconv->tx_handler != 0
-			|| bconv->connect_data != NULL
 			|| bconv->sent_stream_start != FULLY_SENT
 			|| !bconv->recv_stream_start
 			|| purple_circular_buffer_get_max_read(bconv->tx_buf) > 0) {
@@ -1215,9 +1214,6 @@ bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 	bconv->output = NULL;
 
 	g_object_unref(G_OBJECT(bconv->tx_buf));
-	if (bconv->connect_data != NULL) {
-		purple_proxy_connect_cancel(bconv->connect_data);
-	}
 	if (bconv->stream_data != NULL) {
 		struct _stream_start_data *ss = bconv->stream_data;
 		g_free(ss->msg);
@@ -1257,7 +1253,6 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 			if (bb && bb->conversation) {
 				/* Any ongoing connection attempt is cancelled
 				 * when a connection is destroyed */
-				bb->conversation->connect_data = NULL;
 				bonjour_jabber_close_conversation(bb->conversation);
 				bb->conversation = NULL;
 			}
