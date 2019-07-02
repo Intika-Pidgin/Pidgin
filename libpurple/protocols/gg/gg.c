@@ -1191,6 +1191,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	ggp_protocol_register_type(plugin);
 
+	ggp_xfer_register(G_TYPE_MODULE(plugin));
+
 	my_protocol = purple_protocols_add(GGP_TYPE_PROTOCOL, error);
 	if (!my_protocol)
 		return FALSE;

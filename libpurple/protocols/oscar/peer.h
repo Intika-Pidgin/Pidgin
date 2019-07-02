@@ -279,4 +279,17 @@ void peer_oft_cb_generic_cancel(PurpleXfer *xfer);
  */
 void peer_proxy_connection_established_cb(gpointer data, gint source, const gchar *error_message);
 
+/* File transfers */
+#define OSCAR_TYPE_XFER (oscar_xfer_get_type())
+G_DECLARE_FINAL_TYPE(OscarXfer, oscar_xfer, OSCAR, XFER, PurpleXfer);
+
+struct _OscarXfer {
+	PurpleXfer parent;
+
+	PeerConnection *conn;
+};
+
+void oscar_xfer_register(GTypeModule *module);
+PeerConnection *oscar_xfer_get_peer_connection(OscarXfer *xfer);
+
 #endif /* _PEER_H_ */

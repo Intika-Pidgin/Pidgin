@@ -23,36 +23,17 @@
 #define _BONJOUR_FT_H_
 #include "network.h"
 #include "proxy.h"
-typedef struct _XepXfer XepXfer;
+
+G_BEGIN_DECLS
+
+#define XEP_TYPE_XFER (xep_xfer_get_type())
+G_DECLARE_FINAL_TYPE(XepXfer, xep_xfer, XEP, XFER, PurpleXfer);
+
 typedef enum {
 	XEP_BYTESTREAMS = 1,
 	XEP_IBB = 2,
 	XEP_UNKNOWN = 4
 } XepSiMode;
-
-struct _XepXfer
-{
-	void *data;
-	char *filename;
-	int filesize;
-	char *iq_id;
-	char *sid;
-	char *recv_id;
-	char *buddy_ip;
-	int mode;
-	PurpleNetworkListenData *listen_data;
-	int sock5_req_state;
-	int rxlen;
-	char rx_buf[0x500];
-	char tx_buf[0x500];
-	PurpleProxyInfo *proxy_info;
-	PurpleProxyConnectData *proxy_connection;
-	char *jid;
-	char *proxy_host;
-	int proxy_port;
-	PurpleXmlNode *streamhost;
-	PurpleBuddy *pb;
-};
 
 /**
  * Create a new PurpleXfer
@@ -72,6 +53,10 @@ PurpleXfer *bonjour_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc,
 void bonjour_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 
 void xep_si_parse(PurpleConnection *pc, PurpleXmlNode *packet, PurpleBuddy *pb);
-void
-xep_bytestreams_parse(PurpleConnection *pc, PurpleXmlNode *packet, PurpleBuddy *pb);
+void xep_bytestreams_parse(PurpleConnection *pc, PurpleXmlNode *packet, PurpleBuddy *pb);
+
+void xep_xfer_register(GTypeModule *module);
+
+G_END_DECLS
+
 #endif
