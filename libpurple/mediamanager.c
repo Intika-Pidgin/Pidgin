@@ -737,8 +737,9 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 #if GST_CHECK_VERSION(1,0,0)
 		remaining_pad = g_value_get_object(&tmp);
 		g_value_reset(&tmp);
-#endif
+#else
 		gst_object_unref(remaining_pad);
+#endif
 	}
 
 	gst_iterator_free(iter);
