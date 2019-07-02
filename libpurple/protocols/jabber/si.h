@@ -28,13 +28,23 @@
 
 #include "jabber.h"
 
+G_BEGIN_DECLS
+
+#define JABBER_TYPE_SI_XFER (jabber_si_xfer_get_type())
+G_DECLARE_FINAL_TYPE(JabberSIXfer, jabber_si_xfer, JABBER, SI_XFER, PurpleXfer);
+
 void jabber_bytestreams_parse(JabberStream *js, const char *from,
                               JabberIqType type, const char *id, PurpleXmlNode *query);
 void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
                      const char *id, PurpleXmlNode *si);
 PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 void jabber_si_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
+
+void jabber_si_xfer_register(GTypeModule *module);
+
 void jabber_si_init(void);
 void jabber_si_uninit(void);
+
+G_END_DECLS
 
 #endif /* PURPLE_JABBER_SI_H_ */

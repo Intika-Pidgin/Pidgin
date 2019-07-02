@@ -745,6 +745,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	bonjour_protocol_register_type(plugin);
 
+	xep_xfer_register(G_TYPE_MODULE(plugin));
+
 	my_protocol = purple_protocols_add(BONJOUR_TYPE_PROTOCOL, error);
 	if (!my_protocol)
 		return FALSE;
