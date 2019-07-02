@@ -43,7 +43,10 @@ typedef struct
 
 typedef struct
 {
-	gint socket;
+	GCancellable *cancellable;
+	GSocketConnection *socket;
+	GInputStream *input;
+	GOutputStream *output;
 	guint rx_handler;
 	guint tx_handler;
 	guint close_timeout;
