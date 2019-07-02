@@ -89,6 +89,7 @@ jingle_iceudp_candidate_free(JingleIceUdpCandidate *candidate)
 
 	g_free(candidate->username);
 	g_free(candidate->password);
+	g_free(candidate);
 }
 
 GType
@@ -192,8 +193,26 @@ jingle_iceudp_init (JingleIceUdp *iceudp)
 static void
 jingle_iceudp_finalize (GObject *iceudp)
 {
-/*	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp); */
+	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp);
+	GList *iter;
+
 	purple_debug_info("jingle","jingle_iceudp_finalize\n");
+
+	iter = priv->local_candidates;
+	for (; iter; iter = g_list_next(iter)) {
+		JingleIceUdpCandidate *c = iter->data;
+		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
+	}
+	g_list_free (priv->local_candidates);
+	iter = priv->remote_candidates;
+	for (; iter; iter = g_list_next(iter)) {
+		JingleIceUdpCandidate *c = iter->data;
+		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
+	}
+	g_list_free (priv->remote_candidates);
+
+	priv->local_candidates = NULL;
+	priv->remote_candidates = NULL;
 
 	G_OBJECT_CLASS(parent_class)->finalize(iceudp);
 }
