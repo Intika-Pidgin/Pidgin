@@ -3250,7 +3250,7 @@ make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
 	label = pidgin_prefs_dropdown_from_list(parent, _("_Device"),
 			PURPLE_PREF_STRING, preference_key, devices);
 
-	g_list_free(devices);
+	g_list_free_full(devices, g_free);
 
 	gtk_size_group_add_widget(size_group, label);
 	gtk_misc_set_alignment(GTK_MISC(label), 0, 0.5);
