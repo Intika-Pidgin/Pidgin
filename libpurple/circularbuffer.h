@@ -162,7 +162,7 @@ const gchar *purple_circular_buffer_get_output(PurpleCircularBuffer *buffer);
  * purple_circular_buffer_reset:
  * @buffer: The PurpleCircularBuffer to reset.
  *
- * Resets the buffer contents.
+ * Resets the buffer input and output pointers to the start of the buffer.
  */
 void purple_circular_buffer_reset(PurpleCircularBuffer *buffer);
 
