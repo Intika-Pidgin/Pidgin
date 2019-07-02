@@ -18,7 +18,4 @@ pipelines:
             - meson -Dprefix=/usr libgnt libgnt/build
             - ninja -C libgnt/build install
             - ldconfig
-            - ./autogen.sh --enable-debug
-            - make -s -j$(nproc)
-            - make -s -j$(nproc) check
-            - make distcheck
+            - build.sh

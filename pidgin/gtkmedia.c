@@ -510,6 +510,11 @@ pidgin_media_dispose(GObject *media)
 		gtkmedia->priv->remote_videos = NULL;
 	}
 
+	if (gtkmedia->priv->screenname) {
+		g_free(gtkmedia->priv->screenname);
+		gtkmedia->priv->screenname = NULL;
+	}
+
 	G_OBJECT_CLASS(parent_class)->dispose(media);
 }
 
