@@ -551,6 +551,8 @@ bonjour_jabber_send_stream_init(BonjourJabberConversation *bconv,
 	gssize ret;
 	const char *bname = bconv->buddy_name;
 
+	g_return_val_if_fail(error != NULL, FALSE);
+
 	if (bconv->pb != NULL)
 		bname = purple_buddy_get_name(bconv->pb);
 
