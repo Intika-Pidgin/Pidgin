@@ -112,7 +112,6 @@ purple_contact_get_group(const PurpleContact *contact)
 void
 purple_contact_set_alias(PurpleContact *contact, const char *alias)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleIMConversation *im;
 	PurpleBlistNode *bnode;
 	char *old_alias;
@@ -142,14 +141,9 @@ purple_contact_set_alias(PurpleContact *contact, const char *alias)
 	g_object_notify_by_pspec(G_OBJECT(contact),
 			properties[PROP_ALIAS]);
 
-	if (ops) {
-		if (ops->save_node)
-			ops->save_node(PURPLE_BLIST_NODE(contact));
-		if (ops->update) {
-			ops->update(purple_blist_get_default(),
-			            PURPLE_BLIST_NODE(contact));
-		}
-	}
+	purple_blist_save_node(PURPLE_BLIST_NODE(contact));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(contact));
 
 	for(bnode = PURPLE_BLIST_NODE(contact)->child; bnode != NULL; bnode = bnode->next)
 	{
@@ -302,10 +296,7 @@ purple_contact_get_property(GObject *obj, guint param_id, GValue *value,
 static void
 purple_contact_init(PurpleContact *contact)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
-
-	if (ops && ops->new_node)
-		ops->new_node(PURPLE_BLIST_NODE(contact));
+	purple_blist_new_node(PURPLE_BLIST_NODE(contact));
 }
 
 /* GObject finalize function */

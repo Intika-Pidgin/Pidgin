@@ -95,7 +95,6 @@ const char *purple_chat_get_name_only(PurpleChat *chat)
 void
 purple_chat_set_alias(PurpleChat *chat, const char *alias)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	char *old_alias;
 	char *new_alias = NULL;
 	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
@@ -121,14 +120,9 @@ purple_chat_set_alias(PurpleChat *chat, const char *alias)
 
 	g_object_notify_by_pspec(G_OBJECT(chat), properties[PROP_ALIAS]);
 
-	if (ops) {
-		if (ops->save_node)
-			ops->save_node(PURPLE_BLIST_NODE(chat));
-		if (ops->update) {
-			ops->update(purple_blist_get_default(),
-			            PURPLE_BLIST_NODE(chat));
-		}
-	}
+	purple_blist_save_node(PURPLE_BLIST_NODE(chat));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(chat));
 
 	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 chat, old_alias);
@@ -228,12 +222,10 @@ purple_chat_constructed(GObject *object)
 {
 	PurpleChat *chat = PURPLE_CHAT(object);
 	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	G_OBJECT_CLASS(purple_chat_parent_class)->constructed(object);
 
-	if (ops != NULL && ops->new_node != NULL)
-		ops->new_node(PURPLE_BLIST_NODE(chat));
+	purple_blist_new_node(PURPLE_BLIST_NODE(chat));
 
 	priv->is_constructed = TRUE;
 }

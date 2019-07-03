@@ -523,6 +523,61 @@ void purple_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
 void purple_blist_request_add_group(void);
 
 /**************************************************************************/
+/* Buddy list UI Functions                                                */
+/**************************************************************************/
+
+/**
+ * purple_blist_new_node:
+ * @node: The node to initialize.
+ *
+ * Sets UI-specific data on a node.
+ *
+ * This should usually only be run when initializing a @PurpleBlistNode
+ * instance.
+ *
+ * Since: 3.0.0
+ */
+void purple_blist_new_node(PurpleBlistNode *node);
+
+/**
+ * purple_blist_update_node:
+ * @list: The buddy list to modify.
+ * @node: The node to update.
+ *
+ * Update a node in the buddy list in the UI.
+ *
+ * Since: 3.0.0
+ */
+void purple_blist_update_node(PurpleBuddyList *list, PurpleBlistNode *node);
+
+/**
+ * purple_blist_save_node:
+ * @node: The node which has been modified.
+ *
+ * This is called when a node has been modified and should be saved by the UI.
+ *
+ * If the UI does not implement a more specific method, it will be set to save
+ * data to <filename>blist.xml</filename> like in previous libpurple versions.
+ *
+ * Since: 3.0.0
+ */
+void purple_blist_save_node(PurpleBlistNode *node);
+
+/**
+ * purple_blist_save_account:
+ * @account: The account whose data to save. If %NULL, save all data for all
+ *           accounts.
+ *
+ * Save all the data for an account.
+ *
+ * If the UI does not set a more specific method, it will be set to save data
+ * to <filename>blist.xml</filename> like in previous libpurple versions.
+ *
+ * Since: 3.0.0
+ */
+void purple_blist_save_account(PurpleAccount *account);
+
+/**************************************************************************/
 /* UI Registration Functions                                              */
 /**************************************************************************/
 

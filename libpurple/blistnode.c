@@ -114,7 +114,6 @@ purple_blist_node_set_ui_data(PurpleBlistNode *node, void *ui_data) {
 
 void purple_blist_node_remove_setting(PurpleBlistNode *node, const char *key)
 {
-	PurpleBlistUiOps *ops;
 	PurpleBlistNodePrivate *priv =
 			purple_blist_node_get_instance_private(node);
 
@@ -124,9 +123,7 @@ void purple_blist_node_remove_setting(PurpleBlistNode *node, const char *key)
 
 	g_hash_table_remove(priv->settings, key);
 
-	ops = purple_blist_get_ui_ops();
-	if (ops && ops->save_node)
-		ops->save_node(node);
+	purple_blist_save_node(node);
 }
 
 void
@@ -183,7 +180,6 @@ void
 purple_blist_node_set_bool(PurpleBlistNode* node, const char *key, gboolean data)
 {
 	GValue *value;
-	PurpleBlistUiOps *ops;
 	PurpleBlistNodePrivate *priv =
 			purple_blist_node_get_instance_private(node);
 
@@ -196,9 +192,7 @@ purple_blist_node_set_bool(PurpleBlistNode* node, const char *key, gboolean data
 
 	g_hash_table_replace(priv->settings, g_strdup(key), value);
 
-	ops = purple_blist_get_ui_ops();
-	if (ops && ops->save_node)
-		ops->save_node(node);
+	purple_blist_save_node(node);
 }
 
 gboolean
@@ -226,7 +220,6 @@ void
 purple_blist_node_set_int(PurpleBlistNode* node, const char *key, int data)
 {
 	GValue *value;
-	PurpleBlistUiOps *ops;
 	PurpleBlistNodePrivate *priv =
 			purple_blist_node_get_instance_private(node);
 
@@ -239,9 +232,7 @@ purple_blist_node_set_int(PurpleBlistNode* node, const char *key, int data)
 
 	g_hash_table_replace(priv->settings, g_strdup(key), value);
 
-	ops = purple_blist_get_ui_ops();
-	if (ops && ops->save_node)
-		ops->save_node(node);
+	purple_blist_save_node(node);
 }
 
 int
@@ -269,7 +260,6 @@ void
 purple_blist_node_set_string(PurpleBlistNode* node, const char *key, const char *data)
 {
 	GValue *value;
-	PurpleBlistUiOps *ops;
 	PurpleBlistNodePrivate *priv =
 			purple_blist_node_get_instance_private(node);
 
@@ -282,9 +272,7 @@ purple_blist_node_set_string(PurpleBlistNode* node, const char *key, const char 
 
 	g_hash_table_replace(priv->settings, g_strdup(key), value);
 
-	ops = purple_blist_get_ui_ops();
-	if (ops && ops->save_node)
-		ops->save_node(node);
+	purple_blist_save_node(node);
 }
 
 const char *

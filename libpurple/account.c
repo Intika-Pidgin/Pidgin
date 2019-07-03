@@ -1539,7 +1539,6 @@ purple_account_request_change_user_info(PurpleAccount *account)
 void
 purple_account_set_username(PurpleAccount *account, const char *username)
 {
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 
 	g_return_if_fail(PURPLE_IS_ACCOUNT(account));
@@ -1555,9 +1554,7 @@ purple_account_set_username(PurpleAccount *account, const char *username)
 
 	/* if the name changes, we should re-write the buddy list
 	 * to disk with the new name */
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(account);
 }
 
 void
@@ -2306,7 +2303,6 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	GSList *l;
 	char *name;
 	PurpleBuddy *buddy;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2337,9 +2333,7 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->permit_added != NULL)
 		ui_ops->permit_added(account, who);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(account);
 
 	/* This lets the UI know a buddy has had its privacy setting changed */
 	buddy = purple_blist_find_buddy(account, name);
@@ -2358,7 +2352,6 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	const char *name;
 	PurpleBuddy *buddy;
 	char *del;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2390,9 +2383,7 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->permit_removed != NULL)
 		ui_ops->permit_removed(account, who);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(account);
 
 	buddy = purple_blist_find_buddy(account, name);
 	if (buddy != NULL) {
@@ -2410,7 +2401,6 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	GSList *l;
 	char *name;
 	PurpleBuddy *buddy;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2441,9 +2431,7 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->deny_added != NULL)
 		ui_ops->deny_added(account, who);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(account);
 
 	buddy = purple_blist_find_buddy(account, name);
 	if (buddy != NULL) {
@@ -2461,7 +2449,6 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 	const char *normalized;
 	char *name;
 	PurpleBuddy *buddy;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2499,9 +2486,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 
 	g_free(name);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(account);
 
 	return TRUE;
 }
