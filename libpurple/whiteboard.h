@@ -28,17 +28,10 @@
  * @title: Whiteboard Object
  */
 
-#define PURPLE_TYPE_WHITEBOARD             (purple_whiteboard_get_type())
-#define PURPLE_WHITEBOARD(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_WHITEBOARD, PurpleWhiteboard))
-#define PURPLE_WHITEBOARD_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_WHITEBOARD, PurpleWhiteboardClass))
-#define PURPLE_IS_WHITEBOARD(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_WHITEBOARD))
-#define PURPLE_IS_WHITEBOARD_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_WHITEBOARD))
-#define PURPLE_WHITEBOARD_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_WHITEBOARD, PurpleWhiteboardClass))
+#define PURPLE_TYPE_WHITEBOARD (purple_whiteboard_get_type())
+typedef struct _PurpleWhiteboard PurpleWhiteboard;
 
 #define PURPLE_TYPE_WHITEBOARD_UI_OPS      (purple_whiteboard_ui_ops_get_type())
-
-typedef struct _PurpleWhiteboard PurpleWhiteboard;
-typedef struct _PurpleWhiteboardClass PurpleWhiteboardClass;
 
 typedef struct _PurpleWhiteboardUiOps PurpleWhiteboardUiOps;
 typedef struct _PurpleWhiteboardOps PurpleWhiteboardOps;
@@ -123,21 +116,6 @@ struct _PurpleWhiteboard
 	gpointer ui_data;
 };
 
-/**
- * PurpleWhiteboardClass:
- *
- * Base class for all #PurpleWhiteboard's
- */
-struct _PurpleWhiteboardClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
 
 /******************************************************************************/
@@ -149,7 +127,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the #PurpleWhiteboard object.
  */
-GType purple_whiteboard_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleWhiteboard, purple_whiteboard, PURPLE, WHITEBOARD,
+                     GObject)
 
 /**
  * purple_whiteboard_ui_ops_get_type:

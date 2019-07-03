@@ -32,14 +32,8 @@
 #include <glib-object.h>
 
 #define PURPLE_TYPE_ACCOUNT             (purple_account_get_type())
-#define PURPLE_ACCOUNT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_ACCOUNT, PurpleAccount))
-#define PURPLE_ACCOUNT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_ACCOUNT, PurpleAccountClass))
-#define PURPLE_IS_ACCOUNT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_ACCOUNT))
-#define PURPLE_IS_ACCOUNT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_ACCOUNT))
-#define PURPLE_ACCOUNT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_ACCOUNT, PurpleAccountClass))
 
 typedef struct _PurpleAccount       PurpleAccount;
-typedef struct _PurpleAccountClass  PurpleAccountClass;
 
 typedef gboolean (*PurpleFilterAccountFunc)(PurpleAccount *account);
 typedef void (*PurpleAccountRequestAuthorizationCb)(const char *response, void *data);
@@ -111,21 +105,6 @@ struct _PurpleAccount
 	gpointer ui_data;
 };
 
-/**
- * PurpleAccountClass:
- *
- * The base class for all #PurpleAccount's.
- */
-struct _PurpleAccountClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -137,7 +116,7 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the Account object.
  */
-GType purple_account_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleAccount, purple_account, PURPLE, ACCOUNT, GObject)
 
 /**
  * purple_account_new:
