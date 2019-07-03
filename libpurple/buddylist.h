@@ -185,6 +185,8 @@ GType purple_buddy_list_get_type(void);
  * Returns the default buddy list.
  *
  * Returns: The default buddy list.
+ *
+ * Since: 3.0.0
  */
 PurpleBuddyList *purple_blist_get_default(void);
 
@@ -194,6 +196,8 @@ PurpleBuddyList *purple_blist_get_default(void);
  * Returns the root node of the default buddy list.
  *
  * Returns: The root node.
+ *
+ * Since: 3.0.0
  */
 PurpleBlistNode *purple_blist_get_default_root(void);
 
