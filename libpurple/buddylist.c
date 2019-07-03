@@ -375,8 +375,8 @@ blist_to_xmlnode(void)
 			"localized-default-group", localized_default);
 	}
 
-	for (gnode = purplebuddylist->root; gnode != NULL; gnode = gnode->next)
-	{
+	for (gnode = purple_blist_get_default_root(); gnode != NULL;
+	     gnode = gnode->next) {
 		if (purple_blist_node_is_transient(gnode))
 			continue;
 		if (PURPLE_IS_GROUP(gnode))
@@ -433,7 +433,7 @@ _purple_blist_schedule_save()
 }
 
 static void
-purple_blist_save_account(PurpleAccount *account)
+_purple_blist_save_account(PurpleAccount *account)
 {
 #if 1
 	_purple_blist_schedule_save();
@@ -447,7 +447,7 @@ purple_blist_save_account(PurpleAccount *account)
 }
 
 static void
-purple_blist_save_node(PurpleBlistNode *node)
+_purple_blist_save_node(PurpleBlistNode *node)
 {
 	_purple_blist_schedule_save();
 }
@@ -863,8 +863,10 @@ void purple_blist_add_chat(PurpleChat *chat, PurpleGroup *group, PurpleBlistNode
 
 		/* Add group to blist if isn't already on it. Fixes #2752. */
 		if (!purple_blist_find_group(purple_group_get_name(group))) {
-			purple_blist_add_group(group,
-					purple_blist_get_last_sibling(purplebuddylist->root));
+			purple_blist_add_group(
+			        group,
+			        purple_blist_get_last_sibling(
+			                purple_blist_get_default_root()));
 		}
 	} else {
 		group = PURPLE_GROUP(node->parent);
@@ -1699,7 +1701,8 @@ purple_blist_find_chat(PurpleAccount *account, const char *name)
 		return purple_protocol_client_iface_find_blist_chat(protocol, account, name);
 
 	normname = g_strdup(purple_normalize(account, name));
-	for (group = purplebuddylist->root; group != NULL; group = group->next) {
+	for (group = purple_blist_get_default_root(); group != NULL;
+	     group = group->next) {
 		for (node = group->child; node != NULL; node = node->next) {
 			if (PURPLE_IS_CHAT(node)) {
 
@@ -1741,7 +1744,8 @@ void purple_blist_add_account(PurpleAccount *account)
 	if (!ops || !ops->update)
 		return;
 
-	for (gnode = purplebuddylist->root; gnode; gnode = gnode->next) {
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = gnode->next) {
 		if (!PURPLE_IS_GROUP(gnode))
 			continue;
 		for (cnode = gnode->child; cnode; cnode = cnode->next) {
@@ -1789,7 +1793,8 @@ void purple_blist_remove_account(PurpleAccount *account)
 
 	g_return_if_fail(PURPLE_IS_BUDDY_LIST(purplebuddylist));
 
-	for (gnode = purplebuddylist->root; gnode; gnode = gnode->next) {
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = gnode->next) {
 		if (!PURPLE_IS_GROUP(gnode))
 			continue;
 
@@ -1875,7 +1880,8 @@ purple_blist_walk(PurpleBlistWalkFunc group_func,
 {
 	PurpleBlistNode *group = NULL, *meta_contact = NULL, *contact = NULL;
 
-	for(group = purplebuddylist->root; group != NULL; group = group->next) {
+	for (group = purple_blist_get_default_root(); group != NULL;
+	     group = group->next) {
 		if(group_func != NULL) {
 			group_func(group, data);
 		}
@@ -1937,6 +1943,42 @@ purple_blist_request_add_group(void)
 }
 
 void
+purple_blist_new_node(PurpleBlistNode *node)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	if (ops && ops->new_node) {
+		ops->new_node(node);
+	}
+}
+
+void
+purple_blist_update_node(PurpleBuddyList *list, PurpleBlistNode *node)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	if (ops && ops->update) {
+		ops->update(list, node);
+	}
+}
+
+void
+purple_blist_save_node(PurpleBlistNode *node)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	if (ops && ops->save_node) {
+		ops->save_node(node);
+	}
+}
+
+void
+purple_blist_save_account(PurpleAccount *account)
+{
+	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	if (ops && ops->save_account) {
+		ops->save_account(account);
+	}
+}
+
+void
 purple_blist_set_ui_ops(PurpleBlistUiOps *ops)
 {
 	gboolean overrode = FALSE;
@@ -1946,21 +1988,21 @@ purple_blist_set_ui_ops(PurpleBlistUiOps *ops)
 		return;
 
 	if (!ops->save_node) {
-		ops->save_node = purple_blist_save_node;
+		ops->save_node = _purple_blist_save_node;
 		overrode = TRUE;
 	}
 	if (!ops->remove_node) {
-		ops->remove_node = purple_blist_save_node;
+		ops->remove_node = _purple_blist_save_node;
 		overrode = TRUE;
 	}
 	if (!ops->save_account) {
-		ops->save_account = purple_blist_save_account;
+		ops->save_account = _purple_blist_save_account;
 		overrode = TRUE;
 	}
 
-	if (overrode && (ops->save_node    != purple_blist_save_node ||
-	                 ops->remove_node  != purple_blist_save_node ||
-	                 ops->save_account != purple_blist_save_account)) {
+	if (overrode && (ops->save_node != _purple_blist_save_node ||
+	                 ops->remove_node != _purple_blist_save_node ||
+	                 ops->save_account != _purple_blist_save_account)) {
 		purple_debug_warning("buddylist", "Only some of the blist saving UI ops "
 				"were overridden. This probably is not what you want!\n");
 	}

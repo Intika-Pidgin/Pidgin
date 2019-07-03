@@ -2355,7 +2355,6 @@ pidgin_conv_get_icon(PurpleConversation *conv, GtkWidget *parent, const char *ic
 	const char *name = NULL;
 	const char *stock = NULL;
 	GdkPixbuf *status = NULL;
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	GtkIconSize size;
 
 	g_return_val_if_fail(conv != NULL, NULL);
@@ -2373,8 +2372,7 @@ pidgin_conv_get_icon(PurpleConversation *conv, GtkWidget *parent, const char *ic
 			/* I hate this hack.  It fixes a bug where the pending message icon
 			 * displays in the conv tab even though it shouldn't.
 			 * A better solution would be great. */
-			if (ops && ops->update)
-				ops->update(NULL, (PurpleBlistNode*)b);
+			purple_blist_update_node(NULL, PURPLE_BLIST_NODE(b));
 		}
 	}
 

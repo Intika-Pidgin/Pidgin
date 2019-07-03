@@ -97,7 +97,6 @@ gboolean purple_group_on_account(PurpleGroup *g, PurpleAccount *account) {
  * TODO: If merging, prompt the user if they want to merge.
  */
 void purple_group_set_name(PurpleGroup *source, const char *name) {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleGroup *dest;
 	gchar *old_name;
 	gchar *new_name;
@@ -177,14 +176,11 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 	}
 
 	/* Save our changes */
-	if (ops && ops->save_node)
-		ops->save_node(PURPLE_BLIST_NODE(source));
+	purple_blist_save_node(PURPLE_BLIST_NODE(source));
 
 	/* Update the UI */
-	if (ops && ops->update) {
-		ops->update(purple_blist_get_default(),
-		            PURPLE_BLIST_NODE(source));
-	}
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(source));
 
 	/* Notify all protocols */
 	/* TODO: Is this condition needed?  Seems like it would always be TRUE */
@@ -295,12 +291,10 @@ static void
 purple_group_constructed(GObject *object) {
 	PurpleGroup *group = PURPLE_GROUP(object);
 	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	G_OBJECT_CLASS(purple_group_parent_class)->constructed(object);
 
-	if (ops && ops->new_node)
-		ops->new_node(PURPLE_BLIST_NODE(group));
+	purple_blist_new_node(PURPLE_BLIST_NODE(group));
 
 	priv->is_constructed = TRUE;
 }

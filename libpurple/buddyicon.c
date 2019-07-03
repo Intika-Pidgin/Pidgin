@@ -848,7 +848,6 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 	char *old_icon;
 	PurpleImage *old_img;
 	PurpleImage *img = NULL;
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	g_return_val_if_fail(node != NULL, NULL);
 
@@ -903,10 +902,8 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 			/* Is this call necessary anymore? Can the buddies
 			 * themselves need updating when the custom buddy
 			 * icon changes? */
-			if (ops && ops->update) {
-				ops->update(purple_blist_get_default(),
-				            PURPLE_BLIST_NODE(buddy));
-			}
+			purple_blist_update_node(purple_blist_get_default(),
+			                         PURPLE_BLIST_NODE(buddy));
 		}
 	} else if (PURPLE_IS_CHAT(node)) {
 		PurpleChatConversation *chat = NULL;
@@ -917,9 +914,7 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 		}
 	}
 
-	if (ops && ops->update) {
-		ops->update(purple_blist_get_default(), node);
-	}
+	purple_blist_update_node(purple_blist_get_default(), node);
 
 	if (old_img) {
 		g_object_unref(old_img);

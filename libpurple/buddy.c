@@ -67,7 +67,6 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleBuddy, purple_buddy, PURPLE_TYPE_BLIST_NODE)
 void
 purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
@@ -83,10 +82,8 @@ purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 
 	purple_signal_emit(purple_blist_get_handle(), "buddy-icon-changed", buddy);
 
-	if (ops && ops->update) {
-		ops->update(purple_blist_get_default(),
-		            PURPLE_BLIST_NODE(buddy));
-	}
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(buddy));
 }
 
 PurpleBuddyIcon *
@@ -113,7 +110,6 @@ void
 purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 {
 	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	g_return_if_fail(priv != NULL);
 
@@ -124,14 +120,9 @@ purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 
 	g_object_notify_by_pspec(G_OBJECT(buddy), properties[PROP_NAME]);
 
-	if (ops) {
-		if (ops->save_node)
-			ops->save_node(PURPLE_BLIST_NODE(buddy));
-		if (ops->update) {
-			ops->update(purple_blist_get_default(),
-			            PURPLE_BLIST_NODE(buddy));
-		}
-	}
+	purple_blist_save_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(buddy));
 }
 
 const char *
@@ -228,7 +219,6 @@ const char *purple_buddy_get_alias(PurpleBuddy *buddy)
 void
 purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
@@ -256,13 +246,9 @@ purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 	g_object_notify_by_pspec(G_OBJECT(buddy),
 			properties[PROP_LOCAL_ALIAS]);
 
-	if (ops && ops->save_node)
-		ops->save_node(PURPLE_BLIST_NODE(buddy));
-
-	if (ops && ops->update) {
-		ops->update(purple_blist_get_default(),
-		            PURPLE_BLIST_NODE(buddy));
-	}
+	purple_blist_save_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(buddy));
 
 	im = purple_conversations_find_im_with_account(priv->name,
 											   priv->account);
@@ -286,7 +272,6 @@ const char *purple_buddy_get_local_alias(PurpleBuddy *buddy)
 void
 purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
@@ -314,14 +299,9 @@ purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 	g_object_notify_by_pspec(G_OBJECT(buddy),
 			properties[PROP_SERVER_ALIAS]);
 
-	if (ops) {
-		if (ops->save_node)
-			ops->save_node(PURPLE_BLIST_NODE(buddy));
-		if (ops->update) {
-			ops->update(purple_blist_get_default(),
-			            PURPLE_BLIST_NODE(buddy));
-		}
-	}
+	purple_blist_save_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(buddy));
 
 	im = purple_conversations_find_im_with_account(priv->name,
 											   priv->account);
@@ -368,7 +348,6 @@ purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 	PurpleBlistNode *cnode;
 	PurpleContact *contact;
 	PurpleCountingNode *contact_counter, *group_counter;
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
 	g_return_if_fail(priv != NULL);
@@ -423,10 +402,8 @@ purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 	 */
 	purple_contact_invalidate_priority_buddy(purple_buddy_get_contact(buddy));
 
-	if (ops && ops->update) {
-		ops->update(purple_blist_get_default(),
-		            PURPLE_BLIST_NODE(buddy));
-	}
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(buddy));
 }
 
 PurpleMediaCaps purple_buddy_get_media_caps(PurpleBuddy *buddy)
@@ -546,15 +523,13 @@ static void
 purple_buddy_constructed(GObject *object) {
 	PurpleBuddy *buddy = PURPLE_BUDDY(object);
 	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	G_OBJECT_CLASS(purple_buddy_parent_class)->constructed(object);
 
 	priv->presence = PURPLE_PRESENCE(purple_buddy_presence_new(buddy));
 	purple_presence_set_status_active(priv->presence, "offline", TRUE);
 
-	if (ops && ops->new_node)
-		ops->new_node((PurpleBlistNode *)buddy);
+	purple_blist_new_node(PURPLE_BLIST_NODE(buddy));
 
 	priv->is_constructed = TRUE;
 }
