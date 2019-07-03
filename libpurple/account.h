@@ -90,21 +90,6 @@ typedef enum
 	PURPLE_ACCOUNT_PRIVACY_ALLOW_BUDDYLIST
 } PurpleAccountPrivacyType;
 
-/**
- * PurpleAccount:
- * @ui_data: The UI data associated with this account. This is a convenience
- *           field provided to the UIs -- it is not used by the libpurple core.
- *
- * Structure representing an account.
- */
-struct _PurpleAccount
-{
-	GObject gparent;
-
-	/*< public >*/
-	gpointer ui_data;
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -609,27 +594,6 @@ void purple_account_set_ui_string(PurpleAccount *account, const char *ui,
  */
 void purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 							  const char *name, gboolean value);
-
-/**
- * purple_account_set_ui_data:
- * @account: The account.
- * @ui_data: A pointer to associate with this object.
- *
- * Set the UI data associated with this account.
- */
-void purple_account_set_ui_data(PurpleAccount *account, gpointer ui_data);
-
-/**
- * purple_account_get_ui_data:
- * @account: The account.
- *
- * Returns the UI data associated with this account.
- *
- * Returns: The UI data associated with this account.  This is a
- *         convenience field provided to the UIs--it is not
- *         used by the libpurple core.
- */
-gpointer purple_account_get_ui_data(PurpleAccount *account);
 
 /**
  * purple_account_is_connected:

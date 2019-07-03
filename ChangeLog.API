@@ -392,9 +392,12 @@ version 3.0.0 (??/??/????):
 		* _XMLNodeType
 		* account-authorization-requested-with-message signal
 		* network-configuration-changed signal
+		* PurpleAccoun->ui_data
 		* purple_account_add_buddies_with_invite
 		* purple_account_add_buddy_with_invite
+		* purple_account_get_ui_data
 		* purple_account_set_current_error
+		* purple_account_set_ui_data
 		* purple_base64_*. Use g_base64_* instead
 		* purple_blist_load
 		* purple_blist_new
