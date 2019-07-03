@@ -2520,8 +2520,8 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 	PurpleBlistNode *gnode, *cnode;
 
 	/* XXX needs to be %host%,%canon%, and %me% clean */
-	for(gnode = purple_blist_get_root(); gnode;
-			gnode = purple_blist_node_get_sibling_next(gnode)) {
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = purple_blist_node_get_sibling_next(gnode)) {
 		for(cnode = purple_blist_node_get_first_child(gnode);
 				cnode;
 				cnode = purple_blist_node_get_sibling_next(cnode)) {

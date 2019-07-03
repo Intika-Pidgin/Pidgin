@@ -203,7 +203,7 @@ static gboolean gtk_blist_visibility_cb(GtkWidget *w, GdkEventVisibility *event,
 		old_state != GDK_VISIBILITY_FULLY_OBSCURED) {
 
 		/* no longer fully obscured */
-		pidgin_blist_refresh_timer(purple_blist_get_buddy_list());
+		pidgin_blist_refresh_timer(purple_blist_get_default());
 	}
 
 	/* continue to handle event normally */
@@ -217,7 +217,7 @@ static gboolean gtk_blist_window_state_cb(GtkWidget *w, GdkEventWindowState *eve
 			purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_visible", FALSE);
 		else {
 			purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/blist/list_visible", TRUE);
-			pidgin_blist_refresh_timer(purple_blist_get_buddy_list());
+			pidgin_blist_refresh_timer(purple_blist_get_default());
 		}
 	}
 
@@ -231,7 +231,7 @@ static gboolean gtk_blist_window_state_cb(GtkWidget *w, GdkEventWindowState *eve
 	/* Refresh gtkblist if un-iconifying */
 	if (event->changed_mask & GDK_WINDOW_STATE_ICONIFIED){
 		if (!(event->new_window_state & GDK_WINDOW_STATE_ICONIFIED))
-			pidgin_blist_refresh_timer(purple_blist_get_buddy_list());
+			pidgin_blist_refresh_timer(purple_blist_get_default());
 	}
 
 	return FALSE;
@@ -754,7 +754,7 @@ static void gtk_blist_menu_showoffline_cb(GtkWidget *w, PurpleBlistNode *node)
 	{
 		purple_blist_node_set_bool(node, "show_offline",
 		                           !purple_blist_node_get_bool(node, "show_offline"));
-		pidgin_blist_update(purple_blist_get_buddy_list(), node);
+		pidgin_blist_update(purple_blist_get_default(), node);
 	}
 	else if (PURPLE_IS_CONTACT(node))
 	{
@@ -767,7 +767,7 @@ static void gtk_blist_menu_showoffline_cb(GtkWidget *w, PurpleBlistNode *node)
 		     bnode = purple_blist_node_get_sibling_next(bnode))
 		{
 			purple_blist_node_set_bool(bnode, "show_offline", setting);
-			pidgin_blist_update(purple_blist_get_buddy_list(), bnode);
+			pidgin_blist_update(purple_blist_get_default(), bnode);
 		}
 	} else if (PURPLE_IS_GROUP(node)) {
 		PurpleBlistNode *cnode, *bnode;
@@ -784,7 +784,8 @@ static void gtk_blist_menu_showoffline_cb(GtkWidget *w, PurpleBlistNode *node)
 			     bnode = purple_blist_node_get_sibling_next(bnode))
 			{
 				purple_blist_node_set_bool(bnode, "show_offline", setting);
-				pidgin_blist_update(purple_blist_get_buddy_list(), bnode);
+				pidgin_blist_update(purple_blist_get_default(),
+				                    bnode);
 			}
 		}
 	}
@@ -912,7 +913,8 @@ pidgin_blist_update_privacy_cb(PurpleBuddy *buddy)
 	PidginBlistNode *ui_data = purple_blist_node_get_ui_data(PURPLE_BLIST_NODE(buddy));
 	if (ui_data == NULL || ui_data->row == NULL)
 		return;
-	pidgin_blist_update_buddy(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy), TRUE);
+	pidgin_blist_update_buddy(purple_blist_get_default(),
+	                          PURPLE_BLIST_NODE(buddy), TRUE);
 }
 
 static gboolean
@@ -972,7 +974,7 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 	img = gtk_image_new_from_icon_name("dialog-question",
 			GTK_ICON_SIZE_DIALOG);
 
-	gtkblist = PIDGIN_BLIST(purple_blist_get_buddy_list());
+	gtkblist = PIDGIN_BLIST(purple_blist_get_default());
 	blist_window = gtkblist ? GTK_WINDOW(gtkblist->window) : NULL;
 
 	data->window = gtk_dialog_new();
@@ -1385,7 +1387,7 @@ toggle_privacy(GtkWidget *widget, PurpleBlistNode *node)
 	else
 		purple_account_privacy_allow(account, name);
 
-	pidgin_blist_update(purple_blist_get_buddy_list(), node);
+	pidgin_blist_update(purple_blist_get_default(), node);
 }
 
 void pidgin_append_blist_node_privacy_menu(GtkWidget *menu, PurpleBlistNode *node)
@@ -1447,7 +1449,8 @@ pidgin_append_blist_node_move_to_menu(GtkWidget *menu, PurpleBlistNode *node)
 	submenu = gtk_menu_new();
 	gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
 
-	for (group = purple_blist_get_root(); group; group = purple_blist_node_get_sibling_next(group)) {
+	for (group = purple_blist_get_default_root(); group;
+	     group = purple_blist_node_get_sibling_next(group)) {
 		if (!PURPLE_IS_GROUP(group))
 			continue;
 		if (group == purple_blist_node_get_parent(node))
@@ -4470,7 +4473,7 @@ static gboolean pidgin_blist_refresh_timer(PurpleBuddyList *list)
 			|| !gtk_widget_get_visible(gtkblist->window))
 		return TRUE;
 
-	for(gnode = list->root; gnode; gnode = gnode->next) {
+	for (gnode = purple_blist_get_root(list); gnode; gnode = gnode->next) {
 		if(!PURPLE_IS_GROUP(gnode))
 			continue;
 		for(cnode = gnode->child; cnode; cnode = cnode->next) {
@@ -4735,7 +4738,7 @@ written_msg_update_ui_cb(PurpleConversation *conv, PurpleMessage *msg, PurpleBli
 	if (PURPLE_IS_CHAT_CONVERSATION(conv) && (purple_message_get_flags(msg) & PURPLE_MESSAGE_NICK))
 		ui->conv.flags |= PIDGIN_BLIST_CHAT_HAS_PENDING_MESSAGE_WITH_NICK;
 
-	pidgin_blist_update(purple_blist_get_buddy_list(), node);
+	pidgin_blist_update(purple_blist_get_default(), node);
 }
 
 static void
@@ -4746,7 +4749,7 @@ displayed_msg_update_ui_cb(PidginConversation *gtkconv, PurpleBlistNode *node)
 		return;
 	ui->conv.flags &= ~(PIDGIN_BLIST_NODE_HAS_PENDING_MESSAGE |
 	                    PIDGIN_BLIST_CHAT_HAS_PENDING_MESSAGE_WITH_NICK);
-	pidgin_blist_update(purple_blist_get_buddy_list(), node);
+	pidgin_blist_update(purple_blist_get_default(), node);
 }
 
 static void
@@ -4906,7 +4909,7 @@ static void _prefs_change_redo_list(const char *name, PurplePrefType type,
 		gtk_tree_model_get(GTK_TREE_MODEL(gtkblist->treemodel), &iter, NODE_COLUMN, &node, -1);
 	}
 
-	redo_buddy_list(purple_blist_get_buddy_list(), FALSE, FALSE);
+	redo_buddy_list(purple_blist_get_default(), FALSE, FALSE);
 	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(gtkblist->treeview));
 
 	if (node)
@@ -5487,7 +5490,7 @@ treeview_style_set(GtkWidget *widget,
 		    gpointer data)
 {
 	PurpleBuddyList *list = data;
-	PurpleBlistNode *node = list->root;
+	PurpleBlistNode *node = purple_blist_get_root(list);
 	while (node) {
 		pidgin_blist_update_group(list, node);
 		node = node->next;
@@ -6113,7 +6116,7 @@ static void redo_buddy_list(PurpleBuddyList *list, gboolean remove, gboolean rer
 	if(!gtkblist || !gtkblist->treeview)
 		return;
 
-	node = list->root;
+	node = purple_blist_get_root(list);
 
 	while (node)
 	{
@@ -6145,8 +6148,8 @@ pidgin_blist_update_refresh_timeout()
 	PurpleBuddyList *blist;
 	PidginBuddyList *gtkblist;
 
-	blist = purple_blist_get_buddy_list();
-	gtkblist = PIDGIN_BLIST(purple_blist_get_buddy_list());
+	blist = purple_blist_get_default();
+	gtkblist = PIDGIN_BLIST(blist);
 
 	gtkblist->refresh_timer = g_timeout_add_seconds(30,(GSourceFunc)pidgin_blist_refresh_timer, blist);
 }
@@ -6922,17 +6925,12 @@ groups_tree(void)
 	g_list_free(list);
 	list = NULL;
 
-	if (purple_blist_get_buddy_list()->root == NULL)
-	{
+	gnode = purple_blist_get_default_root();
+	if (gnode == NULL) {
 		list  = g_list_append(list,
 			(gpointer)PURPLE_BLIST_DEFAULT_GROUP_NAME);
-	}
-	else
-	{
-		for (gnode = purple_blist_get_buddy_list()->root;
-			 gnode != NULL;
-			 gnode = gnode->next)
-		{
+	} else {
+		for (; gnode != NULL; gnode = gnode->next) {
 			if (PURPLE_IS_GROUP(gnode))
 			{
 				g    = (PurpleGroup *)gnode;
@@ -7415,8 +7413,8 @@ static gboolean autojoin_cb(PurpleConnection *gc, gpointer data)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
 	PurpleBlistNode *gnode, *cnode;
-	for(gnode = purple_blist_get_buddy_list()->root; gnode; gnode = gnode->next)
-	{
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = gnode->next) {
 		if(!PURPLE_IS_GROUP(gnode))
 			continue;
 		for(cnode = gnode->child; cnode; cnode = cnode->next)
@@ -7484,7 +7482,7 @@ void
 pidgin_blist_set_theme(PidginBlistTheme *theme)
 {
 	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
-	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	PurpleBuddyList *list = purple_blist_get_default();
 
 	if (theme != NULL)
 		purple_prefs_set_string(PIDGIN_PREFS_ROOT "/blist/theme",
@@ -7637,9 +7635,9 @@ void pidgin_blist_sort_method_set(const char *id){
 		return;
 	}
 	if (purple_strequal(id, "none")) {
-		redo_buddy_list(purple_blist_get_buddy_list(), TRUE, FALSE);
+		redo_buddy_list(purple_blist_get_default(), TRUE, FALSE);
 	} else {
-		redo_buddy_list(purple_blist_get_buddy_list(), FALSE, FALSE);
+		redo_buddy_list(purple_blist_get_default(), FALSE, FALSE);
 	}
 }
 

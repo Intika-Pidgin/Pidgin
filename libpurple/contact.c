@@ -145,8 +145,10 @@ purple_contact_set_alias(PurpleContact *contact, const char *alias)
 	if (ops) {
 		if (ops->save_node)
 			ops->save_node(PURPLE_BLIST_NODE(contact));
-		if (ops->update)
-			ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(contact));
+		if (ops->update) {
+			ops->update(purple_blist_get_default(),
+			            PURPLE_BLIST_NODE(contact));
+		}
 	}
 
 	for(bnode = PURPLE_BLIST_NODE(contact)->child; bnode != NULL; bnode = bnode->next)

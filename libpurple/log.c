@@ -1889,10 +1889,9 @@ static void old_logger_get_log_sets(PurpleLogSetCallback cb, GHashTable *sets)
 		set->name = set->normalized_name = name;
 
 		/* Search the buddy list to find the account and to determine if this is a buddy. */
-		for (gnode = purple_blist_get_root();
+		for (gnode = purple_blist_get_default_root();
 		     !found && gnode != NULL;
-		     gnode = purple_blist_node_get_sibling_next(gnode))
-		{
+		     gnode = purple_blist_node_get_sibling_next(gnode)) {
 			if (!PURPLE_IS_GROUP(gnode))
 				continue;
 

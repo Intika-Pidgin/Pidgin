@@ -310,14 +310,12 @@ pidgin_dialogs_im(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_blist_get_buddy_list(), _("New Instant Message"),
-						NULL,
-						_("Please enter the username or alias of the person "
-						  "you would like to IM."),
-						fields,
-						_("OK"), G_CALLBACK(pidgin_dialogs_im_cb),
-						_("Cancel"), NULL,
-						NULL, NULL);
+	purple_request_fields(
+	        purple_blist_get_default(), _("New Instant Message"), NULL,
+	        _("Please enter the username or alias of the person "
+	          "you would like to IM."),
+	        fields, _("OK"), G_CALLBACK(pidgin_dialogs_im_cb), _("Cancel"),
+	        NULL, NULL, NULL);
 }
 
 void
@@ -451,14 +449,12 @@ pidgin_dialogs_info(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_blist_get_buddy_list(), _("Get User Info"),
-						NULL,
-						_("Please enter the username or alias of the person "
-						  "whose info you would like to view."),
-						fields,
-						_("OK"), G_CALLBACK(pidgin_dialogs_info_cb),
-						_("Cancel"), NULL,
-						NULL, NULL);
+	purple_request_fields(
+	        purple_blist_get_default(), _("Get User Info"), NULL,
+	        _("Please enter the username or alias of the person "
+	          "whose info you would like to view."),
+	        fields, _("OK"), G_CALLBACK(pidgin_dialogs_info_cb),
+	        _("Cancel"), NULL, NULL, NULL);
 }
 
 static void
@@ -542,14 +538,12 @@ pidgin_dialogs_log(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_blist_get_buddy_list(), _("View User Log"),
-						NULL,
-						_("Please enter the username or alias of the person "
-						  "whose log you would like to view."),
-						fields,
-						_("OK"), G_CALLBACK(pidgin_dialogs_log_cb),
-						_("Cancel"), NULL,
-						NULL, NULL);
+	purple_request_fields(
+	        purple_blist_get_default(), _("View User Log"), NULL,
+	        _("Please enter the username or alias of the person "
+	          "whose log you would like to view."),
+	        fields, _("OK"), G_CALLBACK(pidgin_dialogs_log_cb), _("Cancel"),
+	        NULL, NULL, NULL);
 }
 
 static void

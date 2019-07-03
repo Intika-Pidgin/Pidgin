@@ -124,8 +124,10 @@ purple_chat_set_alias(PurpleChat *chat, const char *alias)
 	if (ops) {
 		if (ops->save_node)
 			ops->save_node(PURPLE_BLIST_NODE(chat));
-		if (ops->update)
-			ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(chat));
+		if (ops->update) {
+			ops->update(purple_blist_get_default(),
+			            PURPLE_BLIST_NODE(chat));
+		}
 	}
 
 	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",

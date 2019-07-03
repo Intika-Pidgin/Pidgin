@@ -56,7 +56,7 @@ static gboolean
 check_timeout(gpointer data)
 {
 	gint count = check_mail();
-	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	PurpleBuddyList *list = purple_blist_get_default();
 
 	if (count == -1)
 		return FALSE;
@@ -91,7 +91,7 @@ check_timeout(gpointer data)
 static void
 signon_cb(PurpleConnection *gc)
 {
-	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	PurpleBuddyList *list = purple_blist_get_default();
 	if (list && !timer) {
 		check_timeout(NULL); /* we want the box to be drawn immediately */
 		timer = g_timeout_add_seconds(2, check_timeout, NULL);
@@ -101,7 +101,7 @@ signon_cb(PurpleConnection *gc)
 static void
 signoff_cb(PurpleConnection *gc)
 {
-	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	PurpleBuddyList *list = purple_blist_get_default();
 	if ((!list || !PIDGIN_BLIST(list)->vbox) && timer) {
 		g_source_remove(timer);
 		timer = 0;
@@ -138,7 +138,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	PurpleBuddyList *list = purple_blist_get_buddy_list();
+	PurpleBuddyList *list = purple_blist_get_default();
 	void *conn_handle = purple_connections_get_handle();
 
 	if (!check_timeout(NULL)) {

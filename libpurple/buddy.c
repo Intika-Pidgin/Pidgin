@@ -83,8 +83,10 @@ purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 
 	purple_signal_emit(purple_blist_get_handle(), "buddy-icon-changed", buddy);
 
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+	if (ops && ops->update) {
+		ops->update(purple_blist_get_default(),
+		            PURPLE_BLIST_NODE(buddy));
+	}
 }
 
 PurpleBuddyIcon *
@@ -125,8 +127,10 @@ purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 	if (ops) {
 		if (ops->save_node)
 			ops->save_node(PURPLE_BLIST_NODE(buddy));
-		if (ops->update)
-			ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+		if (ops->update) {
+			ops->update(purple_blist_get_default(),
+			            PURPLE_BLIST_NODE(buddy));
+		}
 	}
 }
 
@@ -255,8 +259,10 @@ purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 	if (ops && ops->save_node)
 		ops->save_node(PURPLE_BLIST_NODE(buddy));
 
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+	if (ops && ops->update) {
+		ops->update(purple_blist_get_default(),
+		            PURPLE_BLIST_NODE(buddy));
+	}
 
 	im = purple_conversations_find_im_with_account(priv->name,
 											   priv->account);
@@ -311,8 +317,10 @@ purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 	if (ops) {
 		if (ops->save_node)
 			ops->save_node(PURPLE_BLIST_NODE(buddy));
-		if (ops->update)
-			ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+		if (ops->update) {
+			ops->update(purple_blist_get_default(),
+			            PURPLE_BLIST_NODE(buddy));
+		}
 	}
 
 	im = purple_conversations_find_im_with_account(priv->name,
@@ -415,8 +423,10 @@ purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 	 */
 	purple_contact_invalidate_priority_buddy(purple_buddy_get_contact(buddy));
 
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+	if (ops && ops->update) {
+		ops->update(purple_blist_get_default(),
+		            PURPLE_BLIST_NODE(buddy));
+	}
 }
 
 PurpleMediaCaps purple_buddy_get_media_caps(PurpleBuddy *buddy)
