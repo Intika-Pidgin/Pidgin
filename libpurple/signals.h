@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_SIGNALS_H_
-#define _PURPLE_SIGNALS_H_
+#ifndef PURPLE_SIGNALS_H
+#define PURPLE_SIGNALS_H
 /**
  * SECTION:signals
  * @section_id: libpurple-signals
@@ -837,5 +837,4 @@ void purple_marshal_POINTER__POINTER_POINTER(
 
 G_END_DECLS
 
-#endif /* _PURPLE_SIGNALS_H_ */
-
+#endif /* PURPLE_SIGNALS_H */
