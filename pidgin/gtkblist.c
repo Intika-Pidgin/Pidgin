@@ -4849,7 +4849,7 @@ static void pidgin_blist_new_list(PurpleBuddyList *blist)
 	gtkblist = g_new0(PidginBuddyList, 1);
 	gtkblist->priv = g_new0(PidginBuddyListPrivate, 1);
 
-	blist->ui_data = gtkblist;
+	purple_blist_set_ui_data(gtkblist);
 }
 
 static void
@@ -6857,10 +6857,10 @@ static void pidgin_blist_destroy(PurpleBuddyList *list)
 {
 	PidginBuddyListPrivate *priv;
 
-	if (!list || !list->ui_data)
+	if (!list || !purple_blist_get_ui_data())
 		return;
 
-	g_return_if_fail(list->ui_data == gtkblist);
+	g_return_if_fail(purple_blist_get_ui_data() == gtkblist);
 
 	purple_signals_disconnect_by_handle(gtkblist);
 

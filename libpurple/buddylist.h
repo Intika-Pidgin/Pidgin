@@ -67,18 +67,11 @@ typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
 /**************************************************************************/
 /**
  * PurpleBuddyList:
- * @root:    The first node in the buddy list
- * @ui_data: The UI data associated with this buddy list. This is a convenience
- *           field provided to the UIs -- it is not used by the libpurple core.
  *
  * The Buddy List
  */
 struct _PurpleBuddyList {
 	GObject gparent;
-
-	/*< public >*/
-	PurpleBlistNode *root;
-	gpointer ui_data;
 };
 
 struct _PurpleBuddyListClass {
