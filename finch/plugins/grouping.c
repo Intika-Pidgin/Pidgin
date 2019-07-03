@@ -312,7 +312,7 @@ nested_group_can_add_node(PurpleBlistNode *node)
 		return TRUE;
 
 	len = strlen(purple_group_get_name(PURPLE_GROUP(node)));
-	group = purple_blist_get_root();
+	group = purple_blist_get_default_root();
 	for (; group; group = purple_blist_node_get_sibling_next(group)) {
 		if (group == node)
 			continue;

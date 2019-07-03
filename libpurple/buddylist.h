@@ -180,22 +180,32 @@ G_BEGIN_DECLS
 GType purple_buddy_list_get_type(void);
 
 /**
- * purple_blist_get_buddy_list:
+ * purple_blist_get_default:
  *
- * Returns the main buddy list.
+ * Returns the default buddy list.
  *
- * Returns: The main buddy list.
+ * Returns: The default buddy list.
  */
-PurpleBuddyList *purple_blist_get_buddy_list(void);
+PurpleBuddyList *purple_blist_get_default(void);
 
 /**
- * purple_blist_get_root:
+ * purple_blist_get_default_root:
  *
- * Returns the root node of the main buddy list.
+ * Returns the root node of the default buddy list.
  *
  * Returns: The root node.
  */
-PurpleBlistNode *purple_blist_get_root(void);
+PurpleBlistNode *purple_blist_get_default_root(void);
+
+/**
+ * purple_blist_get_root:
+ * @list: The buddy list to query.
+ *
+ * Returns the root node of the specified buddy list.
+ *
+ * Returns: The root node.
+ */
+PurpleBlistNode *purple_blist_get_root(PurpleBuddyList *list);
 
 /**
  * purple_blist_get_buddies:
