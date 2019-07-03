@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_ROOMLIST_H_
-#define _PURPLE_ROOMLIST_H_
+#ifndef PURPLE_ROOMLIST_H
+#define PURPLE_ROOMLIST_H
 /**
  * SECTION:roomlist
  * @section_id: libpurple-roomlist
@@ -518,4 +518,4 @@ PurpleRoomlistUiOps *purple_roomlist_get_ui_ops(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_ROOMLIST_H_ */
+#endif /* PURPLE_ROOMLIST_H */

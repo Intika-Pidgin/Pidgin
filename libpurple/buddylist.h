@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_BUDDY_LIST_H_
-#define _PURPLE_BUDDY_LIST_H_
+#ifndef PURPLE_BUDDY_LIST_H
+#define PURPLE_BUDDY_LIST_H
 /**
  * SECTION:buddylist
  * @section_id: libpurple-buddylist
@@ -574,4 +574,4 @@ void purple_blist_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_BUDDY_LIST_H_ */
+#endif /* PURPLE_BUDDY_LIST_H */

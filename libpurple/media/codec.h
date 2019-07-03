@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_MEDIA_CODEC_H_
-#define _PURPLE_MEDIA_CODEC_H_
+#ifndef PURPLE_MEDIA_CODEC_H
+#define PURPLE_MEDIA_CODEC_H
 /**
  * SECTION:codec
  * @section_id: libpurple-codec
@@ -197,5 +197,4 @@ gchar *purple_media_codec_to_string(PurpleMediaCodec *codec);
 
 G_END_DECLS
 
-#endif  /* _PURPLE_MEDIA_CODEC_H_ */
-
+#endif /* PURPLE_MEDIA_CODEC_H */

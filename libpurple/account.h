@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_ACCOUNT_H_
-#define _PURPLE_ACCOUNT_H_
+#ifndef PURPLE_ACCOUNT_H
+#define PURPLE_ACCOUNT_H
 /**
  * SECTION:account
  * @section_id: libpurple-account
@@ -1265,4 +1265,4 @@ void purple_account_clear_current_error(PurpleAccount *account);
 
 G_END_DECLS
 
-#endif /* _PURPLE_ACCOUNT_H_ */
+#endif /* PURPLE_ACCOUNT_H */
