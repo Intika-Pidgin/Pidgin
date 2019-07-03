@@ -23,8 +23,7 @@
 
 #include <glib.h>
 
-typedef struct NMField_t
-{
+typedef struct {
 	char *tag;				/* Field tag */
 	guint8 method;			/* Method of the field */
 	guint8 flags;			/* Flags */

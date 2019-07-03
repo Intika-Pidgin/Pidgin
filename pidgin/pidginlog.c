@@ -83,7 +83,7 @@ static GHashTable *log_viewers = NULL;
 static void populate_log_tree(PidginLogViewer *lv);
 static PidginLogViewer *syslog_viewer = NULL;
 
-struct log_viewer_hash_t {
+struct log_viewer_hash {
 	PurpleLogType type;
 	char *buddyname;
 	PurpleAccount *account;
@@ -92,7 +92,7 @@ struct log_viewer_hash_t {
 
 static guint log_viewer_hash(gconstpointer data)
 {
-	const struct log_viewer_hash_t *viewer = data;
+	const struct log_viewer_hash *viewer = data;
 
 	if (viewer->contact != NULL)
 		return g_direct_hash(viewer->contact);
@@ -103,7 +103,7 @@ static guint log_viewer_hash(gconstpointer data)
 
 static gboolean log_viewer_equal(gconstpointer y, gconstpointer z)
 {
-	const struct log_viewer_hash_t *a, *b;
+	const struct log_viewer_hash *a, *b;
 	int ret;
 	char *normal;
 
@@ -217,7 +217,9 @@ entry_search_changed_cb(GtkWidget *button, PidginLogViewer *lv)
 	pidgin_clear_cursor(GTK_WIDGET(lv));
 }
 
-static void destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash_t *ht) {
+static void
+destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash *ht)
+{
 	PidginLogViewer *lv = syslog_viewer;
 
 #ifdef _WIN32
@@ -582,8 +584,9 @@ static void populate_log_tree(PidginLogViewer *lv)
 	}
 }
 
-static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *logs,
-						const char *title, GtkWidget *icon, int log_size)
+static PidginLogViewer *
+display_log_viewer(struct log_viewer_hash *ht, GList *logs, const char *title,
+                   GtkWidget *icon, int log_size)
 {
 	PidginLogViewer *lv;
 
@@ -718,7 +721,7 @@ pidgin_log_viewer_init(PidginLogViewer *self)
  ****************************************************************************/
 
 void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *account) {
-	struct log_viewer_hash_t *ht;
+	struct log_viewer_hash *ht;
 	PidginLogViewer *lv = NULL;
 	const char *name = buddyname;
 	char *title;
@@ -727,7 +730,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(buddyname != NULL);
 
-	ht = g_new0(struct log_viewer_hash_t, 1);
+	ht = g_new0(struct log_viewer_hash, 1);
 
 	ht->type = type;
 	ht->buddyname = g_strdup(buddyname);
@@ -772,7 +775,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 }
 
 void pidgin_log_show_contact(PurpleContact *contact) {
-	struct log_viewer_hash_t *ht;
+	struct log_viewer_hash *ht;
 	PurpleBlistNode *child;
 	PidginLogViewer *lv = NULL;
 	GList *logs = NULL;
@@ -784,7 +787,7 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 
 	g_return_if_fail(contact != NULL);
 
-	ht = g_new0(struct log_viewer_hash_t, 1);
+	ht = g_new0(struct log_viewer_hash, 1);
 	ht->type = PURPLE_LOG_IM;
 	ht->contact = contact;
 
