@@ -32,6 +32,7 @@
 #include "gnt.h"
 #include "gnttree.h"
 
+#define FINCH_TYPE_BUDDY_LIST (finch_buddy_list_get_type())
 #define FINCH_TYPE_BLIST_MANAGER (finch_blist_manager_get_type())
 
 /**********************************************************************
@@ -74,14 +75,8 @@ struct _FinchBlistManager
  */
 GType finch_blist_manager_get_type(void);
 
-/**
- * finch_blist_get_ui_ops:
- *
- * Get the ui-functions.
- *
- * Returns: The PurpleBlistUiOps structure populated with the appropriate functions.
- */
-PurpleBlistUiOps * finch_blist_get_ui_ops(void);
+G_DECLARE_FINAL_TYPE(FinchBuddyList, finch_buddy_list, FINCH, BUDDY_LIST,
+                     PurpleBuddyList)
 
 /**
  * finch_blist_init:

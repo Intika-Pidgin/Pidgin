@@ -106,6 +106,8 @@ typedef enum {
  * Like, everything you need to know about the gtk buddy list
  */
 struct _PidginBuddyList {
+	PurpleBuddyList parent;
+
 	GtkWidget *window;
 	GtkWidget *notebook;
 	GtkWidget *main_vbox;
@@ -149,8 +151,6 @@ struct _PidginBuddyList {
 };
 
 #define PIDGIN_BLIST(list) ((PidginBuddyList *)purple_blist_get_ui_data())
-#define PIDGIN_IS_PIDGIN_BLIST(list) \
-	(purple_blist_get_ui_ops() == pidgin_blist_get_ui_ops())
 
 G_BEGIN_DECLS
 
@@ -163,7 +163,8 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the #PidginBuddyList boxed structure.
  */
-GType pidgin_buddy_list_get_type(void);
+G_DECLARE_FINAL_TYPE(PidginBuddyList, pidgin_buddy_list, PIDGIN, BUDDY_LIST,
+                     PurpleBuddyList)
 
 /**
  * pidgin_blist_get_handle:
@@ -187,15 +188,6 @@ void pidgin_blist_init(void);
  * Uninitializes the GTK+ blist system.
  */
 void pidgin_blist_uninit(void);
-
-/**
- * pidgin_blist_get_ui_ops:
- *
- * Returns the UI operations structure for the buddy list.
- *
- * Returns: The GTK+ list operations structure.
- */
-PurpleBlistUiOps *pidgin_blist_get_ui_ops(void);
 
 /**
  * pidgin_blist_get_default_gtk_blist:
