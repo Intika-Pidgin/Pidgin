@@ -518,18 +518,6 @@ node_update(PurpleBuddyList *list, PurpleBlistNode *node)
 	}
 }
 
-static void
-new_list(PurpleBuddyList *list)
-{
-	if (ggblist)
-		return;
-
-	ggblist = FINCH_BUDDY_LIST(list);
-	ggblist->manager = finch_blist_manager_find(purple_prefs_get_string(PREF_ROOT "/grouping"));
-	if (!ggblist->manager)
-		ggblist->manager = &default_manager;
-}
-
 static void destroy_list(PurpleBuddyList *list)
 {
 	if (ggblist == NULL)
@@ -2989,9 +2977,7 @@ group_collapsed(GntWidget *widget, PurpleBlistNode *node, gboolean collapsed, gp
 static void
 blist_show(PurpleBuddyList *list)
 {
-	if (ggblist == NULL)
-		new_list(list);
-	else if (ggblist->window) {
+	if (ggblist->window) {
 		gnt_window_present(ggblist->window);
 		return;
 	}
@@ -3147,6 +3133,16 @@ G_DEFINE_TYPE(FinchBuddyList, finch_buddy_list, PURPLE_TYPE_BUDDY_LIST)
 static void
 finch_buddy_list_init(FinchBuddyList *self)
 {
+	if (!ggblist) {
+		/* The first buddy list object becomes the default. */
+		ggblist = self;
+	}
+
+	self->manager = finch_blist_manager_find(
+	        purple_prefs_get_string(PREF_ROOT "/grouping"));
+	if (!self->manager) {
+		self->manager = &default_manager;
+	}
 }
 
 static void
@@ -3155,7 +3151,6 @@ finch_buddy_list_class_init(FinchBuddyListClass *klass)
 	PurpleBuddyListClass *purple_blist_class;
 
 	purple_blist_class = PURPLE_BUDDY_LIST_CLASS(klass);
-	purple_blist_class->new_list = new_list;
 	purple_blist_class->new_node = new_node;
 	purple_blist_class->show = blist_show;
 	purple_blist_class->update = node_update;

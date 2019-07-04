@@ -724,7 +724,6 @@ purple_blist_boot(void)
 {
 	GList *account;
 	PurpleBuddyList *gbl = g_object_new(buddy_list_type, NULL);
-	PurpleBuddyListClass *klass = PURPLE_BUDDY_LIST_GET_CLASS(gbl);
 
 	buddies_cache = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 					 NULL, (GDestroyNotify)g_hash_table_destroy);
@@ -739,10 +738,6 @@ purple_blist_boot(void)
 	}
 
 	purplebuddylist = gbl;
-
-	if (klass && klass->new_list) {
-		klass->new_list(gbl);
-	}
 
 	load_blist();
 }
