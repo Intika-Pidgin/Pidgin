@@ -518,15 +518,6 @@ node_update(PurpleBuddyList *list, PurpleBlistNode *node)
 	}
 }
 
-static void destroy_list(PurpleBuddyList *list)
-{
-	if (ggblist == NULL)
-		return;
-
-	gnt_widget_destroy(ggblist->window);
-	ggblist = NULL;
-}
-
 static gboolean
 remove_new_empty_group(gpointer data)
 {
@@ -3146,16 +3137,28 @@ finch_buddy_list_init(FinchBuddyList *self)
 }
 
 static void
+finch_buddy_list_finalize(GObject *obj)
+{
+	FinchBuddyList *ggblist = FINCH_BUDDY_LIST(obj);
+
+	gnt_widget_destroy(ggblist->window);
+
+	G_OBJECT_CLASS(finch_buddy_list_parent_class)->finalize(obj);
+}
+
+static void
 finch_buddy_list_class_init(FinchBuddyListClass *klass)
 {
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	PurpleBuddyListClass *purple_blist_class;
+
+	obj_class->finalize = finch_buddy_list_finalize;
 
 	purple_blist_class = PURPLE_BUDDY_LIST_CLASS(klass);
 	purple_blist_class->new_node = new_node;
 	purple_blist_class->show = blist_show;
 	purple_blist_class->update = node_update;
 	purple_blist_class->remove = node_remove;
-	purple_blist_class->destroy = destroy_list;
 	purple_blist_class->request_add_buddy = finch_request_add_buddy;
 	purple_blist_class->request_add_chat = finch_request_add_chat;
 	purple_blist_class->request_add_group = finch_request_add_group;

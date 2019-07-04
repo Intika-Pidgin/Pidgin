@@ -2170,16 +2170,15 @@ purple_blist_init(void)
 }
 
 static void
-blist_node_destroy(PurpleBlistNode *node)
+blist_node_destroy(PurpleBuddyListClass *klass, PurpleBuddyList *list,
+                   PurpleBlistNode *node)
 {
-	PurpleBuddyListClass *klass = NULL;
 	PurpleBlistNode *child, *next_child;
 
-	klass = PURPLE_BUDDY_LIST_GET_CLASS(purplebuddylist);
 	child = node->child;
 	while (child) {
 		next_child = child->next;
-		blist_node_destroy(child);
+		blist_node_destroy(klass, list, child);
 		child = next_child;
 	}
 
@@ -2189,7 +2188,7 @@ blist_node_destroy(PurpleBlistNode *node)
 	node->next   = NULL;
 	node->prev   = NULL;
 	if (klass && klass->remove) {
-		klass->remove(purplebuddylist, node);
+		klass->remove(list, node);
 	}
 
 	g_object_unref(node);
@@ -2198,16 +2197,9 @@ blist_node_destroy(PurpleBlistNode *node)
 void
 purple_blist_uninit(void)
 {
-	PurpleBuddyListClass *klass = NULL;
-	PurpleBuddyListPrivate *priv = NULL;
-	PurpleBlistNode *node, *next_node;
-
 	/* This happens if we quit before purple_set_blist is called. */
 	if (purplebuddylist == NULL)
 		return;
-
-	klass = PURPLE_BUDDY_LIST_GET_CLASS(purplebuddylist);
-	priv = purple_buddy_list_get_instance_private(purplebuddylist);
 
 	if (save_timer != 0) {
 		g_source_remove(save_timer);
@@ -2217,26 +2209,13 @@ purple_blist_uninit(void)
 
 	purple_debug(PURPLE_DEBUG_INFO, "buddylist", "Destroying\n");
 
-	if (klass && klass->destroy) {
-		klass->destroy(purplebuddylist);
-	}
-
-	node = priv->root;
-	while (node) {
-		next_node = node->next;
-		blist_node_destroy(node);
-		node = next_node;
-	}
-	priv->root = NULL;
-
 	g_hash_table_destroy(buddies_cache);
 	g_hash_table_destroy(groups_cache);
 
 	buddies_cache = NULL;
 	groups_cache = NULL;
 
-	g_object_unref(purplebuddylist);
-	purplebuddylist = NULL;
+	g_clear_object(&purplebuddylist);
 
 	g_free(localized_default_group_name);
 	localized_default_group_name = NULL;
@@ -2266,9 +2245,21 @@ purple_buddy_list_init(PurpleBuddyList *blist)
 static void
 purple_buddy_list_finalize(GObject *object)
 {
-	PurpleBuddyListPrivate *priv = purple_buddy_list_get_instance_private(
-			PURPLE_BUDDY_LIST(object));
+	PurpleBuddyList *list = PURPLE_BUDDY_LIST(object);
+	PurpleBuddyListClass *klass = PURPLE_BUDDY_LIST_GET_CLASS(list);
+	PurpleBuddyListPrivate *priv =
+	        purple_buddy_list_get_instance_private(list);
+	PurpleBlistNode *node, *next_node;
+
 	g_hash_table_destroy(priv->buddies);
+
+	node = priv->root;
+	while (node) {
+		next_node = node->next;
+		blist_node_destroy(klass, list, node);
+		node = next_node;
+	}
+	priv->root = NULL;
 
 	G_OBJECT_CLASS(purple_buddy_list_parent_class)->finalize(object);
 }
