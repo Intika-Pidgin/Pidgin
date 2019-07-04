@@ -565,8 +565,8 @@ jingle_rtp_create_media(JingleContent *content)
 				 G_CALLBACK(jingle_rtp_codecs_changed_cb), session);
 	g_signal_connect(G_OBJECT(media), "state-changed",
 				 G_CALLBACK(jingle_rtp_state_changed_cb), session);
-	g_signal_connect(G_OBJECT(media), "stream-info",
-			G_CALLBACK(jingle_rtp_stream_info_cb), session);
+	g_signal_connect_object(G_OBJECT(media), "stream-info",
+			G_CALLBACK(jingle_rtp_stream_info_cb), session, 0);
 
 	g_object_unref(session);
 	return media;
