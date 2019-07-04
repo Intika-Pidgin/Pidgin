@@ -974,7 +974,7 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 	img = gtk_image_new_from_icon_name("dialog-question",
 			GTK_ICON_SIZE_DIALOG);
 
-	gtkblist = PIDGIN_BLIST(purple_blist_get_default());
+	gtkblist = PIDGIN_BUDDY_LIST(purple_blist_get_default());
 	blist_window = gtkblist ? GTK_WINDOW(gtkblist->window) : NULL;
 
 	data->window = gtk_dialog_new();
@@ -4564,7 +4564,7 @@ update_menu_bar(PidginBuddyList *gtkblist)
 static void
 sign_on_off_cb(PurpleConnection *gc, PurpleBuddyList *blist)
 {
-	PidginBuddyList *gtkblist = PIDGIN_BLIST(blist);
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(blist);
 
 	update_menu_bar(gtkblist);
 }
@@ -4803,8 +4803,6 @@ static void pidgin_blist_new_list(PurpleBuddyList *blist)
 
 	gtkblist = PIDGIN_BUDDY_LIST(blist);
 	gtkblist->priv = g_new0(PidginBuddyListPrivate, 1);
-
-	purple_blist_set_ui_data(gtkblist);
 }
 
 static void
@@ -5705,7 +5703,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 		return;
 	}
 
-	gtkblist = PIDGIN_BLIST(list);
+	gtkblist = PIDGIN_BUDDY_LIST(list);
 	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
 
 	if (priv->current_theme)
@@ -6068,7 +6066,7 @@ static void redo_buddy_list(PurpleBuddyList *list, gboolean remove, gboolean rer
 {
 	PurpleBlistNode *node;
 
-	gtkblist = PIDGIN_BLIST(list);
+	gtkblist = PIDGIN_BUDDY_LIST(list);
 	if(!gtkblist || !gtkblist->treeview)
 		return;
 
@@ -6105,7 +6103,7 @@ pidgin_blist_update_refresh_timeout()
 	PidginBuddyList *gtkblist;
 
 	blist = purple_blist_get_default();
-	gtkblist = PIDGIN_BLIST(blist);
+	gtkblist = PIDGIN_BUDDY_LIST(blist);
 
 	gtkblist->refresh_timer = g_timeout_add_seconds(30,(GSourceFunc)pidgin_blist_refresh_timer, blist);
 }
@@ -6791,7 +6789,7 @@ static void pidgin_blist_update_chat(PurpleBuddyList *list, PurpleBlistNode *nod
 static void pidgin_blist_update(PurpleBuddyList *list, PurpleBlistNode *node)
 {
 	if (list)
-		gtkblist = PIDGIN_BLIST(list);
+		gtkblist = PIDGIN_BUDDY_LIST(list);
 	if(!gtkblist || !gtkblist->treeview || !node)
 		return;
 
@@ -6812,10 +6810,7 @@ static void pidgin_blist_destroy(PurpleBuddyList *list)
 {
 	PidginBuddyListPrivate *priv;
 
-	if (!list || !purple_blist_get_ui_data())
-		return;
-
-	g_return_if_fail(purple_blist_get_ui_data() == gtkblist);
+	g_return_if_fail(PIDGIN_IS_BUDDY_LIST(list));
 
 	purple_signals_disconnect_by_handle(gtkblist);
 

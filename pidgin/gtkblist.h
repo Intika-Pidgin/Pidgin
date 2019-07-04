@@ -150,8 +150,6 @@ struct _PidginBuddyList {
 	gpointer priv;
 };
 
-#define PIDGIN_BLIST(list) ((PidginBuddyList *)purple_blist_get_ui_data())
-
 G_BEGIN_DECLS
 
 /**************************************************************************

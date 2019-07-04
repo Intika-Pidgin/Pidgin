@@ -196,23 +196,6 @@ PurpleBlistNode *purple_blist_get_root(PurpleBuddyList *list);
 GSList *purple_blist_get_buddies(void);
 
 /**
- * purple_blist_get_ui_data:
- *
- * Returns the UI data for the list.
- *
- * Returns: The UI data for the list.
- */
-gpointer purple_blist_get_ui_data(void);
-
-/**
- * purple_blist_set_ui_data:
- * @ui_data: The UI data for the list.
- *
- * Sets the UI data for the list.
- */
-void purple_blist_set_ui_data(gpointer ui_data);
-
-/**
  * purple_blist_show:
  *
  * Shows the buddy list, creating a new one if necessary.
