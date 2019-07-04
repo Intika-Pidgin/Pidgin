@@ -796,30 +796,6 @@ purple_blist_get_buddies()
 	return buddies;
 }
 
-void *
-purple_blist_get_ui_data()
-{
-	PurpleBuddyListPrivate *priv;
-
-	if (!purplebuddylist)
-		return NULL;
-
-	priv = purple_buddy_list_get_instance_private(purplebuddylist);
-	return priv->ui_data;
-}
-
-void
-purple_blist_set_ui_data(void *ui_data)
-{
-	PurpleBuddyListPrivate *priv;
-
-	if (!purplebuddylist)
-		return;
-
-	priv = purple_buddy_list_get_instance_private(purplebuddylist);
-	priv->ui_data = ui_data;
-}
-
 void purple_blist_show()
 {
 	PurpleBuddyListClass *klass = NULL;
