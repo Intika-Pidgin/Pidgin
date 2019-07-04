@@ -129,8 +129,8 @@ typedef struct
 
 } PidginBuddyListPrivate;
 
-#define PIDGIN_BUDDY_LIST_GET_PRIVATE(list) \
-	((PidginBuddyListPrivate *)((list)->priv))
+G_DEFINE_TYPE_WITH_PRIVATE(PidginBuddyList, pidgin_buddy_list,
+                           PURPLE_TYPE_BUDDY_LIST)
 
 #define PIDGIN_WINDOW_ICONIFIED(x) \
 	(gdk_window_get_state(gtk_widget_get_window(GTK_WIDGET(x))) & \
@@ -4888,7 +4888,7 @@ static gboolean pidgin_blist_select_notebook_page_cb(gpointer user_data)
 	GList *list = NULL;
 	PidginBuddyListPrivate *priv;
 
-	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	priv = pidgin_buddy_list_get_instance_private(gtkblist);
 
 	priv->select_notebook_page_timeout = 0;
 
@@ -4908,7 +4908,8 @@ static gboolean pidgin_blist_select_notebook_page_cb(gpointer user_data)
 
 static void pidgin_blist_select_notebook_page(PidginBuddyList *gtkblist)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	priv->select_notebook_page_timeout = g_timeout_add(0,
 		pidgin_blist_select_notebook_page_cb, gtkblist);
 }
@@ -5041,7 +5042,8 @@ static void
 add_error_dialog(PidginBuddyList *gtkblist,
                  GtkWidget *dialog)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	gtk_container_add(GTK_CONTAINER(priv->error_scrollbook), dialog);
 }
 
@@ -5158,7 +5160,8 @@ add_generic_error_dialog(PurpleAccount *account,
 static void
 remove_generic_error_dialog(PurpleAccount *account)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	remove_child_widget_by_account(
 		GTK_CONTAINER(priv->error_scrollbook), account);
 }
@@ -5168,7 +5171,8 @@ static void
 update_generic_error_message(PurpleAccount *account,
                              const char *description)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	GtkWidget *mini_dialog = find_child_widget_by_account(
 		GTK_CONTAINER(priv->error_scrollbook), account);
 	pidgin_mini_dialog_set_description(PIDGIN_MINI_DIALOG(mini_dialog),
@@ -5226,7 +5230,8 @@ clear_elsewhere_errors(PidginMiniDialog *mini_dialog,
 static void
 ensure_signed_on_elsewhere_minidialog(PidginBuddyList *gtkblist)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	PidginMiniDialog *mini_dialog;
 
 	if(priv->signed_on_elsewhere)
@@ -5254,7 +5259,8 @@ ensure_signed_on_elsewhere_minidialog(PidginBuddyList *gtkblist)
 static void
 update_signed_on_elsewhere_minidialog_title(void)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	PidginMiniDialog *mini_dialog = priv->signed_on_elsewhere;
 	guint accounts;
 	char *title;
@@ -5308,7 +5314,8 @@ create_account_label(PurpleAccount *account)
 static void
 add_to_signed_on_elsewhere(PurpleAccount *account)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	PidginMiniDialog *mini_dialog;
 	GtkWidget *account_label;
 
@@ -5328,7 +5335,8 @@ add_to_signed_on_elsewhere(PurpleAccount *account)
 static void
 remove_from_signed_on_elsewhere(PurpleAccount *account)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	PidginMiniDialog *mini_dialog = priv->signed_on_elsewhere;
 	if(mini_dialog == NULL)
 		return;
@@ -5343,7 +5351,8 @@ static void
 update_signed_on_elsewhere_tooltip(PurpleAccount *account,
                                    const char *description)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	GtkContainer *c = GTK_CONTAINER(priv->signed_on_elsewhere->contents);
 	GtkWidget *label = find_child_widget_by_account(c, account);
 	gtk_widget_set_tooltip_text(label, description);
@@ -5696,7 +5705,7 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	}
 
 	gtkblist = PIDGIN_BUDDY_LIST(list);
-	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	priv = pidgin_buddy_list_get_instance_private(gtkblist);
 
 	if (priv->current_theme)
 		g_object_unref(priv->current_theme);
@@ -7360,7 +7369,8 @@ static void buddy_signonoff_cb(PurpleBuddy *buddy)
 void
 pidgin_blist_set_theme(PidginBlistTheme *theme)
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 	PurpleBuddyList *list = purple_blist_get_default();
 
 	if (theme != NULL)
@@ -7383,7 +7393,8 @@ pidgin_blist_set_theme(PidginBlistTheme *theme)
 PidginBlistTheme *
 pidgin_blist_get_theme()
 {
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 
 	return priv->current_theme;
 }
@@ -7459,19 +7470,17 @@ pidgin_blist_uninit(void) {
 /**************************************************************************
  * GTK Buddy list GObject code
  **************************************************************************/
-G_DEFINE_TYPE(PidginBuddyList, pidgin_buddy_list, PURPLE_TYPE_BUDDY_LIST)
-
 static void
 pidgin_buddy_list_init(PidginBuddyList *self)
 {
-	self->priv = g_new0(PidginBuddyListPrivate, 1);
 }
 
 static void
 pidgin_buddy_list_finalize(GObject *obj)
 {
 	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(obj);
-	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+	PidginBuddyListPrivate *priv =
+	        pidgin_buddy_list_get_instance_private(gtkblist);
 
 	purple_signals_disconnect_by_handle(gtkblist);
 
@@ -7501,7 +7510,6 @@ pidgin_buddy_list_finalize(GObject *obj)
 	if (priv->select_notebook_page_timeout) {
 		g_source_remove(priv->select_notebook_page_timeout);
 	}
-	g_free(priv);
 
 	purple_prefs_disconnect_by_handle(pidgin_blist_get_handle());
 

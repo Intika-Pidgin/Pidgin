@@ -146,8 +146,6 @@ struct _PidginBuddyList {
 
 	GtkWidget *statusbox;
 	GdkPixbuf *empty_avatar;
-
-	gpointer priv;
 };
 
 G_BEGIN_DECLS
