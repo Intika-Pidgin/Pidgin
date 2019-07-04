@@ -283,11 +283,14 @@ jingle_rtp_candidates_to_transport(JingleSession *session, GType type, guint gen
 		JingleRawUdpCandidate *rawudp_candidate;
 		for (; candidates; candidates = g_list_next(candidates)) {
 			PurpleMediaCandidate *candidate = candidates->data;
-			rawudp_candidate = jingle_rtp_candidate_to_rawudp(
-					session, generation, candidate);
-			jingle_rawudp_add_local_candidate(
-					JINGLE_RAWUDP(transport),
-					rawudp_candidate);
+			if (purple_media_candidate_get_protocol(candidate) ==
+					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP) {
+				rawudp_candidate = jingle_rtp_candidate_to_rawudp(
+						session, generation, candidate);
+				jingle_rawudp_add_local_candidate(
+						JINGLE_RAWUDP(transport),
+						rawudp_candidate);
+			}
 		}
 		return transport;
 	} else if (type == JINGLE_TYPE_ICEUDP) {
@@ -295,11 +298,14 @@ jingle_rtp_candidates_to_transport(JingleSession *session, GType type, guint gen
 		JingleIceUdpCandidate *iceudp_candidate;
 		for (; candidates; candidates = g_list_next(candidates)) {
 			PurpleMediaCandidate *candidate = candidates->data;
-			iceudp_candidate = jingle_rtp_candidate_to_iceudp(
-					session, generation, candidate);
-			jingle_iceudp_add_local_candidate(
-					JINGLE_ICEUDP(transport),
-					iceudp_candidate);
+			if (purple_media_candidate_get_protocol(candidate) ==
+					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP) {
+				iceudp_candidate = jingle_rtp_candidate_to_iceudp(
+						session, generation, candidate);
+				jingle_iceudp_add_local_candidate(
+						JINGLE_ICEUDP(transport),
+						iceudp_candidate);
+			}
 		}
 		return transport;
 	} else {
