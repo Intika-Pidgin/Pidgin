@@ -6798,47 +6798,6 @@ static void pidgin_blist_update(PurpleBuddyList *list, PurpleBlistNode *node)
 		pidgin_blist_update_chat(list, node);
 }
 
-static void pidgin_blist_destroy(PurpleBuddyList *list)
-{
-	PidginBuddyListPrivate *priv;
-
-	g_return_if_fail(PIDGIN_IS_BUDDY_LIST(list));
-
-	purple_signals_disconnect_by_handle(gtkblist);
-
-	gtk_widget_destroy(gtkblist->window);
-
-	pidgin_blist_tooltip_destroy();
-
-	if (gtkblist->refresh_timer)
-		g_source_remove(gtkblist->refresh_timer);
-	if (gtkblist->timeout)
-		g_source_remove(gtkblist->timeout);
-	if (gtkblist->drag_timeout)
-		g_source_remove(gtkblist->drag_timeout);
-
-	gtkblist->refresh_timer = 0;
-	gtkblist->timeout = 0;
-	gtkblist->drag_timeout = 0;
-	gtkblist->window = gtkblist->vbox = gtkblist->treeview = NULL;
-	g_object_unref(G_OBJECT(gtkblist->treemodel));
-	gtkblist->treemodel = NULL;
-	g_object_unref(G_OBJECT(gtkblist->ui));
-	g_object_unref(G_OBJECT(gtkblist->empty_avatar));
-
-	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
-
-	if (priv->current_theme)
-		g_object_unref(priv->current_theme);
-	if (priv->select_notebook_page_timeout)
-		g_source_remove(priv->select_notebook_page_timeout);
-	g_free(priv);
-
-	accountmenu = NULL;
-	gtkblist = NULL;
-	purple_prefs_disconnect_by_handle(pidgin_blist_get_handle());
-}
-
 static void pidgin_blist_set_visible(PurpleBuddyList *list, gboolean show)
 {
 	if (!(gtkblist && gtkblist->window))
@@ -7492,6 +7451,9 @@ pidgin_blist_uninit(void) {
 
 	purple_signals_unregister_by_instance(pidgin_blist_get_handle());
 	purple_signals_disconnect_by_handle(pidgin_blist_get_handle());
+
+	accountmenu = NULL;
+	gtkblist = NULL;
 }
 
 /**************************************************************************
@@ -7506,16 +7468,59 @@ pidgin_buddy_list_init(PidginBuddyList *self)
 }
 
 static void
+pidgin_buddy_list_finalize(GObject *obj)
+{
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(obj);
+	PidginBuddyListPrivate *priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
+
+	purple_signals_disconnect_by_handle(gtkblist);
+
+	gtk_widget_destroy(gtkblist->window);
+
+	pidgin_blist_tooltip_destroy();
+
+	if (gtkblist->refresh_timer) {
+		g_source_remove(gtkblist->refresh_timer);
+		gtkblist->refresh_timer = 0;
+	}
+	if (gtkblist->timeout) {
+		g_source_remove(gtkblist->timeout);
+		gtkblist->timeout = 0;
+	}
+	if (gtkblist->drag_timeout) {
+		g_source_remove(gtkblist->drag_timeout);
+		gtkblist->drag_timeout = 0;
+	}
+
+	gtkblist->window = gtkblist->vbox = gtkblist->treeview = NULL;
+	g_clear_object(&gtkblist->treemodel);
+	g_object_unref(G_OBJECT(gtkblist->ui));
+	g_object_unref(G_OBJECT(gtkblist->empty_avatar));
+
+	g_clear_object(&priv->current_theme);
+	if (priv->select_notebook_page_timeout) {
+		g_source_remove(priv->select_notebook_page_timeout);
+	}
+	g_free(priv);
+
+	purple_prefs_disconnect_by_handle(pidgin_blist_get_handle());
+
+	G_OBJECT_CLASS(pidgin_buddy_list_parent_class)->finalize(obj);
+}
+
+static void
 pidgin_buddy_list_class_init(PidginBuddyListClass *klass)
 {
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	PurpleBuddyListClass *purple_blist_class;
+
+	obj_class->finalize = pidgin_buddy_list_finalize;
 
 	purple_blist_class = PURPLE_BUDDY_LIST_CLASS(klass);
 	purple_blist_class->new_node = pidgin_blist_new_node;
 	purple_blist_class->show = pidgin_blist_show;
 	purple_blist_class->update = pidgin_blist_update;
 	purple_blist_class->remove = pidgin_blist_remove;
-	purple_blist_class->destroy = pidgin_blist_destroy;
 	purple_blist_class->set_visible = pidgin_blist_set_visible;
 	purple_blist_class->request_add_buddy = pidgin_blist_request_add_buddy;
 	purple_blist_class->request_add_chat = pidgin_blist_request_add_chat;

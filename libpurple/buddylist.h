@@ -66,7 +66,6 @@ typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
  *                stuff.
  * @update:       This will update a node in the buddy list.
  * @remove:       This removes a node from the list
- * @destroy:      When the list is destroyed, this is called to destroy the UI.
  * @set_visible:  Hides or unhides the buddy list.
  * @save_node:    This is called when a node has been modified and should be
  *                saved.
@@ -111,7 +110,6 @@ struct _PurpleBuddyListClass {
 	void (*show)(PurpleBuddyList *list);
 	void (*update)(PurpleBuddyList *list, PurpleBlistNode *node);
 	void (*remove)(PurpleBuddyList *list, PurpleBlistNode *node);
-	void (*destroy)(PurpleBuddyList *list);
 	void (*set_visible)(PurpleBuddyList *list, gboolean show);
 
 	void (*request_add_buddy)(PurpleBuddyList *list, PurpleAccount *account,
