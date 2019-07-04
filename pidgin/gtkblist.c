@@ -4793,51 +4793,6 @@ conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
 	}
 }
 
-/**************************************************************************
- * GTK Buddy list GBoxed code
- **************************************************************************/
-static PidginBuddyList *
-pidgin_buddy_list_ref(PidginBuddyList *gtkblist)
-{
-	PidginBuddyListPrivate *priv;
-
-	g_return_val_if_fail(gtkblist != NULL, NULL);
-
-	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
-	priv->box_count++;
-
-	return gtkblist;
-}
-
-static void
-pidgin_buddy_list_unref(PidginBuddyList *gtkblist)
-{
-	PidginBuddyListPrivate *priv;
-
-	g_return_if_fail(gtkblist != NULL);
-
-	priv = PIDGIN_BUDDY_LIST_GET_PRIVATE(gtkblist);
-
-	g_return_if_fail(priv->box_count >= 0);
-
-	if (!priv->box_count--)
-		purple_core_quit();
-}
-
-GType
-pidgin_buddy_list_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("PidginBuddyList",
-				(GBoxedCopyFunc)pidgin_buddy_list_ref,
-				(GBoxedFreeFunc)pidgin_buddy_list_unref);
-	}
-
-	return type;
-}
-
 /**********************************************************************************
  * Public API Functions                                                           *
  **********************************************************************************/
@@ -4846,7 +4801,7 @@ static void pidgin_blist_new_list(PurpleBuddyList *blist)
 {
 	PidginBuddyList *gtkblist;
 
-	gtkblist = g_new0(PidginBuddyList, 1);
+	gtkblist = PIDGIN_BUDDY_LIST(blist);
 	gtkblist->priv = g_new0(PidginBuddyListPrivate, 1);
 
 	purple_blist_set_ui_data(gtkblist);
@@ -6892,7 +6847,6 @@ static void pidgin_blist_destroy(PurpleBuddyList *list)
 		g_source_remove(priv->select_notebook_page_timeout);
 	g_free(priv);
 
-	g_free(gtkblist);
 	accountmenu = NULL;
 	gtkblist = NULL;
 	purple_prefs_disconnect_by_handle(pidgin_blist_get_handle());
@@ -7382,31 +7336,6 @@ set_urgent(void)
 		pidgin_set_urgent(GTK_WINDOW(gtkblist->window), TRUE);
 }
 
-static PurpleBlistUiOps blist_ui_ops =
-{
-	pidgin_blist_new_list,
-	pidgin_blist_new_node,
-	pidgin_blist_show,
-	pidgin_blist_update,
-	pidgin_blist_remove,
-	pidgin_blist_destroy,
-	pidgin_blist_set_visible,
-	pidgin_blist_request_add_buddy,
-	pidgin_blist_request_add_chat,
-	pidgin_blist_request_add_group,
-	NULL,
-	NULL,
-	NULL,
-	NULL, NULL, NULL, NULL
-};
-
-
-PurpleBlistUiOps *
-pidgin_blist_get_ui_ops(void)
-{
-	return &blist_ui_ops;
-}
-
 PidginBuddyList *pidgin_blist_get_default_gtk_blist()
 {
 	return gtkblist;
@@ -7576,6 +7505,34 @@ pidgin_blist_uninit(void) {
 
 	purple_signals_unregister_by_instance(pidgin_blist_get_handle());
 	purple_signals_disconnect_by_handle(pidgin_blist_get_handle());
+}
+
+/**************************************************************************
+ * GTK Buddy list GObject code
+ **************************************************************************/
+G_DEFINE_TYPE(PidginBuddyList, pidgin_buddy_list, PURPLE_TYPE_BUDDY_LIST)
+
+static void
+pidgin_buddy_list_init(PidginBuddyList *self)
+{
+}
+
+static void
+pidgin_buddy_list_class_init(PidginBuddyListClass *klass)
+{
+	PurpleBuddyListClass *purple_blist_class;
+
+	purple_blist_class = PURPLE_BUDDY_LIST_CLASS(klass);
+	purple_blist_class->new_list = pidgin_blist_new_list;
+	purple_blist_class->new_node = pidgin_blist_new_node;
+	purple_blist_class->show = pidgin_blist_show;
+	purple_blist_class->update = pidgin_blist_update;
+	purple_blist_class->remove = pidgin_blist_remove;
+	purple_blist_class->destroy = pidgin_blist_destroy;
+	purple_blist_class->set_visible = pidgin_blist_set_visible;
+	purple_blist_class->request_add_buddy = pidgin_blist_request_add_buddy;
+	purple_blist_class->request_add_chat = pidgin_blist_request_add_chat;
+	purple_blist_class->request_add_group = pidgin_blist_request_add_group;
 }
 
 /*********************************************************************

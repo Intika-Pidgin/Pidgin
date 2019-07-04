@@ -65,7 +65,7 @@ void finch_ui_init()
 
 	/* Initialize the buddy list */
 	finch_blist_init();
-	purple_blist_set_ui_ops(finch_blist_get_ui_ops());
+	purple_blist_set_ui(FINCH_TYPE_BUDDY_LIST);
 
 	/* Initialize sound */
 	purple_sound_set_ui_ops(finch_sound_get_ui_ops());
@@ -122,7 +122,7 @@ void finch_ui_uninit()
 	purple_connections_set_ui_ops(NULL);
 	finch_connections_uninit();
 
-	purple_blist_set_ui_ops(NULL);
+	purple_blist_set_ui(G_TYPE_INVALID);
 	finch_blist_uninit();
 
 	purple_conversations_set_ui_ops(NULL);
