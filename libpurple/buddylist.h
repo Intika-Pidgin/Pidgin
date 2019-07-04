@@ -61,7 +61,6 @@ typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
  */
 /**
  * PurpleBuddyListClass:
- * @new_list:     Sets UI-specific data on a buddy list.
  * @new_node:     Sets UI-specific data on a node.
  * @show:         The core will call this when it's finished doing its core
  *                stuff.
@@ -108,7 +107,6 @@ typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
 struct _PurpleBuddyListClass {
 	GObjectClass gparent_class;
 
-	void (*new_list)(PurpleBuddyList *list);
 	void (*new_node)(PurpleBuddyList *list, PurpleBlistNode *node);
 	void (*show)(PurpleBuddyList *list);
 	void (*update)(PurpleBuddyList *list, PurpleBlistNode *node);

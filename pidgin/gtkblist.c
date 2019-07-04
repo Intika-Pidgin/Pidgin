@@ -4797,14 +4797,6 @@ conversation_created_cb(PurpleConversation *conv, PidginBuddyList *gtkblist)
  * Public API Functions                                                           *
  **********************************************************************************/
 
-static void pidgin_blist_new_list(PurpleBuddyList *blist)
-{
-	PidginBuddyList *gtkblist;
-
-	gtkblist = PIDGIN_BUDDY_LIST(blist);
-	gtkblist->priv = g_new0(PidginBuddyListPrivate, 1);
-}
-
 static void
 pidgin_blist_new_node(PurpleBuddyList *list, PurpleBlistNode *node)
 {
@@ -7510,6 +7502,7 @@ G_DEFINE_TYPE(PidginBuddyList, pidgin_buddy_list, PURPLE_TYPE_BUDDY_LIST)
 static void
 pidgin_buddy_list_init(PidginBuddyList *self)
 {
+	self->priv = g_new0(PidginBuddyListPrivate, 1);
 }
 
 static void
@@ -7518,7 +7511,6 @@ pidgin_buddy_list_class_init(PidginBuddyListClass *klass)
 	PurpleBuddyListClass *purple_blist_class;
 
 	purple_blist_class = PURPLE_BUDDY_LIST_CLASS(klass);
-	purple_blist_class->new_list = pidgin_blist_new_list;
 	purple_blist_class->new_node = pidgin_blist_new_node;
 	purple_blist_class->show = pidgin_blist_show;
 	purple_blist_class->update = pidgin_blist_update;
