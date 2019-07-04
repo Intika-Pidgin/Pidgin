@@ -25,9 +25,10 @@
 #include "internal.h"
 #include <purple.h>
 
+#include "http.h"
+#include "ntlm.h"
 #include "simple.h"
 #include "sipmsg.h"
-#include "ntlm.h"
 
 static PurpleProtocol *my_protocol = NULL;
 
@@ -313,9 +314,9 @@ static gchar *auth_header(struct simple_account_data *sip,
 
 	if(auth->type == 1) { /* Digest */
 		sprintf(noncecount, "%08d", auth->nc++);
-		response = purple_http_digest_calculate_response(
-							"md5", method, target, NULL, NULL,
-							auth->nonce, noncecount, NULL, auth->digest_session_key);
+		response = simple_http_digest_calculate_response(
+		        method, target, auth->nonce, noncecount,
+		        auth->digest_session_key);
 		purple_debug(PURPLE_DEBUG_MISC, "simple", "response %s\n", response);
 
 		ret = g_strdup_printf("Digest username=\"%s\", realm=\"%s\", nonce=\"%s\", uri=\"%s\", nc=\"%s\", response=\"%s\"", authuser, auth->realm, auth->nonce, target, noncecount, response);
@@ -345,9 +346,9 @@ static gchar *auth_header(struct simple_account_data *sip,
 	}
 
 	sprintf(noncecount, "%08d", auth->nc++);
-	response = purple_http_digest_calculate_response(
-						"md5", method, target, NULL, NULL,
-						auth->nonce, noncecount, NULL, auth->digest_session_key);
+	response = simple_http_digest_calculate_response(
+	        method, target, auth->nonce, noncecount,
+	        auth->digest_session_key);
 	purple_debug(PURPLE_DEBUG_MISC, "simple", "response %s\n", response);
 
 	ret = g_strdup_printf("Digest username=\"%s\", realm=\"%s\", nonce=\"%s\", uri=\"%s\", nc=\"%s\", response=\"%s\"", authuser, auth->realm, auth->nonce, target, noncecount, response);
@@ -455,8 +456,10 @@ static void fill_auth(struct simple_account_data *sip, const gchar *hdr, struct 
 					 auth->realm ? auth->realm : "(null)");
 
 		if(auth->realm) {
-			auth->digest_session_key = purple_http_digest_calculate_session_key(
-				"md5", authuser, auth->realm, sip->password, auth->nonce, NULL);
+			auth->digest_session_key =
+			        simple_http_digest_calculate_session_key(
+			                authuser, auth->realm, sip->password,
+			                auth->nonce);
 
 			auth->nc = 1;
 		}

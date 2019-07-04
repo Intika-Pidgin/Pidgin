@@ -1520,51 +1520,6 @@ GValue *purple_value_dup(GValue *value);
  */
 void purple_value_free(GValue *value);
 
-/**
- * purple_http_digest_calculate_session_key:
- * @algorithm:    The hash algorithm to use
- * @username:     The username provided by the user
- * @realm:        The authentication realm provided by the server
- * @password:     The password provided by the user
- * @nonce:        The nonce provided by the server
- * @client_nonce: The nonce provided by the client
- *
- * Calculates a session key for HTTP Digest authentation
- *
- * See RFC 2617 for more information.
- *
- * Returns: The session key, or %NULL if an error occurred.
- */
-gchar *purple_http_digest_calculate_session_key(
-		const gchar *algorithm, const gchar *username,
-		const gchar *realm, const gchar *password,
-		const gchar *nonce, const gchar *client_nonce);
-
-/**
- * purple_http_digest_calculate_response:
- * @algorithm:         The hash algorithm to use
- * @method:            The HTTP method in use
- * @digest_uri:        The URI from the initial request
- * @qop:               The "quality of protection"
- * @entity:            The entity body
- * @nonce:             The nonce provided by the server
- * @nonce_count:       The nonce count
- * @client_nonce:      The nonce provided by the client
- * @session_key:       The session key from purple_http_digest_calculate_session_key()
- *
- * Calculate a response for HTTP Digest authentication
- *
- * See RFC 2617 for more information.
- *
- * Returns: The hashed response, or %NULL if an error occurred.
- */
-gchar *purple_http_digest_calculate_response(
-		const gchar *algorithm, const gchar *method,
-		const gchar *digest_uri, const gchar *qop,
-		const gchar *entity, const gchar *nonce,
-		const gchar *nonce_count, const gchar *client_nonce,
-		const gchar *session_key);
-
 G_END_DECLS
 
 #endif /* PURPLE_UTIL_H */

@@ -1,4 +1,6 @@
 SIMPLESOURCES = [
+	'http.c',
+	'http.h',
 	'ntlm.c',
 	'ntlm.h',
 	'simple.c',
