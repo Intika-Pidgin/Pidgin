@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_KEYRING_H_
-#define _PURPLE_KEYRING_H_
+#ifndef PURPLE_KEYRING_H
+#define PURPLE_KEYRING_H
 /**
  * SECTION:keyring
  * @section_id: libpurple-keyring
@@ -646,4 +646,4 @@ purple_keyring_get_handle(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_KEYRING_H_ */
+#endif /* PURPLE_KEYRING_H */

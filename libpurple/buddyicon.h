@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_BUDDYICON_H_
-#define _PURPLE_BUDDYICON_H_
+#ifndef PURPLE_BUDDYICON_H
+#define PURPLE_BUDDYICON_H
 /**
  * SECTION:buddyicon
  * @section_id: libpurple-buddyicon
@@ -506,4 +506,4 @@ void purple_buddy_icon_spec_get_scaled_size(PurpleBuddyIconSpec *spec,
 
 G_END_DECLS
 
-#endif /* _PURPLE_BUDDYICON_H_ */
+#endif /* PURPLE_BUDDYICON_H */

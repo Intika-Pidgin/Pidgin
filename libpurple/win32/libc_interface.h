@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _LIBC_INTERFACE_H_
-#define _LIBC_INTERFACE_H_
+#ifndef PURPLE_WIN32_LIBC_INTERFACE_H
+#define PURPLE_WIN32_LIBC_INTERFACE_H
 
 #include <config.h>
 
@@ -156,4 +156,4 @@ wpurple_localtime_r( time, resultp )
 
 G_END_DECLS
 
-#endif /* _LIBC_INTERFACE_H_ */
+#endif /* PURPLE_WIN32_LIBC_INTERFACE_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_MEDIA_GST_H_
-#define _PURPLE_MEDIA_GST_H_
+#ifndef PURPLE_MEDIA_GST_H
+#define PURPLE_MEDIA_GST_H
 /**
  * SECTION:media-gst
  * @section_id: libpurple-media-gst
@@ -239,4 +239,4 @@ GstElement *purple_media_element_info_call_create(
 
 G_END_DECLS
 
-#endif  /* _PURPLE_MEDIA_GST_H_ */
+#endif /* PURPLE_MEDIA_GST_H */
