@@ -1091,8 +1091,6 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 			jsx->ibb_buffer =
 				purple_circular_buffer_new(jabber_ibb_session_get_block_size(sess));
 
-			purple_debug_error("grim", "huh?\n");
-
 			/* start the transfer */
 			purple_xfer_start(xfer, -1, NULL, 0);
 			return TRUE;
@@ -1600,10 +1598,6 @@ PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *g
 	);
 
 	jsx->js = js;
-	jsx->local_streamhost_fd = -1;
-
-	jsx->ibb_session = NULL;
-
 	js->file_transfers = g_list_append(js->file_transfers, jsx);
 
 	return PURPLE_XFER(jsx);
@@ -1688,9 +1682,6 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 		NULL
 	);
 
-	jsx->local_streamhost_fd = -1;
-	jsx->ibb_session = NULL;
-
 	for(field = purple_xmlnode_get_child(x, "field"); field; field = purple_xmlnode_get_next_twin(field)) {
 		const char *var = purple_xmlnode_get_attrib(field, "var");
 		if(purple_strequal(var, "stream-method")) {
@@ -1748,7 +1739,8 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
  *****************************************************************************/
 static void
 jabber_si_xfer_init(JabberSIXfer *xfer) {
-
+	xfer->local_streamhost_fd = -1;
+	xfer->ibb_session = NULL;
 }
 
 static void
@@ -1818,8 +1810,6 @@ static void
 jabber_si_xfer_class_init(JabberSIXferClass *klass) {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	PurpleXferClass *xfer_class = PURPLE_XFER_CLASS(klass);
-
-	jabber_iq_register_handler("si", "http://jabber.org/protocol/si", jabber_si_parse);
 
 	obj_class->finalize = jabber_si_xfer_finalize;
 

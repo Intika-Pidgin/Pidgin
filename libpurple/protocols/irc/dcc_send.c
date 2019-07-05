@@ -386,7 +386,7 @@ irc_dccsend_init(PurpleXfer *xfer) {
  *****************************************************************************/
 static void
 irc_xfer_init(IrcXfer *xfer) {
-
+	xfer->fd = -1;
 }
 
 static void
@@ -395,6 +395,7 @@ irc_xfer_finalize(GObject *obj) {
 
 	/* clean up the receiving proprties */
 	g_free(xfer->ip);
+	g_free(xfer->rxqueue);
 
 	/* clean up the sending properties */
 	g_clear_pointer(&xfer->listen_data, purple_network_listen_cancel);
