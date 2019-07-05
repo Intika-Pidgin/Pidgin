@@ -38,7 +38,6 @@ bonjour_xfer_init(PurpleXfer *xfer);
 static void
 bonjour_xfer_receive(PurpleConnection *pc, const char *id, const char *sid, const char *from,
 		     const goffset filesize, const char *filename, int option);
-static void bonjour_free_xfer(PurpleXfer *xfer);
 
 /* Look for specific xfer handle */
 static unsigned int next_id = 0;
@@ -112,7 +111,6 @@ xep_ft_si_reject(BonjourData *bd, const char *id, const char *to, const char *er
 static void bonjour_xfer_cancel_send(PurpleXfer *xfer)
 {
 	purple_debug_info("bonjour", "Bonjour-xfer-cancel-send.\n");
-	bonjour_free_xfer(xfer);
 }
 
 static void bonjour_xfer_request_denied(PurpleXfer *xfer)
@@ -121,16 +119,14 @@ static void bonjour_xfer_request_denied(PurpleXfer *xfer)
 
 	purple_debug_info("bonjour", "Bonjour-xfer-request-denied.\n");
 
-	if(xf)
+	if(xf) {
 		xep_ft_si_reject(xf->data, xf->sid, purple_xfer_get_remote_user(xfer), "403", "cancel");
-
-	bonjour_free_xfer(xfer);
+	}
 }
 
 static void bonjour_xfer_cancel_recv(PurpleXfer *xfer)
 {
 	purple_debug_info("bonjour", "Bonjour-xfer-cancel-recv.\n");
-	bonjour_free_xfer(xfer);
 }
 
 struct socket_cleanup {
@@ -168,8 +164,6 @@ static void bonjour_xfer_end(PurpleXfer *xfer)
 		sc->handle = purple_input_add(sc->fd, PURPLE_INPUT_READ,
 						 _wait_for_socket_close, sc);
 	}
-
-	bonjour_free_xfer(xfer);
 }
 
 static PurpleXfer*
@@ -322,11 +316,6 @@ purple_xmlnode_free_tree(PurpleXmlNode *node)
 		node = purple_xmlnode_get_parent(node);
 
 	purple_xmlnode_free(node);
-}
-
-static void
-bonjour_free_xfer(PurpleXfer *xfer)
-{
 }
 
 PurpleXfer *
