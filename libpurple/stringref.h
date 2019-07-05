@@ -22,8 +22,8 @@
  *
  */
 
-#ifndef _PURPLE_STRINGREF_H_
-#define _PURPLE_STRINGREF_H_
+#ifndef PURPLE_STRINGREF_H
+#define PURPLE_STRINGREF_H
 /**
  * SECTION:stringref
  * @section_id: libpurple-stringref
@@ -141,4 +141,4 @@ size_t purple_stringref_len(const PurpleStringref *stringref);
 
 G_END_DECLS
 
-#endif /* _PURPLE_STRINGREF_H_ */
+#endif /* PURPLE_STRINGREF_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_IDLE_H_
-#define _PURPLE_IDLE_H_
+#ifndef PURPLE_IDLE_H
+#define PURPLE_IDLE_H
 /**
  * SECTION:idle
  * @section_id: libpurple-idle
@@ -119,4 +119,4 @@ void purple_idle_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_IDLE_H_ */
+#endif /* PURPLE_IDLE_H */

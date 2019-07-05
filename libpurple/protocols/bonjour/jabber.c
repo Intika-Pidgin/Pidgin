@@ -232,7 +232,7 @@ _jabber_parse_and_write_message_to_ui(PurpleXmlNode *message_node, PurpleBuddy *
 	g_free(body);
 }
 
-struct _match_buddies_by_address_t {
+struct _match_buddies_by_address {
 	const char *address;
 	GSList *matched_buddies;
 };
@@ -242,7 +242,7 @@ _match_buddies_by_address(gpointer value, gpointer data)
 {
 	PurpleBuddy *pb = value;
 	BonjourBuddy *bb = NULL;
-	struct _match_buddies_by_address_t *mbba = data;
+	struct _match_buddies_by_address *mbba = data;
 
 	bb = purple_buddy_get_protocol_data(pb);
 
@@ -695,7 +695,7 @@ _server_socket_handler(GSocketService *service, GSocketConnection *connection,
 	GSocketAddress *their_addr; /* connector's address information */
 	GInetAddress *their_inet_addr;
 	gchar *address_text;
-	struct _match_buddies_by_address_t *mbba;
+	struct _match_buddies_by_address *mbba;
 	BonjourJabberConversation *bconv;
 	GSList *buddies;
 	GSource *source;
@@ -722,7 +722,7 @@ _server_socket_handler(GSocketService *service, GSocketConnection *connection,
 	g_object_unref(their_addr);
 
 	purple_debug_info("bonjour", "Received incoming connection from %s.\n", address_text);
-	mbba = g_new0(struct _match_buddies_by_address_t, 1);
+	mbba = g_new0(struct _match_buddies_by_address, 1);
 	mbba->address = address_text;
 
 	buddies = purple_blist_find_buddies(jdata->account, NULL);
@@ -971,10 +971,10 @@ bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv) {
 	PurpleConnection *pc = purple_account_get_connection(bconv->account);
 	BonjourData *bd = purple_connection_get_protocol_data(pc);
 	BonjourJabber *jdata = bd->jabber_data;
-	struct _match_buddies_by_address_t *mbba;
+	struct _match_buddies_by_address *mbba;
 	GSList *buddies;
 
-	mbba = g_new0(struct _match_buddies_by_address_t, 1);
+	mbba = g_new0(struct _match_buddies_by_address, 1);
 	mbba->address = bconv->ip;
 
 	buddies = purple_blist_find_buddies(jdata->account, NULL);
