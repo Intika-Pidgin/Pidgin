@@ -2457,21 +2457,6 @@ update_tab_icon(PurpleConversation *conv)
 	}
 }
 
-#if 0
-/* This gets added as an idle handler when doing something that
- * redraws the icon. It sets the auto_resize gboolean to TRUE.
- * This way, when the size_allocate callback gets triggered, it notices
- * that this is an autoresize, and after the main loop iterates, it
- * gets set back to FALSE
- */
-static gboolean reset_auto_resize_cb(gpointer data)
-{
-	PidginConversation *gtkconv = (PidginConversation *)data;
-	gtkconv->auto_resize = FALSE;
-	return FALSE;
-}
-#endif
-
 static gboolean
 redraw_icon(gpointer data)
 {
