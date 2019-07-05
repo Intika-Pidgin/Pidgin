@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_ROOMLIST_H_
-#define _PURPLE_ROOMLIST_H_
+#ifndef PURPLE_ROOMLIST_H
+#define PURPLE_ROOMLIST_H
 /**
  * SECTION:roomlist
  * @section_id: libpurple-roomlist
@@ -28,15 +28,8 @@
  * @title: Room List API
  */
 
-#define PURPLE_TYPE_ROOMLIST             (purple_roomlist_get_type())
-#define PURPLE_ROOMLIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlist))
-#define PURPLE_ROOMLIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_ROOMLIST, PurpleRoomlistClass))
-#define PURPLE_IS_ROOMLIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_ROOMLIST))
-#define PURPLE_IS_ROOMLIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_ROOMLIST))
-#define PURPLE_ROOMLIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlistClass))
-
+#define PURPLE_TYPE_ROOMLIST (purple_roomlist_get_type())
 typedef struct _PurpleRoomlist PurpleRoomlist;
-typedef struct _PurpleRoomlistClass PurpleRoomlistClass;
 
 #define PURPLE_TYPE_ROOMLIST_ROOM        (purple_roomlist_room_get_type())
 
@@ -131,21 +124,6 @@ struct _PurpleRoomlist {
 	gpointer ui_data;
 };
 
-/**
- * PurpleRoomlistClass:
- *
- * Base class for all #PurpleRoomlist's
- */
-struct _PurpleRoomlistClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -157,7 +135,7 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the Room List object.
  */
-GType purple_roomlist_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleRoomlist, purple_roomlist, PURPLE, ROOMLIST, GObject)
 
 /**
  * purple_roomlist_show_with_account:
@@ -518,4 +496,4 @@ PurpleRoomlistUiOps *purple_roomlist_get_ui_ops(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_ROOMLIST_H_ */
+#endif /* PURPLE_ROOMLIST_H */

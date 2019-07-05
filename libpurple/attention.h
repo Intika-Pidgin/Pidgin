@@ -47,37 +47,12 @@
  */
 typedef struct _PurpleAttentionType PurpleAttentionType;
 
-#define PURPLE_TYPE_PROTOCOL_ATTENTION           (purple_protocol_attention_get_type())
-#define PURPLE_PROTOCOL_ATTENTION(obj)           (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PROTOCOL_ATTENTION, PurpleProtocolAttention))
-#define PURPLE_IS_PROTOCOL_ATTENTION(obj)        (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ATTENTION))
-#define PURPLE_PROTOCOL_ATTENTION_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ATTENTION, PurpleProtocolAttentionInterface))
-
-typedef struct _PurpleProtocolAttention          PurpleProtocolAttention;
-typedef struct _PurpleProtocolAttentionInterface PurpleProtocolAttentionInterface;
-
 #include "account.h"
 #include "connection.h"
 
-/**
- * PurpleProtocolAttentionInterface:
- *
- * The protocol attention interface.
- *
- * This interface provides attention API for sending and receiving
- * zaps/nudges/buzzes etc.
- */
-struct _PurpleProtocolAttentionInterface
-{
-	/*< private >*/
-	GTypeInterface parent;
-
-	/*< public >*/
-	gboolean (*send)(PurpleProtocolAttention *attn, PurpleConnection *gc, const gchar *username, guint type);
-
-	GList *(*get_types)(PurpleProtocolAttention *attn, PurpleAccount *acct);
-};
-
 G_BEGIN_DECLS
+
+#define PURPLE_TYPE_PROTOCOL_ATTENTION (purple_protocol_attention_get_type())
 
 /******************************************************************************
  * AttentionType API
@@ -223,7 +198,27 @@ void purple_attention_type_set_unlocalized_name(PurpleAttentionType *type, const
  *
  * Returns: The #GType for the protocol attention interface.
  */
-GType purple_protocol_attention_get_type(void);
+G_DECLARE_INTERFACE(PurpleProtocolAttention, purple_protocol_attention, PURPLE,
+                    PROTOCOL_ATTENTION, GObject)
+
+/**
+ * PurpleProtocolAttentionInterface:
+ *
+ * The protocol attention interface.
+ *
+ * This interface provides attention API for sending and receiving
+ * zaps/nudges/buzzes etc.
+ */
+struct _PurpleProtocolAttentionInterface {
+	/*< private >*/
+	GTypeInterface parent;
+
+	/*< public >*/
+	gboolean (*send)(PurpleProtocolAttention *attn, PurpleConnection *gc,
+	                 const gchar *username, guint type);
+
+	GList *(*get_types)(PurpleProtocolAttention *attn, PurpleAccount *acct);
+};
 
 /**
  * purple_protocol_attention_get_types:

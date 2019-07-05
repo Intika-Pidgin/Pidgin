@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_HTTP_H_
-#define _PURPLE_HTTP_H_
+#ifndef PURPLE_HTTP_H
+#define PURPLE_HTTP_H
 /**
  * SECTION:http
  * @section_id: libpurple-http
@@ -981,4 +981,4 @@ void purple_http_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_HTTP_H_ */
+#endif /* PURPLE_HTTP_H */
