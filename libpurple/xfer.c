@@ -1089,15 +1089,6 @@ do_read(PurpleXfer *xfer, guchar **buffer, gsize size)
 		r = -1;
 	}
 
-	if (r >= 0 && (gsize)r == priv->current_buffer_size) {
-		/*
-		 * We managed to read the entire buffer.  This means our
-		 * network is fast and our buffer is too small, so make it
-		 * bigger.
-		 */
-		purple_xfer_increase_buffer_size(xfer);
-	}
-
 	return r;
 }
 
@@ -1107,6 +1098,7 @@ purple_xfer_read(PurpleXfer *xfer, guchar **buffer)
 	PurpleXferPrivate *priv = NULL;
 	PurpleXferClass *klass = NULL;
 	gsize s;
+	gssize r;
 
 	g_return_val_if_fail(PURPLE_IS_XFER(xfer), 0);
 	g_return_val_if_fail(buffer != NULL, 0);
@@ -1124,10 +1116,21 @@ purple_xfer_read(PurpleXfer *xfer, guchar **buffer)
 
 	klass = PURPLE_XFER_GET_CLASS(xfer);
 	if(klass && klass->read) {
-		return klass->read(xfer, buffer, s);
+		r = klass->read(xfer, buffer, s);
+	} else {
+		r = do_read(xfer, buffer, s);
 	}
 
-	return do_read(xfer, buffer, s);
+	if (r >= 0 && (gsize)r == priv->current_buffer_size) {
+		/*
+		 * We managed to read the entire buffer.  This means our
+		 * network is fast and our buffer is too small, so make it
+		 * bigger.
+		 */
+		purple_xfer_increase_buffer_size(xfer);
+	}
+
+	return r;
 }
 
 static gssize

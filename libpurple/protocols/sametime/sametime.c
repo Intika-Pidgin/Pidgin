@@ -2225,6 +2225,7 @@ static void ft_init(PurpleXfer *xfer) {
       break;
     case PURPLE_XFER_TYPE_UNKNOWN:
     default:
+      g_return_if_reached();
       break;
   }
 }

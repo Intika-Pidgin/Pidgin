@@ -1226,8 +1226,6 @@ ggp_xfer_finalize(GObject *obj) {
 			edisc_xfer->ticket_id);
 	}
 
-	g_free(edisc_xfer);
-
 	G_OBJECT_CLASS(ggp_xfer_parent_class)->finalize(obj);
 }
 
