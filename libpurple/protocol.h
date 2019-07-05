@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_PROTOCOL_H_
-#define _PURPLE_PROTOCOL_H_
+#ifndef PURPLE_PROTOCOL_H
+#define PURPLE_PROTOCOL_H
 /**
  * SECTION:protocol
  * @section_id: libpurple-protocol
@@ -1425,4 +1425,4 @@ PurpleXfer *purple_protocol_factory_iface_xfer_new(PurpleProtocol *protocol,
 
 G_END_DECLS
 
-#endif /* _PROTOCOL_H_ */
+#endif /* PURPLE_PROTOCOL_H */

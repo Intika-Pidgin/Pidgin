@@ -21,8 +21,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_GIO_H
-#define _PURPLE_GIO_H
+#ifndef PURPLE_GIO_H
+#define PURPLE_GIO_H
 /**
  * SECTION:purple-gio
  * @section_id: libpurple-purple-gio
@@ -73,4 +73,4 @@ purple_gio_socket_client_new(PurpleAccount *account, GError **error);
 
 G_END_DECLS
 
-#endif /* _PURPLE_GIO_H */
+#endif /* PURPLE_GIO_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_PURPLE_H_
-#define _PURPLE_PURPLE_H_
+#ifndef PURPLE_PURPLE_H
+#define PURPLE_PURPLE_H
 /**
  * SECTION:purple
  * @section_id: libpurple-purple
@@ -39,14 +39,6 @@
 # include <config.h>
 #endif
 
-#ifndef G_GNUC_NULL_TERMINATED
-#	if     __GNUC__ >= 4
-#		define G_GNUC_NULL_TERMINATED __attribute__((__sentinel__))
-#	else
-#		define G_GNUC_NULL_TERMINATED
-#	endif
-#endif
-
 @PURPLE_H_INCLUDES@
 
-#endif
+#endif /* PURPLE_PURPLE_H */

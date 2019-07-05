@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_MESSAGE_H_
-#define _PURPLE_MESSAGE_H_
+#ifndef PURPLE_MESSAGE_H
+#define PURPLE_MESSAGE_H
 /**
  * SECTION:message
  * @include:message.h
@@ -237,4 +237,4 @@ purple_message_get_flags(PurpleMessage *msg);
 
 G_END_DECLS
 
-#endif /* _PURPLE_MESSAGE_H_ */
+#endif /* PURPLE_MESSAGE_H */

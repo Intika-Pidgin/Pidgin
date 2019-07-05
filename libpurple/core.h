@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_CORE_H_
-#define _PURPLE_CORE_H_
+#ifndef PURPLE_CORE_H
+#define PURPLE_CORE_H
 /**
  * SECTION:core
  * @section_id: libpurple-core
@@ -228,7 +228,7 @@ gboolean purple_core_migrate_to_xdg_base_dirs(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_CORE_H_ */
+#endif /* PURPLE_CORE_H */
 
 /*
 
