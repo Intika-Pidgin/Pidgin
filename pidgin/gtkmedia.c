@@ -551,6 +551,10 @@ realize_cb_cb(PidginMediaRealizeData *data)
 	PidginMediaPrivate *priv = data->gtkmedia->priv;
 	GdkWindow *window = NULL;
 
+        if (priv->media == NULL)
+                /* gtkmedia has been disposed */
+                goto done;
+
 	if (data->participant == NULL)
 #if GTK_CHECK_VERSION(2, 14, 0)
 		window = gtk_widget_get_window(priv->local_video);
@@ -582,6 +586,7 @@ realize_cb_cb(PidginMediaRealizeData *data)
 				data->participant, window_id);
 	}
 
+done:
 	g_free(data->session_id);
 	g_free(data->participant);
 	g_object_unref(data->gtkmedia);
