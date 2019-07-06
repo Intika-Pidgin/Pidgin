@@ -4852,7 +4852,8 @@ static void pidgin_blist_new_list(PurpleBuddyList *blist)
 	blist->ui_data = gtkblist;
 }
 
-static void pidgin_blist_new_node(PurpleBlistNode *node)
+static void
+pidgin_blist_new_node(PurpleBuddyList *list, PurpleBlistNode *node)
 {
 	purple_blist_node_set_ui_data(node, g_new0(PidginBlistNode, 1));
 }
@@ -6277,7 +6278,7 @@ static gboolean insert_node(PurpleBuddyList *list, PurpleBlistNode *node, GtkTre
 	if(gtknode != NULL) {
 		gtk_tree_row_reference_free(gtknode->row);
 	} else {
-		pidgin_blist_new_node(node);
+		pidgin_blist_new_node(list, node);
 		gtknode = purple_blist_node_get_ui_data(node);
 	}
 
@@ -6840,7 +6841,7 @@ static void pidgin_blist_update(PurpleBuddyList *list, PurpleBlistNode *node)
 		return;
 
 	if (purple_blist_node_get_ui_data(node) == NULL)
-		pidgin_blist_new_node(node);
+		pidgin_blist_new_node(list, node);
 
 	if (PURPLE_IS_GROUP(node))
 		pidgin_blist_update_group(list, node);
@@ -7048,8 +7049,9 @@ add_buddy_cb(GtkWidget *w, int resp, PidginAddBuddyData *data)
 }
 
 static void
-pidgin_blist_request_add_buddy(PurpleAccount *account, const char *username,
-								 const char *group, const char *alias)
+pidgin_blist_request_add_buddy(PurpleBuddyList *list, PurpleAccount *account,
+                               const char *username, const char *group,
+                               const char *alias)
 {
 	PidginAddBuddyData *data = g_new0(PidginAddBuddyData, 1);
 
@@ -7200,8 +7202,9 @@ add_chat_resp_cb(GtkWidget *w, int resp, PidginAddChatData *data)
 }
 
 static void
-pidgin_blist_request_add_chat(PurpleAccount *account, PurpleGroup *group,
-								const char *alias, const char *name)
+pidgin_blist_request_add_chat(PurpleBuddyList *list, PurpleAccount *account,
+                              PurpleGroup *group, const char *alias,
+                              const char *name)
 {
 	PidginAddChatData *data;
 	GList *l;
@@ -7295,7 +7298,7 @@ add_group_cb(PurpleConnection *gc, const char *group_name)
 }
 
 static void
-pidgin_blist_request_add_group(void)
+pidgin_blist_request_add_group(PurpleBuddyList *list)
 {
 	purple_request_input(NULL, _("Add Group"), NULL,
 					   _("Please enter the name of the group to be added."),
@@ -7463,7 +7466,8 @@ static void buddy_signonoff_cb(PurpleBuddy *buddy)
 	PidginBlistNode *gtknode = purple_blist_node_get_ui_data(PURPLE_BLIST_NODE(buddy));
 
 	if(!gtknode) {
-		pidgin_blist_new_node(PURPLE_BLIST_NODE(buddy));
+		pidgin_blist_new_node(purple_blist_get_default(),
+		                      PURPLE_BLIST_NODE(buddy));
 	}
 
 	gtknode = purple_blist_node_get_ui_data(PURPLE_BLIST_NODE(buddy));

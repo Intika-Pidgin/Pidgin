@@ -140,7 +140,10 @@ static void blist_show(PurpleBuddyList *list);
 static void update_node_display(PurpleBlistNode *buddy, FinchBlist *ggblist);
 static void update_buddy_display(PurpleBuddy *buddy, FinchBlist *ggblist);
 static gboolean account_autojoin_cb(PurpleConnection *pc, gpointer null);
-static void finch_request_add_buddy(PurpleAccount *account, const char *username, const char *grp, const char *alias);
+static void finch_request_add_buddy(PurpleBuddyList *list,
+                                    PurpleAccount *account,
+                                    const char *username, const char *grp,
+                                    const char *alias);
 static void menu_group_set_cb(GntMenuItem *item, gpointer null);
 
 /* Sort functions */
@@ -397,7 +400,7 @@ blist_update_row_flags(PurpleBlistNode *node)
 }
 
 static void
-new_node(PurpleBlistNode *node)
+new_node(PurpleBuddyList *list, PurpleBlistNode *node)
 {
 }
 
@@ -582,7 +585,8 @@ add_buddy_cb(void *data, PurpleRequestFields *allfields)
 
 	if (error)
 	{
-		finch_request_add_buddy(account, username, group, alias);
+		finch_request_add_buddy(purple_blist_get_default(), account,
+		                        username, group, alias);
 		purple_notify_error(NULL, _("Error"), _("Error adding buddy"),
 			error, purple_request_cpar_from_account(account));
 		return;
@@ -607,7 +611,9 @@ add_buddy_cb(void *data, PurpleRequestFields *allfields)
 }
 
 static void
-finch_request_add_buddy(PurpleAccount *account, const char *username, const char *grp, const char *alias)
+finch_request_add_buddy(PurpleBuddyList *list, PurpleAccount *account,
+                        const char *username, const char *grp,
+                        const char *alias)
 {
 	PurpleRequestFields *fields = purple_request_fields_new();
 	PurpleRequestFieldGroup *group = purple_request_field_group_new(NULL);
@@ -705,7 +711,8 @@ add_chat_cb(void *data, PurpleRequestFields *allfields)
 }
 
 static void
-finch_request_add_chat(PurpleAccount *account, PurpleGroup *grp, const char *alias, const char *name)
+finch_request_add_chat(PurpleBuddyList *list, PurpleAccount *account,
+                       PurpleGroup *grp, const char *alias, const char *name)
 {
 	PurpleRequestFields *fields = purple_request_fields_new();
 	PurpleRequestFieldGroup *group = purple_request_field_group_new(NULL);
@@ -777,7 +784,7 @@ add_group_cb(gpointer null, const char *group)
 }
 
 static void
-finch_request_add_group(void)
+finch_request_add_group(PurpleBuddyList *list)
 {
 	purple_request_input(NULL, _("Add Group"), NULL, _("Enter the name of the group"),
 			NULL, FALSE, FALSE, NULL,

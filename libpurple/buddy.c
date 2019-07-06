@@ -120,7 +120,8 @@ purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 
 	g_object_notify_by_pspec(G_OBJECT(buddy), properties[PROP_NAME]);
 
-	purple_blist_save_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(buddy));
 	purple_blist_update_node(purple_blist_get_default(),
 	                         PURPLE_BLIST_NODE(buddy));
 }
@@ -246,7 +247,8 @@ purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 	g_object_notify_by_pspec(G_OBJECT(buddy),
 			properties[PROP_LOCAL_ALIAS]);
 
-	purple_blist_save_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(buddy));
 	purple_blist_update_node(purple_blist_get_default(),
 	                         PURPLE_BLIST_NODE(buddy));
 
@@ -299,7 +301,8 @@ purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 	g_object_notify_by_pspec(G_OBJECT(buddy),
 			properties[PROP_SERVER_ALIAS]);
 
-	purple_blist_save_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(buddy));
 	purple_blist_update_node(purple_blist_get_default(),
 	                         PURPLE_BLIST_NODE(buddy));
 
@@ -529,7 +532,8 @@ purple_buddy_constructed(GObject *object) {
 	priv->presence = PURPLE_PRESENCE(purple_buddy_presence_new(buddy));
 	purple_presence_set_status_active(priv->presence, "offline", TRUE);
 
-	purple_blist_new_node(PURPLE_BLIST_NODE(buddy));
+	purple_blist_new_node(purple_blist_get_default(),
+	                      PURPLE_BLIST_NODE(buddy));
 
 	priv->is_constructed = TRUE;
 }

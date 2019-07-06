@@ -139,25 +139,27 @@ struct _PurpleBuddyListClass {
 struct _PurpleBlistUiOps
 {
 	void (*new_list)(PurpleBuddyList *list);
-	void (*new_node)(PurpleBlistNode *node);
+	void (*new_node)(PurpleBuddyList *list, PurpleBlistNode *node);
 	void (*show)(PurpleBuddyList *list);
 	void (*update)(PurpleBuddyList *list, PurpleBlistNode *node);
 	void (*remove)(PurpleBuddyList *list, PurpleBlistNode *node);
 	void (*destroy)(PurpleBuddyList *list);
 	void (*set_visible)(PurpleBuddyList *list, gboolean show);
 
-	void (*request_add_buddy)(PurpleAccount *account, const char *username,
-							  const char *group, const char *alias);
+	void (*request_add_buddy)(PurpleBuddyList *list, PurpleAccount *account,
+	                          const char *username, const char *group,
+	                          const char *alias);
 
-	void (*request_add_chat)(PurpleAccount *account, PurpleGroup *group,
-							 const char *alias, const char *name);
+	void (*request_add_chat)(PurpleBuddyList *list, PurpleAccount *account,
+	                         PurpleGroup *group, const char *alias,
+	                         const char *name);
 
-	void (*request_add_group)(void);
+	void (*request_add_group)(PurpleBuddyList *list);
 
-	void (*save_node)(PurpleBlistNode *node);
-	void (*remove_node)(PurpleBlistNode *node);
+	void (*save_node)(PurpleBuddyList *list, PurpleBlistNode *node);
+	void (*remove_node)(PurpleBuddyList *list, PurpleBlistNode *node);
 
-	void (*save_account)(PurpleAccount *account);
+	void (*save_account)(PurpleBuddyList *list, PurpleAccount *account);
 
 	/*< private >*/
 	void (*_purple_reserved1)(void);
@@ -528,6 +530,7 @@ void purple_blist_request_add_group(void);
 
 /**
  * purple_blist_new_node:
+ * @list: The list that contains the node.
  * @node: The node to initialize.
  *
  * Sets UI-specific data on a node.
@@ -537,7 +540,7 @@ void purple_blist_request_add_group(void);
  *
  * Since: 3.0.0
  */
-void purple_blist_new_node(PurpleBlistNode *node);
+void purple_blist_new_node(PurpleBuddyList *list, PurpleBlistNode *node);
 
 /**
  * purple_blist_update_node:
@@ -552,6 +555,7 @@ void purple_blist_update_node(PurpleBuddyList *list, PurpleBlistNode *node);
 
 /**
  * purple_blist_save_node:
+ * @list: The list that contains the node.
  * @node: The node which has been modified.
  *
  * This is called when a node has been modified and should be saved by the UI.
@@ -561,10 +565,11 @@ void purple_blist_update_node(PurpleBuddyList *list, PurpleBlistNode *node);
  *
  * Since: 3.0.0
  */
-void purple_blist_save_node(PurpleBlistNode *node);
+void purple_blist_save_node(PurpleBuddyList *list, PurpleBlistNode *node);
 
 /**
  * purple_blist_save_account:
+ * @list: The list that contains the account.
  * @account: The account whose data to save. If %NULL, save all data for all
  *           accounts.
  *
@@ -575,7 +580,7 @@ void purple_blist_save_node(PurpleBlistNode *node);
  *
  * Since: 3.0.0
  */
-void purple_blist_save_account(PurpleAccount *account);
+void purple_blist_save_account(PurpleBuddyList *list, PurpleAccount *account);
 
 /**************************************************************************/
 /* UI Registration Functions                                              */

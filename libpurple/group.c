@@ -176,7 +176,8 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 	}
 
 	/* Save our changes */
-	purple_blist_save_node(PURPLE_BLIST_NODE(source));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(source));
 
 	/* Update the UI */
 	purple_blist_update_node(purple_blist_get_default(),
@@ -294,7 +295,8 @@ purple_group_constructed(GObject *object) {
 
 	G_OBJECT_CLASS(purple_group_parent_class)->constructed(object);
 
-	purple_blist_new_node(PURPLE_BLIST_NODE(group));
+	purple_blist_new_node(purple_blist_get_default(),
+	                      PURPLE_BLIST_NODE(group));
 
 	priv->is_constructed = TRUE;
 }

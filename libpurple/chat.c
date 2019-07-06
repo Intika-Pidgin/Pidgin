@@ -120,7 +120,8 @@ purple_chat_set_alias(PurpleChat *chat, const char *alias)
 
 	g_object_notify_by_pspec(G_OBJECT(chat), properties[PROP_ALIAS]);
 
-	purple_blist_save_node(PURPLE_BLIST_NODE(chat));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(chat));
 	purple_blist_update_node(purple_blist_get_default(),
 	                         PURPLE_BLIST_NODE(chat));
 
@@ -225,7 +226,8 @@ purple_chat_constructed(GObject *object)
 
 	G_OBJECT_CLASS(purple_chat_parent_class)->constructed(object);
 
-	purple_blist_new_node(PURPLE_BLIST_NODE(chat));
+	purple_blist_new_node(purple_blist_get_default(),
+	                      PURPLE_BLIST_NODE(chat));
 
 	priv->is_constructed = TRUE;
 }

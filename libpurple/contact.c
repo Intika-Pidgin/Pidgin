@@ -141,7 +141,8 @@ purple_contact_set_alias(PurpleContact *contact, const char *alias)
 	g_object_notify_by_pspec(G_OBJECT(contact),
 			properties[PROP_ALIAS]);
 
-	purple_blist_save_node(PURPLE_BLIST_NODE(contact));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(contact));
 	purple_blist_update_node(purple_blist_get_default(),
 	                         PURPLE_BLIST_NODE(contact));
 
@@ -296,7 +297,8 @@ purple_contact_get_property(GObject *obj, guint param_id, GValue *value,
 static void
 purple_contact_init(PurpleContact *contact)
 {
-	purple_blist_new_node(PURPLE_BLIST_NODE(contact));
+	purple_blist_new_node(purple_blist_get_default(),
+	                      PURPLE_BLIST_NODE(contact));
 }
 
 /* GObject finalize function */
