@@ -123,7 +123,7 @@ void purple_blist_node_remove_setting(PurpleBlistNode *node, const char *key)
 
 	g_hash_table_remove(priv->settings, key);
 
-	purple_blist_save_node(node);
+	purple_blist_save_node(purple_blist_get_default(), node);
 }
 
 void
@@ -192,7 +192,7 @@ purple_blist_node_set_bool(PurpleBlistNode* node, const char *key, gboolean data
 
 	g_hash_table_replace(priv->settings, g_strdup(key), value);
 
-	purple_blist_save_node(node);
+	purple_blist_save_node(purple_blist_get_default(), node);
 }
 
 gboolean
@@ -232,7 +232,7 @@ purple_blist_node_set_int(PurpleBlistNode* node, const char *key, int data)
 
 	g_hash_table_replace(priv->settings, g_strdup(key), value);
 
-	purple_blist_save_node(node);
+	purple_blist_save_node(purple_blist_get_default(), node);
 }
 
 int
@@ -272,7 +272,7 @@ purple_blist_node_set_string(PurpleBlistNode* node, const char *key, const char 
 
 	g_hash_table_replace(priv->settings, g_strdup(key), value);
 
-	purple_blist_save_node(node);
+	purple_blist_save_node(purple_blist_get_default(), node);
 }
 
 const char *

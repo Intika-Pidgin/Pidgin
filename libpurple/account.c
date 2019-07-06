@@ -1554,7 +1554,7 @@ purple_account_set_username(PurpleAccount *account, const char *username)
 
 	/* if the name changes, we should re-write the buddy list
 	 * to disk with the new name */
-	purple_blist_save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 }
 
 void
@@ -2333,7 +2333,7 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->permit_added != NULL)
 		ui_ops->permit_added(account, who);
 
-	purple_blist_save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	/* This lets the UI know a buddy has had its privacy setting changed */
 	buddy = purple_blist_find_buddy(account, name);
@@ -2383,7 +2383,7 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->permit_removed != NULL)
 		ui_ops->permit_removed(account, who);
 
-	purple_blist_save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	buddy = purple_blist_find_buddy(account, name);
 	if (buddy != NULL) {
@@ -2431,7 +2431,7 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->deny_added != NULL)
 		ui_ops->deny_added(account, who);
 
-	purple_blist_save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	buddy = purple_blist_find_buddy(account, name);
 	if (buddy != NULL) {
@@ -2486,7 +2486,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 
 	g_free(name);
 
-	purple_blist_save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	return TRUE;
 }
