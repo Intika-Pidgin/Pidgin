@@ -302,29 +302,6 @@ default_formatize(PidginConversation *c)
 	pidgin_webview_setup_entry(PIDGIN_WEBVIEW(c->entry), purple_conversation_get_features(conv));
 }
 
-static void
-conversation_entry_clear(PidginConversation *gtkconv)
-{
-	PidginWebView *webview = PIDGIN_WEBVIEW(gtkconv->entry);
-
-	//XXX: hotfix for not focused entry after sending a message
-	//pidgin_webview_load_html_string(webview, "");
-	pidgin_webview_load_html_string_with_selection(webview, "<div id='caret'></div>");
-
-#if 0
-	/* TODO WebKit */
-	gtk_source_undo_manager_begin_not_undoable_action(webview->undo_manager);
-	pidgin_webview_clear(webview);
-	gtk_source_undo_manager_end_not_undoable_action(webview->undo_manager);
-#endif
-}
-
-static void
-clear_formatting_cb(PidginWebView *webview, PidginConversation *gtkconv)
-{
-	default_formatize(gtkconv);
-}
-
 static const char *
 pidgin_get_cmd_prefix(void)
 {
