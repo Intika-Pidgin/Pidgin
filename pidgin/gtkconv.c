@@ -7666,8 +7666,7 @@ spellcheck_pref_cb(const char *name, PurplePrefType type,
 
 		gtkconv = PIDGIN_CONVERSATION(conv);
 
-		pidgin_webview_set_spellcheck(PIDGIN_WEBVIEW(gtkconv->entry),
-		                              (gboolean)GPOINTER_TO_INT(value));
+# warning toggle spell checking when talkatu #60 is done.
 	}
 }
 
@@ -8084,7 +8083,7 @@ add_message_history_to_gtkconv(gpointer data)
 	PidginWebView *webview = PIDGIN_WEBVIEW(gtkconv->webview);
 	int count = 0;
 	int timer = gtkconv->attach_timer;
-	time_t when = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(gtkconv->entry), "attach-start-time"));
+	time_t when = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(gtkconv->editor), "attach-start-time"));
 	gboolean im = (PURPLE_IS_IM_CONVERSATION(gtkconv->active_conv));
 
 	gtkconv->attach_timer = 0;
@@ -8093,7 +8092,7 @@ add_message_history_to_gtkconv(gpointer data)
 		if (!im && when && (guint64)when < purple_message_get_time(msg)) {
 			pidgin_webview_append_html(webview, "<BR><HR>");
 			pidgin_webview_scroll_to_end(webview, TRUE);
-			g_object_set_data(G_OBJECT(gtkconv->entry), "attach-start-time", NULL);
+			g_object_set_data(G_OBJECT(gtkconv->editor), "attach-start-time", NULL);
 		}
 		/* XXX: should it be gtkconv->active_conv? */
 		pidgin_conv_write_conv(gtkconv->active_conv, msg);
@@ -8131,10 +8130,10 @@ add_message_history_to_gtkconv(gpointer data)
 		}
 		pidgin_webview_append_html(webview, "<BR><HR>");
 		pidgin_webview_scroll_to_end(webview, TRUE);
-		g_object_set_data(G_OBJECT(gtkconv->entry), "attach-start-time", NULL);
+		g_object_set_data(G_OBJECT(gtkconv->editor), "attach-start-time", NULL);
 	}
 
-	g_object_set_data(G_OBJECT(gtkconv->entry), "attach-start-time", NULL);
+	g_object_set_data(G_OBJECT(gtkconv->editor), "attach-start-time", NULL);
 	purple_signal_emit(pidgin_conversations_get_handle(),
 			"conversation-displayed", gtkconv);
 	return FALSE;
@@ -8199,7 +8198,7 @@ gboolean pidgin_conv_attach_to_conversation(PurpleConversation *conv)
 			gtkconv->attach_current = g_list_last(list);
 		}
 
-		g_object_set_data(G_OBJECT(gtkconv->entry), "attach-start-time",
+		g_object_set_data(G_OBJECT(gtkconv->editor), "attach-start-time",
 			GINT_TO_POINTER(purple_message_get_time(list->data)));
 		gtkconv->attach_timer = g_idle_add(add_message_history_to_gtkconv, gtkconv);
 	} else {
