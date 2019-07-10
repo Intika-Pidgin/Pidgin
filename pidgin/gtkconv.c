@@ -5370,8 +5370,6 @@ setup_common_pane(PidginConversation *gtkconv)
 		gtkconv
 	);
 
-	frame = pidgin_create_webview(TRUE, &gtkconv->entry, NULL);
-
 	if (!chat) {
 		/* For sending typing notifications for IMs */
 		gtkconv->u.im->typing_timer = 0;
@@ -5722,8 +5720,6 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		talkatu_editor_hide_toolbar(TALKATU_EDITOR(gtkconv->editor));
 	}
 
-	pidgin_webview_switch_active_conversation(
-		PIDGIN_WEBVIEW(gtkconv->entry), conv);
 	pidgin_webview_switch_active_conversation(
 		PIDGIN_WEBVIEW(gtkconv->webview), conv);
 
@@ -9246,7 +9242,7 @@ notebook_release_cb(GtkWidget *widget, GdkEventButton *e, PidginConvWindow *win)
 		}
 	}
 
-	gtk_widget_grab_focus(active_gtkconv->entry);
+	gtk_widget_grab_focus(active_gtkconv->editor);
 
 	return TRUE;
 }
@@ -9449,7 +9445,7 @@ remove_edit_entry(PidginConversation *gtkconv, GtkWidget *entry)
 	g_signal_handlers_disconnect_matched(G_OBJECT(entry), G_SIGNAL_MATCH_DATA,
 				0, 0, NULL, NULL, gtkconv);
 	gtk_widget_show(gtkconv->infopane);
-	gtk_widget_grab_focus(gtkconv->entry);
+	gtk_widget_grab_focus(gtkconv->editor);
 	gtk_widget_destroy(entry);
 }
 
@@ -10073,7 +10069,7 @@ pidgin_conv_window_add_gtkconv(PidginConvWindow *win, PidginConversation *gtkcon
 
 	focus_gtkconv = g_list_nth_data(pidgin_conv_window_get_gtkconvs(win),
 	                             gtk_notebook_get_current_page(GTK_NOTEBOOK(win->notebook)));
-	gtk_widget_grab_focus(focus_gtkconv->entry);
+	gtk_widget_grab_focus(focus_gtkconv->editor);
 
 	if (pidgin_conv_window_get_gtkconv_count(win) == 1)
 		update_send_to_selection(win);
