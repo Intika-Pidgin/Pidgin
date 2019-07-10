@@ -30,6 +30,8 @@
 
 #include <gdk/gdkkeysyms.h>
 
+#include <talkatu.h>
+
 #include "account.h"
 #include "attention.h"
 #include "action.h"
@@ -612,66 +614,42 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 {
 	PurpleConversation *conv = gtkconv->active_conv;
 	PurpleAccount *account;
-#if 0
-	PurpleConnection *gc;
-#endif
 	PurpleMessageFlags flags = 0;
-	char *buf;
+	GtkTextBuffer *buffer = NULL;
+	gchar *content;
 
 	account = purple_conversation_get_account(conv);
 
-	if (check_for_and_do_command(conv)) {
-		conversation_entry_clear(gtkconv);
+	// if (check_for_and_do_command(conv)) {
+	// 	conversation_entry_clear(gtkconv);
+	// 	return;
+	// }
+
+	if (PURPLE_IS_CHAT_CONVERSATION(conv) &&
+		purple_chat_conversation_has_left(PURPLE_CHAT_CONVERSATION(conv))) {
 		return;
 	}
 
-	if (PURPLE_IS_CHAT_CONVERSATION(conv) &&
-		purple_chat_conversation_has_left(PURPLE_CHAT_CONVERSATION(conv)))
+	if (!purple_account_is_connected(account)) {
 		return;
+	}
 
-	if (!purple_account_is_connected(account))
-		return;
+	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
 
-	if (pidgin_webview_is_empty(PIDGIN_WEBVIEW(gtkconv->entry)))
-		return;
-
-	buf = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(gtkconv->entry));
-	g_return_if_fail(buf != NULL);
-
-	gtk_widget_grab_focus(gtkconv->entry);
+	content = talkatu_markup_get_html(TALKATU_BUFFER(buffer), NULL);
 
 	purple_idle_touch();
 
 	/* XXX: is there a better way to tell if the message has images? */
-	if (strstr(buf, "<img ") != NULL)
-		flags |= PURPLE_MESSAGE_IMAGES;
+	// if (strstr(buf, "<img ") != NULL)
+	// 	flags |= PURPLE_MESSAGE_IMAGES;
 
-#if 0
-	gc = purple_account_get_connection(account);
-	if (gc && (purple_conversation_get_features(conv) & PURPLE_CONNECTION_FLAG_NO_NEWLINES)) {
-		/* TODO WebKit */
-		char **bufs;
-		int i;
+	purple_conversation_send_with_flags(conv, content, flags);
 
-		bufs = pidgin_webview_get_markup_lines(PIDGIN_WEBVIEW(gtkconv->entry));
-		for (i = 0; bufs[i]; i++) {
-			send_history_add(gtkconv, bufs[i]);
-			purple_conversation_send_with_flags(conv, bufs[i], flags);
-		}
+	g_free(content);
 
-		g_strfreev(bufs);
-	} else
-#endif
-	{
-		send_history_add(gtkconv, buf);
-		purple_conversation_send_with_flags(conv, buf, flags);
-	}
-
-	g_free(buf);
-
-	conversation_entry_clear(gtkconv);
+	talkatu_buffer_clear(TALKATU_BUFFER(buffer));
 	gtkconv_set_unseen(gtkconv, PIDGIN_UNSEEN_NONE);
-	gtk_widget_grab_focus(gtkconv->entry); // XXX: doesn't work
 }
 
 static void
@@ -4671,28 +4649,6 @@ buddy_removed_cb(PurpleBlistNode *node, PurpleChatConversation *chat)
 	buddy_cb_common(PURPLE_BUDDY(node), chat, FALSE);
 }
 
-static void
-entry_popup_menu_cb(PidginWebView *webview, GtkMenu *menu, gpointer data)
-{
-	GtkWidget *menuitem;
-	PidginConversation *gtkconv = data;
-	gboolean is_empty;
-
-	g_return_if_fail(menu != NULL);
-	g_return_if_fail(gtkconv != NULL);
-
-	menuitem = pidgin_new_menu_item(NULL, _("_Send"), NULL,
-	                                      G_CALLBACK(send_cb), gtkconv);
-	is_empty = pidgin_webview_is_empty(webview);
-	if (is_empty)
-		gtk_widget_set_sensitive(menuitem, FALSE);
-	gtk_menu_shell_insert(GTK_MENU_SHELL(menu), menuitem, 0);
-
-	menuitem = gtk_separator_menu_item_new();
-	gtk_widget_show(menuitem);
-	gtk_menu_shell_insert(GTK_MENU_SHELL(menu), menuitem, 1);
-}
-
 static gboolean
 resize_webview_cb(PidginConversation *gtkconv)
 {
@@ -5277,7 +5233,7 @@ load_conv_theme(PidginConversation *gtkconv)
 static GtkWidget *
 setup_common_pane(PidginConversation *gtkconv)
 {
-	GtkWidget *vbox, *frame, *webview_sw, *event_box;
+	GtkWidget *vbox, *frame, *webview_sw, *event_box, *view;
 	GtkCellRenderer *rend;
 	GtkTreePath *path;
 	PurpleConversation *conv = gtkconv->active_conv;
@@ -5416,22 +5372,20 @@ setup_common_pane(PidginConversation *gtkconv)
 	gtk_widget_show(gtkconv->lower_hbox);
 
 	/* Setup the entry widget and all signals */
+	gtkconv->editor = talkatu_editor_new();
+	gtk_box_pack_start(GTK_BOX(gtkconv->lower_hbox), gtkconv->editor, TRUE, TRUE, 0);
+
+	view = talkatu_editor_get_view(TALKATU_EDITOR(gtkconv->editor));
+	gtk_widget_set_name(view, "pidgin_conv_entry");
+	talkatu_view_set_send_binding(TALKATU_VIEW(view), TALKATU_VIEW_SEND_BINDING_RETURN | TALKATU_VIEW_SEND_BINDING_KP_ENTER);
+	g_signal_connect(
+		G_OBJECT(view),
+		"send-message",
+		G_CALLBACK(send_cb),
+		gtkconv
+	);
+
 	frame = pidgin_create_webview(TRUE, &gtkconv->entry, NULL);
-	gtk_box_pack_start(GTK_BOX(gtkconv->lower_hbox), frame, TRUE, TRUE, 0);
-	gtk_widget_show(frame);
-
-	_pidgin_widget_set_accessible_name(frame, "Message Input");
-	gtk_widget_set_name(gtkconv->entry, "pidgin_conv_entry");
-
-	g_signal_connect(G_OBJECT(gtkconv->entry), "populate-popup",
-	                 G_CALLBACK(entry_popup_menu_cb), gtkconv);
-	g_signal_connect(G_OBJECT(gtkconv->entry), "key-press-event",
-	                 G_CALLBACK(entry_key_press_cb), gtkconv);
-#if 0
-	/* TODO WebKit: Why? */
-	g_signal_connect_after(G_OBJECT(gtkconv->entry), "button-press-event",
-	                       G_CALLBACK(entry_stop_rclick_cb), NULL);
-#endif
 
 	if (!chat) {
 		/* For sending typing notifications for IMs */
@@ -5440,21 +5394,6 @@ setup_common_pane(PidginConversation *gtkconv)
 		gtkconv->u.im->show_icon = TRUE;
 	}
 
-#if 0
-	/* TODO WebKit: sizing stuff? */
-	g_signal_connect_swapped(G_OBJECT(gtkconv->entry_buffer), "changed",
-				 G_CALLBACK(resize_webview_cb), gtkconv);
-	g_signal_connect_swapped(G_OBJECT(gtkconv->entry), "size-allocate",
-				 G_CALLBACK(resize_webview_cb), gtkconv);
-#endif
-	g_signal_connect_swapped(G_OBJECT(gtkconv->entry), "changed",
-				 G_CALLBACK(resize_webview_cb), gtkconv);
-	g_signal_connect_swapped(G_OBJECT(gtkconv->entry), "size-allocate",
-				 G_CALLBACK(resize_webview_cb), gtkconv);
-
-	default_formatize(gtkconv);
-	g_signal_connect_after(G_OBJECT(gtkconv->entry), "format-cleared",
-	                       G_CALLBACK(clear_formatting_cb), gtkconv);
 	return vbox;
 }
 

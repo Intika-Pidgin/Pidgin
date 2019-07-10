@@ -108,6 +108,9 @@ struct _PidginConversation
 	GArray *nick_colors;
 	PurpleMessageFlags last_flags;
 	GtkWidget *webview;
+
+	GtkWidget *editor;
+	GtkTextBuffer *entry_buffer;
 	GtkWidget *entry;
 
 	GtkWidget *close; /* "x" on the tab */
