@@ -5686,9 +5686,6 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	gtk_drag_dest_set(gtkconv->webview, 0, NULL, 0, GDK_ACTION_COPY);
 	gtk_drag_dest_set_target_list(gtkconv->webview, targets);
 
-	gtk_drag_dest_set(gtkconv->entry, 0, NULL, 0, GDK_ACTION_COPY);
-	gtk_drag_dest_set_target_list(gtkconv->entry, targets);
-
 	g_signal_connect(G_OBJECT(pane), "button_press_event",
 	                 G_CALLBACK(ignore_middle_click), NULL);
 	g_signal_connect(G_OBJECT(pane), "drag-data-received",
@@ -5719,10 +5716,12 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		purple_conversation_set_logging(conv, logging);
 	}
 
-	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_formatting_toolbar"))
-		pidgin_webview_show_toolbar(PIDGIN_WEBVIEW(gtkconv->entry));
-	else
-		pidgin_webview_hide_toolbar(PIDGIN_WEBVIEW(gtkconv->entry));
+	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_formatting_toolbar")) {
+		talkatu_editor_show_toolbar(TALKATU_EDITOR(gtkconv->editor));
+	} else {
+		talkatu_editor_hide_toolbar(TALKATU_EDITOR(gtkconv->editor));
+	}
+
 	pidgin_webview_switch_active_conversation(
 		PIDGIN_WEBVIEW(gtkconv->entry), conv);
 	pidgin_webview_switch_active_conversation(
@@ -7718,10 +7717,11 @@ show_formatting_toolbar_pref_cb(const char *name, PurplePrefType type,
 		        GTK_TOGGLE_ACTION(win->menu->show_formatting_toolbar),
 		        (gboolean)GPOINTER_TO_INT(value));
 
-		if ((gboolean)GPOINTER_TO_INT(value))
-			pidgin_webview_show_toolbar(PIDGIN_WEBVIEW(gtkconv->entry));
-		else
-			pidgin_webview_hide_toolbar(PIDGIN_WEBVIEW(gtkconv->entry));
+		if ((gboolean)GPOINTER_TO_INT(value)) {
+			talkatu_editor_show_toolbar(TALKATU_EDITOR(gtkconv->editor));
+		} else {
+			talkatu_editor_hide_toolbar(TALKATU_EDITOR(gtkconv->editor));
+		}
 
 		resize_webview_cb(gtkconv);
 	}
