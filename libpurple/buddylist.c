@@ -735,15 +735,23 @@ purple_blist_boot(void)
 }
 
 PurpleBuddyList *
-purple_blist_get_buddy_list()
+purple_blist_get_default(void)
 {
 	return purplebuddylist;
 }
 
 PurpleBlistNode *
-purple_blist_get_root()
+purple_blist_get_default_root(void)
 {
 	return purplebuddylist ? purplebuddylist->root : NULL;
+}
+
+PurpleBlistNode *
+purple_blist_get_root(PurpleBuddyList *list)
+{
+	g_return_val_if_fail(PURPLE_IS_BUDDY_LIST(list), NULL);
+
+	return list->root;
 }
 
 static void
@@ -2096,7 +2104,7 @@ purple_blist_uninit(void)
 	if (ops && ops->destroy)
 		ops->destroy(purplebuddylist);
 
-	node = purple_blist_get_root();
+	node = purple_blist_get_default_root();
 	while (node) {
 		next_node = node->next;
 		blist_node_destroy(node);

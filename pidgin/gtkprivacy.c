@@ -250,7 +250,7 @@ type_changed_cb(GtkComboBox *combo, PidginPrivacyDialog *dialog)
 	gtk_widget_show(dialog->button_box);
 
 	purple_blist_schedule_save();
-	pidgin_blist_refresh(purple_blist_get_buddy_list());
+	pidgin_blist_refresh(purple_blist_get_default());
 }
 
 static void

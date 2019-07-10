@@ -69,14 +69,12 @@ gevo_get_groups(void)
 	g_list_free(list);
 	list = NULL;
 
-	if (purple_blist_get_buddy_list()->root == NULL) {
+	gnode = purple_blist_get_default_root();
+	if (gnode == NULL) {
 		list  = g_list_append(list,
 			(gpointer)PURPLE_BLIST_DEFAULT_GROUP_NAME);
 	} else {
-		for (gnode = purple_blist_get_buddy_list()->root;
-			 gnode != NULL;
-			 gnode = gnode->next)
-		{
+		for (; gnode != NULL; gnode = gnode->next) {
 			if (PURPLE_IS_GROUP(gnode))
 			{
 				g = PURPLE_GROUP(gnode);

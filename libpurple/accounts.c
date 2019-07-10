@@ -621,10 +621,8 @@ purple_accounts_delete(PurpleAccount *account)
 	purple_accounts_remove(account);
 
 	/* Remove this account's buddies */
-	for (gnode = purple_blist_get_root();
-	     gnode != NULL;
-		 gnode = purple_blist_node_get_sibling_next(gnode))
-	{
+	for (gnode = purple_blist_get_default_root(); gnode != NULL;
+	     gnode = purple_blist_node_get_sibling_next(gnode)) {
 		if (!PURPLE_IS_GROUP(gnode))
 			continue;
 

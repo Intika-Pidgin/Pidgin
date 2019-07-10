@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_PROXY_H_
-#define _PURPLE_PROXY_H_
+#ifndef PURPLE_PROXY_H
+#define PURPLE_PROXY_H
 /**
  * SECTION:proxy
  * @section_id: libpurple-proxy
@@ -355,4 +355,4 @@ GProxyResolver *purple_proxy_get_proxy_resolver(PurpleAccount *account,
 
 G_END_DECLS
 
-#endif /* _PURPLE_PROXY_H_ */
+#endif /* PURPLE_PROXY_H */

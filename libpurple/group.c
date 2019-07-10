@@ -181,8 +181,10 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 		ops->save_node(PURPLE_BLIST_NODE(source));
 
 	/* Update the UI */
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(source));
+	if (ops && ops->update) {
+		ops->update(purple_blist_get_default(),
+		            PURPLE_BLIST_NODE(source));
+	}
 
 	/* Notify all protocols */
 	/* TODO: Is this condition needed?  Seems like it would always be TRUE */

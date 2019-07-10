@@ -673,8 +673,8 @@ static void blist_export(PurpleConnection *gc, struct mwSametimeList *stlist) {
   acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
 
-  for(gn = purple_blist_get_root(); gn;
-		  gn = purple_blist_node_get_sibling_next(gn)) {
+  for (gn = purple_blist_get_default_root(); gn;
+       gn = purple_blist_node_get_sibling_next(gn)) {
     const char *owner;
     const char *gname;
     enum mwSametimeGroupType gtype;
@@ -916,7 +916,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
   acct = purple_connection_get_account(gc);
   owner = purple_account_get_username(acct);
 
-  blist = purple_blist_get_buddy_list();
+  blist = purple_blist_get_default();
   g_return_val_if_fail(blist != NULL, NULL);
 
   name = mwSametimeGroup_getName(stgroup);
@@ -937,8 +937,8 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
 	     NSTR(name), NSTR(alias));
 
   /* first attempt at finding the group, by the name key */
-  for(gn = purple_blist_get_root(); gn;
-		  gn = purple_blist_node_get_sibling_next(gn)) {
+  for (gn = purple_blist_get_default_root(); gn;
+       gn = purple_blist_node_get_sibling_next(gn)) {
     const char *n, *o;
     if(! PURPLE_IS_GROUP(gn)) continue;
     n = purple_blist_node_get_string(gn, GROUP_KEY_NAME);
@@ -1149,7 +1149,7 @@ static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist) {
 
   acct_n = purple_account_get_username(acct);
 
-  blist = purple_blist_get_buddy_list();
+  blist = purple_blist_get_default();
   g_return_if_fail(blist != NULL);
 
   /* build a hash table for quick lookup while pruning the local
@@ -1164,8 +1164,8 @@ static void blist_sync(PurpleConnection *gc, struct mwSametimeList *stlist) {
   g_list_free(gtl);
 
   /* find all groups which should be pruned from the local list */
-  for(gn = purple_blist_get_root(); gn;
-		  gn = purple_blist_node_get_sibling_next(gn)) {
+  for (gn = purple_blist_get_default_root(); gn;
+       gn = purple_blist_node_get_sibling_next(gn)) {
     PurpleGroup *grp = (PurpleGroup *) gn;
     const char *gname, *owner;
     struct mwSametimeGroup *stgrp;
@@ -1365,8 +1365,8 @@ static void blist_init(PurpleAccount *acct) {
   PurpleBlistNode *gnode, *cnode, *bnode;
   GList *add_buds = NULL;
 
-  for(gnode = purple_blist_get_root(); gnode;
-		  gnode = purple_blist_node_get_sibling_next(gnode)) {
+  for (gnode = purple_blist_get_default_root(); gnode;
+       gnode = purple_blist_node_get_sibling_next(gnode)) {
     if(! PURPLE_IS_GROUP(gnode)) continue;
 
     for(cnode = purple_blist_node_get_first_child(gnode);
@@ -1412,8 +1412,8 @@ static void services_starting(struct mwPurpleProtocolData *pd) {
   mwServiceStorage_load(pd->srvc_store, unit, fetch_blist_cb, pd, NULL);
 
   /* find all the NAB groups and subscribe to them */
-  for(l = purple_blist_get_root(); l;
-		  l = purple_blist_node_get_sibling_next(l)) {
+  for (l = purple_blist_get_default_root(); l;
+       l = purple_blist_node_get_sibling_next(l)) {
     PurpleGroup *group = (PurpleGroup *) l;
     enum mwSametimeGroupType gt;
     const char *owner;

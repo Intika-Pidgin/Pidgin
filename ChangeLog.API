@@ -23,6 +23,7 @@ version 3.0.0 (??/??/????):
 		* purple_account_presence_new
 		* purple_buddy_presence_new
 		* purple_account_register_completed
+		* purple_blist_get_default_root
 		* purple_blist_node_is_transient
 		* purple_blist_node_set_transient
 		* purple_certificate_get_der_data
@@ -205,6 +206,9 @@ version 3.0.0 (??/??/????):
 		* purple_blist_alias_buddy renamed to purple_buddy_set_local_alias
 		* purple_blist_alias_chat renamed to purple_chat_set_alias
 		* purple_blist_alias_contact renamed to purple_contact_set_alias
+		* purple_blist_get_root now takes a PurpleBuddyList parameter;
+		  use purple_blist_get_default_root to work on the default buddy
+		  list as before
 		* purple_blist_merge_contact renamed to purple_contact_merge
 		* purple_blist_rename_buddy renamed to purple_buddy_set_name
 		* purple_blist_rename_group renamed to purple_group_set_name
@@ -220,7 +224,7 @@ version 3.0.0 (??/??/????):
 		* purple_find_buddy_in_group renamed to purple_blist_find_buddy_in_group
 		* purple_find_buddy renamed to purple_blist_find_buddy
 		* purple_find_group renamed to purple_blist_find_group
-		* purple_get_blist renamed to purple_blist_get_buddy_list
+		* purple_get_blist renamed to purple_blist_get_default
 		* PurpleBuddyIconSpec has been moved to buddyicon.h
 		* purple_certificate_check_signature_chain now returns a list of failing
 		  PurpleCertificate*s as the second parameter
@@ -392,9 +396,12 @@ version 3.0.0 (??/??/????):
 		* _XMLNodeType
 		* account-authorization-requested-with-message signal
 		* network-configuration-changed signal
+		* PurpleAccoun->ui_data
 		* purple_account_add_buddies_with_invite
 		* purple_account_add_buddy_with_invite
+		* purple_account_get_ui_data
 		* purple_account_set_current_error
+		* purple_account_set_ui_data
 		* purple_base64_*. Use g_base64_* instead
 		* purple_blist_load
 		* purple_blist_new

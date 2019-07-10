@@ -33,6 +33,16 @@
 #include "signals.h"
 #include "util.h"
 
+/**
+ * PurpleAccount:
+ *
+ * Structure representing an account.
+ */
+struct _PurpleAccount
+{
+	GObject gparent;
+};
+
 typedef struct
 {
 	char *username;             /* The username.                          */
@@ -2067,22 +2077,6 @@ purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 	g_hash_table_insert(table, g_strdup(name), setting);
 
 	purple_accounts_schedule_save();
-}
-
-void
-purple_account_set_ui_data(PurpleAccount *account, gpointer ui_data)
-{
-	g_return_if_fail(PURPLE_IS_ACCOUNT(account));
-
-	account->ui_data = ui_data;
-}
-
-gpointer
-purple_account_get_ui_data(PurpleAccount *account)
-{
-	g_return_val_if_fail(PURPLE_IS_ACCOUNT(account), NULL);
-
-	return account->ui_data;
 }
 
 gboolean

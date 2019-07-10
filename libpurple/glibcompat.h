@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _GLIBCOMPAT_H_
-#define _GLIBCOMPAT_H_
+#ifndef PURPLE_GLIBCOMPAT_H
+#define PURPLE_GLIBCOMPAT_H
 /*
  * SECTION:glibcompat
  * @section_id: libpurple-glibcompat
@@ -80,4 +80,4 @@ purple_g_stat(const gchar *filename, GStatBufW32 *buf)
                                         } G_STMT_END
 #endif
 
-#endif /* _GLIBCOMPAT_H_ */
+#endif /* PURPLE_GLIBCOMPAT_H */
