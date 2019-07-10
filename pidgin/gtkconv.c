@@ -487,14 +487,19 @@ static gboolean
 check_for_and_do_command(PurpleConversation *conv)
 {
 	PidginConversation *gtkconv;
-	char *cmd;
-	const char *prefix;
+	GtkWidget *view = NULL;
+	GtkTextBuffer *buffer = NULL;
+	gchar *cmd;
+	const gchar *prefix;
 	gboolean retval = FALSE;
 
 	gtkconv = PIDGIN_CONVERSATION(conv);
 	prefix = pidgin_get_cmd_prefix();
 
-	cmd = pidgin_webview_get_body_text(PIDGIN_WEBVIEW(gtkconv->entry));
+	view = talkatu_editor_get_view(TALKATU_EDITOR(gtkconv->editor));
+	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(view));
+
+	cmd = talkatu_buffer_get_plain_text(TALKATU_BUFFER(buffer));
 
 	if (cmd && purple_str_has_prefix(cmd, prefix)) {
 		PurpleCmdStatus status;
@@ -513,8 +518,11 @@ check_for_and_do_command(PurpleConversation *conv)
 			return TRUE;
 		}
 
-		/* TODO WebKit: Cut out prefix for markup... */
-		markup = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(gtkconv->entry));
+		/* Docs are unclear on whether or not prefix should be removed from
+		 * the markup so, ignoring for now.  Notably if the markup is
+		 * `<b>/foo arg1</b>` we now have to move the bold tag around?
+		 * - gk 20190709 */
+		markup = talkatu_markup_get_html(buffer, NULL);
 		status = purple_cmd_do_command(conv, cmdline, markup, &error);
 		g_free(markup);
 
@@ -597,10 +605,12 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	account = purple_conversation_get_account(conv);
 
-	// if (check_for_and_do_command(conv)) {
-	// 	conversation_entry_clear(gtkconv);
-	// 	return;
-	// }
+	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+
+	if (check_for_and_do_command(conv)) {
+		talkatu_buffer_clear(TALKATU_BUFFER(buffer));
+		return;
+	}
 
 	if (PURPLE_IS_CHAT_CONVERSATION(conv) &&
 		purple_chat_conversation_has_left(PURPLE_CHAT_CONVERSATION(conv))) {
@@ -611,9 +621,7 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		return;
 	}
 
-	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
-
-	content = talkatu_markup_get_html(TALKATU_BUFFER(buffer), NULL);
+	content = talkatu_markup_get_html(buffer, NULL);
 
 	purple_idle_touch();
 
