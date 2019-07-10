@@ -91,7 +91,7 @@ GType purple_blist_node_get_type(void);
  * @offline:	Whether to include nodes for offline accounts
  *
  * Returns the next node of a given node. This function is to be used to iterate
- * over the tree returned by purple_blist_get_buddy_list.
+ * over the tree returned by purple_blist_get_default.
  *
  * See purple_blist_node_get_parent(), purple_blist_node_get_first_child(),
  *   purple_blist_node_get_sibling_next(), purple_blist_node_get_sibling_prev().

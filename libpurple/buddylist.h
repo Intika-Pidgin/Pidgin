@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_BUDDY_LIST_H_
-#define _PURPLE_BUDDY_LIST_H_
+#ifndef PURPLE_BUDDY_LIST_H
+#define PURPLE_BUDDY_LIST_H
 /**
  * SECTION:buddylist
  * @section_id: libpurple-buddylist
@@ -180,22 +180,36 @@ G_BEGIN_DECLS
 GType purple_buddy_list_get_type(void);
 
 /**
- * purple_blist_get_buddy_list:
+ * purple_blist_get_default:
  *
- * Returns the main buddy list.
+ * Returns the default buddy list.
  *
- * Returns: The main buddy list.
+ * Returns: The default buddy list.
+ *
+ * Since: 3.0.0
  */
-PurpleBuddyList *purple_blist_get_buddy_list(void);
+PurpleBuddyList *purple_blist_get_default(void);
+
+/**
+ * purple_blist_get_default_root:
+ *
+ * Returns the root node of the default buddy list.
+ *
+ * Returns: The root node.
+ *
+ * Since: 3.0.0
+ */
+PurpleBlistNode *purple_blist_get_default_root(void);
 
 /**
  * purple_blist_get_root:
+ * @list: The buddy list to query.
  *
- * Returns the root node of the main buddy list.
+ * Returns the root node of the specified buddy list.
  *
  * Returns: The root node.
  */
-PurpleBlistNode *purple_blist_get_root(void);
+PurpleBlistNode *purple_blist_get_root(PurpleBuddyList *list);
 
 /**
  * purple_blist_get_buddies:
@@ -574,4 +588,4 @@ void purple_blist_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_BUDDY_LIST_H_ */
+#endif /* PURPLE_BUDDY_LIST_H */

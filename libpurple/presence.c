@@ -831,8 +831,10 @@ purple_buddy_presence_update_idle(PurplePresence *presence, gboolean old_idle)
 	 * connect to buddy-[un]idle signals and update from there
 	 */
 
-	if (ops != NULL && ops->update != NULL)
-		ops->update(purple_blist_get_buddy_list(), (PurpleBlistNode *)buddy);
+	if (ops != NULL && ops->update != NULL) {
+		ops->update(purple_blist_get_default(),
+		            (PurpleBlistNode *)buddy);
+	}
 
 	g_date_time_unref(current_time);
 }

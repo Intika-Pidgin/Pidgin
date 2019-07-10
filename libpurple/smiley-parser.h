@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_SMILEY_PARSER_H_
-#define _PURPLE_SMILEY_PARSER_H_
+#ifndef PURPLE_SMILEY_PARSER_H
+#define PURPLE_SMILEY_PARSER_H
 /**
  * SECTION:smiley-parser
  * @include:smiley-parser.h
@@ -134,4 +134,4 @@ _purple_smiley_parser_init(void);
 void
 _purple_smiley_parser_uninit(void);
 
-#endif /* _PURPLE_SMILEY_PARSER_H_ */
+#endif /* PURPLE_SMILEY_PARSER_H */

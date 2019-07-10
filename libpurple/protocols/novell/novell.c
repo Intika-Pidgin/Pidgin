@@ -1250,8 +1250,8 @@ _remove_purple_buddies(NMUser *user)
 	NMFolder *folder = NULL;
 	const char *gname = NULL;
 
-	for (gnode = purple_blist_get_root(); gnode;
-			gnode = purple_blist_node_get_sibling_next(gnode)) {
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = purple_blist_node_get_sibling_next(gnode)) {
 		if (!PURPLE_IS_GROUP(gnode))
 			continue;
 		group = (PurpleGroup *) gnode;

@@ -83,7 +83,8 @@ fb_get_group(gboolean friend)
 		grp = purple_group_new(title);
 		node = NULL;
 
-		for (n = purple_blist_get_root(); n != NULL; n = n->next) {
+		for (n = purple_blist_get_default_root(); n != NULL;
+		     n = n->next) {
 			node = n;
 		}
 

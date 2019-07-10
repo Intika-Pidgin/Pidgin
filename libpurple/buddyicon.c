@@ -18,7 +18,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#define _PURPLE_BUDDYICON_C_
 
 #include "internal.h"
 #include "buddyicon.h"
@@ -903,8 +902,10 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 			/* Is this call necessary anymore? Can the buddies
 			 * themselves need updating when the custom buddy
 			 * icon changes? */
-			if (ops && ops->update)
-				ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+			if (ops && ops->update) {
+				ops->update(purple_blist_get_default(),
+				            PURPLE_BLIST_NODE(buddy));
+			}
 		}
 	} else if (PURPLE_IS_CHAT(node)) {
 		PurpleChatConversation *chat = NULL;
@@ -915,8 +916,9 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 		}
 	}
 
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), node);
+	if (ops && ops->update) {
+		ops->update(purple_blist_get_default(), node);
+	}
 
 	if (old_img) {
 		g_object_unref(old_img);
@@ -995,7 +997,7 @@ _purple_buddy_icons_account_loaded_cb()
 void
 _purple_buddy_icons_blist_loaded_cb()
 {
-	PurpleBlistNode *node = purple_blist_get_root();
+	PurpleBlistNode *node = purple_blist_get_default_root();
 	const char *dirname = purple_buddy_icons_get_cache_dir();
 
 	while (node != NULL)

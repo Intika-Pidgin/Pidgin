@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_UPNP_H_
-#define _PURPLE_UPNP_H_
+#ifndef PURPLE_UPNP_H
+#define PURPLE_UPNP_H
 /**
  * SECTION:upnp
  * @section_id: libpurple-upnp
@@ -122,4 +122,4 @@ PurpleUPnPMappingAddRemove *purple_upnp_remove_port_mapping(unsigned short portm
 
 G_END_DECLS
 
-#endif /* _PURPLE_UPNP_H_ */
+#endif /* PURPLE_UPNP_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_SSLCONN_H_
-#define _PURPLE_SSLCONN_H_
+#ifndef PURPLE_SSLCONN_H
+#define PURPLE_SSLCONN_H
 /**
  * SECTION:sslconn
  * @section_id: libpurple-sslconn
@@ -264,4 +264,4 @@ void purple_ssl_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_SSLCONN_H_ */
+#endif /* PURPLE_SSLCONN_H */

@@ -127,7 +127,8 @@ GList * ggp_purplew_account_get_groups(PurpleAccount *account, gboolean exclusiv
 {
 	PurpleBlistNode *bnode;
 	GList *groups = NULL;
-	for (bnode = purple_blist_get_root(); bnode; bnode = bnode->next) {
+	for (bnode = purple_blist_get_default_root(); bnode;
+	     bnode = bnode->next) {
 		PurpleGroup *group;
 		GSList *accounts;
 		gboolean have_specified = FALSE, have_others = FALSE;
