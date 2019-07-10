@@ -53,6 +53,7 @@ if PLUGINS
 	imgupload = library('imgupload', 'imgupload.c',
 	    dependencies : [json, libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
+	    build_by_default: false,
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	markerline = library('markerline', 'markerline.c',
@@ -63,6 +64,7 @@ if PLUGINS
 	notify = library('notify', 'notify.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
+	    build_by_default: false,
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	relnot = library('relnot', 'relnot.c',
@@ -73,11 +75,13 @@ if PLUGINS
 	screencap = library('screencap', 'screencap.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
+	    build_by_default: false,
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	spellchk = library('spellchk', 'spellchk.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
+	    build_by_default: false,
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	xmppconsole = library('xmppconsole', 'xmppconsole.c',
