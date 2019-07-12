@@ -295,13 +295,6 @@ lbox_size_allocate_cb(GtkWidget *w, GtkAllocation *allocation, gpointer data)
 	return FALSE;
 }
 
-static void
-default_formatize(PidginConversation *c)
-{
-	PurpleConversation *conv = c->active_conv;
-	pidgin_webview_setup_entry(PIDGIN_WEBVIEW(c->entry), purple_conversation_get_features(conv));
-}
-
 static const char *
 pidgin_get_cmd_prefix(void)
 {
@@ -505,7 +498,7 @@ check_for_and_do_command(PurpleConversation *conv)
 		PurpleCmdStatus status;
 		char *error, *cmdline, *markup, *send_history;
 
-		send_history = pidgin_webview_get_body_html(PIDGIN_WEBVIEW(gtkconv->entry));
+		send_history = talkatu_markup_get_html(buffer, NULL);
 		send_history_add(gtkconv, send_history);
 		g_free(send_history);
 
@@ -664,8 +657,6 @@ add_remove_cb(GtkWidget *widget, PidginConversation *gtkconv)
 		else if (account != NULL && purple_account_is_connected(account))
 			purple_blist_request_add_chat(account, NULL, NULL, name);
 	}
-
-	gtk_widget_grab_focus(PIDGIN_CONVERSATION(conv)->entry);
 }
 
 static void chat_do_info(PidginConversation *gtkconv, const char *who)
@@ -687,7 +678,6 @@ info_cb(GtkWidget *widget, PidginConversation *gtkconv)
 	if (PURPLE_IS_IM_CONVERSATION(conv)) {
 		pidgin_retrieve_user_info(purple_conversation_get_connection(conv),
 					  purple_conversation_get_name(conv));
-		gtk_widget_grab_focus(gtkconv->entry);
 	} else if (PURPLE_IS_CHAT_CONVERSATION(conv)) {
 		/* Get info of the person currently selected in the GtkTreeView */
 		PidginChatPane *gtkchat;
@@ -721,8 +711,6 @@ block_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	if (account != NULL && purple_account_is_connected(account))
 		pidgin_request_add_block(account, purple_conversation_get_name(conv));
-
-	gtk_widget_grab_focus(PIDGIN_CONVERSATION(conv)->entry);
 }
 
 static void
@@ -735,8 +723,6 @@ unblock_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	if (account != NULL && purple_account_is_connected(account))
 		pidgin_request_add_permit(account, purple_conversation_get_name(conv));
-
-	gtk_widget_grab_focus(PIDGIN_CONVERSATION(conv)->entry);
 }
 
 static void
@@ -1941,9 +1927,6 @@ entry_key_press_cb(GtkWidget *entry, GdkEventKey *event, gpointer data)
 						gtk_text_buffer_get_end_iter(buffer, &iter);
 						gtk_text_buffer_move_mark_by_name(buffer, "insert", &iter);
 #endif
-					} else {
-						/* Restore the default formatting */
-						default_formatize(gtkconv);
 					}
 				}
 
@@ -2914,8 +2897,8 @@ static GtkActionEntry menu_entries[] =
 	{ "Unblock", PIDGIN_STOCK_TOOLBAR_UNBLOCK, N_("_Unblock..."), NULL, NULL, G_CALLBACK(menu_unblock_cb) },
 	{ "Add", GTK_STOCK_ADD, N_("_Add..."), NULL, NULL, G_CALLBACK(menu_add_remove_cb) },
 	{ "Remove", GTK_STOCK_REMOVE, N_("_Remove..."), NULL, NULL, G_CALLBACK(menu_add_remove_cb) },
-	{ "InsertLink", PIDGIN_STOCK_TOOLBAR_INSERT_LINK, N_("Insert Lin_k..."), NULL, NULL, G_CALLBACK(menu_insert_link_cb) },
-	{ "InsertImage", PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE, N_("Insert Imag_e..."), NULL, NULL, G_CALLBACK(menu_insert_image_cb) },
+	{ "InsertLink", PIDGIN_STOCK_TOOLBAR_INSERT_LINK, N_("Insert Lin_k..."), NULL, NULL, NULL },
+	{ "InsertImage", PIDGIN_STOCK_TOOLBAR_INSERT_IMAGE, N_("Insert Imag_e..."), NULL, NULL, NULL },
 	{ "Close", GTK_STOCK_CLOSE, N_("_Close"), "<control>W", NULL, G_CALLBACK(menu_close_conv_cb) },
 
 	/* Options */
