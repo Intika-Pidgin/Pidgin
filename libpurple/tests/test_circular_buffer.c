@@ -57,7 +57,6 @@ test_circular_buffer_reset(void) {
 	g_assert_cmpuint(4, ==, purple_circular_buffer_get_used(buffer));
 	g_assert_cmpuint(4, ==, purple_circular_buffer_get_max_read(buffer));
 
-	/* force a read to move the output */
 	purple_circular_buffer_get_output(buffer);
 	data = purple_circular_buffer_get_output(buffer);
 	g_assert_cmpstr("abc", ==, data);
