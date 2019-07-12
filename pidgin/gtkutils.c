@@ -1389,7 +1389,8 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		img = purple_image_new_from_data((guint8 *)filedata, size);
 		purple_image_set_friendly_filename(img, shortname);
 
-		pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
+# warning fix this when talkatu has a way to programmatically insert an image
+		// pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
 		g_object_unref(img);
 
 		break;
@@ -1567,8 +1568,9 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(account, who));
 		gtkconv =  PIDGIN_CONVERSATION(conv);
-		pidgin_webview_insert_link(PIDGIN_WEBVIEW(gtkconv->entry),
-				url, name);
+# warning fix this when talkatu has a way to programmatically add a link.
+		// pidgin_webview_insert_link(PIDGIN_WEBVIEW(gtkconv->entry),
+		// 		url, name);
 	}
 
 	g_free(type);

@@ -110,7 +110,6 @@ struct _PidginConversation
 	GtkWidget *webview;
 
 	GtkWidget *editor;
-	GtkTextBuffer *entry_buffer;
 	GtkWidget *entry;
 
 	GtkWidget *close; /* "x" on the tab */
