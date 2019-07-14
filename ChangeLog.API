@@ -5,6 +5,7 @@ version 2.14.0:
 		Added:
 		* purple_media_manager_enumerate_elements
 		* purple_request_screenshare_media
+		* purple_media_set_require_encryption
 
 version 2.13.0:
 	libpurple:
