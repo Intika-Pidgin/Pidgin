@@ -2,7 +2,7 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="Talkatu" version="0.0"/>
-  <requires lib="gtk+" version="3.10"/>
+  <requires lib="gtk+" version="3.18"/>
   <!-- interface-local-resource-path ../ -->
   <object class="TalkatuHtmlBuffer" id="buffer"/>
   <template class="PidginDebugPluginInfo" parent="GtkDialog">
