@@ -65,6 +65,8 @@ struct _PidginDebugWindow {
 	gboolean paused;
 
 	GtkWidget *popover;
+	GtkWidget *popover_invert;
+	GtkWidget *popover_highlight;
 	gboolean invert;
 	gboolean highlight;
 	GRegex *regex;
@@ -390,12 +392,17 @@ regex_key_release_cb(GtkWidget *w, GdkEventKey *e, PidginDebugWindow *win) {
 }
 
 static void
-regex_menu_cb(GtkWidget *item, const gchar *pref) {
+regex_menu_cb(GtkWidget *item, PidginDebugWindow *win)
+{
 	gboolean active;
 
 	active = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(item));
 
-	purple_prefs_set_bool(pref, active);
+	if (item == win->popover_highlight) {
+		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/highlight", active);
+	} else if (item == win->popover_invert) {
+		purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/debug/invert", active);
+	}
 }
 
 static void
@@ -403,6 +410,10 @@ regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
 		PidginDebugWindow *win)
 {
 	GdkRectangle rect;
+	if (icon_pos != GTK_ENTRY_ICON_PRIMARY) {
+		return;
+	}
+
 	gtk_entry_get_icon_area(entry, icon_pos, &rect);
 	gtk_popover_set_pointing_to(GTK_POPOVER(win->popover), &rect);
 #if GTK_CHECK_VERSION(3,22,0)
@@ -546,6 +557,12 @@ pidgin_debug_window_class_init(PidginDebugWindowClass *klass) {
 			widget_class, PidginDebugWindow, expression);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginDebugWindow, tags.match);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, popover);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, popover_invert);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginDebugWindow, popover_highlight);
 	gtk_widget_class_bind_template_callback(widget_class, toolbar_context);
 	gtk_widget_class_bind_template_callback(widget_class, save_cb);
 	gtk_widget_class_bind_template_callback(widget_class, clear_cb);
@@ -555,6 +572,7 @@ pidgin_debug_window_class_init(PidginDebugWindowClass *klass) {
 	gtk_widget_class_bind_template_callback(widget_class,
 			regex_changed_cb);
 	gtk_widget_class_bind_template_callback(widget_class, regex_popup_cb);
+	gtk_widget_class_bind_template_callback(widget_class, regex_menu_cb);
 	gtk_widget_class_bind_template_callback(widget_class,
 			regex_key_release_cb);
 	gtk_widget_class_bind_template_callback(widget_class,
@@ -582,9 +600,6 @@ pidgin_debug_window_init(PidginDebugWindow *win)
 			"background-image: none;"
 			"background-color: @success_color;"
 		"}";
-	GtkBuilder *builder;
-	GtkWidget *popover_invert;
-	GtkWidget *popover_highlight;
 
 	gtk_widget_init_template(GTK_WIDGET(win));
 
@@ -649,30 +664,10 @@ pidgin_debug_window_init(PidginDebugWindow *win)
 		purple_prefs_connect_callback(handle, PIDGIN_PREFS_ROOT "/debug/filterlevel",
 						filter_level_pref_changed, win);
 
-		builder = gtk_builder_new_from_resource(
-				"/im/pidgin/Pidgin/Debug/filter-popover.ui");
-		win->popover = GTK_WIDGET(gtk_builder_get_object(builder,
-					"popover"));
-		gtk_popover_set_relative_to(GTK_POPOVER(win->popover),
-				win->expression);
-
-		popover_invert = GTK_WIDGET(gtk_builder_get_object(builder,
-					"popover.invert"));
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(popover_invert),
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win->popover_invert),
 				win->invert);
-		g_signal_connect(G_OBJECT(popover_invert), "toggled",
-				G_CALLBACK(regex_menu_cb),
-				PIDGIN_PREFS_ROOT "/debug/invert");
-
-		popover_highlight = GTK_WIDGET(gtk_builder_get_object(builder,
-					"popover.highlight"));
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(popover_highlight),
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(win->popover_highlight),
 				win->highlight);
-		g_signal_connect(G_OBJECT(popover_highlight), "toggled",
-				G_CALLBACK(regex_menu_cb),
-				PIDGIN_PREFS_ROOT "/debug/highlight");
-
-		g_object_unref(builder);
 	}
 
 	/* The *start* and *end* marks bound the beginning and end of an
