@@ -426,17 +426,17 @@ save_cb(gpointer data)
 }
 
 static void
-_purple_blist_schedule_save()
+purple_blist_real_schedule_save(void)
 {
 	if (save_timer == 0)
 		save_timer = g_timeout_add_seconds(5, save_cb, NULL);
 }
 
 static void
-_purple_blist_save_account(PurpleBuddyList *list, PurpleAccount *account)
+purple_blist_real_save_account(PurpleBuddyList *list, PurpleAccount *account)
 {
 #if 1
-	_purple_blist_schedule_save();
+	purple_blist_real_schedule_save();
 #else
 	if (account != NULL) {
 		/* Save the buddies and privacy data for this account */
@@ -447,9 +447,9 @@ _purple_blist_save_account(PurpleBuddyList *list, PurpleAccount *account)
 }
 
 static void
-_purple_blist_save_node(PurpleBuddyList *list, PurpleBlistNode *node)
+purple_blist_real_save_node(PurpleBuddyList *list, PurpleBlistNode *node)
 {
-	_purple_blist_schedule_save();
+	purple_blist_real_schedule_save();
 }
 
 void purple_blist_schedule_save()
@@ -2006,21 +2006,21 @@ purple_blist_set_ui_ops(PurpleBlistUiOps *ops)
 		return;
 
 	if (!ops->save_node) {
-		ops->save_node = _purple_blist_save_node;
+		ops->save_node = purple_blist_real_save_node;
 		overrode = TRUE;
 	}
 	if (!ops->remove_node) {
-		ops->remove_node = _purple_blist_save_node;
+		ops->remove_node = purple_blist_real_save_node;
 		overrode = TRUE;
 	}
 	if (!ops->save_account) {
-		ops->save_account = _purple_blist_save_account;
+		ops->save_account = purple_blist_real_save_account;
 		overrode = TRUE;
 	}
 
-	if (overrode && (ops->save_node != _purple_blist_save_node ||
-	                 ops->remove_node != _purple_blist_save_node ||
-	                 ops->save_account != _purple_blist_save_account)) {
+	if (overrode && (ops->save_node != purple_blist_real_save_node ||
+	                 ops->remove_node != purple_blist_real_save_node ||
+	                 ops->save_account != purple_blist_real_save_account)) {
 		purple_debug_warning("buddylist", "Only some of the blist saving UI ops "
 				"were overridden. This probably is not what you want!\n");
 	}
