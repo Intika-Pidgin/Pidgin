@@ -301,7 +301,7 @@ enable_gestures = get_option('gestures')
 # Check Pidgin dependencies
 # #######################################################################
 if get_option('gtkui')
-	gtk = dependency('gtk+-3.0', version : '>= 3.10.0')
+	gtk = dependency('gtk+-3.0', version : '>= 3.18.0')
 
 	webkit = dependency('webkitgtk-3.0', version : '>= 1.3.7')
 
