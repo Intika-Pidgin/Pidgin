@@ -374,7 +374,7 @@ get_display_color(PurpleBlistNode  *node)
 }
 
 static GntTextFormatFlags
-get_blist_node_flag(PurpleBlistNode *node)
+get_blist_node_flag(FinchBuddyList *ggblist, PurpleBlistNode *node)
 {
 	GntTextFormatFlags flag = 0;
 	FinchBlistNode *fnode = purple_blist_node_get_ui_data(node);
@@ -395,9 +395,10 @@ get_blist_node_flag(PurpleBlistNode *node)
 }
 
 static void
-blist_update_row_flags(PurpleBlistNode *node)
+blist_update_row_flags(FinchBuddyList *ggblist, PurpleBlistNode *node)
 {
-	gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), node, get_blist_node_flag(node));
+	gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), node,
+	                       get_blist_node_flag(ggblist, node));
 	gnt_tree_set_row_color(GNT_TREE(ggblist->tree), node, get_display_color(node));
 }
 
@@ -476,12 +477,15 @@ node_remove(PurpleBuddyList *list, PurpleBlistNode *node)
 static void
 node_update(PurpleBuddyList *list, PurpleBlistNode *node)
 {
+	FinchBuddyList *ggblist;
+
 	g_return_if_fail(FINCH_IS_BUDDY_LIST(list));
 	/* It really looks like this should never happen ... but it does.
            This will at least emit a warning to the log when it
            happens, so maybe someone will figure it out. */
 	g_return_if_fail(node != NULL);
 
+	ggblist = FINCH_BUDDY_LIST(list);
 	if (ggblist->window == NULL)
 		return;
 
@@ -489,7 +493,7 @@ node_update(PurpleBuddyList *list, PurpleBlistNode *node)
 		gnt_tree_change_text(GNT_TREE(ggblist->tree), node,
 				0, get_display_name(node));
 		gnt_tree_sort_row(GNT_TREE(ggblist->tree), node);
-		blist_update_row_flags(node);
+		blist_update_row_flags(ggblist, node);
 		if (gnt_tree_get_parent_key(GNT_TREE(ggblist->tree), node) !=
 				ggblist->manager->find_parent(node))
 			node_remove(list, node);
@@ -522,12 +526,11 @@ static gboolean
 remove_new_empty_group(gpointer data)
 {
 	PurpleBuddyList *list;
-
-	if (!ggblist)
-		return FALSE;
+	FinchBuddyList *ggblist;
 
 	list = purple_blist_get_default();
 	g_return_val_if_fail(list, FALSE);
+	ggblist = FINCH_BUDDY_LIST(list);
 
 	ggblist->new_group_timeout = 0;
 	while (ggblist->new_group) {
@@ -723,13 +726,14 @@ finch_request_add_chat(PurpleBuddyList *list, PurpleAccount *account,
 }
 
 static void
-add_group_cb(gpointer null, const char *group)
+add_group_cb(FinchBuddyList *ggblist, const char *group)
 {
 	PurpleGroup *grp;
 
 	if (!group || !*group) {
 		purple_notify_error(NULL, _("Error"), _("Error adding group"),
 				_("You must give a name for the group to add."), NULL);
+		g_object_unref(ggblist);
 		return;
 	}
 
@@ -738,9 +742,6 @@ add_group_cb(gpointer null, const char *group)
 		grp = purple_group_new(group);
 		purple_blist_add_group(grp, NULL);
 	}
-
-	if (!ggblist)
-		return;
 
 	/* Treat the group as a new group even if it had existed before. This should
 	 * make things easier to add buddies to empty groups (new or old) without having
@@ -758,15 +759,18 @@ add_group_cb(gpointer null, const char *group)
 			add_node((PurpleBlistNode*)grp, ggblist);
 		gnt_tree_set_selected(GNT_TREE(ggblist->tree), grp);
 	}
+
+	g_object_unref(ggblist);
 }
 
 static void
 finch_request_add_group(PurpleBuddyList *list)
 {
-	purple_request_input(NULL, _("Add Group"), NULL, _("Enter the name of the group"),
-			NULL, FALSE, FALSE, NULL,
-			_("Add"), G_CALLBACK(add_group_cb), _("Cancel"), NULL,
-			NULL, NULL);
+	purple_request_input(NULL, _("Add Group"), NULL,
+	                     _("Enter the name of the group"), NULL, FALSE,
+	                     FALSE, NULL, _("Add"), G_CALLBACK(add_group_cb),
+	                     _("Cancel"), G_CALLBACK(g_object_unref), NULL,
+	                     g_object_ref(list));
 }
 
 static gpointer
@@ -907,9 +911,10 @@ add_buddy(PurpleBuddy *buddy, FinchBuddyList *ggblist)
 				gnt_tree_create_row(GNT_TREE(ggblist->tree), get_display_name(node)),
 				parent, NULL));
 
-	blist_update_row_flags((PurpleBlistNode*)buddy);
-	if (buddy == purple_contact_get_priority_buddy(contact))
-		blist_update_row_flags((PurpleBlistNode*)contact);
+	blist_update_row_flags(ggblist, (PurpleBlistNode *)buddy);
+	if (buddy == purple_contact_get_priority_buddy(contact)) {
+		blist_update_row_flags(ggblist, (PurpleBlistNode *)contact);
+	}
 }
 
 static void
@@ -1801,7 +1806,7 @@ key_pressed(GntWidget *widget, const char *text, FinchBuddyList *ggblist)
 static void
 update_node_display(PurpleBlistNode *node, FinchBuddyList *ggblist)
 {
-	GntTextFormatFlags flag = get_blist_node_flag(node);
+	GntTextFormatFlags flag = get_blist_node_flag(ggblist, node);
 	gnt_tree_set_row_flags(GNT_TREE(ggblist->tree), node, flag);
 }
 
@@ -1815,12 +1820,13 @@ update_buddy_display(PurpleBuddy *buddy, FinchBuddyList *ggblist)
 	gnt_tree_change_text(GNT_TREE(ggblist->tree), buddy, 0, get_display_name((PurpleBlistNode*)buddy));
 	gnt_tree_change_text(GNT_TREE(ggblist->tree), contact, 0, get_display_name((PurpleBlistNode*)contact));
 
-	blist_update_row_flags((PurpleBlistNode *)buddy);
+	blist_update_row_flags(ggblist, (PurpleBlistNode *)buddy);
 	if (buddy == purple_contact_get_priority_buddy(contact))
-		blist_update_row_flags((PurpleBlistNode *)contact);
+		blist_update_row_flags(ggblist, (PurpleBlistNode *)contact);
 
-	if (ggblist->tnode == (PurpleBlistNode*)buddy)
+	if (ggblist->tnode == (PurpleBlistNode *)buddy) {
 		draw_tooltip(ggblist);
+	}
 }
 
 static void
