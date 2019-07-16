@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_LOG_H_
-#define _PURPLE_LOG_H_
+#ifndef PURPLE_LOG_H
+#define PURPLE_LOG_H
 /**
  * SECTION:log
  * @section_id: libpurple-log
@@ -639,4 +639,4 @@ void purple_log_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_LOG_H_ */
+#endif /* PURPLE_LOG_H */

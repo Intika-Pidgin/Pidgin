@@ -22,8 +22,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _WPURPLEERROR_H
-#define _WPURPLEERROR_H
+#ifndef PURPLE_WIN32_WPURPLEERROR_H
+#define PURPLE_WIN32_WPURPLEERROR_H
 
 /* Here we define unix socket errors as windows socket errors */
 
@@ -80,4 +80,4 @@
 #undef EHOSTUNREACH
 #define EHOSTUNREACH WSAEHOSTUNREACH
 
-#endif /* end _WPURPLEERROR_H */
+#endif /* PURPLE_WIN32_WPURPLEERROR_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_IMAGE_STORE_H_
-#define _PURPLE_IMAGE_STORE_H_
+#ifndef PURPLE_IMAGE_STORE_H
+#define PURPLE_IMAGE_STORE_H
 /**
  * SECTION:image-store
  * @include:image-store.h
@@ -163,4 +163,4 @@ _purple_image_store_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_IMAGE_STORE_H_ */
+#endif /* PURPLE_IMAGE_STORE_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_ACCOUNT_H_
-#define _PURPLE_ACCOUNT_H_
+#ifndef PURPLE_ACCOUNT_H
+#define PURPLE_ACCOUNT_H
 /**
  * SECTION:account
  * @section_id: libpurple-account
@@ -32,14 +32,8 @@
 #include <glib-object.h>
 
 #define PURPLE_TYPE_ACCOUNT             (purple_account_get_type())
-#define PURPLE_ACCOUNT(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_ACCOUNT, PurpleAccount))
-#define PURPLE_ACCOUNT_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_ACCOUNT, PurpleAccountClass))
-#define PURPLE_IS_ACCOUNT(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_ACCOUNT))
-#define PURPLE_IS_ACCOUNT_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_ACCOUNT))
-#define PURPLE_ACCOUNT_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_ACCOUNT, PurpleAccountClass))
 
 typedef struct _PurpleAccount       PurpleAccount;
-typedef struct _PurpleAccountClass  PurpleAccountClass;
 
 typedef gboolean (*PurpleFilterAccountFunc)(PurpleAccount *account);
 typedef void (*PurpleAccountRequestAuthorizationCb)(const char *response, void *data);
@@ -96,36 +90,6 @@ typedef enum
 	PURPLE_ACCOUNT_PRIVACY_ALLOW_BUDDYLIST
 } PurpleAccountPrivacyType;
 
-/**
- * PurpleAccount:
- * @ui_data: The UI data associated with this account. This is a convenience
- *           field provided to the UIs -- it is not used by the libpurple core.
- *
- * Structure representing an account.
- */
-struct _PurpleAccount
-{
-	GObject gparent;
-
-	/*< public >*/
-	gpointer ui_data;
-};
-
-/**
- * PurpleAccountClass:
- *
- * The base class for all #PurpleAccount's.
- */
-struct _PurpleAccountClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -137,7 +101,7 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the Account object.
  */
-GType purple_account_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleAccount, purple_account, PURPLE, ACCOUNT, GObject)
 
 /**
  * purple_account_new:
@@ -630,27 +594,6 @@ void purple_account_set_ui_string(PurpleAccount *account, const char *ui,
  */
 void purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 							  const char *name, gboolean value);
-
-/**
- * purple_account_set_ui_data:
- * @account: The account.
- * @ui_data: A pointer to associate with this object.
- *
- * Set the UI data associated with this account.
- */
-void purple_account_set_ui_data(PurpleAccount *account, gpointer ui_data);
-
-/**
- * purple_account_get_ui_data:
- * @account: The account.
- *
- * Returns the UI data associated with this account.
- *
- * Returns: The UI data associated with this account.  This is a
- *         convenience field provided to the UIs--it is not
- *         used by the libpurple core.
- */
-gpointer purple_account_get_ui_data(PurpleAccount *account);
 
 /**
  * purple_account_is_connected:
@@ -1265,4 +1208,4 @@ void purple_account_clear_current_error(PurpleAccount *account);
 
 G_END_DECLS
 
-#endif /* _PURPLE_ACCOUNT_H_ */
+#endif /* PURPLE_ACCOUNT_H */

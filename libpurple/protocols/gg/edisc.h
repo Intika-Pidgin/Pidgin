@@ -32,6 +32,13 @@
 
 typedef struct _ggp_edisc_session_data ggp_edisc_session_data;
 
+G_BEGIN_DECLS
+
+#define GGP_TYPE_XFER (ggp_xfer_get_type())
+G_DECLARE_FINAL_TYPE(GGPXfer, ggp_xfer, GGP, XFER, PurpleXfer);
+
+void ggp_xfer_register(GTypeModule *module);
+
 /* Setting up. */
 void ggp_edisc_setup(PurpleConnection *gc);
 void ggp_edisc_cleanup(PurpleConnection *gc);
@@ -45,5 +52,7 @@ gboolean ggp_edisc_xfer_can_receive_file(PurpleProtocolXfer *prplxfer, PurpleCon
 void ggp_edisc_xfer_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who,
 	const char *filename);
 PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
+
+G_END_DECLS
 
 #endif /* _GGP_EDISC_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _MEDIA_BACKEND_FS2_H_
-#define _MEDIA_BACKEND_FS2_H_
+#ifndef PURPLE_MEDIA_BACKEND_FS2_H
+#define PURPLE_MEDIA_BACKEND_FS2_H
 /*
  * SECTION:backend-fs2
  * @section_id: libpurple-backend-fs2
@@ -66,4 +66,4 @@ void purple_media_backend_fs2_set_output_volume(PurpleMediaBackendFs2 *self,
 
 G_END_DECLS
 
-#endif /* _MEDIA_BACKEND_FS2_H_ */
+#endif /* PURPLE_MEDIA_BACKEND_FS2_H */

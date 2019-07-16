@@ -1109,6 +1109,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	irc_protocol_register_type(plugin);
 
+	irc_xfer_register(G_TYPE_MODULE(plugin));
+
 	_irc_protocol = purple_protocols_add(IRC_TYPE_PROTOCOL, error);
 	if (!_irc_protocol)
 		return FALSE;

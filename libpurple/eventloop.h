@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_EVENTLOOP_H_
-#define _PURPLE_EVENTLOOP_H_
+#ifndef PURPLE_EVENTLOOP_H
+#define PURPLE_EVENTLOOP_H
 /**
  * SECTION:eventloop
  * @section_id: libpurple-eventloop
@@ -108,4 +108,4 @@ purple_input_pipe(int pipefd[2]);
 
 G_END_DECLS
 
-#endif /* _PURPLE_EVENTLOOP_H_ */
+#endif /* PURPLE_EVENTLOOP_H */

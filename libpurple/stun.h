@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_STUN_H_
-#define _PURPLE_STUN_H_
+#ifndef PURPLE_STUN_H
+#define PURPLE_STUN_H
 /**
  * SECTION:stun
  * @section_id: libpurple-stun
@@ -111,4 +111,4 @@ void purple_stun_init(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_STUN_H_ */
+#endif /* PURPLE_STUN_H */

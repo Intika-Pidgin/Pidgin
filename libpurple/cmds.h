@@ -16,8 +16,8 @@
  *
  */
 
-#ifndef _PURPLE_CMDS_H_
-#define _PURPLE_CMDS_H_
+#ifndef PURPLE_CMDS_H
+#define PURPLE_CMDS_H
 /**
  * SECTION:cmds
  * @section_id: libpurple-cmds
@@ -338,4 +338,4 @@ void purple_cmds_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_CMDS_H_ */
+#endif /* PURPLE_CMDS_H */
