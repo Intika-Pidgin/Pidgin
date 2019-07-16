@@ -249,14 +249,14 @@ static gboolean gtk_blist_delete_cb(GtkWidget *w, GdkEventAny *event, gpointer d
 }
 
 static void
-gtk_blist_hide_cb(GtkWidget *widget, gpointer data)
+gtk_blist_hide_cb(GtkWidget *widget, PidginBuddyList *gtkblist)
 {
 	purple_signal_emit(pidgin_blist_get_handle(),
 			"gtkblist-hiding", gtkblist);
 }
 
 static void
-gtk_blist_show_cb(GtkWidget *widget, gpointer data)
+gtk_blist_show_cb(GtkWidget *widget, PidginBuddyList *gtkblist)
 {
 	purple_signal_emit(pidgin_blist_get_handle(),
 			"gtkblist-unhiding", gtkblist);
@@ -407,6 +407,7 @@ static void gtk_blist_renderer_editing_started_cb(GtkCellRenderer *renderer,
 		gchar *path_str,
 		gpointer user_data)
 {
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(user_data);
 	GtkTreeIter iter;
 	GtkTreePath *path = NULL;
 	PurpleBlistNode *node;
@@ -548,6 +549,7 @@ gtk_blist_auto_personize(PurpleBlistNode *group, const char *alias)
 static void gtk_blist_renderer_edited_cb(GtkCellRendererText *text_rend, char *arg1,
 					 char *arg2, PurpleBuddyList *list)
 {
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(list);
 	GtkTreeIter iter;
 	GtkTreePath *path;
 	PurpleBlistNode *node;
@@ -1152,6 +1154,7 @@ pidgin_blist_joinchat_show(void)
 
 static void gtk_blist_row_expanded_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTreePath *path, gpointer user_data)
 {
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(user_data);
 	PurpleBlistNode *node;
 
 	gtk_tree_model_get(GTK_TREE_MODEL(gtkblist->treemodel), iter, NODE_COLUMN, &node, -1);
@@ -1174,6 +1177,7 @@ static void gtk_blist_row_expanded_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTre
 
 static void gtk_blist_row_collapsed_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTreePath *path, gpointer user_data)
 {
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(user_data);
 	PurpleBlistNode *node;
 
 	gtk_tree_model_get(GTK_TREE_MODEL(gtkblist->treemodel), iter, NODE_COLUMN, &node, -1);
@@ -1209,6 +1213,7 @@ static void gtk_blist_row_collapsed_cb(GtkTreeView *tv, GtkTreeIter *iter, GtkTr
 }
 
 static void gtk_blist_row_activated_cb(GtkTreeView *tv, GtkTreePath *path, GtkTreeViewColumn *col, gpointer data) {
+	PidginBuddyList *gtkblist = PIDGIN_BUDDY_LIST(data);
 	PurpleBlistNode *node;
 	GtkTreeIter iter;
 
@@ -5579,7 +5584,10 @@ pidgin_blist_build_layout(PurpleBuddyList *list)
 							    "cell-background-rgba", BGCOLOR_COLUMN,
 							    "markup", NAME_COLUMN,
 							    NULL);
-			g_signal_connect(G_OBJECT(rend), "editing-started", G_CALLBACK(gtk_blist_renderer_editing_started_cb), NULL);
+			g_signal_connect(
+			        G_OBJECT(rend), "editing-started",
+			        G_CALLBACK(gtk_blist_renderer_editing_started_cb),
+			        list);
 			g_signal_connect(G_OBJECT(rend), "editing-canceled", G_CALLBACK(gtk_blist_renderer_editing_cancelled_cb), list);
 			g_signal_connect(G_OBJECT(rend), "edited", G_CALLBACK(gtk_blist_renderer_edited_cb), list);
 			g_object_set(rend, "ypad", 0, "yalign", 0.5, NULL);
@@ -5731,9 +5739,9 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 
 	g_signal_connect(G_OBJECT(gtkblist->window), "delete_event", G_CALLBACK(gtk_blist_delete_cb), NULL);
 	g_signal_connect(G_OBJECT(gtkblist->window), "hide",
-			G_CALLBACK(gtk_blist_hide_cb), NULL);
+	                 G_CALLBACK(gtk_blist_hide_cb), gtkblist);
 	g_signal_connect(G_OBJECT(gtkblist->window), "show",
-			G_CALLBACK(gtk_blist_show_cb), NULL);
+	                 G_CALLBACK(gtk_blist_show_cb), gtkblist);
 	g_signal_connect(G_OBJECT(gtkblist->window), "size-allocate",
 			G_CALLBACK(gtk_blist_size_allocate_cb), NULL);
 	g_signal_connect(G_OBJECT(gtkblist->window), "visibility_notify_event", G_CALLBACK(gtk_blist_visibility_cb), NULL);
@@ -5911,9 +5919,12 @@ static void pidgin_blist_show(PurpleBuddyList *list)
 	gtk_tree_view_append_column(GTK_TREE_VIEW(gtkblist->treeview), gtkblist->text_column);
 	pidgin_blist_build_layout(list);
 
-	g_signal_connect(G_OBJECT(gtkblist->treeview), "row-activated", G_CALLBACK(gtk_blist_row_activated_cb), NULL);
-	g_signal_connect(G_OBJECT(gtkblist->treeview), "row-expanded", G_CALLBACK(gtk_blist_row_expanded_cb), NULL);
-	g_signal_connect(G_OBJECT(gtkblist->treeview), "row-collapsed", G_CALLBACK(gtk_blist_row_collapsed_cb), NULL);
+	g_signal_connect(G_OBJECT(gtkblist->treeview), "row-activated",
+	                 G_CALLBACK(gtk_blist_row_activated_cb), gtkblist);
+	g_signal_connect(G_OBJECT(gtkblist->treeview), "row-expanded",
+	                 G_CALLBACK(gtk_blist_row_expanded_cb), gtkblist);
+	g_signal_connect(G_OBJECT(gtkblist->treeview), "row-collapsed",
+	                 G_CALLBACK(gtk_blist_row_collapsed_cb), gtkblist);
 	g_signal_connect(G_OBJECT(gtkblist->treeview), "button-press-event", G_CALLBACK(gtk_blist_button_press_cb), NULL);
 	g_signal_connect(G_OBJECT(gtkblist->treeview), "key-press-event", G_CALLBACK(gtk_blist_key_press_cb), NULL);
 	g_signal_connect(G_OBJECT(gtkblist->treeview), "popup-menu", G_CALLBACK(pidgin_blist_popup_menu_cb), NULL);
