@@ -598,7 +598,7 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 
 	account = purple_conversation_get_account(conv);
 
-	buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(widget));
+	buffer = talkatu_editor_get_buffer(gtkconv->editor);
 
 	if (check_for_and_do_command(conv)) {
 		talkatu_buffer_clear(TALKATU_BUFFER(buffer));
@@ -615,6 +615,10 @@ send_cb(GtkWidget *widget, PidginConversation *gtkconv)
 	}
 
 	content = talkatu_markup_get_html(buffer, NULL);
+	if (purple_strequal(content, "")) {
+		g_free(content);
+		return;
+	}
 
 	purple_idle_touch();
 
@@ -5341,6 +5345,7 @@ setup_common_pane(PidginConversation *gtkconv)
 
 	/* Setup the entry widget and all signals */
 	gtkconv->editor = talkatu_editor_new();
+	talkatu_editor_set_buffer(TALKATU_BUFFER(gtkconv->editor), talkatu_html_buffer_new());
 	gtk_box_pack_start(GTK_BOX(gtkconv->lower_hbox), gtkconv->editor, TRUE, TRUE, 0);
 
 	view = talkatu_editor_get_view(TALKATU_EDITOR(gtkconv->editor));
@@ -5697,11 +5702,10 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		purple_conversation_set_logging(conv, logging);
 	}
 
-	if (purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_formatting_toolbar")) {
-		talkatu_editor_show_toolbar(TALKATU_EDITOR(gtkconv->editor));
-	} else {
-		talkatu_editor_hide_toolbar(TALKATU_EDITOR(gtkconv->editor));
-	}
+	talkatu_editor_set_toolbar_visible(
+		TALKATU_EDITOR(gtkconv->editor),
+		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/show_formatting_toolbar")
+	);
 
 	pidgin_webview_switch_active_conversation(
 		PIDGIN_WEBVIEW(gtkconv->webview), conv);
@@ -7695,11 +7699,10 @@ show_formatting_toolbar_pref_cb(const char *name, PurplePrefType type,
 		        GTK_TOGGLE_ACTION(win->menu->show_formatting_toolbar),
 		        (gboolean)GPOINTER_TO_INT(value));
 
-		if ((gboolean)GPOINTER_TO_INT(value)) {
-			talkatu_editor_show_toolbar(TALKATU_EDITOR(gtkconv->editor));
-		} else {
-			talkatu_editor_hide_toolbar(TALKATU_EDITOR(gtkconv->editor));
-		}
+		talkatu_editor_set_toolbar_visible(
+			TALKATU_EDITOR(gtkconv->editor),
+			(gboolean)GPOINTER_TO_INT(value)
+		);
 
 		resize_webview_cb(gtkconv);
 	}
