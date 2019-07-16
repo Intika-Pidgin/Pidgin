@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef _PURPLE_PREFS_H_
-#define _PURPLE_PREFS_H_
+#ifndef PURPLE_PREFS_H
+#define PURPLE_PREFS_H
 /**
  * SECTION:prefs
  * @section_id: libpurple-prefs
@@ -529,4 +529,4 @@ gboolean purple_prefs_load(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_PREFS_H_ */
+#endif /* PURPLE_PREFS_H */

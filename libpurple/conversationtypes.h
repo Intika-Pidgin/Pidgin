@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_CONVERSATION_TYPES_H_
-#define _PURPLE_CONVERSATION_TYPES_H_
+#ifndef PURPLE_CONVERSATION_TYPES_H
+#define PURPLE_CONVERSATION_TYPES_H
 /**
  * SECTION:conversationtypes
  * @section_id: libpurple-conversationtypes
@@ -765,4 +765,4 @@ gboolean purple_chat_user_is_buddy(PurpleChatUser *cb);
 
 G_END_DECLS
 
-#endif /* _PURPLE_CONVERSATION_TYPES_H_ */
+#endif /* PURPLE_CONVERSATION_TYPES_H */

@@ -4279,6 +4279,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	gtalk_protocol_register_type(plugin);
 	xmpp_protocol_register_type(plugin);
 
+	jabber_si_xfer_register(G_TYPE_MODULE(plugin));
+
 	xmpp_protocol = purple_protocols_add(XMPP_TYPE_PROTOCOL, error);
 	if (!xmpp_protocol)
 		return FALSE;

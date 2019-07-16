@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _LIBC_INTERNAL_
-#define _LIBC_INTERNAL_
+#ifndef PURPLE_WIN32_LIBC_INTERNAL
+#define PURPLE_WIN32_LIBC_INTERNAL
 #include <glib.h>
 
 G_BEGIN_DECLS
@@ -113,4 +113,4 @@ int wpurple_gethostname(char *name, size_t size);
 
 G_END_DECLS
 
-#endif /* _LIBC_INTERNAL_ */
+#endif /* PURPLE_WIN32_LIBC_INTERNAL */

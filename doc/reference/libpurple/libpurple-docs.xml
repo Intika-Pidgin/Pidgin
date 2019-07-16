@@ -89,7 +89,6 @@
       <xi:include href="xml/version.xml" />
       <xi:include href="xml/util.xml" />
       <xi:include href="xml/enums.xml" />
-      <xi:include href="xml/purple.xml" />
   </part>
 
   <part id="Submodules">

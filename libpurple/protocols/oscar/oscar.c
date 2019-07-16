@@ -5273,7 +5273,7 @@ oscar_can_receive_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const
 PurpleXfer *
 oscar_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who)
 {
-	PurpleXfer *xfer;
+	OscarXfer *xfer;
 	OscarData *od;
 	PurpleAccount *account;
 	PeerConnection *conn;
@@ -5281,23 +5281,23 @@ oscar_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *w
 	od = purple_connection_get_protocol_data(gc);
 	account = purple_connection_get_account(gc);
 
-	xfer = purple_xfer_new(account, PURPLE_XFER_TYPE_SEND, who);
-	if (xfer)
-	{
-		purple_xfer_set_init_fnc(xfer, peer_oft_sendcb_init);
-		purple_xfer_set_cancel_send_fnc(xfer, peer_oft_cb_generic_cancel);
-		purple_xfer_set_request_denied_fnc(xfer, peer_oft_cb_generic_cancel);
-		purple_xfer_set_ack_fnc(xfer, peer_oft_sendcb_ack);
+	conn = peer_connection_new(od, OSCAR_CAPABILITY_SENDFILE, who);
+	conn->flags |= PEER_CONNECTION_FLAG_INITIATED_BY_ME;
+	conn->flags |= PEER_CONNECTION_FLAG_APPROVED;
 
-		conn = peer_connection_new(od, OSCAR_CAPABILITY_SENDFILE, who);
-		conn->flags |= PEER_CONNECTION_FLAG_INITIATED_BY_ME;
-		conn->flags |= PEER_CONNECTION_FLAG_APPROVED;
-		aim_icbm_makecookie(conn->cookie);
-		conn->xfer = xfer;
-		purple_xfer_set_protocol_data(xfer, conn);
-	}
+	xfer = g_object_new(
+		OSCAR_TYPE_XFER,
+		"account", account,
+		"type", PURPLE_XFER_TYPE_SEND,
+		"remote-user", who,
+		"conn", conn,
+		NULL
+	);
 
-	return xfer;
+	aim_icbm_makecookie(conn->cookie);
+	conn->xfer = PURPLE_XFER(xfer);
+
+	return PURPLE_XFER(xfer);
 }
 
 /*
@@ -5807,6 +5807,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 
 	aim_protocol_register_type(plugin);
 	icq_protocol_register_type(plugin);
+
+	oscar_xfer_register(G_TYPE_MODULE(plugin));
 
 	aim_protocol = purple_protocols_add(AIM_TYPE_PROTOCOL, error);
 	if (!aim_protocol)
