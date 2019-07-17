@@ -36,7 +36,6 @@
 /* Private data for a buddy list. */
 typedef struct  {
 	PurpleBlistNode *root;
-	gpointer ui_data;
 	GHashTable *buddies;  /* Every buddy in this list */
 } PurpleBuddyListPrivate;
 
