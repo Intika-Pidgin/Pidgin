@@ -31,6 +31,8 @@
 
 #include <gdk/gdkkeysyms.h>
 
+#include <talkatu.h>
+
 #include "conversation.h"
 #include "debug.h"
 #include "notify.h"
@@ -1389,7 +1391,8 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		img = purple_image_new_from_data((guint8 *)filedata, size);
 		purple_image_set_friendly_filename(img, shortname);
 
-		pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
+# warning fix this when talkatu has a way to programmatically insert an image
+		// pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
 		g_object_unref(img);
 
 		break;
@@ -1564,11 +1567,19 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 					"launcher itself."), NULL);
 
 	} else {
+		GtkTextBuffer *buffer = NULL;
+		GtkTextMark *mark = NULL;
+		GtkTextIter iter;
 
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(account, who));
 		gtkconv =  PIDGIN_CONVERSATION(conv);
-		pidgin_webview_insert_link(PIDGIN_WEBVIEW(gtkconv->entry),
-				url, name);
+
+		buffer = talkatu_editor_get_buffer(TALKATU_EDITOR(gtkconv->editor));
+		mark = gtk_text_buffer_get_insert(buffer);
+
+		gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+
+		talkatu_buffer_insert_link(TALKATU_BUFFER(buffer), &iter, name, url);
 	}
 
 	g_free(type);
