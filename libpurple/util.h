@@ -22,8 +22,8 @@
  *      namespace.
  */
 
-#ifndef _PURPLE_UTIL_H_
-#define _PURPLE_UTIL_H_
+#ifndef PURPLE_UTIL_H
+#define PURPLE_UTIL_H
 /**
  * SECTION:util
  * @section_id: libpurple-util
@@ -1615,4 +1615,4 @@ gchar *purple_http_digest_calculate_response(
 
 G_END_DECLS
 
-#endif /* _PURPLE_UTIL_H_ */
+#endif /* PURPLE_UTIL_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_CONVERSATION_H_
-#define _PURPLE_CONVERSATION_H_
+#ifndef PURPLE_CONVERSATION_H
+#define PURPLE_CONVERSATION_H
 /**
  * SECTION:conversation
  * @section_id: libpurple-conversation
@@ -708,4 +708,4 @@ gboolean purple_conversation_present_error(const char *who, PurpleAccount *accou
 
 G_END_DECLS
 
-#endif /* _PURPLE_CONVERSATION_H_ */
+#endif /* PURPLE_CONVERSATION_H */

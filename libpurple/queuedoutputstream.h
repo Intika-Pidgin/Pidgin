@@ -21,8 +21,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_QUEUED_OUTPUT_STREAM_H
-#define _PURPLE_QUEUED_OUTPUT_STREAM_H
+#ifndef PURPLE_QUEUED_OUTPUT_STREAM_H
+#define PURPLE_QUEUED_OUTPUT_STREAM_H
 /**
  * SECTION:queuedoutputstream
  * @section_id: libpurple-queuedoutputstream
@@ -106,4 +106,4 @@ void purple_queued_output_stream_clear_queue(PurpleQueuedOutputStream *stream);
 
 G_END_DECLS
 
-#endif /* _PURPLE_QUEUED_OUTPUT_STREAM_H */
+#endif /* PURPLE_QUEUED_OUTPUT_STREAM_H */

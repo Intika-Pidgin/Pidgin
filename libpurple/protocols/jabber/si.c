@@ -42,7 +42,9 @@
 #define STREAMHOST_CONNECT_TIMEOUT 15
 #define ENABLE_FT_THUMBNAILS 0
 
-typedef struct {
+struct _JabberSIXfer {
+	PurpleXfer parent;
+
 	JabberStream *js;
 
 	PurpleProxyConnectData *connect_data;
@@ -72,7 +74,9 @@ typedef struct {
 	JabberIBBSession *ibb_session;
 	guint ibb_timeout_handle;
 	PurpleCircularBuffer *ibb_buffer;
-} JabberSIXfer;
+};
+
+G_DEFINE_DYNAMIC_TYPE(JabberSIXfer, jabber_si_xfer, PURPLE_TYPE_XFER);
 
 /* some forward declarations */
 static void jabber_si_xfer_ibb_send_init(JabberStream *js, PurpleXfer *xfer);
@@ -87,7 +91,7 @@ jabber_si_xfer_find(JabberStream *js, const char *sid, const char *from)
 
 	for(xfers = js->file_transfers; xfers; xfers = xfers->next) {
 		PurpleXfer *xfer = xfers->data;
-		JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+		JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 		if(jsx->stream_id && purple_xfer_get_remote_user(xfer) &&
 				purple_strequal(jsx->stream_id, sid) && purple_strequal(purple_xfer_get_remote_user(xfer), from))
 			return xfer;
@@ -97,8 +101,7 @@ jabber_si_xfer_find(JabberStream *js, const char *sid, const char *from)
 }
 
 static void
-jabber_si_free_streamhost(gpointer data, gpointer user_data)
-{
+jabber_si_free_streamhost(gpointer data) {
 	JabberBytestreamsStreamhost *sh = data;
 
 	if(!data)
@@ -118,7 +121,7 @@ static void
 jabber_si_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_message)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	JabberIq *iq;
 	PurpleXmlNode *query, *su;
 	JabberBytestreamsStreamhost *streamhost = jsx->streamhosts->data;
@@ -137,7 +140,7 @@ jabber_si_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_
 				streamhost->jid, streamhost->host,
 				error_message ? error_message : "(null)");
 		jsx->streamhosts = g_list_remove(jsx->streamhosts, streamhost);
-		jabber_si_free_streamhost(streamhost, NULL);
+		jabber_si_free_streamhost(streamhost);
 		jabber_si_bytestreams_attempt_connect(xfer);
 		return;
 	}
@@ -174,7 +177,7 @@ static gboolean
 connect_timeout_cb(gpointer data)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 	purple_debug_info("jabber", "Streamhost connection timeout of %d seconds exceeded.\n", STREAMHOST_CONNECT_TIMEOUT);
 
@@ -203,7 +206,7 @@ static gboolean
 jabber_si_bytestreams_ibb_timeout_cb(gpointer data)
 {
 	PurpleXfer *xfer = (PurpleXfer *) data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 	if (jsx && !jsx->ibb_session) {
 		purple_debug_info("jabber",
@@ -218,7 +221,7 @@ jabber_si_bytestreams_ibb_timeout_cb(gpointer data)
 
 static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	JabberBytestreamsStreamhost *streamhost;
 	JabberID *dstjid;
 
@@ -244,6 +247,9 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 			purple_debug_info("jabber",
 				"jabber_si_bytestreams_attempt_connect: "
 				"no streamhosts found, trying IBB\n");
+			if(jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
+				jsx->stream_method &= ~STREAM_METHOD_BYTESTREAMS;
+			}
 			/* if we are the sender, open an IBB session, but not if we already
 			  did it, since we could have received the error <iq/> from the
 			  receiver already... */
@@ -322,7 +328,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 	if (jsx->connect_data == NULL)
 	{
 		jsx->streamhosts = g_list_remove(jsx->streamhosts, streamhost);
-		jabber_si_free_streamhost(streamhost, NULL);
+		jabber_si_free_streamhost(streamhost);
 		jabber_si_bytestreams_attempt_connect(xfer);
 	}
 }
@@ -347,7 +353,7 @@ void jabber_bytestreams_parse(JabberStream *js, const char *from,
 	if(!(xfer = jabber_si_xfer_find(js, sid, from)))
 		return;
 
-	jsx = purple_xfer_get_protocol_data(xfer);
+	jsx = JABBER_SI_XFER(xfer);
 
 	if(!jsx->accepted)
 		return;
@@ -384,7 +390,7 @@ jabber_si_xfer_bytestreams_send_read_again_resp_cb(gpointer data, gint source,
 		PurpleInputCondition cond)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	int len;
 
 	len = write(source, jsx->rxqueue + jsx->rxlen, jsx->rxmaxlen - jsx->rxlen);
@@ -419,7 +425,7 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 		PurpleInputCondition cond)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	char buffer[42]; /* 40 for DST.ADDR + 2 bytes for port number*/
 	int len;
 	char *dstaddr, *hash;
@@ -528,7 +534,7 @@ jabber_si_xfer_bytestreams_send_read_response_cb(gpointer data, gint source,
 		PurpleInputCondition cond)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	int len;
 
 	len = write(source, jsx->rxqueue + jsx->rxlen, jsx->rxmaxlen - jsx->rxlen);
@@ -565,7 +571,7 @@ jabber_si_xfer_bytestreams_send_read_cb(gpointer data, gint source,
 		PurpleInputCondition cond)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	int i;
 	int len;
 	char buffer[256];
@@ -669,7 +675,7 @@ jabber_si_xfer_bytestreams_send_connected_cb(gpointer data, gint source,
 		PurpleInputCondition cond)
 {
 	PurpleXfer *xfer = data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	int acceptfd;
 
 	purple_debug_info("jabber", "in jabber_si_xfer_bytestreams_send_connected_cb\n");
@@ -712,7 +718,7 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 		return;
 	}
 
-	jsx = purple_xfer_get_protocol_data(xfer);
+	jsx = JABBER_SI_XFER(xfer);
 
 	/* In the case of a direct file transfer, this is expected to return */
 	if(!jsx)
@@ -726,6 +732,11 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 			"jabber_si_xfer_connect_proxy_cb: got error, method: %d\n",
 			jsx->stream_method);
 		if (jsx->stream_method & STREAM_METHOD_IBB) {
+			/* if we previously tried bytestreams, we need to disble it. */
+			if(jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
+				jsx->stream_method &= ~STREAM_METHOD_BYTESTREAMS;
+			}
+
 			purple_debug_info("jabber", "IBB is possible, try it\n");
 			/* if we are the sender and haven't already opened an IBB
 			  session, do so now (we might already have failed to open
@@ -770,6 +781,10 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 		} else {
 			/* if available, try to revert to IBB... */
 			if (jsx->stream_method & STREAM_METHOD_IBB) {
+				if(jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
+					jsx->stream_method &= ~STREAM_METHOD_BYTESTREAMS;
+				}
+
 				purple_debug_info("jabber",
 					"jabber_si_connect_proxy_cb: trying to revert to IBB\n");
 				if (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_SEND) {
@@ -800,8 +815,7 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 	}
 
 	jsx->streamhosts = g_list_remove_link(jsx->streamhosts, matched);
-	g_list_foreach(jsx->streamhosts, jabber_si_free_streamhost, NULL);
-	g_list_free(jsx->streamhosts);
+	g_list_free_full(jsx->streamhosts, jabber_si_free_streamhost);
 
 	jsx->streamhosts = matched;
 
@@ -820,7 +834,7 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 	JabberBytestreamsStreamhost *sh, *sh2;
 	int streamhost_count = 0;
 
-	jsx = purple_xfer_get_protocol_data(xfer);
+	jsx = JABBER_SI_XFER(xfer);
 	jsx->listen_data = NULL;
 
 	/* I'm not sure under which conditions this can happen
@@ -920,6 +934,9 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 
 		/* if available, revert to IBB */
 		if (jsx->stream_method & STREAM_METHOD_IBB) {
+			if(jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
+				jsx->stream_method &= ~STREAM_METHOD_BYTESTREAMS;
+			}
 			purple_debug_info("jabber",
 				"jabber_si_xfer_bytestreams_listen_cb: trying to revert to IBB\n");
 			if (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_SEND) {
@@ -954,7 +971,7 @@ jabber_si_xfer_bytestreams_send_init(PurpleXfer *xfer)
 
 	g_object_ref(xfer);
 
-	jsx = purple_xfer_get_protocol_data(xfer);
+	jsx = JABBER_SI_XFER(xfer);
 
 	/* TODO: This should probably be done with an account option instead of
 	 *       piggy-backing on the TOR proxy type. */
@@ -1002,7 +1019,7 @@ jabber_si_xfer_ibb_recv_data_cb(JabberIBBSession *sess, gpointer data,
 	gsize size)
 {
 	PurpleXfer *xfer = (PurpleXfer *) jabber_ibb_session_get_user_data(sess);
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 	if ((goffset)size <= purple_xfer_get_bytes_remaining(xfer)) {
 		purple_debug_info("jabber", "about to write %" G_GSIZE_FORMAT " bytes from IBB stream\n",
@@ -1020,12 +1037,18 @@ jabber_si_xfer_ibb_recv_data_cb(JabberIBBSession *sess, gpointer data,
 }
 
 static gssize
-jabber_si_xfer_ibb_read(guchar **out_buffer, size_t buf_size, PurpleXfer *xfer)
+jabber_si_xfer_ibb_read(PurpleXfer *xfer, guchar **out_buffer, size_t buf_size)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	guchar *buffer;
-	gsize size = purple_circular_buffer_get_used(jsx->ibb_buffer);
+	gsize size;
 	gsize tmp;
+
+	if(jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
+		return PURPLE_XFER_CLASS(jabber_si_xfer_parent_class)->read(xfer, out_buffer, buf_size);
+	}
+
+	size = purple_circular_buffer_get_used(jsx->ibb_buffer);
 
 	*out_buffer = buffer = g_malloc(size);
 	while ((tmp = purple_circular_buffer_get_max_read(jsx->ibb_buffer))) {
@@ -1044,8 +1067,9 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 {
 	const gchar *sid = purple_xmlnode_get_attrib(open, "sid");
 	PurpleXfer *xfer = jabber_si_xfer_find(js, sid, who);
+
 	if (xfer) {
-		JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+		JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 		JabberIBBSession *sess =
 			jabber_ibb_session_create_from_xmlnode(js, who, id, open, xfer);
 
@@ -1067,9 +1091,6 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 			jsx->ibb_buffer =
 				purple_circular_buffer_new(jabber_ibb_session_get_block_size(sess));
 
-			/* set up read function */
-			purple_xfer_set_read_fnc(xfer, jabber_si_xfer_ibb_read);
-
 			/* start the transfer */
 			purple_xfer_start(xfer, -1, NULL, 0);
 			return TRUE;
@@ -1088,12 +1109,18 @@ jabber_si_xfer_ibb_open_cb(JabberStream *js, const char *who, const char *id,
 }
 
 static gssize
-jabber_si_xfer_ibb_write(const guchar *buffer, size_t len, PurpleXfer *xfer)
+jabber_si_xfer_ibb_write(PurpleXfer *xfer, const guchar *buffer, size_t len)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	JabberIBBSession *sess = jsx->ibb_session;
-	gsize packet_size = len < jabber_ibb_session_get_max_data_size(sess) ?
-		len : jabber_ibb_session_get_max_data_size(sess);
+	gsize packet_size;
+
+	if(jsx->stream_method & STREAM_METHOD_BYTESTREAMS) {
+		purple_debug_error("jabber", "falling back to raw socket\n");
+		return PURPLE_XFER_CLASS(jabber_si_xfer_parent_class)->write(xfer, buffer, len);
+	}
+
+	packet_size = MIN(len, jabber_ibb_session_get_max_data_size(sess));
 
 	jabber_ibb_session_send_data(sess, buffer, packet_size);
 
@@ -1134,7 +1161,7 @@ jabber_si_xfer_ibb_opened_cb(JabberIBBSession *sess)
 static void
 jabber_si_xfer_ibb_send_init(JabberStream *js, PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 	jsx->ibb_session = jabber_ibb_session_create(js, jsx->stream_id,
 		purple_xfer_get_remote_user(xfer), xfer);
@@ -1149,8 +1176,6 @@ jabber_si_xfer_ibb_send_init(JabberStream *js, PurpleXfer *xfer)
 			jabber_si_xfer_ibb_closed_cb);
 		jabber_ibb_session_set_error_callback(jsx->ibb_session,
 			jabber_si_xfer_ibb_error_cb);
-
-		purple_xfer_set_write_fnc(xfer, jabber_si_xfer_ibb_write);
 
 		jsx->ibb_buffer =
 			purple_circular_buffer_new(jabber_ibb_session_get_max_data_size(jsx->ibb_session));
@@ -1191,7 +1216,7 @@ static void jabber_si_xfer_send_method_cb(JabberStream *js, const char *from,
 
 	for(field = purple_xmlnode_get_child(x, "field"); field; field = purple_xmlnode_get_next_twin(field)) {
 		const char *var = purple_xmlnode_get_attrib(field, "var");
-		JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+		JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 		if(purple_strequal(var, "stream-method")) {
 			if((value = purple_xmlnode_get_child(field, "value"))) {
@@ -1222,7 +1247,7 @@ static void jabber_si_xfer_send_method_cb(JabberStream *js, const char *from,
 
 static void jabber_si_xfer_send_request(PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	JabberIq *iq;
 	PurpleXmlNode *si, *file, *feature, *x, *field, *option, *value;
 	char buf[32];
@@ -1292,58 +1317,6 @@ static void jabber_si_xfer_send_request(PurpleXfer *xfer)
 	jabber_iq_send(iq);
 }
 
-static void jabber_si_xfer_free(PurpleXfer *xfer)
-{
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
-
-	if (jsx) {
-		JabberStream *js = jsx->js;
-
-		js->file_transfers = g_list_remove(js->file_transfers, xfer);
-
-		if (jsx->connect_data != NULL)
-			purple_proxy_connect_cancel(jsx->connect_data);
-		if (jsx->listen_data != NULL)
-			purple_network_listen_cancel(jsx->listen_data);
-		if (jsx->iq_id != NULL)
-			jabber_iq_remove_callback_by_id(js, jsx->iq_id);
-		if (jsx->local_streamhost_fd >= 0)
-			close(jsx->local_streamhost_fd);
-		if (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_SEND && purple_xfer_get_fd(xfer) >= 0) {
-			purple_debug_info("jabber", "remove port mapping\n");
-			purple_network_remove_port_mapping(purple_xfer_get_fd(xfer));
-		}
-		if (jsx->connect_timeout > 0)
-			g_source_remove(jsx->connect_timeout);
-		if (jsx->ibb_timeout_handle > 0)
-			g_source_remove(jsx->ibb_timeout_handle);
-
-		if (jsx->streamhosts) {
-			g_list_foreach(jsx->streamhosts, jabber_si_free_streamhost, NULL);
-			g_list_free(jsx->streamhosts);
-		}
-
-		if (jsx->ibb_session) {
-			purple_debug_info("jabber",
-				"jabber_si_xfer_free: destroying IBB session\n");
-			jabber_ibb_session_destroy(jsx->ibb_session);
-		}
-
-		if (jsx->ibb_buffer) {
-			g_object_unref(G_OBJECT(jsx->ibb_buffer));
-		}
-
-		purple_debug_info("jabber", "jabber_si_xfer_free(): freeing jsx %p\n", jsx);
-
-		g_free(jsx->stream_id);
-		g_free(jsx->iq_id);
-		/* XXX: free other stuff */
-		g_free(jsx->rxqueue);
-		g_free(jsx);
-		purple_xfer_set_protocol_data(xfer, NULL);
-	}
-}
-
 /*
  * These four functions should only be called from the PurpleXfer functions
  * (typically purple_xfer_cancel_(remote|local), purple_xfer_end, or
@@ -1351,20 +1324,19 @@ static void jabber_si_xfer_free(PurpleXfer *xfer)
  */
 static void jabber_si_xfer_cancel_send(PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 	/* if there is an IBB session active, send close on that */
 	if (jsx->ibb_session) {
 		jabber_ibb_session_close(jsx->ibb_session);
 	}
-	jabber_si_xfer_free(xfer);
 	purple_debug_info("jabber", "in jabber_si_xfer_cancel_send\n");
 }
 
 
 static void jabber_si_xfer_request_denied(PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	JabberStream *js = jsx->js;
 
 	/*
@@ -1389,34 +1361,26 @@ static void jabber_si_xfer_request_denied(PurpleXfer *xfer)
 		jabber_iq_send(iq);
 	}
 
-	jabber_si_xfer_free(xfer);
 	purple_debug_info("jabber", "in jabber_si_xfer_request_denied\n");
 }
 
 
 static void jabber_si_xfer_cancel_recv(PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	/* if there is an IBB session active, send close */
 	if (jsx->ibb_session) {
 		jabber_ibb_session_close(jsx->ibb_session);
 	}
-	jabber_si_xfer_free(xfer);
 	purple_debug_info("jabber", "in jabber_si_xfer_cancel_recv\n");
-}
-
-
-static void jabber_si_xfer_end(PurpleXfer *xfer)
-{
-	jabber_si_xfer_free(xfer);
 }
 
 
 static void jabber_si_xfer_send_disco_cb(JabberStream *js, const char *who,
 		JabberCapabilities capabilities, gpointer data)
 {
-	PurpleXfer *xfer = (PurpleXfer *) data;
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	PurpleXfer *xfer = PURPLE_XFER(data);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 
 	if (capabilities & JABBER_CAP_IBB) {
 		purple_debug_info("jabber",
@@ -1443,7 +1407,7 @@ static void resource_select_cancel_cb(PurpleXfer *xfer, PurpleRequestFields *fie
 
 static void do_transfer_send(PurpleXfer *xfer, const char *resource)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	char **who_v = g_strsplit(purple_xfer_get_remote_user(xfer), "/", 2);
 	char *who;
 	JabberBuddy *jb;
@@ -1491,9 +1455,9 @@ static void resource_select_ok_cb(PurpleXfer *xfer, PurpleRequestFields *fields)
 	do_transfer_send(xfer, selected_label);
 }
 
-static void jabber_si_xfer_init(PurpleXfer *xfer)
+static void jabber_si_xfer_xfer_init(PurpleXfer *xfer)
 {
-	JabberSIXfer *jsx = purple_xfer_get_protocol_data(xfer);
+	JabberSIXfer *jsx = JABBER_SI_XFER(xfer);
 	JabberIq *iq;
 	if(purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_SEND) {
 		JabberBuddy *jb;
@@ -1621,30 +1585,22 @@ static void jabber_si_xfer_init(PurpleXfer *xfer)
 PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who)
 {
 	JabberStream *js;
-
-	PurpleXfer *xfer;
 	JabberSIXfer *jsx;
 
 	js = purple_connection_get_protocol_data(gc);
 
-	xfer = purple_xfer_new(purple_connection_get_account(gc), PURPLE_XFER_TYPE_SEND, who);
-	if (xfer)
-	{
-		jsx = g_new0(JabberSIXfer, 1);
-		purple_xfer_set_protocol_data(xfer, jsx);
-		jsx->js = js;
-		jsx->local_streamhost_fd = -1;
+	jsx = g_object_new(
+		JABBER_TYPE_SI_XFER,
+		"account", purple_connection_get_account(gc),
+		"type", PURPLE_XFER_TYPE_SEND,
+		"remote-user", who,
+		NULL
+	);
 
-		jsx->ibb_session = NULL;
+	jsx->js = js;
+	js->file_transfers = g_list_append(js->file_transfers, jsx);
 
-		purple_xfer_set_init_fnc(xfer, jabber_si_xfer_init);
-		purple_xfer_set_cancel_send_fnc(xfer, jabber_si_xfer_cancel_send);
-		purple_xfer_set_end_fnc(xfer, jabber_si_xfer_end);
-
-		js->file_transfers = g_list_append(js->file_transfers, xfer);
-	}
-
-	return xfer;
+	return PURPLE_XFER(jsx);
 }
 
 void jabber_si_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file)
@@ -1680,7 +1636,6 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
                      const char *id, PurpleXmlNode *si)
 {
 	JabberSIXfer *jsx;
-	PurpleXfer *xfer;
 	PurpleXmlNode *file, *feature, *x, *field, *option, *value;
 #if ENABLE_FT_THUMBNAILS
 	PurpleXmlNode *thumbnail;
@@ -1719,10 +1674,13 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 	if(jabber_si_xfer_find(js, stream_id, from) != NULL)
 		return;
 
-	jsx = g_new0(JabberSIXfer, 1);
-	jsx->local_streamhost_fd = -1;
-
-	jsx->ibb_session = NULL;
+	jsx = g_object_new(
+		JABBER_TYPE_SI_XFER,
+		"account", purple_connection_get_account(js->gc),
+		"type", PURPLE_XFER_TYPE_RECEIVE,
+		"remote-user", from,
+		NULL
+	);
 
 	for(field = purple_xmlnode_get_child(x, "field"); field; field = purple_xmlnode_get_next_twin(field)) {
 		const char *var = purple_xmlnode_get_attrib(field, "var");
@@ -1745,7 +1703,7 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 	}
 
 	if(jsx->stream_method == STREAM_METHOD_UNKNOWN) {
-		g_free(jsx);
+		g_object_unref(G_OBJECT(jsx));
 		return;
 	}
 
@@ -1753,21 +1711,12 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 	jsx->stream_id = g_strdup(stream_id);
 	jsx->iq_id = g_strdup(id);
 
-	xfer = purple_xfer_new(purple_connection_get_account(js->gc), PURPLE_XFER_TYPE_RECEIVE, from);
-	g_return_if_fail(xfer != NULL);
+	purple_xfer_set_filename(PURPLE_XFER(jsx), filename);
+	if(filesize > 0) {
+		purple_xfer_set_size(PURPLE_XFER(jsx), filesize);
+	}
 
-	purple_xfer_set_protocol_data(xfer, jsx);
-
-	purple_xfer_set_filename(xfer, filename);
-	if(filesize > 0)
-		purple_xfer_set_size(xfer, filesize);
-
-	purple_xfer_set_init_fnc(xfer, jabber_si_xfer_init);
-	purple_xfer_set_request_denied_fnc(xfer, jabber_si_xfer_request_denied);
-	purple_xfer_set_cancel_recv_fnc(xfer, jabber_si_xfer_cancel_recv);
-	purple_xfer_set_end_fnc(xfer, jabber_si_xfer_end);
-
-	js->file_transfers = g_list_append(js->file_transfers, xfer);
+	js->file_transfers = g_list_append(js->file_transfers, jsx);
 
 #if ENABLE_FT_THUMBNAILS
 	/* if there is a thumbnail, we should request it... */
@@ -1775,27 +1724,119 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
 		NS_THUMBS))) {
 		const char *cid = purple_xmlnode_get_attrib(thumbnail, "cid");
 		if (cid) {
-			jabber_data_request(js, cid, purple_xfer_get_remote_user(xfer),
-			    NULL, TRUE, jabber_si_thumbnail_cb, xfer);
+			jabber_data_request(js, cid, purple_xfer_get_remote_user(PURPLE_XFER(jsx)),
+			    NULL, TRUE, jabber_si_thumbnail_cb, jsx);
 			return;
 		}
 	}
 #endif
 
-	purple_xfer_request(xfer);
+	purple_xfer_request(PURPLE_XFER(jsx));
+}
+
+/******************************************************************************
+ * GObject Implementation
+ *****************************************************************************/
+static void
+jabber_si_xfer_init(JabberSIXfer *xfer) {
+	xfer->local_streamhost_fd = -1;
+	xfer->ibb_session = NULL;
+}
+
+static void
+jabber_si_xfer_finalize(GObject *obj) {
+	JabberSIXfer *jsx = JABBER_SI_XFER(obj);
+	JabberStream *js = jsx->js;
+
+	js->file_transfers = g_list_remove(js->file_transfers, jsx);
+
+	if (jsx->connect_data != NULL) {
+		purple_proxy_connect_cancel(jsx->connect_data);
+	}
+
+	if (jsx->listen_data != NULL) {
+		purple_network_listen_cancel(jsx->listen_data);
+	}
+
+	if (jsx->iq_id != NULL) {
+		jabber_iq_remove_callback_by_id(js, jsx->iq_id);
+	}
+
+	if (jsx->local_streamhost_fd >= 0) {
+		close(jsx->local_streamhost_fd);
+	}
+
+	if (purple_xfer_get_xfer_type(PURPLE_XFER(jsx)) == PURPLE_XFER_TYPE_SEND && purple_xfer_get_fd(PURPLE_XFER(jsx)) >= 0) {
+		purple_debug_info("jabber", "remove port mapping\n");
+		purple_network_remove_port_mapping(purple_xfer_get_fd(PURPLE_XFER(jsx)));
+	}
+
+	if (jsx->connect_timeout > 0) {
+		g_source_remove(jsx->connect_timeout);
+	}
+
+	if (jsx->ibb_timeout_handle > 0) {
+		g_source_remove(jsx->ibb_timeout_handle);
+	}
+
+	if (jsx->streamhosts) {
+		g_list_free_full(jsx->streamhosts, jabber_si_free_streamhost);
+	}
+
+	if (jsx->ibb_session) {
+		purple_debug_info("jabber",
+			"jabber_si_xfer_free: destroying IBB session\n");
+		jabber_ibb_session_destroy(jsx->ibb_session);
+	}
+
+	if (jsx->ibb_buffer) {
+		g_object_unref(G_OBJECT(jsx->ibb_buffer));
+	}
+
+	purple_debug_info("jabber", "jabber_si_xfer_free(): freeing jsx %p\n", jsx);
+
+	g_free(jsx->stream_id);
+	g_free(jsx->iq_id);
+	g_free(jsx->rxqueue);
+
+	G_OBJECT_CLASS(jabber_si_xfer_parent_class)->finalize(obj);
+}
+
+static void
+jabber_si_xfer_class_finalize(JabberSIXferClass *klass) {
+}
+
+static void
+jabber_si_xfer_class_init(JabberSIXferClass *klass) {
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
+	PurpleXferClass *xfer_class = PURPLE_XFER_CLASS(klass);
+
+	obj_class->finalize = jabber_si_xfer_finalize;
+
+	xfer_class->init = jabber_si_xfer_xfer_init;
+	xfer_class->request_denied = jabber_si_xfer_request_denied;
+	xfer_class->cancel_send = jabber_si_xfer_cancel_send;
+	xfer_class->cancel_recv = jabber_si_xfer_cancel_recv;
+	xfer_class->read = jabber_si_xfer_ibb_read;
+	xfer_class->write = jabber_si_xfer_ibb_write;
+}
+
+/******************************************************************************
+ * Public API
+ *****************************************************************************/
+void
+jabber_si_xfer_register(GTypeModule *module) {
+	jabber_si_xfer_register_type(module);
 }
 
 void
-jabber_si_init(void)
-{
+jabber_si_init(void) {
 	jabber_iq_register_handler("si", "http://jabber.org/protocol/si", jabber_si_parse);
 
 	jabber_ibb_register_open_handler(jabber_si_xfer_ibb_open_cb);
 }
 
 void
-jabber_si_uninit(void)
-{
+jabber_si_uninit(void) {
 	jabber_ibb_unregister_open_handler(jabber_si_xfer_ibb_open_cb);
 }
-

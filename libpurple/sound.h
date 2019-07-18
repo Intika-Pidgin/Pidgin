@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_SOUND_H_
-#define _PURPLE_SOUND_H_
+#ifndef PURPLE_SOUND_H
+#define PURPLE_SOUND_H
 /**
  * SECTION:sound
  * @section_id: libpurple-sound
@@ -193,4 +193,4 @@ void *purple_sounds_get_handle(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_SOUND_H_ */
+#endif /* PURPLE_SOUND_H */

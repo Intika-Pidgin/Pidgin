@@ -232,7 +232,7 @@ _jabber_parse_and_write_message_to_ui(PurpleXmlNode *message_node, PurpleBuddy *
 	g_free(body);
 }
 
-struct _match_buddies_by_address_t {
+struct _match_buddies_by_address {
 	const char *address;
 	GSList *matched_buddies;
 };
@@ -242,7 +242,7 @@ _match_buddies_by_address(gpointer value, gpointer data)
 {
 	PurpleBuddy *pb = value;
 	BonjourBuddy *bb = NULL;
-	struct _match_buddies_by_address_t *mbba = data;
+	struct _match_buddies_by_address *mbba = data;
 
 	bb = purple_buddy_get_protocol_data(pb);
 
@@ -330,7 +330,6 @@ _send_data(PurpleBuddy *pb, char *message)
 
 	/* If we're not ready to actually send, append it to the buffer */
 	if (bconv->tx_handler != 0
-			|| bconv->connect_data != NULL
 			|| bconv->sent_stream_start != FULLY_SENT
 			|| !bconv->recv_stream_start
 			|| purple_circular_buffer_get_max_read(bconv->tx_buf) > 0) {
@@ -552,6 +551,8 @@ bonjour_jabber_send_stream_init(BonjourJabberConversation *bconv,
 	gssize ret;
 	const char *bname = bconv->buddy_name;
 
+	g_return_val_if_fail(error != NULL, FALSE);
+
 	if (bconv->pb != NULL)
 		bname = purple_buddy_get_name(bconv->pb);
 
@@ -694,7 +695,7 @@ _server_socket_handler(GSocketService *service, GSocketConnection *connection,
 	GSocketAddress *their_addr; /* connector's address information */
 	GInetAddress *their_inet_addr;
 	gchar *address_text;
-	struct _match_buddies_by_address_t *mbba;
+	struct _match_buddies_by_address *mbba;
 	BonjourJabberConversation *bconv;
 	GSList *buddies;
 	GSource *source;
@@ -721,7 +722,7 @@ _server_socket_handler(GSocketService *service, GSocketConnection *connection,
 	g_object_unref(their_addr);
 
 	purple_debug_info("bonjour", "Received incoming connection from %s.\n", address_text);
-	mbba = g_new0(struct _match_buddies_by_address_t, 1);
+	mbba = g_new0(struct _match_buddies_by_address, 1);
 	mbba->address = address_text;
 
 	buddies = purple_blist_find_buddies(jdata->account, NULL);
@@ -970,10 +971,10 @@ bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv) {
 	PurpleConnection *pc = purple_account_get_connection(bconv->account);
 	BonjourData *bd = purple_connection_get_protocol_data(pc);
 	BonjourJabber *jdata = bd->jabber_data;
-	struct _match_buddies_by_address_t *mbba;
+	struct _match_buddies_by_address *mbba;
 	GSList *buddies;
 
-	mbba = g_new0(struct _match_buddies_by_address_t, 1);
+	mbba = g_new0(struct _match_buddies_by_address, 1);
 	mbba->address = bconv->ip;
 
 	buddies = purple_blist_find_buddies(jdata->account, NULL);
@@ -1215,9 +1216,6 @@ bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 	bconv->output = NULL;
 
 	g_object_unref(G_OBJECT(bconv->tx_buf));
-	if (bconv->connect_data != NULL) {
-		purple_proxy_connect_cancel(bconv->connect_data);
-	}
 	if (bconv->stream_data != NULL) {
 		struct _stream_start_data *ss = bconv->stream_data;
 		g_free(ss->msg);
@@ -1257,7 +1255,6 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 			if (bb && bb->conversation) {
 				/* Any ongoing connection attempt is cancelled
 				 * when a connection is destroyed */
-				bb->conversation->connect_data = NULL;
 				bonjour_jabber_close_conversation(bb->conversation);
 				bb->conversation = NULL;
 			}

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_SERVER_H_
-#define _PURPLE_SERVER_H_
+#ifndef PURPLE_SERVER_H
+#define PURPLE_SERVER_H
 /**
  * SECTION:server
  * @section_id: libpurple-server
@@ -370,5 +370,4 @@ void purple_serv_send_file(PurpleConnection *gc, const char *who, const char *fi
 
 G_END_DECLS
 
-#endif /* _PURPLE_SERVER_H_ */
-
+#endif /* PURPLE_SERVER_H */

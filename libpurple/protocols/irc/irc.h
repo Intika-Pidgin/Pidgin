@@ -238,6 +238,11 @@ int irc_cmd_wallops(struct irc_conn *irc, const char *cmd, const char *target, c
 int irc_cmd_whois(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_whowas(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
+#define IRC_TYPE_XFER (irc_xfer_get_type())
+G_DECLARE_FINAL_TYPE(IrcXfer, irc_xfer, IRC, XFER, PurpleXfer);
+
+void irc_xfer_register(GTypeModule *module);
+
 PurpleXfer *irc_dccsend_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 void irc_dccsend_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 void irc_dccsend_recv(struct irc_conn *irc, const char *from, const char *msg);

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_POUNCE_H_
-#define _PURPLE_POUNCE_H_
+#ifndef PURPLE_POUNCE_H
+#define PURPLE_POUNCE_H
 /**
  * SECTION:pounce
  * @section_id: libpurple-pounce
@@ -400,4 +400,4 @@ void purple_pounces_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_POUNCE_H_ */
+#endif /* PURPLE_POUNCE_H */
