@@ -53,7 +53,6 @@ typedef struct
 	PurpleCircularBuffer *tx_buf;
 	int sent_stream_start; /* 0 = Unsent, 1 = Partial, 2 = Complete */
 	gboolean recv_stream_start;
-	PurpleProxyConnectData *connect_data;
 	gpointer stream_data;
 	xmlParserCtxt *context;
 	PurpleXmlNode *current;

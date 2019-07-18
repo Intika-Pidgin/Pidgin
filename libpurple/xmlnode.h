@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_XMLNODE_H_
-#define _PURPLE_XMLNODE_H_
+#ifndef PURPLE_XMLNODE_H
+#define PURPLE_XMLNODE_H
 /**
  * SECTION:xmlnode
  * @section_id: libpurple-xmlnode
@@ -424,5 +424,4 @@ PurpleXmlNode *purple_xmlnode_from_file(const char *dir, const char *filename,
 
 G_END_DECLS
 
-#endif /* _PURPLE_XMLNODE_H_ */
-
+#endif /* PURPLE_XMLNODE_H */

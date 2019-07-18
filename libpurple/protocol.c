@@ -979,13 +979,5 @@ purple_protocol_factory_iface_whiteboard_new(PurpleProtocol *protocol,
 			who, state);
 }
 
-PurpleXfer *
-purple_protocol_factory_iface_xfer_new(PurpleProtocol *protocol,
-		PurpleAccount *account, PurpleXferType type, const char *who)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, xfer_new, account, type,
-			who);
-}
-
 #undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
 #undef DEFINE_PROTOCOL_FUNC

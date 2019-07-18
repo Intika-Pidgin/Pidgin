@@ -2124,11 +2124,22 @@ static struct mwServiceConference *mw_srvc_conf_new(struct mwSession *s) {
 /** size of an outgoing file transfer chunk */
 #define MW_FT_LEN  (BUF_LONG * 2)
 
+#define MW_TYPE_XFER (mw_xfer_get_type())
+G_DECLARE_FINAL_TYPE(mwXfer, mw_xfer, MW, XFER, PurpleXfer)
+
+struct _mwXfer {
+  PurpleXfer parent;
+
+  struct mwFileTransfer *ft;
+};
+
+G_DEFINE_DYNAMIC_TYPE(mwXfer, mw_xfer, PURPLE_TYPE_XFER);
+
 
 static void ft_incoming_cancel(PurpleXfer *xfer) {
   /* incoming transfer rejected or cancelled in-progress */
-  struct mwFileTransfer *ft = purple_xfer_get_protocol_data(xfer);
-  if(ft) mwFileTransfer_reject(ft);
+  mwXfer *mw_xfer = MW_XFER(xfer);
+  if(mw_xfer->ft) mwFileTransfer_reject(mw_xfer->ft);
 }
 
 
@@ -2140,14 +2151,84 @@ static void ft_incoming_init(PurpleXfer *xfer) {
      - stick the FILE's fp in xfer->dest_fp
   */
 
-  struct mwFileTransfer *ft;
-
-  ft = purple_xfer_get_protocol_data(xfer);
+  mwXfer *mw_xfer = MW_XFER(xfer);
 
   purple_xfer_start(xfer, -1, NULL, 0);
-  mwFileTransfer_accept(ft);
+  mwFileTransfer_accept(mw_xfer->ft);
 }
 
+
+static void ft_outgoing_init(PurpleXfer *xfer) {
+  PurpleAccount *acct;
+  PurpleConnection *gc;
+
+  struct mwPurpleProtocolData *pd;
+  struct mwServiceFileTransfer *srvc;
+  struct mwFileTransfer *ft;
+
+  const char *filename;
+  gsize filesize;
+  FILE *fp;
+  char *remote_user = NULL;
+
+  struct mwIdBlock idb = { NULL, NULL };
+
+  DEBUG_INFO("ft_outgoing_init\n");
+
+  acct = purple_xfer_get_account(xfer);
+  gc = purple_account_get_connection(acct);
+  pd = purple_connection_get_protocol_data(gc);
+  srvc = pd->srvc_ft;
+
+  remote_user = g_strdup(purple_xfer_get_remote_user(xfer));
+
+  filename = purple_xfer_get_local_filename(xfer);
+  filesize = purple_xfer_get_size(xfer);
+  idb.user = remote_user;
+
+  purple_xfer_update_progress(xfer);
+
+  /* test that we can actually send the file */
+  fp = g_fopen(filename, "rb");
+  if(! fp) {
+    char *msg = g_strdup_printf(_("Error reading file %s: \n%s\n"),
+        filename, g_strerror(errno));
+    purple_xfer_error(purple_xfer_get_xfer_type(xfer), acct, purple_xfer_get_remote_user(xfer), msg);
+    g_free(msg);
+    g_free(remote_user);
+    return;
+  }
+  fclose(fp);
+
+  {
+    char *tmp = strrchr(filename, G_DIR_SEPARATOR);
+    if(tmp++) filename = tmp;
+  }
+
+  ft = mwFileTransfer_new(srvc, &idb, NULL, filename, filesize);
+
+  g_object_ref(xfer);
+  mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) g_object_unref);
+
+  mwFileTransfer_offer(ft);
+  g_free(remote_user);
+}
+
+
+static void ft_init(PurpleXfer *xfer) {
+  switch(purple_xfer_get_xfer_type(xfer)) {
+    case PURPLE_XFER_TYPE_SEND:
+      ft_outgoing_init(xfer);
+      break;
+    case PURPLE_XFER_TYPE_RECEIVE:
+      ft_incoming_init(xfer);
+      break;
+    case PURPLE_XFER_TYPE_UNKNOWN:
+    default:
+      g_return_if_reached();
+      break;
+  }
+}
 
 static void mw_ft_offered(struct mwFileTransfer *ft) {
   /*
@@ -2183,11 +2264,6 @@ static void mw_ft_offered(struct mwFileTransfer *ft) {
   {
 	g_object_ref(xfer);
 	mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) g_object_unref);
-	purple_xfer_set_protocol_data(xfer, ft);
-
-	purple_xfer_set_init_fnc(xfer, ft_incoming_init);
-	purple_xfer_set_cancel_recv_fnc(xfer, ft_incoming_cancel);
-	purple_xfer_set_request_denied_fnc(xfer, ft_incoming_cancel);
 
 	purple_xfer_set_filename(xfer, mwFileTransfer_getFileName(ft));
 	purple_xfer_set_size(xfer, mwFileTransfer_getFileSize(ft));
@@ -2261,8 +2337,6 @@ static void mw_ft_closed(struct mwFileTransfer *ft, guint32 code) {
 
   xfer = mwFileTransfer_getClientData(ft);
   if(xfer) {
-    purple_xfer_set_protocol_data(xfer, NULL);
-
     if(! mwFileTransfer_getRemaining(ft)) {
       purple_xfer_set_completed(xfer, TRUE);
       purple_xfer_end(xfer);
@@ -2359,6 +2433,52 @@ static struct mwServiceFileTransfer *mw_srvc_ft_new(struct mwSession *s) {
 			  (GDestroyNotify) g_hash_table_destroy);
 
   return srvc;
+}
+
+
+static void ft_outgoing_cancel(PurpleXfer *xfer) {
+  mwXfer *mw_xfer = MW_XFER(xfer);
+
+  DEBUG_INFO("ft_outgoing_cancel called\n");
+
+  if(mw_xfer->ft) mwFileTransfer_cancel(mw_xfer->ft);
+}
+
+
+static void
+mw_xfer_init(mwXfer *xfer) {
+
+}
+
+static void
+mw_xfer_class_finalize(mwXferClass *klass) {
+
+}
+
+static void
+mw_xfer_class_init(mwXferClass *klass) {
+  PurpleXferClass *xfer_class = PURPLE_XFER_CLASS(klass);
+
+  xfer_class->init = ft_init;
+  xfer_class->cancel_send = ft_outgoing_cancel;
+  xfer_class->cancel_recv = ft_incoming_cancel;
+  xfer_class->request_denied = ft_incoming_cancel;
+}
+
+
+static PurpleXfer *mw_protocol_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who) {
+  PurpleAccount *acct;
+
+  acct = purple_connection_get_account(gc);
+
+  return g_object_new(
+    MW_TYPE_XFER,
+    "account", acct,
+    "type", PURPLE_XFER_TYPE_SEND,
+    "remote-user", who,
+    NULL
+  );
+
 }
 
 
@@ -4578,89 +4698,6 @@ static gboolean mw_protocol_can_receive_file(PurpleProtocolXfer *prplxfer,
 }
 
 
-static void ft_outgoing_init(PurpleXfer *xfer) {
-  PurpleAccount *acct;
-  PurpleConnection *gc;
-
-  struct mwPurpleProtocolData *pd;
-  struct mwServiceFileTransfer *srvc;
-  struct mwFileTransfer *ft;
-
-  const char *filename;
-  gsize filesize;
-  FILE *fp;
-  char *remote_user = NULL;
-
-  struct mwIdBlock idb = { NULL, NULL };
-
-  DEBUG_INFO("ft_outgoing_init\n");
-
-  acct = purple_xfer_get_account(xfer);
-  gc = purple_account_get_connection(acct);
-  pd = purple_connection_get_protocol_data(gc);
-  srvc = pd->srvc_ft;
-
-  remote_user = g_strdup(purple_xfer_get_remote_user(xfer));
-
-  filename = purple_xfer_get_local_filename(xfer);
-  filesize = purple_xfer_get_size(xfer);
-  idb.user = remote_user;
-
-  purple_xfer_update_progress(xfer);
-
-  /* test that we can actually send the file */
-  fp = g_fopen(filename, "rb");
-  if(! fp) {
-    char *msg = g_strdup_printf(_("Error reading file %s: \n%s\n"),
-				filename, g_strerror(errno));
-    purple_xfer_error(purple_xfer_get_xfer_type(xfer), acct, purple_xfer_get_remote_user(xfer), msg);
-    g_free(msg);
-    g_free(remote_user);
-    return;
-  }
-  fclose(fp);
-
-  {
-    char *tmp = strrchr(filename, G_DIR_SEPARATOR);
-    if(tmp++) filename = tmp;
-  }
-
-  ft = mwFileTransfer_new(srvc, &idb, NULL, filename, filesize);
-
-  g_object_ref(xfer);
-  mwFileTransfer_setClientData(ft, xfer, (GDestroyNotify) g_object_unref);
-  purple_xfer_set_protocol_data(xfer, ft);
-
-  mwFileTransfer_offer(ft);
-  g_free(remote_user);
-}
-
-
-static void ft_outgoing_cancel(PurpleXfer *xfer) {
-  struct mwFileTransfer *ft = purple_xfer_get_protocol_data(xfer);
-
-  DEBUG_INFO("ft_outgoing_cancel called\n");
-
-  if(ft) mwFileTransfer_cancel(ft);
-}
-
-
-static PurpleXfer *mw_protocol_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who) {
-  PurpleAccount *acct;
-  PurpleXfer *xfer;
-
-  acct = purple_connection_get_account(gc);
-
-  xfer = purple_xfer_new(acct, PURPLE_XFER_TYPE_SEND, who);
-  if (xfer)
-  {
-    purple_xfer_set_init_fnc(xfer, ft_outgoing_init);
-    purple_xfer_set_cancel_send_fnc(xfer, ft_outgoing_cancel);
-  }
-
-  return xfer;
-}
-
 static void mw_protocol_send_file(PurpleProtocolXfer *prplxfer,
 			      PurpleConnection *gc,
 			      const char *who, const char *file) {
@@ -5347,6 +5384,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
     G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION;
 
   mw_protocol_register_type(plugin);
+
+  mw_xfer_register_type(G_TYPE_MODULE(plugin));
 
   my_protocol = purple_protocols_add(MW_TYPE_PROTOCOL, error);
   if (!my_protocol)

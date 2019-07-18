@@ -108,14 +108,9 @@ struct _PidginConversation
 	GArray *nick_colors;
 	PurpleMessageFlags last_flags;
 	GtkWidget *webview;
+
+	GtkWidget *editor;
 	GtkWidget *entry;
-	gboolean auto_resize;   /* this is set to TRUE if the conversation
-				 * is being resized by a non-user-initiated
-				 * event, such as the buddy icon appearing
-				 */
-	gboolean entry_growing; /* True if the size of the entry was set
-				 * automatically by typing too much to fit
-				 * in one line */
 
 	GtkWidget *close; /* "x" on the tab */
 	GtkWidget *icon;

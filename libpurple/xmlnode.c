@@ -23,7 +23,6 @@
  * libxode uses memory pools that we simply have no need for, I decided to
  * write my own stuff.  Also, re-writing this lets me be as lightweight
  * as I want to be.  Thank you libxode for giving me a good starting point */
-#define _PURPLE_XMLNODE_C_
 
 #include "internal.h"
 #include "debug.h"

@@ -24,8 +24,8 @@
  * OF SUCH DAMAGE.
  */
 
-#ifndef _PURPLE_NAT_PMP_H
-#define _PURPLE_NAT_PMP_H
+#ifndef PURPLE_NAT_PMP_H
+#define PURPLE_NAT_PMP_H
 /**
  * SECTION:nat-pmp
  * @section_id: libpurple-nat-pmp
@@ -81,5 +81,4 @@ gboolean purple_pmp_destroy_map(PurplePmpType type, unsigned short privateport);
 
 G_END_DECLS
 
-#endif
-
+#endif /* PURPLE_NAT_PMP_H */

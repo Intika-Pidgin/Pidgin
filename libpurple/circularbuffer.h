@@ -29,20 +29,12 @@
 #include <glib.h>
 #include <glib-object.h>
 
-#define PURPLE_TYPE_CIRCULAR_BUFFER            (purple_circular_buffer_get_type())
-#define PURPLE_CIRCULAR_BUFFER(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_CIRCULAR_BUFFER, PurpleCircularBuffer))
-#define PURPLE_CIRCULAR_BUFFER_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_CIRCULAR_BUFFER, PurpleCircularBufferClass))
-#define PURPLE_IS_CIRCULAR_BUFFER(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_CIRCULAR_BUFFER))
-#define PURPLE_IS_CIRCULAR_BUFFER_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_CIRCULAR_BUFFER))
-#define PURPLE_CIRCULAR_BUFFER_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_CIRCULAR_BUFFER, PurpleCircularBufferClass))
+G_BEGIN_DECLS
 
-typedef struct _PurpleCircularBuffer           PurpleCircularBuffer;
-typedef struct _PurpleCircularBufferClass      PurpleCircularBufferClass;
+#define PURPLE_TYPE_CIRCULAR_BUFFER (purple_circular_buffer_get_type())
 
-struct _PurpleCircularBuffer {
-	/*< private >*/
-	GObject parent;
-};
+G_DECLARE_DERIVABLE_TYPE(PurpleCircularBuffer, purple_circular_buffer, PURPLE,
+                         CIRCULAR_BUFFER, GObject)
 
 struct _PurpleCircularBufferClass {
 	/*< private >*/
@@ -58,10 +50,6 @@ struct _PurpleCircularBufferClass {
 	void (*purple_reserved3)(void);
 	void (*purple_reserved4)(void);
 };
-
-G_BEGIN_DECLS
-
-GType purple_circular_buffer_get_type(void);
 
 /**
  * purple_circular_buffer_new:

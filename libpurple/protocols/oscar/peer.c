@@ -208,7 +208,6 @@ peer_connection_destroy_cb(gpointer data)
 	if (conn->xfer != NULL)
 	{
 		PurpleXferStatus status;
-		purple_xfer_set_protocol_data(conn->xfer, NULL);
 		status = purple_xfer_get_status(conn->xfer);
 		if ((status != PURPLE_XFER_STATUS_DONE) &&
 			(status != PURPLE_XFER_STATUS_CANCEL_LOCAL) &&
@@ -1101,58 +1100,113 @@ peer_connection_got_proposition(OscarData *od, const gchar *bn, const gchar *mes
 	{
 		gchar *filename;
 
-		conn->xfer = purple_xfer_new(account, PURPLE_XFER_TYPE_RECEIVE, bn);
-		if (conn->xfer)
+		conn->xfer = PURPLE_XFER(g_object_new(
+			OSCAR_TYPE_XFER,
+			"account", account,
+			"type", PURPLE_XFER_TYPE_RECEIVE,
+			"remote-user", bn,
+			"conn", conn,
+			NULL
+		));
+		purple_xfer_set_size(conn->xfer, args->info.sendfile.totsize);
+
+		/* Set the file name */
+		if (g_utf8_validate(args->info.sendfile.filename, -1, NULL))
+			filename = g_strdup(args->info.sendfile.filename);
+		else
+			filename = purple_utf8_salvage(args->info.sendfile.filename);
+
+		if (args->info.sendfile.subtype == AIM_OFT_SUBTYPE_SEND_DIR)
 		{
-			purple_xfer_set_protocol_data(conn->xfer, conn);
-			purple_xfer_set_size(conn->xfer, args->info.sendfile.totsize);
-
-			/* Set the file name */
-			if (g_utf8_validate(args->info.sendfile.filename, -1, NULL))
-				filename = g_strdup(args->info.sendfile.filename);
-			else
-				filename = purple_utf8_salvage(args->info.sendfile.filename);
-
-			if (args->info.sendfile.subtype == AIM_OFT_SUBTYPE_SEND_DIR)
-			{
-				/*
-				 * If they are sending us a directory then the last character
-				 * of the file name will be an asterisk.  We don't want to
-				 * save stuff to a directory named "*" so we remove the
-				 * asterisk from the file name.
-				 */
-				char *tmp = strrchr(filename, '\\');
-				if ((tmp != NULL) && (tmp[1] == '*'))
-					tmp[0] = '\0';
-			}
-			purple_xfer_set_filename(conn->xfer, filename);
-			g_free(filename);
-
 			/*
-			 * Set the message, unless this is the dummy message from an
-			 * ICQ client or an empty message from an AIM client.
-			 * TODO: Maybe we should strip HTML and then see if strlen>0?
+			 * If they are sending us a directory then the last character
+			 * of the file name will be an asterisk.  We don't want to
+			 * save stuff to a directory named "*" so we remove the
+			 * asterisk from the file name.
 			 */
-			if ((message != NULL) &&
-				(g_ascii_strncasecmp(message, "<ICQ_COOL_FT>", 13) != 0) &&
-				(g_ascii_strcasecmp(message, "<HTML>") != 0))
-			{
-				purple_xfer_set_message(conn->xfer, message);
-			}
-
-			/* Setup our I/O op functions */
-			purple_xfer_set_init_fnc(conn->xfer, peer_oft_recvcb_init);
-			purple_xfer_set_end_fnc(conn->xfer, peer_oft_recvcb_end);
-			purple_xfer_set_request_denied_fnc(conn->xfer, peer_oft_cb_generic_cancel);
-			purple_xfer_set_cancel_recv_fnc(conn->xfer, peer_oft_cb_generic_cancel);
-			purple_xfer_set_ack_fnc(conn->xfer, peer_oft_recvcb_ack_recv);
-
-			/* Now perform the request */
-			purple_xfer_request(conn->xfer);
+			char *tmp = strrchr(filename, '\\');
+			if ((tmp != NULL) && (tmp[1] == '*'))
+				tmp[0] = '\0';
 		}
+		purple_xfer_set_filename(conn->xfer, filename);
+		g_free(filename);
+
+		/*
+		 * Set the message, unless this is the dummy message from an
+		 * ICQ client or an empty message from an AIM client.
+		 * TODO: Maybe we should strip HTML and then see if strlen>0?
+		 */
+		if ((message != NULL) &&
+			(g_ascii_strncasecmp(message, "<ICQ_COOL_FT>", 13) != 0) &&
+			(g_ascii_strcasecmp(message, "<HTML>") != 0))
+		{
+			purple_xfer_set_message(conn->xfer, message);
+		}
+
+		/* Now perform the request */
+		purple_xfer_request(conn->xfer);
 	}
 }
 
 /*******************************************************************/
 /* End code for establishing a peer connection                     */
 /*******************************************************************/
+
+G_DEFINE_DYNAMIC_TYPE(OscarXfer, oscar_xfer, PURPLE_TYPE_XFER);
+
+static void
+oscar_xfer_init_xfer(PurpleXfer *xfer) {
+	PurpleXferType type = purple_xfer_get_xfer_type(xfer);
+
+	if(type == PURPLE_XFER_TYPE_SEND) {
+		peer_oft_sendcb_init(xfer);
+	} else if(type == PURPLE_XFER_TYPE_RECEIVE) {
+		peer_oft_recvcb_init(xfer);
+	}
+}
+
+static void
+oscar_xfer_ack(PurpleXfer *xfer, const guchar *buffer, size_t size) {
+	PurpleXferType type = purple_xfer_get_xfer_type(xfer);
+
+	if(type == PURPLE_XFER_TYPE_SEND) {
+		peer_oft_sendcb_ack(xfer, buffer, size);
+	} else if(type == PURPLE_XFER_TYPE_RECEIVE) {
+		peer_oft_recvcb_ack_recv(xfer, buffer, size);
+	}
+
+}
+
+static void
+oscar_xfer_init(OscarXfer *xfer) {
+
+}
+
+static void
+oscar_xfer_class_finalize(OscarXferClass *klass) {
+
+}
+
+static void
+oscar_xfer_class_init(OscarXferClass *klass) {
+	PurpleXferClass *xfer_class = PURPLE_XFER_CLASS(klass);
+
+	xfer_class->init = oscar_xfer_init_xfer;
+	xfer_class->end = peer_oft_recvcb_end;
+	xfer_class->cancel_send = peer_oft_cb_generic_cancel;
+	xfer_class->cancel_recv = peer_oft_cb_generic_cancel;
+	xfer_class->request_denied = peer_oft_cb_generic_cancel;
+	xfer_class->ack = oscar_xfer_ack;
+}
+
+void
+oscar_xfer_register(GTypeModule *module) {
+	oscar_xfer_register_type(module);
+}
+
+PeerConnection *
+oscar_xfer_get_peer_connection(OscarXfer *xfer) {
+	g_return_val_if_fail(OSCAR_IS_XFER(xfer), NULL);
+
+	return xfer->conn;
+}

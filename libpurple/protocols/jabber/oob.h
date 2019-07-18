@@ -26,7 +26,16 @@
 
 #include "jabber.h"
 
+G_BEGIN_DECLS
+
+#define JABBER_TYPE_OOB_XFER (jabber_oob_xfer_get_type())
+G_DECLARE_FINAL_TYPE(JabberOOBXfer, jabber_oob_xfer, JABBER, OOB_XFER, PurpleXfer);
+
 void jabber_oob_parse(JabberStream *js, const char *from, JabberIqType type,
                       const char *id, PurpleXmlNode *querynode);
+
+void jabber_oob_xfer_register(GTypeModule *module);
+
+G_END_DECLS
 
 #endif /* PURPLE_JABBER_OOB_H_ */

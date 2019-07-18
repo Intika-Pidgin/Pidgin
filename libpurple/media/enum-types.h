@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_MEDIA_ENUM_TYPES_H_
-#define _PURPLE_MEDIA_ENUM_TYPES_H_
+#ifndef PURPLE_MEDIA_ENUM_TYPES_H
+#define PURPLE_MEDIA_ENUM_TYPES_H
 /**
  * SECTION:enum-types
  * @section_id: libpurple-enum-types
@@ -194,4 +194,4 @@ GType purple_media_state_changed_get_type(void);
 
 G_END_DECLS
 
-#endif  /* _PURPLE_MEDIA_ENUM_TYPES_ */
+#endif /* PURPLE_MEDIA_ENUM_TYPES */
