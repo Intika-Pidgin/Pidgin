@@ -7,8 +7,6 @@ libpidgin_SOURCES = [
 	'gtkcellrendererexpander.c',
 	'gtkconn.c',
 	'gtkconv.c',
-	'gtkconv-theme.c',
-	'gtkconv-theme-loader.c',
 	'gtkdialogs.c',
 	'gtkdnd-hints.c',
 	'gtkdocklet.c',
@@ -59,8 +57,6 @@ libpidgin_headers = [
 	'gtkconn.h',
 	'gtkconv.h',
 	'gtkconvwin.h',
-	'gtkconv-theme.h',
-	'gtkconv-theme-loader.h',
 	'gtkdialogs.h',
 	'gtkdnd-hints.h',
 	'gtkdocklet.h',
@@ -249,5 +245,4 @@ if ENABLE_GTK
 	subdir('data')
 	subdir('pixmaps')
 	subdir('plugins')
-	subdir('themes')
 endif  # ENABLE_GTK
