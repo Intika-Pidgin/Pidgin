@@ -76,7 +76,6 @@ enum {
 #include "pidgin.h"
 #include "conversation.h"
 #include "gtkconvwin.h"
-#include "gtkconv-theme.h"
 
 /**************************************************************************
  * Structures
@@ -104,7 +103,6 @@ struct _PidginConversation
 	GtkWidget *tabby;
 	GtkWidget *menu_tabby;
 
-	PidginConvTheme *theme;
 	GArray *nick_colors;
 	PurpleMessageFlags last_flags;
 	GtkTextBuffer *history_buffer;
@@ -170,15 +168,6 @@ GType pidgin_conversation_get_type(void);
  * Returns: The GTK+ conversation operations structure.
  */
 PurpleConversationUiOps *pidgin_conversations_get_conv_ui_ops(void);
-
-/**
- * pidgin_conversations_get_default_theme:
- *
- * Returns the default theme for GTK+ conversations.
- *
- * Returns: (transfer none): The default GTK+ conversation theme.
- */
-PurpleTheme *pidgin_conversations_get_default_theme(void);
 
 /**
  * pidgin_conv_update_buddy_icon:

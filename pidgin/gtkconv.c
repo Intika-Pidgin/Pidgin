@@ -57,8 +57,6 @@
 #include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkconvwin.h"
-#include "gtkconv-theme.h"
-#include "gtkconv-theme-loader.h"
 #include "gtkdialogs.h"
 #include "gtkmenutray.h"
 #include "gtkpounce.h"
@@ -4355,7 +4353,7 @@ setup_common_pane(PidginConversation *gtkconv)
 		/* Add the topic */
 		setup_chat_topic(gtkconv, vbox);
 
-		/* Add the gtkwebview frame */
+		/* Add the talkatu history */
 		hpaned = gtk_paned_new(GTK_ORIENTATION_HORIZONTAL);
 		gtk_box_pack_start(GTK_BOX(vbox), hpaned, TRUE, TRUE, 0);
 		gtk_widget_show(hpaned);
@@ -4494,12 +4492,6 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	/* Setup some initial variables. */
 	gtkconv->unseen_state = PIDGIN_UNSEEN_NONE;
 	gtkconv->unseen_count = 0;
-	theme_name = purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/theme");
-	if (theme_name && *theme_name)
-		theme = purple_theme_manager_find_theme(theme_name, "conversation");
-	if (!theme)
-		theme = default_conv_theme;
-	gtkconv->theme = PIDGIN_CONV_THEME(g_object_ref(theme));
 	gtkconv->last_flags = 0;
 
 	if (PURPLE_IS_IM_CONVERSATION(conv)) {
@@ -4570,10 +4562,7 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 		generated_nick_colors = generate_nick_colors(NICK_COLOR_GENERATE_COUNT, rgba);
 	}
 
-	if(NULL == (gtkconv->nick_colors = pidgin_conversation_theme_get_nick_colors(gtkconv->theme)))
-	{
-		gtkconv->nick_colors = g_array_ref(generated_nick_colors);
-	}
+	gtkconv->nick_colors = g_array_ref(generated_nick_colors);
 }
 
 static void
@@ -4682,7 +4671,6 @@ pidgin_conv_destroy(PurpleConversation *conv)
 	}
 
 	g_array_unref(gtkconv->nick_colors);
-	g_object_unref(gtkconv->theme);
 
 	g_free(gtkconv);
 }
@@ -6807,12 +6795,6 @@ pidgin_conversations_init(void)
 			PURPLE_CALLBACK(wrote_msg_update_unseen_cb), NULL);
 	purple_signal_connect(purple_conversations_get_handle(), "wrote-chat-msg", handle,
 			PURPLE_CALLBACK(wrote_msg_update_unseen_cb), NULL);
-
-	purple_theme_manager_register_type(g_object_new(PIDGIN_TYPE_CONV_THEME_LOADER, "type", "conversation", NULL));
-	theme_dir = g_build_filename(PURPLE_DATADIR, "pidgin", "theme", NULL);
-	default_conv_theme = purple_theme_manager_load_theme(theme_dir, "conversation");
-	g_free(theme_dir);
-
 }
 
 static void
