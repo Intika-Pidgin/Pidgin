@@ -1,1 +1,1 @@
-i18n.gettext('pidgin')
+i18n.gettext('pidgin', args : '--from-code=utf-8')
