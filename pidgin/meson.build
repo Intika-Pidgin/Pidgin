@@ -197,7 +197,7 @@ if ENABLE_GTK
 	    filebase : 'pidgin-3',
 	    subdirs : 'pidgin-3',
 	    libraries : [libpidgin],
-	    requires : ['gtk+-3.0', 'webkitgtk-3.0', 'purple-3'],
+	    requires : ['gtk+-3.0', 'purple-3', 'talkatu'],
 	    variables : ['plugindir=${libdir}/pidgin-@0@'.format(purple_major_version)])
 
 	if INSTALL_I18N
