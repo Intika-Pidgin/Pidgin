@@ -246,7 +246,6 @@ pidgin_ui_init(void)
 	pidgin_log_init();
 	pidgin_docklet_init();
 	_pidgin_smiley_theme_init();
-	pidgin_utils_init();
 	pidgin_medias_init();
 	pidgin_notify_init();
 }
@@ -259,7 +258,6 @@ pidgin_quit(void)
 	/* Uninit */
 	PurpleDebugUi *ui;
 
-	pidgin_utils_uninit();
 	pidgin_notify_uninit();
 	_pidgin_smiley_theme_uninit();
 	pidgin_conversations_uninit();

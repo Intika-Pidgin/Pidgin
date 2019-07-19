@@ -28,7 +28,6 @@
 
 #include "gtkdialogs.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
 #include "pidgindebug.h"
 #include "pidginstock.h"
 

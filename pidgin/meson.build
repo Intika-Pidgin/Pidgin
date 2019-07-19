@@ -34,8 +34,6 @@ libpidgin_SOURCES = [
 	'gtkstatusbox.c',
 	'gtkstyle.c',
 	'gtkutils.c',
-	'gtkwebview.c',
-	'gtkwebviewtoolbar.c',
 	'gtkwhiteboard.c',
 	'gtkxfer.c',
 	'libpidgin.c',
@@ -90,8 +88,6 @@ libpidgin_headers = [
 	'gtkstyle.h',
 	'pidginstock.h',
 	'gtkutils.h',
-	'gtkwebview.h',
-	'gtkwebviewtoolbar.h',
 	'gtkwhiteboard.h',
 	'gtkxfer.h',
 	'minidialog.h',
@@ -177,7 +173,6 @@ if ENABLE_GTK
 	    	json,
 	    	math,
 	        talkatu_dep,
-	    	webkit,
 	    	x11,
 	    	libpurple_dep,
 	    ],
@@ -185,7 +180,7 @@ if ENABLE_GTK
 	libpidgin_dep = declare_dependency(
 	    include_directories : [toplevel_inc, libpidgin_inc],
 	    link_with : libpidgin,
-	    dependencies : [webkit, gtk, glib, math])
+	    dependencies : [gtk, glib, math])
 
 	pidgin = executable('pidgin3',
 	    pidgin_SOURCES,

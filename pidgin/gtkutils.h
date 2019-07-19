@@ -82,34 +82,6 @@ typedef gboolean (*PidginFilterBuddyCompletionEntryFunc) (const PidginBuddyCompl
 G_BEGIN_DECLS
 
 /**
- * pidgin_setup_webview:
- * @webview: The gtkwebview widget to setup.
- *
- * Sets up a gtkwebview widget and sets the default signal handlers.
- */
-void pidgin_setup_webview(GtkWidget *webview);
-
-/**
- * pidgin_create_webview:
- * @editable: %TRUE if this webview should be editable.  If this is
- *        %FALSE, then the toolbar will NOT be created.  If this webview
- *        should be read-only at first, but may become editable later, then
- *        pass in %TRUE here and then manually call
- *        webkit_web_view_set_editable() later.
- * @webview_ret: A pointer to a pointer to a GtkWidget.  This pointer
- *        will be set to the webview when this function exits.
- * @sw_ret: This will be filled with a pointer to the scrolled window
- *        widget which contains the webview.
- *
- * Create an PidginWebView widget and associated PidginWebViewToolbar widget.  This
- * function puts both widgets in a nice GtkFrame.  They're separated by an
- * attractive GtkSeparator.
- *
- * Returns: (transfer full): The GtkFrame containing the toolbar and webview.
- */
-GtkWidget *pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **sw_ret);
-
-/**
  * pidgin_create_small_button:
  * @image:   A button image.
  *
@@ -919,20 +891,6 @@ pidgin_pixbuf_scale_down(GdkPixbuf *src, guint max_width, guint max_height,
  * Returns: (transfer full): A scrolled window with @child packed inside of it.
  */
 GtkWidget *pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPolicyType vscrollbar_policy, GtkShadowType shadow_type, int width, int height);
-
-/**
- * pidgin_utils_init:
- *
- * Initialize some utility functions.
- */
-void pidgin_utils_init(void);
-
-/**
- * pidgin_utils_uninit:
- *
- * Uninitialize some utility functions.
- */
-void pidgin_utils_uninit(void);
 
 G_END_DECLS
 
