@@ -2195,23 +2195,25 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 			sinkpad = gst_element_get_static_pad (stream->src, "src");
 			caps = gst_pad_get_current_caps (sinkpad);
 
-			convert = gst_element_factory_make("audioconvert", NULL);
-			resample = gst_element_factory_make("audioresample", NULL);
-			capsfilter = gst_element_factory_make("capsfilter", NULL);
+			if (caps) {
+				convert = gst_element_factory_make("audioconvert", NULL);
+				resample = gst_element_factory_make("audioresample", NULL);
+				capsfilter = gst_element_factory_make("capsfilter", NULL);
 
-			gst_bin_add_many(GST_BIN(priv->confbin), convert,
-					resample, capsfilter, NULL);
-			gst_element_link_many(gst_pad_get_parent_element (srcpad),
-					convert, resample, capsfilter, NULL);
+				gst_bin_add_many(GST_BIN(priv->confbin), convert,
+						resample, capsfilter, NULL);
+				gst_element_link_many(gst_pad_get_parent_element (srcpad),
+						convert, resample, capsfilter, NULL);
 
-			g_object_set (capsfilter, "caps", caps, NULL);
-			gst_element_set_state (convert, GST_STATE_PLAYING);
-			gst_element_set_state (resample, GST_STATE_PLAYING);
-			gst_element_set_state (capsfilter, GST_STATE_PLAYING);
+				g_object_set (capsfilter, "caps", caps, NULL);
+				gst_element_set_state (convert, GST_STATE_PLAYING);
+				gst_element_set_state (resample, GST_STATE_PLAYING);
+				gst_element_set_state (capsfilter, GST_STATE_PLAYING);
 
-			srcpad = gst_element_get_static_pad (capsfilter, "src");
+				srcpad = gst_element_get_static_pad (capsfilter, "src");
+				gst_object_unref (caps);
+			}
 			gst_object_unref (sinkpad);
-			gst_object_unref (caps);
 		}
 	}
 
