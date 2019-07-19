@@ -117,6 +117,14 @@ pidgin_message_set_property(GObject *obj, guint param_id, const GValue *value, G
 		case PROP_MESSAGE:
 			pidgin_message_set_message(msg, g_value_get_object(value));
 			break;
+		case PROP_ID:
+		case PROP_CONTENT_TYPE:
+		case PROP_TIMESTAMP:
+		case PROP_AUTHOR:
+		case PROP_CONTENTS:
+		case PROP_EDITED:
+			/* we don't allow settings these */
+			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
 			break;
