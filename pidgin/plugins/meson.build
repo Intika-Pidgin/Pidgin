@@ -41,6 +41,7 @@ if PLUGINS
 	    name_prefix : '')
 
 	history = library('history', 'history.c',
+	    build_by_default: false,
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
@@ -54,11 +55,6 @@ if PLUGINS
 	    dependencies : [json, libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    build_by_default: false,
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
-
-	markerline = library('markerline', 'markerline.c',
-	    dependencies : [webkit, libpurple_dep, libpidgin_dep, glib],
-	    name_prefix : '',
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	notify = library('notify', 'notify.c',
