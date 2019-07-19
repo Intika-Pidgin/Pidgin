@@ -119,9 +119,6 @@ ARCHIVES+="ARC_JSG "
 ARC_XML="${DOWNLOAD_HOST}mingw32-libxml2-devel-2.9.0-2.1.noarch.rpm;libxml2;2.9.0-2.1;bd63823e0be2436ee7d2369aa254e7214a0dd692;${OBS_SKIP};libxml2-2.9"
 ARCHIVES+="ARC_XML "
 
-ARC_WKG="${DOWNLOAD_HOST}mingw32-libwebkitgtk-devel-1.10.2-9.2.noarch.rpm;WebKitGTK+;1.10.2-9.2;02cd5de75e3b4269bc1a31320e95f455d5804be9;${OBS_SKIP};libwebkitgtk-1.10"
-ARCHIVES+="ARC_WKG "
-
 ARC_SOU="${DOWNLOAD_HOST}mingw32-libsoup-devel-2.42.2-1.1.noarch.rpm;libsoup;2.42.2-1.1;cb4e520f1bb17c83230f28bb225420dce54c8d80;${OBS_SKIP};libsoup-2.42"
 ARCHIVES+="ARC_SOU "
 

@@ -543,7 +543,6 @@ Section Uninstall
     Delete "$INSTDIR\plugins\gtkbuddynote.dll"
     Delete "$INSTDIR\plugins\history.dll"
 	Delete "$INSTDIR\plugins\internalkeyring.dll"
-	Delete "$INSTDIR\plugins\webkit.dll"
 	Delete "$INSTDIR\plugins\wincred.dll"
     Delete "$INSTDIR\plugins\iconaway.dll"
     Delete "$INSTDIR\plugins\idle.dll"
