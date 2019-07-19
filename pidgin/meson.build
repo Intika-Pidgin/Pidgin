@@ -161,7 +161,6 @@ if ENABLE_GTK
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
 	    dependencies : [
-	    	enchant,
 	    	glib,
 	    	gstreamer_video,
 	    	gtk,

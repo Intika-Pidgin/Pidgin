@@ -321,22 +321,6 @@ if get_option('gtkui')
 		talkatu_gir = talkatu_proj.get_variable('talkatu_gir')[0]
 		talkatu_include_directories = []
 	endif
-
-	#######################################################################
-	# Check if we should compile with enchant support
-	#######################################################################
-	# We need enchant for spell checking dictionary enumeration,
-	# because webkit1 doesn't have this.
-	enable_enchant = get_option('enchant')
-	if enable_enchant
-		enchant = dependency('enchant', required : force_deps)
-		enable_enchant = enchant.found()
-		conf.set('USE_ENCHANT', enable_enchant)
-	else
-		enchant = []
-	endif
-else	# GTK
-	enable_enchant = false
 endif	# GTK
 
 ENABLE_GTK = get_option('gtkui')
@@ -997,7 +981,6 @@ message('Install pixmaps............... : ' + INSTALL_PIXMAPS.to_string())
 message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
-message('Build with Enchant support.... : ' + enable_enchant.to_string())
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
 message('Build with KWallet............ : ' + enable_kwallet.to_string())
