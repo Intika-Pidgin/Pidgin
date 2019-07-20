@@ -551,9 +551,10 @@ realize_cb_cb(PidginMediaRealizeData *data)
 	PidginMediaPrivate *priv = data->gtkmedia->priv;
 	GdkWindow *window = NULL;
 
-        if (priv->media == NULL)
-                /* gtkmedia has been disposed */
-                goto done;
+	if (priv->media == NULL) {
+		/* gtkmedia has been disposed */
+		goto done;
+	}
 
 	if (data->participant == NULL)
 #if GTK_CHECK_VERSION(2, 14, 0)
