@@ -199,17 +199,17 @@ jingle_iceudp_finalize (GObject *iceudp)
 	purple_debug_info("jingle","jingle_iceudp_finalize\n");
 
 	iter = priv->local_candidates;
-	for (; iter; iter = g_list_next(iter)) {
+	while (iter) {
 		JingleIceUdpCandidate *c = iter->data;
 		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
+		iter = g_list_delete_link(iter, iter);
 	}
-	g_list_free (priv->local_candidates);
 	iter = priv->remote_candidates;
-	for (; iter; iter = g_list_next(iter)) {
+	while (iter) {
 		JingleIceUdpCandidate *c = iter->data;
 		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
+		iter = g_list_delete_link(iter, iter);
 	}
-	g_list_free (priv->remote_candidates);
 
 	priv->local_candidates = NULL;
 	priv->remote_candidates = NULL;
