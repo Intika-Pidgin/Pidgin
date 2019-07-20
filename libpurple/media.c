@@ -1319,7 +1319,7 @@ purple_media_set_decryption_parameters(PurpleMedia *media, const gchar *sess_id,
 
 gboolean
 purple_media_set_require_encryption(PurpleMedia *media, const gchar *sess_id,
-		const gchar *participant, const gboolean require_encryption)
+		const gchar *participant, gboolean require_encryption)
 {
 #ifdef USE_VV
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);

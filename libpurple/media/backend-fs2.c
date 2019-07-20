@@ -99,7 +99,7 @@ static gboolean purple_media_backend_fs2_set_decryption_parameters(
 		const gchar *auth, const gchar *key, gsize key_len);
 static gboolean purple_media_backend_fs2_set_require_encryption(
 		PurpleMediaBackend *self, const gchar *sess_id,
-		const gchar *participant, const gboolean require_encryption);
+		const gchar *participant, gboolean require_encryption);
 #endif
 static gboolean purple_media_backend_fs2_set_remote_codecs(
 		PurpleMediaBackend *self,
@@ -2809,21 +2809,20 @@ purple_media_backend_fs2_set_decryption_parameters (PurpleMediaBackend *self,
 }
 
 static gboolean
-purple_media_backend_fs2_set_require_encryption (PurpleMediaBackend *self,
+purple_media_backend_fs2_set_require_encryption(PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *participant,
-		const gboolean require_encryption)
+		gboolean require_encryption)
 {
 	PurpleMediaBackendFs2Stream *stream;
 	gboolean result;
 
-	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND_FS2(self), FALSE);
-
 	stream = get_stream(PURPLE_MEDIA_BACKEND_FS2(self), sess_id,
 			participant);
-	if (!stream)
+	if (!stream) {
 		return FALSE;
+	}
 
-	g_object_set (stream->stream, "require-encryption",
+	g_object_set(stream->stream, "require-encryption",
 			require_encryption, NULL);
 	return TRUE;
 }
