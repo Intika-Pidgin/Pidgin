@@ -2186,14 +2186,15 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 	} else {
 		if (codec->media_type == FS_MEDIA_TYPE_AUDIO) {
 			GstElement *convert, *resample, *capsfilter;
+			GstPad *mixer_srcpad;
 			GstCaps *caps;
 
 			/* The audiomixer element requires that all input
 			 * streams have the same rate, so resample if
 			 * needed
 			 */
-			sinkpad = gst_element_get_static_pad(stream->src, "src");
-			caps = gst_pad_get_current_caps(sinkpad);
+			mixer_srcpad = gst_element_get_static_pad(stream->src, "src");
+			caps = gst_pad_get_current_caps(mixer_srcpad);
 
 			if (caps) {
 				convert = gst_element_factory_make("audioconvert", NULL);
@@ -2213,7 +2214,7 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 				srcpad = gst_element_get_static_pad(capsfilter, "src");
 				gst_object_unref(caps);
 			}
-			gst_object_unref(sinkpad);
+			gst_object_unref(mixer_srcpad);
 		}
 	}
 
