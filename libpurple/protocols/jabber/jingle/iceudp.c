@@ -194,22 +194,13 @@ static void
 jingle_iceudp_finalize (GObject *iceudp)
 {
 	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp);
-	GList *iter;
 
 	purple_debug_info("jingle","jingle_iceudp_finalize\n");
 
-	iter = priv->local_candidates;
-	while (iter) {
-		JingleIceUdpCandidate *c = iter->data;
-		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
-		iter = g_list_delete_link(iter, iter);
-	}
-	iter = priv->remote_candidates;
-	while (iter) {
-		JingleIceUdpCandidate *c = iter->data;
-		g_boxed_free(JINGLE_TYPE_ICEUDP_CANDIDATE, c);
-		iter = g_list_delete_link(iter, iter);
-	}
+	g_list_free_full(priv->local_candidates,
+			(GDestroyNotify)jingle_iceudp_candidate_free);
+	g_list_free_full(priv->remote_candidates,
+			(GDestroyNotify)jingle_iceudp_candidate_free);
 
 	priv->local_candidates = NULL;
 	priv->remote_candidates = NULL;
