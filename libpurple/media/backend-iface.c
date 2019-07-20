@@ -225,7 +225,7 @@ purple_media_backend_set_decryption_parameters(PurpleMediaBackend *self,
 gboolean
 purple_media_backend_set_require_encryption(PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *participant,
-		const gboolean require_encryption)
+		gboolean require_encryption)
 {
 	PurpleMediaBackendIface *backend_iface;
 

@@ -389,9 +389,9 @@ gboolean purple_media_set_decryption_parameters(PurpleMedia *media,
  * Sets whether a session participant's media requires encryption.
  *
  * @param media The media object to find the session in.
- * @param sess_id The session id of the session to set parameters of.
+ * @param sess_id The id of the session to set parameters of.
  * @param participant The participant of the session to set parameters of.
- * @param require-encryption TRUE is the media requires encryption.
+ * @param require-encryption TRUE if the media requires encryption.
  *
  * @since 2.14.0
  */
