@@ -231,7 +231,7 @@ static GtkWidget *prefs_sound_themes_combo_box;
 static GtkWidget *prefs_blist_themes_combo_box;
 static GtkWidget *prefs_status_themes_combo_box;
 static GtkWidget *prefs_smiley_themes_combo_box;
-static PurpleHttpConnection *prefs_conv_themes_running_request = NULL;
+static PurpleHttpConnection *prefs_themes_running_request = NULL;
 
 /* Keyrings page */
 static GtkWidget *keyring_page_instance = NULL;
@@ -1373,8 +1373,8 @@ theme_got_url(PurpleHttpConnection *http_conn, PurpleHttpResponse *response,
 	gchar *path;
 	size_t wc;
 
-	g_assert(http_conn == prefs_conv_themes_running_request);
-	prefs_conv_themes_running_request = NULL;
+	g_assert(http_conn == prefs_themes_running_request);
+	prefs_themes_running_request = NULL;
 
 	if (!purple_http_response_is_successful(response)) {
 		free_theme_info(info);
@@ -1437,12 +1437,12 @@ theme_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 			/* Oo, a web drag and drop. This is where things
 			 * will start to get interesting */
 			PurpleHttpRequest *hr;
-			purple_http_conn_cancel(prefs_conv_themes_running_request);
+			purple_http_conn_cancel(prefs_themes_running_request);
 
 			hr = purple_http_request_new(name);
 			purple_http_request_set_max_len(hr,
 				PREFS_MAX_DOWNLOADED_THEME_SIZE);
-			prefs_conv_themes_running_request = purple_http_request(
+			prefs_themes_running_request = purple_http_request(
 				NULL, hr, theme_got_url, info);
 			purple_http_request_unref(hr);
 		} else
