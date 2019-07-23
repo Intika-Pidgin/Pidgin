@@ -47,8 +47,6 @@
 #include "protocol.h"
 #include "request.h"
 #include "smiley-parser.h"
-#include "theme-loader.h"
-#include "theme-manager.h"
 #include "util.h"
 #include "version.h"
 
@@ -168,8 +166,6 @@ static GList *xa_list = NULL;
 static GList *offline_list = NULL;
 static GHashTable *protocol_lists = NULL;
 static GHashTable *e2ee_stock = NULL;
-
-static PurpleTheme *default_conv_theme = NULL;
 
 static gboolean update_send_to_selection(PidginConvWindow *win);
 static void generate_send_to_items(PidginConvWindow *win);
@@ -4468,8 +4464,6 @@ static void
 private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 {
 	PidginConversation *gtkconv;
-	const char *theme_name;
-	PurpleTheme *theme = NULL;
 	GtkWidget *pane = NULL;
 	GtkWidget *tab_cont;
 	PurpleBlistNode *convnode;
@@ -6515,12 +6509,6 @@ gboolean pidgin_conv_attach_to_conversation(PurpleConversation *conv)
 	return TRUE;
 }
 
-PurpleTheme *
-pidgin_conversations_get_default_theme(void)
-{
-	return default_conv_theme;
-}
-
 void *
 pidgin_conversations_get_handle(void)
 {
@@ -6537,14 +6525,12 @@ pidgin_conversations_init(void)
 {
 	void *handle = pidgin_conversations_get_handle();
 	void *blist_handle = purple_blist_get_handle();
-	char *theme_dir;
 
 	e2ee_stock = g_hash_table_new_full(g_str_hash, g_str_equal,
 		g_free, g_object_unref);
 
 	/* Conversations */
 	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/conversations");
-	purple_prefs_add_none(PIDGIN_PREFS_ROOT "/conversations/themes");
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/conversations/use_smooth_scrolling", TRUE);
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/conversations/close_on_tabs", TRUE);
 	purple_prefs_add_bool(PIDGIN_PREFS_ROOT "/conversations/send_bold", FALSE);
