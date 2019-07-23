@@ -231,7 +231,11 @@ purple_media_backend_set_require_encryption(PurpleMediaBackend *self,
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND(self), FALSE);
 	backend_iface = PURPLE_MEDIA_BACKEND_GET_INTERFACE(self);
-	g_return_val_if_fail(backend_iface->set_require_encryption, FALSE);
+
+	if (!backend_iface->set_require_encryption) {
+		return FALSE;
+	}
+
 	return backend_iface->set_require_encryption(self,
 			sess_id, participant, require_encryption);
 }
