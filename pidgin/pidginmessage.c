@@ -83,7 +83,7 @@ pidgin_message_get_property(GObject *obj, guint param_id, GValue *value, GParamS
 
 	switch(param_id) {
 		case PROP_MESSAGE:
-			g_value_set_object(value, pidgin_message_get_message(msg));
+			g_value_set_object(value, msg->msg);
 			break;
 		case PROP_ID:
 			g_value_set_uint(value, purple_message_get_id(msg->msg));
