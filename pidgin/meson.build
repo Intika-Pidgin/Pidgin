@@ -242,6 +242,7 @@ if ENABLE_GTK
 	endif
 
 	subdir('data')
+	subdir('glade')
 	subdir('pixmaps')
 	subdir('plugins')
 endif  # ENABLE_GTK
