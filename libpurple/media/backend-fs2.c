@@ -1896,6 +1896,7 @@ create_src(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 	gst_element_set_locked_state(session->src, FALSE);
 	gst_object_unref(session->src);
 	gst_object_unref(sinkpad);
+	gst_object_unref(srcpad);
 
 	purple_media_manager_create_output_window(purple_media_get_manager(
 			priv->media), priv->media, sess_id, NULL);

@@ -251,11 +251,11 @@ jingle_rtp_candidate_to_iceudp(JingleSession *session, guint generation,
 	gchar *password = purple_media_candidate_get_password(candidate);
 	PurpleMediaCandidateType type =
 			purple_media_candidate_get_candidate_type(candidate);
+	gchar *foundation = purple_media_candidate_get_foundation(candidate);
 
 	JingleIceUdpCandidate *iceudp_candidate = jingle_iceudp_candidate_new(
 			purple_media_candidate_get_component_id(candidate),
-			purple_media_candidate_get_foundation(candidate),
-			generation, id, ip, 0,
+			foundation, generation, id, ip, 0,
 			purple_media_candidate_get_port(candidate),
 			purple_media_candidate_get_priority(candidate), "udp",
 			type == PURPLE_MEDIA_CANDIDATE_TYPE_HOST ? "host" :
@@ -269,6 +269,7 @@ jingle_rtp_candidate_to_iceudp(JingleSession *session, guint generation,
 			purple_media_candidate_get_base_port(candidate);
 	g_free(password);
 	g_free(username);
+	g_free(foundation);
 	g_free(ip);
 	g_free(id);
 	return iceudp_candidate;
@@ -282,11 +283,14 @@ jingle_rtp_candidates_to_transport(JingleSession *session, GType type, guint gen
 		JingleRawUdpCandidate *rawudp_candidate;
 		for (; candidates; candidates = g_list_next(candidates)) {
 			PurpleMediaCandidate *candidate = candidates->data;
-			rawudp_candidate = jingle_rtp_candidate_to_rawudp(
-					session, generation, candidate);
-			jingle_rawudp_add_local_candidate(
-					JINGLE_RAWUDP(transport),
-					rawudp_candidate);
+			if (purple_media_candidate_get_protocol(candidate) ==
+					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP) {
+				rawudp_candidate = jingle_rtp_candidate_to_rawudp(
+						session, generation, candidate);
+				jingle_rawudp_add_local_candidate(
+						JINGLE_RAWUDP(transport),
+						rawudp_candidate);
+			}
 		}
 		return transport;
 	} else if (type == JINGLE_TYPE_ICEUDP) {
@@ -294,11 +298,14 @@ jingle_rtp_candidates_to_transport(JingleSession *session, GType type, guint gen
 		JingleIceUdpCandidate *iceudp_candidate;
 		for (; candidates; candidates = g_list_next(candidates)) {
 			PurpleMediaCandidate *candidate = candidates->data;
-			iceudp_candidate = jingle_rtp_candidate_to_iceudp(
-					session, generation, candidate);
-			jingle_iceudp_add_local_candidate(
-					JINGLE_ICEUDP(transport),
-					iceudp_candidate);
+			if (purple_media_candidate_get_protocol(candidate) ==
+					PURPLE_MEDIA_NETWORK_PROTOCOL_UDP) {
+				iceudp_candidate = jingle_rtp_candidate_to_iceudp(
+						session, generation, candidate);
+				jingle_iceudp_add_local_candidate(
+						JINGLE_ICEUDP(transport),
+						iceudp_candidate);
+			}
 		}
 		return transport;
 	} else {
@@ -383,7 +390,7 @@ jingle_rtp_candidates_prepared_cb(PurpleMedia *media,
 				JINGLE_TYPE_RAWUDP : JINGLE_TYPE_ICEUDP,
 			0, candidates));
 
-	g_list_free(candidates);
+	purple_media_candidate_list_free(candidates);
 	g_object_unref(oldtransport);
 
 	jingle_content_set_pending_transport(content, transport);
@@ -485,8 +492,15 @@ jingle_rtp_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 				session);
 
 		g_object_unref(session);
-	} else if (type == PURPLE_MEDIA_INFO_ACCEPT &&
+	/* The same signal is emited *four* times in case of acceptance
+	 * by purple_media_stream_info() (stream acceptance, session
+	 * acceptance, participant acceptance, and conference acceptance).
+	 * We only react to the first one, where sid and name are given
+	 * non-null values.
+	 */
+	} else if (type == PURPLE_MEDIA_INFO_ACCEPT && sid && name &&
 			jingle_session_is_initiator(session) == FALSE) {
+
 		jingle_rtp_ready(session);
 	}
 }
@@ -551,8 +565,8 @@ jingle_rtp_create_media(JingleContent *content)
 				 G_CALLBACK(jingle_rtp_codecs_changed_cb), session);
 	g_signal_connect(G_OBJECT(media), "state-changed",
 				 G_CALLBACK(jingle_rtp_state_changed_cb), session);
-	g_signal_connect(G_OBJECT(media), "stream-info",
-			G_CALLBACK(jingle_rtp_stream_info_cb), session);
+	g_signal_connect_object(G_OBJECT(media), "stream-info",
+			G_CALLBACK(jingle_rtp_stream_info_cb), session, 0);
 
 	g_object_unref(session);
 	return media;
@@ -846,6 +860,9 @@ jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *xmlcontent, J
 			g_free(remote_jid);
 			g_free(name);
 			g_object_unref(session);
+			g_object_unref(transport);
+			purple_media_codec_list_free(codecs);
+			purple_media_candidate_list_free(candidates);
 			break;
 		}
 		case JINGLE_SESSION_TERMINATE: {
@@ -875,6 +892,8 @@ jingle_rtp_handle_action_internal(JingleContent *content, xmlnode *xmlcontent, J
 			g_free(remote_jid);
 			g_free(name);
 			g_object_unref(session);
+			g_object_unref(transport);
+			purple_media_candidate_list_free(candidates);
 			break;
 		}
 		case JINGLE_DESCRIPTION_INFO: {
