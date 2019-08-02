@@ -551,6 +551,11 @@ realize_cb_cb(PidginMediaRealizeData *data)
 	PidginMediaPrivate *priv = data->gtkmedia->priv;
 	GdkWindow *window = NULL;
 
+	if (priv->media == NULL) {
+		/* gtkmedia has been disposed */
+		goto done;
+	}
+
 	if (data->participant == NULL)
 #if GTK_CHECK_VERSION(2, 14, 0)
 		window = gtk_widget_get_window(priv->local_video);
@@ -582,8 +587,10 @@ realize_cb_cb(PidginMediaRealizeData *data)
 				data->participant, window_id);
 	}
 
+done:
 	g_free(data->session_id);
 	g_free(data->participant);
+	g_object_unref(data->gtkmedia);
 	g_free(data);
 	return FALSE;
 }
@@ -960,7 +967,7 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		gtk_box_pack_start(GTK_BOX(recv_widget), aspect, TRUE, TRUE, 0);
 
 		data = g_new0(PidginMediaRealizeData, 1);
-		data->gtkmedia = gtkmedia;
+		data->gtkmedia = g_object_ref(gtkmedia);
 		data->session_id = g_strdup(sid);
 		data->participant = g_strdup(gtkmedia->priv->screenname);
 
@@ -991,7 +998,7 @@ pidgin_media_ready_cb(PurpleMedia *media, PidginMedia *gtkmedia, const gchar *si
 		gtk_box_pack_start(GTK_BOX(send_widget), aspect, FALSE, TRUE, 0);
 
 		data = g_new0(PidginMediaRealizeData, 1);
-		data->gtkmedia = gtkmedia;
+		data->gtkmedia = g_object_ref(gtkmedia);
 		data->session_id = g_strdup(sid);
 		data->participant = NULL;
 
