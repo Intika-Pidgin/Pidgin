@@ -161,16 +161,6 @@ void purple_action_menu_set_data(PurpleActionMenu *act, gpointer data);
  */
 void purple_action_menu_set_children(PurpleActionMenu *act, GList *children);
 
-/**
- * purple_action_menu_get_stock_icon:
- * @act: The menu action.
- *
- * Gets the stock icon of the PurpleActionMenu.
- *
- * Returns: The stock icon identifier.
- */
-const gchar *purple_action_menu_get_stock_icon(PurpleActionMenu *act);
-
 /******************************************************************************
  * Protocol Action API
  *****************************************************************************/
