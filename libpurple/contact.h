@@ -91,7 +91,7 @@ PurpleContact *purple_contact_new(void);
  *
  * Gets the PurpleGroup from a PurpleContact
  *
- * Returns:         The group
+ * Returns: (transfer none): The group.
  */
 PurpleGroup *purple_contact_get_group(const PurpleContact *contact);
 
@@ -101,7 +101,7 @@ PurpleGroup *purple_contact_get_group(const PurpleContact *contact);
  *
  * Returns the highest priority buddy for a given contact.
  *
- * Returns: The highest priority buddy
+ * Returns: (transfer none): The highest priority buddy.
  */
 PurpleBuddy *purple_contact_get_priority_buddy(PurpleContact *contact);
 

@@ -141,7 +141,7 @@ PurpleBuddyIcon *purple_buddy_get_icon(PurpleBuddy *buddy);
  *
  * Returns a buddy's account.
  *
- * Returns: The account
+ * Returns: (transfer none): The account.
  */
 PurpleAccount *purple_buddy_get_account(PurpleBuddy *buddy);
 
@@ -197,7 +197,7 @@ void purple_buddy_set_protocol_data(PurpleBuddy *buddy, gpointer data);
  *
  * Returns a buddy's contact.
  *
- * Returns: The buddy's contact.
+ * Returns: (transfer none): The buddy's contact.
  */
 PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy);
 
@@ -207,7 +207,7 @@ PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy);
  *
  * Returns a buddy's presence.
  *
- * Returns: The buddy's presence.
+ * Returns: (transfer none): The buddy's presence.
  */
 PurplePresence *purple_buddy_get_presence(PurpleBuddy *buddy);
 
@@ -321,7 +321,7 @@ const char *purple_buddy_get_local_alias(PurpleBuddy *buddy);
  *
  * Returns the group of which the buddy is a member.
  *
- * Returns:        The group or NULL if the buddy is not in a group
+ * Returns: (transfer none): The group or %NULL if the buddy is not in a group.
  */
 PurpleGroup *purple_buddy_get_group(PurpleBuddy *buddy);
 

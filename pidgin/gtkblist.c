@@ -7302,7 +7302,8 @@ set_urgent(void)
 		pidgin_set_urgent(GTK_WINDOW(gtkblist->window), TRUE);
 }
 
-PidginBuddyList *pidgin_blist_get_default_gtk_blist()
+PidginBuddyList *
+pidgin_blist_get_default_gtk_blist(void)
 {
 	return gtkblist;
 }

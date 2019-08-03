@@ -386,6 +386,8 @@ purple_protocol_get_max_message_size(PurpleProtocol *protocol);
  * @id: The protocol's ID.
  *
  * Finds a protocol by ID.
+ *
+ * Returns: (transfer none): The protocol, if found, or %NULL otherwise.
  */
 PurpleProtocol *purple_protocols_find(const char *id);
 
@@ -397,7 +399,8 @@ PurpleProtocol *purple_protocols_find(const char *id);
  *
  * Adds a protocol to the list of protocols.
  *
- * Returns: The protocol instance if the protocol was added, else %NULL.
+ * Returns: (transfer none): The protocol instance if the protocol was added,
+ *          else %NULL.
  */
 PurpleProtocol *purple_protocols_add(GType protocol_type, GError **error);
 

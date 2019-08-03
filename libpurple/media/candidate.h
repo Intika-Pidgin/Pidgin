@@ -71,7 +71,7 @@ PurpleMediaCandidate *purple_media_candidate_new(
  *
  * Copies a PurpleMediaCandidate.
  *
- * Returns: The copy of the PurpleMediaCandidate.
+ * Returns: (transfer full): The copy of the PurpleMediaCandidate.
  */
 PurpleMediaCandidate *purple_media_candidate_copy(
 		PurpleMediaCandidate *candidate);
@@ -83,7 +83,8 @@ PurpleMediaCandidate *purple_media_candidate_copy(
  *
  * Copies a GList of PurpleMediaCandidate and its contents.
  *
- * Returns: (element-type PurpleMediaCandidate): The copy of the GList.
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The copy of
+ *          the candidate list.
  */
 GList *purple_media_candidate_list_copy(GList *candidates);
 

@@ -111,7 +111,7 @@ purple_message_get_id(PurpleMessage *msg);
  *
  * Finds the message with a given @id.
  *
- * Returns: the #PurpleMessage, or %NULL if not found.
+ * Returns: (transfer none): The #PurpleMessage, or %NULL if not found.
  */
 PurpleMessage *
 purple_message_find_by_id(guint id);
