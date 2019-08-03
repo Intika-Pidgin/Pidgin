@@ -94,9 +94,9 @@ G_BEGIN_DECLS
 
 /**
  * purple_stun_discover:
- * @cb: The callback to call when the STUN discovery is finished if the
- *           discovery would block.  If the discovery is done, this is NOT
- *           called.
+ * @cb: (scope async): The callback to call when the STUN discovery is finished
+ *      if the discovery would block. If the discovery is done, this is NOT
+ *      called.
  *
  * Starts a NAT discovery. It returns a PurpleStunNatDiscovery if the discovery
  * is already done. Otherwise the callback is called when the discovery is over
