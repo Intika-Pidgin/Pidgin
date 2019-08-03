@@ -413,7 +413,7 @@ gboolean purple_markup_find_tag(const char *needle, const char *haystack,
  * @display_name:   The short descriptive name to display for this token.
  * @is_link:        TRUE if this should be a link, or FALSE otherwise.
  * @link_prefix:    The prefix for the link.
- * @format_cb:      A callback to format the value before adding it.
+ * @format_cb: (scope call): A callback to format the value before adding it.
  *
  * Extracts a field of data from HTML.
  *
