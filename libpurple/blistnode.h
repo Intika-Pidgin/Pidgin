@@ -122,7 +122,7 @@ PurpleBlistNode *purple_blist_node_get_parent(PurpleBlistNode *node);
  * See purple_blist_node_get_parent(), purple_blist_node_get_sibling_next(),
  *     purple_blist_node_get_sibling_prev(), purple_blist_node_next().
  *
- * Returns:  The child node.
+ * Returns: (transfer none): The child node.
  */
 PurpleBlistNode *purple_blist_node_get_first_child(PurpleBlistNode *node);
 
@@ -135,7 +135,7 @@ PurpleBlistNode *purple_blist_node_get_first_child(PurpleBlistNode *node);
  * See purple_blist_node_get_parent(), purple_blist_node_get_first_child(),
  *     purple_blist_node_get_sibling_prev(), purple_blist_node_next().
  *
- * Returns:  The sibling node.
+ * Returns: (transfer none): The sibling node.
  */
 PurpleBlistNode *purple_blist_node_get_sibling_next(PurpleBlistNode *node);
 
@@ -148,7 +148,7 @@ PurpleBlistNode *purple_blist_node_get_sibling_next(PurpleBlistNode *node);
  * See purple_blist_node_get_parent(), purple_blist_node_get_first_child(),
  *     purple_blist_node_get_sibling_next(), purple_blist_node_next().
  *
- * Returns:  The sibling node.
+ * Returns: (transfer none): The sibling node.
  */
 PurpleBlistNode *purple_blist_node_get_sibling_prev(PurpleBlistNode *node);
 
@@ -177,7 +177,7 @@ void purple_blist_node_set_ui_data(PurpleBlistNode *node, gpointer ui_data);
  *
  * Returns a node's settings
  *
- * Returns: The hash table with the node's settings
+ * Returns: (transfer none): The hash table with the node's settings.
  */
 GHashTable *purple_blist_node_get_settings(PurpleBlistNode *node);
 
@@ -289,8 +289,9 @@ gboolean purple_blist_node_is_transient(PurpleBlistNode *node);
  * purple_blist_node_get_extended_menu:
  * @n: The blist node for which to obtain the extended menu items.
  *
- * Returns: (element-type PurpleActionMenu): The extended menu items for a buddy
- *          list node, as harvested by the blist-node-extended-menu signal.
+ * Returns: (element-type PurpleActionMenu) (transfer full): The extended menu
+ *          items for a buddy list node, as harvested by the
+ *          blist-node-extended-menu signal.
  */
 GList *purple_blist_node_get_extended_menu(PurpleBlistNode *n);
 

@@ -106,7 +106,8 @@ gboolean purple_smiley_list_is_empty(PurpleSmileyList *list);
  *
  * Retrieves a smiley with the specified @shortcut from the @list.
  *
- * Returns: a #PurpleSmiley if the smiley was found, %NULL otherwise.
+ * Returns: (transfer none): A #PurpleSmiley if the smiley was found, %NULL
+ *          otherwise.
  */
 PurpleSmiley *purple_smiley_list_get_by_shortcut(PurpleSmileyList *list, const gchar *shortcut);
 

@@ -207,8 +207,8 @@ PurpleCoreUiOps *purple_core_get_ui_ops(void);
  *   </tbody></tgroup>
  * </informaltable>
  *
- * Returns: A GHashTable with strings for keys and values.  This
- * hash table must not be freed and should not be modified.
+ * Returns: (transfer none): A GHashTable with strings for keys and values.
+ *          This hash table should not be modified.
  *
  */
 GHashTable* purple_core_get_ui_info(void);

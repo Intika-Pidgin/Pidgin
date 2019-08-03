@@ -150,7 +150,7 @@ G_DECLARE_DERIVABLE_TYPE(PurpleBuddyList, purple_buddy_list, PURPLE, BUDDY_LIST,
  *
  * Returns the default buddy list.
  *
- * Returns: The default buddy list.
+ * Returns: (transfer none): The default buddy list.
  *
  * Since: 3.0.0
  */
@@ -161,7 +161,7 @@ PurpleBuddyList *purple_blist_get_default(void);
  *
  * Returns the root node of the default buddy list.
  *
- * Returns: The root node.
+ * Returns: (transfer none): The root node.
  *
  * Since: 3.0.0
  */
@@ -173,7 +173,7 @@ PurpleBlistNode *purple_blist_get_default_root(void);
  *
  * Returns the root node of the specified buddy list.
  *
- * Returns: The root node.
+ * Returns: (transfer none): The root node.
  */
 PurpleBlistNode *purple_blist_get_root(PurpleBuddyList *list);
 
@@ -330,7 +330,7 @@ void purple_blist_remove_group(PurpleGroup *group);
  *
  * Finds the buddy struct given a name and an account
  *
- * Returns:        The buddy or NULL if the buddy does not exist
+ * Returns: (transfer none): The buddy or %NULL if the buddy does not exist.
  */
 PurpleBuddy *purple_blist_find_buddy(PurpleAccount *account, const char *name);
 
@@ -342,7 +342,8 @@ PurpleBuddy *purple_blist_find_buddy(PurpleAccount *account, const char *name);
  *
  * Finds the buddy struct given a name, an account, and a group
  *
- * Returns:        The buddy or NULL if the buddy does not exist in the group
+ * Returns: (transfer none): The buddy or %NULL if the buddy does not exist in
+ *          the group.
  */
 PurpleBuddy *purple_blist_find_buddy_in_group(PurpleAccount *account, const char *name,
 		PurpleGroup *group);
@@ -365,7 +366,7 @@ GSList *purple_blist_find_buddies(PurpleAccount *account, const char *name);
  *
  * Finds a group by name
  *
- * Returns:        The group or NULL if the group does not exist
+ * Returns: (transfer none): The group or %NULL if the group does not exist.
  */
 PurpleGroup *purple_blist_find_group(const char *name);
 
@@ -374,7 +375,7 @@ PurpleGroup *purple_blist_find_group(const char *name);
  *
  * Finds or creates default group.
  *
- * Returns: The default group.
+ * Returns: (transfer none): The default group.
  */
 PurpleGroup *purple_blist_get_default_group(void);
 
@@ -385,7 +386,7 @@ PurpleGroup *purple_blist_get_default_group(void);
  *
  * Finds a chat by name.
  *
- * Returns: The chat, or %NULL if the chat does not exist.
+ * Returns: (transfer none): The chat, or %NULL if the chat does not exist.
  */
 PurpleChat *purple_blist_find_chat(PurpleAccount *account, const char *name);
 

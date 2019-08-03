@@ -272,7 +272,7 @@ char *purple_log_read(PurpleLog *log, PurpleLogReadFlags *flags);
  *
  * Returns a list of all available logs
  *
- * Returns: (element-type PurpleLog): A sorted list of logs
+ * Returns: (element-type PurpleLog) (transfer full): A sorted list of logs.
  */
 GList *purple_log_get_logs(PurpleLogType type, const char *name, PurpleAccount *account);
 
@@ -292,8 +292,8 @@ GList *purple_log_get_logs(PurpleLogType type, const char *name, PurpleAccount *
  * destroyed. If a PurpleLogSet is removed from the GHashTable, it
  * must be freed with purple_log_set_free().
  *
- * Returns: (element-type PurpleLogSet PurpleLogSet): All available unique log
- *          sets.
+ * Returns: (element-type PurpleLogSet PurpleLogSet) (transfer full): All
+ *          available unique log sets.
  */
 GHashTable *purple_log_get_log_sets(void);
 
@@ -303,7 +303,7 @@ GHashTable *purple_log_get_log_sets(void);
  *
  * Returns a list of all available system logs
  *
- * Returns: (element-type PurpleLog): A sorted list of logs
+ * Returns: (element-type PurpleLog) (transfer full): A sorted list of logs.
  */
 GList *purple_log_get_system_logs(PurpleAccount *account);
 
@@ -449,7 +449,8 @@ void purple_log_common_writer(PurpleLog *log, const char *ext);
  * It should only be passed to purple_log_logger_new() and never
  * called directly.
  *
- * Returns: (element-type PurpleLog): A sorted list of logs matching the parameters.
+ * Returns: (element-type PurpleLog) (transfer full): A sorted list of logs
+ *          matching the parameters.
  */
 GList *purple_log_common_lister(PurpleLogType type, const char *name,
 							  PurpleAccount *account, const char *ext,
@@ -554,7 +555,7 @@ gboolean purple_log_common_is_deletable(PurpleLog *log);
  *
  * Creates a new logger
  *
- * Returns: The new logger
+ * Returns: (transfer full): The new logger.
  */
 PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int functions, ...);
 
@@ -595,9 +596,9 @@ void purple_log_logger_set (PurpleLogLogger *logger);
  *
  * Returns the current logger
  *
- * Returns: logger      The current logger
+ * Returns: (transfer none): The current logger.
  */
-PurpleLogLogger *purple_log_logger_get (void);
+PurpleLogLogger *purple_log_logger_get(void);
 
 /**
  * purple_log_logger_get_options:

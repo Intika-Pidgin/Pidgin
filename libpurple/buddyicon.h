@@ -170,7 +170,7 @@ purple_buddy_icon_set_data(PurpleBuddyIcon *icon, guchar *data,
  *
  * Returns the buddy icon's account.
  *
- * Returns: The account.
+ * Returns: (transfer none): The account.
  */
 PurpleAccount *purple_buddy_icon_get_account(const PurpleBuddyIcon *icon);
 
@@ -290,14 +290,11 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username);
  *
  * Returns the buddy icon image for an account.
  *
- * The caller owns a reference to the image, and must dereference
- * the image with g_object_unref() for it to be freed.
- *
  * This function deals with loading the icon from the cache, if
  * needed, so it should be called in any case where you want the
  * appropriate icon.
  *
- * Returns: The account's buddy icon image.
+ * Returns: (transfer full): The account's buddy icon image.
  */
 PurpleImage *
 purple_buddy_icons_find_account_icon(PurpleAccount *account);
@@ -314,9 +311,7 @@ purple_buddy_icons_find_account_icon(PurpleAccount *account);
  * This function will deal with saving a record of the icon,
  * caching the data, etc.
  *
- * Returns: The icon that was set.  The caller does NOT own
- *         a reference to this, and must call g_object_ref()
- *         if it wants one.
+ * Returns: (transfer none): The icon that was set.
  */
 PurpleImage *
 purple_buddy_icons_set_account_icon(PurpleAccount *account,
@@ -353,14 +348,11 @@ purple_buddy_icons_node_has_custom_icon(PurpleBlistNode *node);
  *
  * Returns the custom buddy icon image for a blist node.
  *
- * The caller owns a reference to the image, and must dereference
- * the image with g_object_unref() for it to be freed.
- *
  * This function deals with loading the icon from the cache, if
  * needed, so it should be called in any case where you want the
  * appropriate icon.
  *
- * Returns: The custom buddy icon.
+ * Returns: (transfer full): The custom buddy icon.
  */
 PurpleImage *
 purple_buddy_icons_node_find_custom_icon(PurpleBlistNode *node);
@@ -377,8 +369,7 @@ purple_buddy_icons_node_find_custom_icon(PurpleBlistNode *node);
  * This function will deal with saving a record of the icon, caching the data,
  * etc.
  *
- * Returns: The icon that was set. The caller does NOT own a reference to this,
- *         and must call g_object_ref() if it wants one.
+ * Returns: (transfer none): The icon that was set.
  */
 PurpleImage *
 purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
@@ -395,8 +386,7 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
  * Convenience wrapper around purple_buddy_icons_node_set_custom_icon.
  * See purple_buddy_icons_node_set_custom_icon().
  *
- * Returns: The icon that was set. The caller does NOT own a reference to this,
- *         and must call g_object_ref() if it wants one.
+ * Returns: (transfer none): The icon that was set.
  */
 PurpleImage *
 purple_buddy_icons_node_set_custom_icon_from_file(PurpleBlistNode *node,

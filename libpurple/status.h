@@ -523,7 +523,7 @@ PurpleStatusType *purple_status_get_status_type(PurpleStatus *status);
  *
  * Returns the status's presence.
  *
- * Returns: The status's presence.
+ * Returns: (transfer none): The status's presence.
  */
 PurplePresence *purple_status_get_presence(PurpleStatus *status);
 

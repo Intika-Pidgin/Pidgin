@@ -319,7 +319,7 @@ void purple_serv_got_chat_invite(PurpleConnection *gc, const char *name,
  *
  * Called by a protocol when an account has joined a chat.
  *
- * Returns:     The resulting conversation
+ * Returns: (transfer none): The resulting conversation.
  */
 PurpleChatConversation *purple_serv_got_joined_chat(PurpleConnection *gc,
 									   int id, const char *name);

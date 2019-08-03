@@ -433,7 +433,7 @@ const char *purple_prefs_get_string(const char *name);
  *
  * Get string list pref value
  *
- * Returns: (element-type utf8): The value of the pref
+ * Returns: (transfer full) (element-type utf8): The value of the pref.
  */
 GList *purple_prefs_get_string_list(const char *name);
 
@@ -453,7 +453,7 @@ const char *purple_prefs_get_path(const char *name);
  *
  * Get path list pref value
  *
- * Returns: (element-type utf8): The value of the pref
+ * Returns: (transfer full) (element-type utf8): The value of the pref.
  */
 GList *purple_prefs_get_path_list(const char *name);
 
@@ -463,9 +463,10 @@ GList *purple_prefs_get_path_list(const char *name);
  *
  * Returns a list of children for a pref
  *
- * Returns: (element-type utf8): A list of newly allocated strings denoting the
- *          names of the children. Returns %NULL if there are no children or if
- *          pref doesn't exist. The caller must free all the strings and the list.
+ * Returns: (transfer full) (element-type utf8): A list of newly allocated
+ *          strings denoting the names of the children. Returns %NULL if there
+ *          are no children or if pref doesn't exist. The caller must free all
+ *          the strings and the list.
  */
 GList *purple_prefs_get_children_names(const char *name);
 
