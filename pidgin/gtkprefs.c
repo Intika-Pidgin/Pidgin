@@ -210,6 +210,22 @@ struct _PidginPrefsWindow {
 		GtkWidget *password;
 	} proxy;
 
+	/* Sounds page */
+	struct {
+		PidginPrefCombo method;
+		GtkWidget *method_vbox;
+		GtkWidget *command;
+		GtkWidget *command_hbox;
+		GtkWidget *mute;
+		GtkWidget *conv_focus;
+		PidginPrefCombo while_status;
+		struct {
+			GtkWidget *view;
+			GtkListStore *store;
+		} event;
+		GtkWidget *entry;
+	} sound;
+
 	/* Away page */
 	struct {
 		PidginPrefCombo idle_reporting;
@@ -242,7 +258,6 @@ static GList *keyring_settings_fields = NULL;
 static GtkWidget *keyring_apply = NULL;
 
 /* Sound theme specific */
-static GtkWidget *sound_entry = NULL;
 static int sound_row_sel = 0;
 static gboolean prefs_sound_themes_loading;
 
@@ -872,7 +887,6 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	purple_prefs_disconnect_by_handle(prefs);
 
 	/* NULL-ify globals */
-	sound_entry = NULL;
 	sound_row_sel = 0;
 	prefs_sound_themes_loading = FALSE;
 
@@ -1492,6 +1506,7 @@ prefs_build_theme_combo_box(GtkListStore *store, const char *current_theme, cons
 static void
 prefs_set_sound_theme_cb(GtkComboBox *combo_box, gpointer user_data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(user_data);
 	gint i;
 	gchar *pref;
 	gchar *new_theme;
@@ -1514,7 +1529,7 @@ prefs_set_sound_theme_cb(GtkComboBox *combo_box, gpointer user_data)
 		/* gets rid of the "(Custom)" from the last selection */
 		pref_sound_generate_markup();
 
-		gtk_entry_set_text(GTK_ENTRY(sound_entry), _("(default)"));
+		gtk_entry_set_text(GTK_ENTRY(win->sound.entry), _("(default)"));
 
 		g_free(new_theme);
 	}
@@ -1648,7 +1663,7 @@ add_theme_prefs_combo(GtkWidget *vbox,
 }
 
 static GtkWidget *
-theme_page(void)
+theme_page(PidginPrefsWindow *win)
 {
 	GtkWidget *label;
 	GtkWidget *ret, *vbox;
@@ -1687,7 +1702,7 @@ theme_page(void)
 	/* Sound Themes */
 	prefs_sound_themes_combo_box = add_theme_prefs_combo(
 		vbox, combo_sg, label_sg, prefs_sound_themes,
-		(GCallback)prefs_set_sound_theme_cb, NULL,
+		(GCallback)prefs_set_sound_theme_cb, win,
 		_("Sound Theme:"), PIDGIN_PREFS_ROOT "/sound/theme", "sound");
 
 	/* Smiley Themes */
@@ -2604,6 +2619,38 @@ keyring_page(void)
 
 /*** keyring page - end *************************************************/
 
+static gboolean
+sound_method_filter(GtkTreeModel *model, GtkTreeIter *iter, gpointer data)
+{
+	gboolean any = FALSE;
+	gboolean gstreamer = FALSE;
+	gboolean win32 = FALSE;
+
+	gtk_tree_model_get(model, iter, 2, &any, 3, &gstreamer, 4, &win32, -1);
+
+	if (any) {
+		return TRUE;
+	}
+
+	if (gstreamer) {
+#ifdef USE_GSTREAMER
+#ifdef _WIN32
+		return win32;
+#else
+		return !win32;
+#endif
+#else
+		return FALSE;
+#endif
+	}
+
+#ifdef _WIN32
+	return win32;
+#else
+	return !win32;
+#endif
+}
+
 static gint
 sound_cmd_yeah(GtkEntry *entry, gpointer d)
 {
@@ -2684,8 +2731,9 @@ test_sound(GtkWidget *button, gpointer i_am_NULL)
  * Resets a sound file back to default.
  */
 static void
-reset_sound(GtkWidget *button, gpointer i_am_also_NULL)
+reset_sound(GtkWidget *button, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 	gchar *pref;
 
 	pref = g_strdup_printf(PIDGIN_PREFS_ROOT "/sound/file/%s",
@@ -2693,7 +2741,7 @@ reset_sound(GtkWidget *button, gpointer i_am_also_NULL)
 	purple_prefs_set_path(pref, "");
 	g_free(pref);
 
-	gtk_entry_set_text(GTK_ENTRY(sound_entry), _("(default)"));
+	gtk_entry_set_text(GTK_ENTRY(win->sound.entry), _("(default)"));
 
 	pref_sound_generate_markup();
 }
@@ -2717,7 +2765,7 @@ sound_chosen_cb(void *user_data, const char *filename)
 	 * sound, then update the box showing the file name.
 	 */
 	if (sound == sound_row_sel)
-		gtk_entry_set_text(GTK_ENTRY(sound_entry), filename);
+		gtk_entry_set_text(GTK_ENTRY(prefs->sound.entry), filename);
 
 	pref_sound_generate_markup();
 }
@@ -2742,8 +2790,10 @@ select_sound(GtkWidget *button, gpointer being_NULL_is_fun)
 }
 
 static void
-prefs_sound_sel(GtkTreeSelection *sel, GtkTreeModel *model)
+prefs_sound_sel(GtkTreeSelection *sel, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
+	GtkTreeModel *model;
 	GtkTreeIter  iter;
 	GValue val;
 	const char *file;
@@ -2760,147 +2810,81 @@ prefs_sound_sel(GtkTreeSelection *sel, GtkTreeModel *model)
 			pidgin_sound_get_event_option(sound_row_sel));
 	file = purple_prefs_get_path(pref);
 	g_free(pref);
-	if (sound_entry)
-		gtk_entry_set_text(GTK_ENTRY(sound_entry), (file && *file != '\0') ? file : _("(default)"));
+	if (win->sound.entry) {
+		gtk_entry_set_text(GTK_ENTRY(win->sound.entry),
+		                   (file && *file != '\0') ? file
+		                                           : _("(default)"));
+	}
 	g_value_unset (&val);
 
 	pref_sound_generate_markup();
 }
 
-
 static void
-mute_changed_cb(const char *pref_name,
-                PurplePrefType pref_type,
-                gconstpointer val,
-                gpointer data)
+bind_sound_page(PidginPrefsWindow *win)
 {
-	GtkToggleButton *button = data;
-	gboolean muted = GPOINTER_TO_INT(val);
-
-	g_return_if_fail(purple_strequal (pref_name, PIDGIN_PREFS_ROOT "/sound/mute"));
-
-	/* Block the handler that re-sets the preference. */
-	g_signal_handlers_block_matched(button, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, (gpointer)pref_name);
-	gtk_toggle_button_set_active (button, muted);
-	g_signal_handlers_unblock_matched(button, G_SIGNAL_MATCH_DATA, 0, 0, NULL, NULL, (gpointer)pref_name);
-}
-
-
-static GtkWidget *
-sound_page(void)
-{
-	GtkWidget *ret;
-	GtkWidget *vbox, *vbox2, *button, *parent, *parent_parent, *parent_parent_parent;
-	GtkSizeGroup *sg;
-	GtkTreeIter iter;
-	GtkWidget *event_view;
-	GtkListStore *event_store;
-	GtkCellRenderer *rend;
-	GtkTreeViewColumn *col;
+	GtkTreeModel *model;
 	GtkTreeSelection *sel;
 	GtkTreePath *path;
-	GtkWidget *hbox;
 	int j;
 	const char *file;
 	char *pref;
-	GtkWidget *dd;
-	GtkWidget *entry;
 	const char *cmd;
 
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
+	win->sound.method.type = PURPLE_PREF_STRING;
+	win->sound.method.key = PIDGIN_PREFS_ROOT "/sound/method";
+	pidgin_prefs_bind_dropdown(&win->sound.method);
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(win->sound.method.combo));
+	gtk_tree_model_filter_set_visible_func(GTK_TREE_MODEL_FILTER(model), sound_method_filter, NULL, NULL);
+	gtk_tree_model_filter_refilter(GTK_TREE_MODEL_FILTER(model));
 
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	gtk_widget_set_sensitive(
+	        win->sound.method_vbox,
+	        !purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT
+	                                                 "/sound/method"),
+	                         "none"));
+	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
+	                              sound_changed2_cb,
+	                              win->sound.method_vbox);
 
-	vbox2 = pidgin_make_frame(ret, _("Sound Options"));
+	gtk_widget_set_sensitive(
+	        win->sound.command_hbox,
+	        purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT
+	                                                "/sound/method"),
+	                        "custom"));
+	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
+	                              sound_changed1_cb,
+	                              win->sound.command_hbox);
 
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox2), vbox, FALSE, FALSE, 0);
-
-	dd = pidgin_prefs_dropdown(vbox2, _("_Method:"), PURPLE_PREF_STRING,
-			PIDGIN_PREFS_ROOT "/sound/method",
-			_("Automatic"), "automatic",
-#ifdef USE_GSTREAMER
-#ifdef _WIN32
-/*			"WaveForm", "waveform", */
-			"DirectSound", "directsound",
-#else
-			"ESD", "esd",
-			"ALSA", "alsa",
-#endif /* _WIN32 */
-#endif /* USE_GSTREAMER */
-#ifdef _WIN32
-			"PlaySound", "playsoundw",
-#else
-			_("Console beep"), "beep",
-			_("Command"), "custom",
-#endif /* _WIN32 */
-			_("No sounds"), "none",
-			NULL);
-	gtk_size_group_add_widget(sg, dd);
-	gtk_label_set_xalign(GTK_LABEL(dd), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(dd), 0.5);
-
-	entry = gtk_entry_new();
-	gtk_editable_set_editable(GTK_EDITABLE(entry), TRUE);
 	cmd = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/sound/command");
-	if(cmd)
-		gtk_entry_set_text(GTK_ENTRY(entry), cmd);
-	g_signal_connect(G_OBJECT(entry), "changed",
-					 G_CALLBACK(sound_cmd_yeah), NULL);
+	if (cmd) {
+		gtk_entry_set_text(GTK_ENTRY(win->sound.command), cmd);
+	}
 
-	hbox = pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Sound c_ommand:\n(%s for filename)"), sg, entry, TRUE, NULL);
-	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
-								sound_changed1_cb, hbox);
-	gtk_widget_set_sensitive(hbox,
-			purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"),
-					"custom"));
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/sound/mute",
+	                           win->sound.mute);
 
-	button = pidgin_prefs_checkbox(_("M_ute sounds"), PIDGIN_PREFS_ROOT "/sound/mute", vbox);
-	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/mute", mute_changed_cb, button);
+	pidgin_prefs_bind_checkbox(PIDGIN_PREFS_ROOT "/sound/conv_focus",
+	                           win->sound.conv_focus);
 
-	pidgin_prefs_checkbox(_("Sounds when conversation has _focus"),
-				   PIDGIN_PREFS_ROOT "/sound/conv_focus", vbox);
-	pidgin_prefs_dropdown(vbox, _("_Enable sounds:"),
-				 PURPLE_PREF_INT, "/purple/sound/while_status",
-				_("Only when available"), PURPLE_SOUND_STATUS_AVAILABLE,
-				_("Only when not available"), PURPLE_SOUND_STATUS_AWAY,
-				_("Always"), PURPLE_SOUND_STATUS_ALWAYS,
-				NULL);
-
-	gtk_widget_set_sensitive(vbox,
-			!purple_strequal(purple_prefs_get_string(PIDGIN_PREFS_ROOT "/sound/method"), "none"));
-	purple_prefs_connect_callback(prefs, PIDGIN_PREFS_ROOT "/sound/method",
-								sound_changed2_cb, vbox);
-	vbox = pidgin_make_frame(ret, _("Sound Events"));
-
-	/* The following is an ugly hack to make the frame expand so the
-	 * sound events list is big enough to be usable */
-	parent = gtk_widget_get_parent(vbox);
-	parent_parent = gtk_widget_get_parent(parent);
-	parent_parent_parent = gtk_widget_get_parent(parent_parent);
-	gtk_box_set_child_packing(GTK_BOX(parent), vbox, TRUE, TRUE, 0,
-			GTK_PACK_START);
-	gtk_box_set_child_packing(GTK_BOX(parent_parent),
-			parent, TRUE, TRUE, 0, GTK_PACK_START);
-	gtk_box_set_child_packing(GTK_BOX(parent_parent_parent),
-			parent_parent, TRUE, TRUE, 0, GTK_PACK_START);
+	win->sound.while_status.type = PURPLE_PREF_INT;
+	win->sound.while_status.key = "/purple/sound/while_status";
+	pidgin_prefs_bind_dropdown(&win->sound.while_status);
 
 	/* SOUND SELECTION */
-	event_store = gtk_list_store_new (4, G_TYPE_BOOLEAN, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_UINT);
-
 	for (j=0; j < PURPLE_NUM_SOUNDS; j++) {
 		char *pref = g_strdup_printf(PIDGIN_PREFS_ROOT "/sound/enabled/%s",
 					     pidgin_sound_get_event_option(j));
 		const char *label = pidgin_sound_get_event_label(j);
+		GtkTreeIter iter;
 
 		if (label == NULL) {
 			g_free(pref);
 			continue;
 		}
 
-		gtk_list_store_append (event_store, &iter);
-		gtk_list_store_set(event_store, &iter,
+		gtk_list_store_append(win->sound.event.store, &iter);
+		gtk_list_store_set(win->sound.event.store, &iter,
 				   0, purple_prefs_get_bool(pref),
 				   1, _(label),
 				   2, pref,
@@ -2909,63 +2893,17 @@ sound_page(void)
 		g_free(pref);
 	}
 
-	event_view = gtk_tree_view_new_with_model (GTK_TREE_MODEL(event_store));
-
-	rend = gtk_cell_renderer_toggle_new();
-	sel = gtk_tree_view_get_selection (GTK_TREE_VIEW (event_view));
-	g_signal_connect (G_OBJECT (sel), "changed",
-			  G_CALLBACK (prefs_sound_sel),
-			  NULL);
-	g_signal_connect (G_OBJECT(rend), "toggled",
-			  G_CALLBACK(event_toggled), event_store);
+	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(win->sound.event.view));
 	path = gtk_tree_path_new_first();
 	gtk_tree_selection_select_path(sel, path);
 	gtk_tree_path_free(path);
 
-	col = gtk_tree_view_column_new_with_attributes (_("Play"),
-							rend,
-							"active", 0,
-							NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW(event_view), col);
-
-	rend = gtk_cell_renderer_text_new();
-	col = gtk_tree_view_column_new_with_attributes (_("Event"),
-							rend,
-							"text", 1,
-							NULL);
-	gtk_tree_view_append_column (GTK_TREE_VIEW(event_view), col);
-	g_object_unref(G_OBJECT(event_store));
-	gtk_box_pack_start(GTK_BOX(vbox),
-		pidgin_make_scrollable(event_view, GTK_POLICY_NEVER, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, 100),
-		TRUE, TRUE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	sound_entry = gtk_entry_new();
 	pref = g_strdup_printf(PIDGIN_PREFS_ROOT "/sound/file/%s",
 			       pidgin_sound_get_event_option(0));
 	file = purple_prefs_get_path(pref);
 	g_free(pref);
-	gtk_entry_set_text(GTK_ENTRY(sound_entry), (file && *file != '\0') ? file : _("(default)"));
-	gtk_editable_set_editable(GTK_EDITABLE(sound_entry), FALSE);
-	gtk_box_pack_start(GTK_BOX(hbox), sound_entry, FALSE, FALSE, PIDGIN_HIG_BOX_SPACE);
-
-	button = gtk_button_new_with_mnemonic(_("_Browse..."));
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(select_sound), NULL);
-	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
-
-	button = gtk_button_new_with_mnemonic(_("Pre_view"));
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(test_sound), NULL);
-	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
-
-	button = gtk_button_new_with_mnemonic(_("_Reset"));
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(reset_sound), NULL);
-	gtk_box_pack_start(GTK_BOX(hbox), button, FALSE, FALSE, 1);
-
-	gtk_widget_show_all(ret);
-	g_object_unref(sg);
-
-	return ret;
+	gtk_entry_set_text(GTK_ENTRY(win->sound.entry),
+	                   (file && *file != '\0') ? file : _("(default)"));
 }
 
 
@@ -3641,10 +3579,11 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	notebook_page++;
 	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
 
-	prefs_notebook_add_page(notebook, _("Sounds"), sound_page(), notebook_page++);
+	bind_sound_page(win);
+	notebook_page++;
 	bind_away_page(win);
 	notebook_page++;
-	prefs_notebook_add_page(notebook, _("Themes"), theme_page(), notebook_page++);
+	prefs_notebook_add_page(notebook, _("Themes"), theme_page(win), notebook_page++);
 #ifdef USE_VV
 	prefs_notebook_add_page(notebook, _("Voice/Video"), vv_page(win), notebook_page++);
 #endif
@@ -3861,6 +3800,34 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			proxy_button_clicked_cb);
 	gtk_widget_class_bind_template_callback(widget_class,
 			proxy_print_option);
+
+	/* Sounds page */
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.method.combo);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.method_vbox);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.command);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.command_hbox);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.mute);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.conv_focus);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.while_status.combo);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.event.view);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.event.store);
+	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
+	                                     sound.entry);
+	gtk_widget_class_bind_template_callback(widget_class, sound_cmd_yeah);
+	gtk_widget_class_bind_template_callback(widget_class, prefs_sound_sel);
+	gtk_widget_class_bind_template_callback(widget_class, event_toggled);
+	gtk_widget_class_bind_template_callback(widget_class, select_sound);
+	gtk_widget_class_bind_template_callback(widget_class, test_sound);
+	gtk_widget_class_bind_template_callback(widget_class, reset_sound);
 
 	/* Away page */
 	gtk_widget_class_bind_template_child(
