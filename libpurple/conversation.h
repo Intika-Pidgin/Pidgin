@@ -619,10 +619,9 @@ void purple_conversation_send_confirm(PurpleConversation *conv, const char *mess
  *
  * Retrieves the extended menu items for the conversation.
  *
- * Returns: (element-type PurpleActionMenu):
- *          A list of PurpleActionMenu items, harvested by the
- *          chat-extended-menu signal. The list and the menuaction
- *          items should be freed by the caller.
+ * Returns: (element-type PurpleActionMenu) (transfer full): The extended menu
+ *          items for a conversation, as harvested by the chat-extended-menu
+ *          signal.
  */
 GList * purple_conversation_get_extended_menu(PurpleConversation *conv);
 

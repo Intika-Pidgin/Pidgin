@@ -246,7 +246,7 @@ PurplePounceOption purple_pounce_get_options(const PurplePounce *pounce);
  *
  * Returns the account that will do the pouncing.
  *
- * Returns: The account that will pounce.
+ * Returns: (transfer none): The account that will pounce.
  */
 PurpleAccount *purple_pounce_get_pouncer(const PurplePounce *pounce);
 

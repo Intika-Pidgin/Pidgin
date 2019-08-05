@@ -60,7 +60,7 @@ typedef gboolean (*PurpleSmileyParseCb)(GString *out, PurpleSmiley *smiley,
  * @conv: the conversation of a message.
  * @html_message: the html message, or escaped plain message.
  * @use_remote_smileys: %TRUE if remote smileys of @conv should be parsed.
- * @cb: the callback to replace smiley text with an image.
+ * @cb: (scope call): The callback to replace smiley text with an image.
  * @ui_data: the user data to be passed to @cb and
  *           #purple_smiley_theme_get_smileys.
  *
@@ -85,8 +85,8 @@ purple_smiley_parser_smileify(PurpleConversation *conv, const gchar *html_messag
  * purple_smiley_parser_replace:
  * @smileys: the list of smileys to replace.
  * @html_message: the html message, or escaped plain message.
- * @cb: the callback to replace smiley text with an image.
- * @ui_data: the user data to be passed to @cb.
+ * @cb: (scope call): The callback to replace smiley text with an image.
+ * @ui_data: (closure cb): The user data to be passed to the callback.
  *
  * Replaces all textual smiley representations from @smileys list with images.
  *

@@ -167,7 +167,7 @@ GList *purple_accounts_get_all_active(void);
  *
  * Finds an account with the specified name and protocol id.
  *
- * Returns: The account, if found, or %FALSE otherwise.
+ * Returns: (transfer none): The account, if found, or %NULL otherwise.
  */
 PurpleAccount *purple_accounts_find(const char *name, const char *protocol);
 

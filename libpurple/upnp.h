@@ -51,9 +51,9 @@ void purple_upnp_init(void);
 
 /**
  * purple_upnp_discover:
- * @cb: an optional callback function to be notified when the UPnP
- *           discovery is complete
- * @cb_data: Extra data to be passed to the callback
+ * @cb: (scope async): An optional callback function to be notified when the
+ *      UPnP discovery is complete.
+ * @cb_data: (closure): Extra data to be passed to the callback.
  *
  * Sends a discovery request to search for a UPnP enabled IGD that
  * contains the WANIPConnection service that will allow us to recieve the
@@ -87,9 +87,9 @@ void purple_upnp_cancel_port_mapping(PurpleUPnPMappingAddRemove *mapping_data);
  * purple_upnp_set_port_mapping:
  * @portmap: The port to map to this client
  * @protocol: The protocol to map, either "TCP" or "UDP"
- * @cb: an optional callback function to be notified when the mapping
- *           addition is complete
- * @cb_data: Extra data to be passed to the callback
+ * @cb: (scope async): An optional callback function to be notified when the
+ *      mapping addition is complete.
+ * @cb_data: (closure): Extra data to be passed to the callback.
  *
  * Maps Ports in a UPnP enabled IGD that sits on the local network to
  * this purple client. Essentially, this function takes care of the port
@@ -105,9 +105,9 @@ PurpleUPnPMappingAddRemove *purple_upnp_set_port_mapping(unsigned short portmap,
  * purple_upnp_remove_port_mapping:
  * @portmap: The port to delete the mapping for
  * @protocol: The protocol to map to. Either "TCP" or "UDP"
- * @cb: an optional callback function to be notified when the mapping
- *           removal is complete
- * @cb_data: Extra data to be passed to the callback
+ * @cb: (scope async): An optional callback function to be notified when the
+ *      mapping removal is complete.
+ * @cb_data: (closure): Extra data to be passed to the callback.
  *
  * Deletes a port mapping in a UPnP enabled IGD that sits on the local network
  * to this purple client. Essentially, this function takes care of deleting the

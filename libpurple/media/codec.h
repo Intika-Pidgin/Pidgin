@@ -161,7 +161,7 @@ PurpleKeyValuePair *purple_media_codec_get_optional_parameter(
  *
  * Copies a PurpleMediaCodec object.
  *
- * Returns: The copy of the codec.
+ * Returns: (transfer full): The copy of the codec.
  */
 PurpleMediaCodec *purple_media_codec_copy(PurpleMediaCodec *codec);
 
@@ -172,7 +172,8 @@ PurpleMediaCodec *purple_media_codec_copy(PurpleMediaCodec *codec);
  *
  * Copies a GList of PurpleMediaCodec and its contents.
  *
- * Returns: (element-type PurpleMediaCodec): The copy of the GList.
+ * Returns: (element-type PurpleMediaCodec) (transfer full): The copy of the
+ *          codec list.
  */
 GList *purple_media_codec_list_copy(GList *codecs);
 
