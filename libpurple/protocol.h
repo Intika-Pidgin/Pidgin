@@ -742,7 +742,8 @@ PurpleProtocolOptions purple_protocol_get_options(const PurpleProtocol *protocol
  *
  * Returns the user splits of a protocol.
  *
- * Returns: The user splits of the protocol.
+ * Returns: (element-type PurpleAccountUserSplit) (transfer none): The user
+ *          splits of the protocol.
  */
 GList *purple_protocol_get_user_splits(const PurpleProtocol *protocol);
 
@@ -752,7 +753,8 @@ GList *purple_protocol_get_user_splits(const PurpleProtocol *protocol);
  *
  * Returns the account options for a protocol.
  *
- * Returns: The account options for the protocol.
+ * Returns: (element-type PurpleAccountOption) (transfer none): The account
+ *          options for the protocol.
  */
 GList *purple_protocol_get_account_options(const PurpleProtocol *protocol);
 

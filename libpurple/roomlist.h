@@ -166,7 +166,7 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account);
  * Retrieve the PurpleAccount that was given when the room list was
  * created.
  *
- * Returns: The PurpleAccount tied to this room list.
+ * Returns: (transfer none): The PurpleAccount tied to this room list.
  */
 PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list);
 
@@ -224,8 +224,8 @@ void purple_roomlist_room_add(PurpleRoomlist *list, PurpleRoomlistRoom *room);
  * Returns a PurpleRoomlist structure from the protocol, and
  * instructs the protocol to start fetching the list.
  *
- * Returns: A PurpleRoomlist* or %NULL if the protocol
- *         doesn't support that.
+ * Returns: (transfer full): A PurpleRoomlist* or %NULL if the protocol doesn't
+ *          support that.
  */
 PurpleRoomlist *purple_roomlist_get_list(PurpleConnection *gc);
 

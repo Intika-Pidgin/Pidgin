@@ -413,7 +413,7 @@ gboolean purple_markup_find_tag(const char *needle, const char *haystack,
  * @display_name:   The short descriptive name to display for this token.
  * @is_link:        TRUE if this should be a link, or FALSE otherwise.
  * @link_prefix:    The prefix for the link.
- * @format_cb:      A callback to format the value before adding it.
+ * @format_cb: (scope call): A callback to format the value before adding it.
  *
  * Extracts a field of data from HTML.
  *
@@ -1332,8 +1332,8 @@ gboolean purple_ipv6_address_is_valid(const char *ip);
  * This function extracts a list of URIs from the a "text/uri-list"
  * string.  It was "borrowed" from gnome_uri_list_extract_uris
  *
- * Returns: (element-type utf8): A GList containing strings allocated with
- *          g_malloc that have been split from uri-list.
+ * Returns: (element-type utf8) (transfer full): A list of strings that have
+ *          been split from uri-list.
  */
 GList *purple_uri_list_extract_uris(const gchar *uri_list);
 
@@ -1345,10 +1345,10 @@ GList *purple_uri_list_extract_uris(const gchar *uri_list);
  * "text/uri-list" string.  It was "borrowed" from
  * gnome_uri_list_extract_filenames
  *
- * Returns: (element-type utf8): A GList containing strings allocated with
- *          g_malloc that contain the filenames in the uri-list. Note that
- *          unlike the purple_uri_list_extract_uris() function, this will
- *          discard any non-file uri from the result value.
+ * Returns: (element-type utf8) (transfer full): A list of strings that contain
+ *          the filenames in the uri-list. Note that unlike the
+ *          purple_uri_list_extract_uris() function, this will discard any
+ *          non-file uri from the result value.
  */
 GList *purple_uri_list_extract_filenames(const gchar *uri_list);
 

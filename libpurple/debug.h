@@ -259,7 +259,7 @@ void purple_debug_set_ui(PurpleDebugUi *ops);
  * Returns the UI operations structure used when outputting debug
  * information.
  *
- * Returns: The UI operations structure in use.
+ * Returns: (transfer none): The UI operations structure in use.
  */
 PurpleDebugUi *purple_debug_get_ui(void);
 

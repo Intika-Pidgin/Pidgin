@@ -110,7 +110,7 @@ GList *purple_media_get_session_ids(PurpleMedia *media);
  *
  * Gets the PurpleAccount this media session is on.
  *
- * Returns: The account retrieved.
+ * Returns: (transfer none): The account retrieved.
  */
 PurpleAccount *purple_media_get_account(PurpleMedia *media);
 
@@ -196,7 +196,8 @@ void purple_media_set_params(PurpleMedia *media,
  *
  * The list is owned by the #PurpleMedia internals and should NOT be freed.
  *
- * Returns: NULL-terminated array of names of supported parameters.
+ * Returns: (array zero-terminated=1) (transfer none): Names of supported
+ *          parameters.
  */
 const gchar **purple_media_get_available_params(PurpleMedia *media);
 
@@ -262,7 +263,8 @@ struct _PurpleMediaManager *purple_media_get_manager(PurpleMedia *media);
  *
  * Gets the codecs from a session.
  *
- * Returns: (element-type PurpleMediaCodec): The retrieved codecs.
+ * Returns: (element-type PurpleMediaCodec) (transfer full): The retrieved
+ *          codecs.
  */
 GList *purple_media_get_codecs(PurpleMedia *media, const gchar *sess_id);
 
@@ -289,7 +291,8 @@ void purple_media_add_remote_candidates(PurpleMedia *media,
  *
  * Gets the local candidates from a stream.
  *
- * Returns: (element-type PurpleMediaCandidate): The local candidates.
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The local
+ *          candidates.
  */
 GList *purple_media_get_local_candidates(PurpleMedia *media,
 					 const gchar *sess_id,
@@ -304,7 +307,7 @@ GList *purple_media_get_local_candidates(PurpleMedia *media,
  *
  * Gets the active local candidates for the stream.
  *
- * Returns: (element-type PurpleMediaCandidate): The active
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The active
  *          candidates retrieved.
  */
 GList *purple_media_get_active_local_candidates(PurpleMedia *media,
@@ -319,7 +322,7 @@ GList *purple_media_get_active_local_candidates(PurpleMedia *media,
  *
  * Gets the active remote candidates for the stream.
  *
- * Returns: (element-type PurpleMediaCandidate): The remote
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The remote
  *          candidates retrieved.
  */
 GList *purple_media_get_active_remote_candidates(PurpleMedia *media,

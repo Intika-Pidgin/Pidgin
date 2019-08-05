@@ -90,7 +90,7 @@ GList *purple_conversations_get_chats(void);
  *
  * Finds a conversation of any type with the specified name and Purple account.
  *
- * Returns: The conversation if found, or %NULL otherwise.
+ * Returns: (transfer none): The conversation if found, or %NULL otherwise.
  */
 PurpleConversation *purple_conversations_find_with_account(const char *name,
 		PurpleAccount *account);
@@ -102,7 +102,7 @@ PurpleConversation *purple_conversations_find_with_account(const char *name,
  *
  * Finds an IM with the specified name and Purple account.
  *
- * Returns: The conversation if found, or %NULL otherwise.
+ * Returns: (transfer none): The conversation if found, or %NULL otherwise.
  */
 PurpleIMConversation *purple_conversations_find_im_with_account(const char *name,
 		PurpleAccount *account);
@@ -114,7 +114,7 @@ PurpleIMConversation *purple_conversations_find_im_with_account(const char *name
  *
  * Finds a chat with the specified name and Purple account.
  *
- * Returns: The conversation if found, or %NULL otherwise.
+ * Returns: (transfer none): The conversation if found, or %NULL otherwise.
  */
 PurpleChatConversation *purple_conversations_find_chat_with_account(const char *name,
 		PurpleAccount *account);
@@ -126,7 +126,7 @@ PurpleChatConversation *purple_conversations_find_chat_with_account(const char *
  *
  * Finds a chat with the specified chat ID.
  *
- * Returns: The chat conversation.
+ * Returns: (transfer none): The chat conversation.
  */
 PurpleChatConversation *purple_conversations_find_chat(const PurpleConnection *gc, int id);
 

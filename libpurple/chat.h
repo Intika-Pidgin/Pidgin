@@ -119,7 +119,8 @@ void purple_chat_set_alias(PurpleChat *chat, const char *alias);
  *
  * Returns the group of which the chat is a member.
  *
- * Returns: The parent group, or %NULL if the chat is not in a group.
+ * Returns: (transfer none): The parent group, or %NULL if the chat is not in a
+ *          group.
  */
 PurpleGroup *purple_chat_get_group(PurpleChat *chat);
 
@@ -129,7 +130,7 @@ PurpleGroup *purple_chat_get_group(PurpleChat *chat);
  *
  * Returns the account the chat belongs to.
  *
- * Returns:  The account the chat belongs to.
+ * Returns: (transfer none): The account the chat belongs to.
  */
 PurpleAccount *purple_chat_get_account(PurpleChat *chat);
 

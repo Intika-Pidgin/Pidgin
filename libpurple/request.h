@@ -357,7 +357,8 @@ purple_request_cpar_set_account(PurpleRequestCommonParameters *cpar,
  *
  * Gets the #PurpleAccount associated with the request.
  *
- * Returns: The associated #PurpleAccount, or NULL if none is.
+ * Returns: (transfer none): The associated #PurpleAccount, or %NULL if none is
+ *          set.
  */
 PurpleAccount *
 purple_request_cpar_get_account(PurpleRequestCommonParameters *cpar);
@@ -380,7 +381,8 @@ purple_request_cpar_set_conversation(PurpleRequestCommonParameters *cpar,
  *
  * Gets the #PurpleConversation associated with the request.
  *
- * Returns: The associated #PurpleConversation, or NULL if none is.
+ * Returns: (transfer none): The associated #PurpleConversation, or %NULL if
+ *          none is set.
  */
 PurpleConversation *
 purple_request_cpar_get_conversation(PurpleRequestCommonParameters *cpar);
@@ -526,7 +528,8 @@ purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...);
  *
  * Gets extra actions for the PurpleRequestFields dialog.
  *
- * Returns: A list of actions (pairs of arguments, as in setter).
+ * Returns: (transfer none): A list of actions (pairs of arguments, as in
+ *          setter).
  */
 GSList *
 purple_request_cpar_get_extra_actions(PurpleRequestCommonParameters *cpar);
@@ -612,8 +615,8 @@ void purple_request_fields_set_tab_names(PurpleRequestFields *fields,
  *
  * Returns tab names of a field list.
  *
- * Returns: NULL-terminated array of localized tab labels, or NULL if tabs
- *         are disabled.
+ * Returns: (array zero-terminated=1) (transfer none): Localized tab labels, or
+ *          %NULL if tabs are disabled.
  */
 const gchar **
 purple_request_fields_get_tab_names(const PurpleRequestFields *fields);
@@ -765,7 +768,7 @@ purple_request_fields_get_choice(const PurpleRequestFields *fields,
  *
  * Returns the account of a field with the specified ID.
  *
- * Returns: The account value, if found, or NULL otherwise.
+ * Returns: (transfer none): The account value, if found, or %NULL otherwise.
  */
 PurpleAccount *purple_request_fields_get_account(const PurpleRequestFields *fields,
 											 const char *id);
@@ -1779,7 +1782,7 @@ void purple_request_field_account_set_filter(PurpleRequestField *field,
  *
  * Returns the default account in an account field.
  *
- * Returns: The default account.
+ * Returns: (transfer none): The default account.
  */
 PurpleAccount *purple_request_field_account_get_default_value(
 		const PurpleRequestField *field);
@@ -1790,7 +1793,7 @@ PurpleAccount *purple_request_field_account_get_default_value(
  *
  * Returns the user-entered account in an account field.
  *
- * Returns: The user-entered account.
+ * Returns: (transfer none): The user-entered account.
  */
 PurpleAccount *purple_request_field_account_get_value(
 		const PurpleRequestField *field);

@@ -194,7 +194,7 @@ void pidgin_blist_uninit(void);
  * returns the PidginBuddyList we're most likely wanting to work with. This is slightly
  * cleaner than an externed global.
  *
- * Returns: The default GTK+ buddy list
+ * Returns: (transfer none): The default GTK+ buddy list.
  */
 PidginBuddyList *pidgin_blist_get_default_gtk_blist(void);
 
