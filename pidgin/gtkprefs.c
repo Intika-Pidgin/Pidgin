@@ -210,6 +210,15 @@ struct _PidginPrefsWindow {
 		GtkWidget *password;
 	} proxy;
 
+	/* Keyrings page */
+	struct {
+		PidginPrefCombo active;
+		GtkWidget *vbox;
+		PurpleRequestFields *settings;
+		GtkWidget *settings_box;
+		GtkWidget *apply;
+	} keyring;
+
 	/* Sounds page */
 	struct {
 		PidginPrefCombo method;
@@ -248,14 +257,6 @@ static GtkWidget *prefs_blist_themes_combo_box;
 static GtkWidget *prefs_status_themes_combo_box;
 static GtkWidget *prefs_smiley_themes_combo_box;
 static PurpleHttpConnection *prefs_themes_running_request = NULL;
-
-/* Keyrings page */
-static GtkWidget *keyring_page_instance = NULL;
-static GtkComboBox *keyring_combo = NULL;
-static GtkBox *keyring_vbox = NULL;
-static PurpleRequestFields *keyring_settings = NULL;
-static GtkBox *keyring_settings_box = NULL;
-static GtkWidget *keyring_apply = NULL;
 
 /* Sound theme specific */
 static int sound_row_sel = 0;
@@ -447,18 +448,15 @@ dropdown_set(GtkComboBox *combo_box, gpointer _cb)
 	cb(combo_box, active);
 }
 
-static void pidgin_prefs_dropdown_revert_active(GtkComboBox *combo_box)
+static void
+pidgin_prefs_bind_dropdown_revert_active(PidginPrefCombo *combo)
 {
-	gint previously_active;
+	g_return_if_fail(combo != NULL);
 
-	g_return_if_fail(combo_box != NULL);
+	combo->current_active = combo->previously_active;
 
-	previously_active = GPOINTER_TO_INT(g_object_get_data(
-		G_OBJECT(combo_box), "previously_active"));
-	g_object_set_data(G_OBJECT(combo_box), "current_active",
-		GINT_TO_POINTER(previously_active));
-
-	gtk_combo_box_set_active(combo_box, previously_active);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(combo->combo),
+	                         combo->previously_active);
 }
 
 static GtkWidget *
@@ -873,7 +871,7 @@ pidgin_prefs_bind_checkbox(const char *key, GtkWidget *button)
 			G_CALLBACK(set_bool_pref), (char *)key);
 }
 
-static void keyring_page_cleanup(void);
+static void keyring_page_cleanup(PidginPrefsWindow *win);
 
 static void
 delete_prefs(GtkWidget *asdf, void *gdsa)
@@ -895,7 +893,7 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 	prefs_status_themes_combo_box = NULL;
 	prefs_smiley_themes_combo_box = NULL;
 
-	keyring_page_cleanup();
+	keyring_page_cleanup(prefs);
 
 #ifdef USE_VV
 	voice_level = NULL;
@@ -2371,7 +2369,7 @@ keyring_page_settings_changed(GtkWidget *widget, gpointer _setting)
 	PurpleRequestField *setting = _setting;
 	PurpleRequestFieldType field_type;
 
-	gtk_widget_set_sensitive(keyring_apply, TRUE);
+	gtk_widget_set_sensitive(prefs->keyring.apply, TRUE);
 
 	field_type = purple_request_field_get_field_type(setting);
 
@@ -2433,19 +2431,19 @@ keyring_page_add_settings_field(GtkBox *vbox, PurpleRequestField *setting,
 }
 
 /* XXX: it could be available for all plugins, not keyrings only */
-static GtkBox *
-keyring_page_add_settings(PurpleRequestFields *settings)
+static void
+keyring_page_add_settings(PidginPrefsWindow *win)
 {
-	GtkWidget *ret;
+	GtkWidget *box;
 	GList *it, *groups;
 	GtkSizeGroup *sg;
 
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
-	gtk_box_pack_start(keyring_vbox, ret, FALSE, FALSE, 0);
+	box = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BOX_SPACE);
+	gtk_box_pack_start(GTK_BOX(win->keyring.vbox), box, FALSE, FALSE, 0);
 
 	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
-	groups = purple_request_fields_get_groups(settings);
+	groups = purple_request_fields_get_groups(win->keyring.settings);
 	for (it = g_list_first(groups); it != NULL; it = g_list_next(it)) {
 		GList *it2, *fields;
 		GtkBox *vbox;
@@ -2455,9 +2453,9 @@ keyring_page_add_settings(PurpleRequestFields *settings)
 		group = it->data;
 		group_title = purple_request_field_group_get_title(group);
 		if (group_title) {
-			vbox = GTK_BOX(pidgin_make_frame(ret, group_title));
+			vbox = GTK_BOX(pidgin_make_frame(box, group_title));
 		} else {
-			vbox = GTK_BOX(ret);
+			vbox = GTK_BOX(box);
 		}
 
 		fields = purple_request_field_group_get_fields(group);
@@ -2469,52 +2467,57 @@ keyring_page_add_settings(PurpleRequestFields *settings)
 
 	g_object_unref(sg);
 
-	return GTK_BOX(ret);
+	win->keyring.settings_box = box;
 }
 
 static void
-keyring_page_settings_apply(GtkButton *button, gpointer _unused)
+keyring_page_settings_apply(GtkButton *button, gpointer data)
 {
-	if (!purple_keyring_apply_settings(prefs, keyring_settings))
-		return;
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 
-	gtk_widget_set_sensitive(keyring_apply, FALSE);
+	if (!purple_keyring_apply_settings(win, win->keyring.settings)) {
+		return;
+	}
+
+	gtk_widget_set_sensitive(win->keyring.apply, FALSE);
 }
 
 static void
-keyring_page_update_settings()
+keyring_page_update_settings(PidginPrefsWindow *win)
 {
-	if (keyring_settings != NULL)
-		purple_request_fields_destroy(keyring_settings);
-	keyring_settings = purple_keyring_read_settings();
-	if (!keyring_settings)
+	g_clear_pointer(&win->keyring.settings, purple_request_fields_destroy);
+	win->keyring.settings = purple_keyring_read_settings();
+	if (!win->keyring.settings) {
 		return;
+	}
 
-	keyring_settings_box = keyring_page_add_settings(keyring_settings);
+	keyring_page_add_settings(win);
 
-	keyring_apply = gtk_button_new_with_mnemonic(_("_Apply"));
-	gtk_box_pack_start(keyring_settings_box, keyring_apply, FALSE, FALSE, 1);
-	gtk_widget_set_sensitive(keyring_apply, FALSE);
-	g_signal_connect(G_OBJECT(keyring_apply), "clicked",
-		G_CALLBACK(keyring_page_settings_apply), NULL);
+	win->keyring.apply = gtk_button_new_with_mnemonic(_("_Apply"));
+	gtk_box_pack_start(GTK_BOX(win->keyring.settings_box),
+	                   win->keyring.apply, FALSE, FALSE, 1);
+	gtk_widget_set_sensitive(win->keyring.apply, FALSE);
+	g_signal_connect(G_OBJECT(win->keyring.apply), "clicked",
+	                 G_CALLBACK(keyring_page_settings_apply), win);
 
-	gtk_widget_show_all(keyring_page_instance);
+	gtk_widget_show_all(win->keyring.settings_box);
 }
 
 static void
-keyring_page_pref_set_inuse(GError *error, gpointer _keyring_page_instance)
+keyring_page_pref_set_inuse(GError *error, G_GNUC_UNUSED gpointer unused)
 {
 	PurpleKeyring *in_use = purple_keyring_get_inuse();
 
-	if (_keyring_page_instance != keyring_page_instance) {
+	if (prefs == NULL) {
 		purple_debug_info("gtkprefs", "pref window already closed\n");
 		return;
 	}
 
-	gtk_widget_set_sensitive(GTK_WIDGET(keyring_combo), TRUE);
+	gtk_widget_set_sensitive(GTK_WIDGET(prefs->keyring.active.combo), TRUE);
 
 	if (error != NULL) {
-		pidgin_prefs_dropdown_revert_active(keyring_combo);
+		pidgin_prefs_bind_dropdown_revert_active(
+		        &prefs->keyring.active);
 		purple_notify_error(NULL, _("Keyring"),
 			_("Failed to set new keyring"), error->message, NULL);
 		return;
@@ -2524,22 +2527,21 @@ keyring_page_pref_set_inuse(GError *error, gpointer _keyring_page_instance)
 	purple_prefs_set_string("/purple/keyring/active",
 		purple_keyring_get_id(in_use));
 
-	keyring_page_update_settings();
+	keyring_page_update_settings(prefs);
 }
 
 static void
-keyring_page_pref_changed(GtkComboBox *combo_box, PidginPrefValue value)
+keyring_page_pref_changed(GtkComboBox *combo_box, PidginPrefCombo *combo)
 {
 	const char *keyring_id;
 	PurpleKeyring *keyring;
 
 	g_return_if_fail(combo_box != NULL);
-	g_return_if_fail(value.type == PURPLE_PREF_STRING);
 
-	keyring_id = value.value.string;
+	keyring_id = combo->value.string;
 	keyring = purple_keyring_find_keyring_by_id(keyring_id);
 	if (keyring == NULL) {
-		pidgin_prefs_dropdown_revert_active(keyring_combo);
+		pidgin_prefs_bind_dropdown_revert_active(combo);
 		purple_notify_error(NULL, _("Keyring"),
 			_("Selected keyring is disabled"), NULL, NULL);
 		return;
@@ -2547,58 +2549,35 @@ keyring_page_pref_changed(GtkComboBox *combo_box, PidginPrefValue value)
 
 	gtk_widget_set_sensitive(GTK_WIDGET(combo_box), FALSE);
 
-	g_clear_pointer(&keyring_settings_box, gtk_widget_destroy);
-	gtk_widget_show_all(keyring_page_instance);
-	if (keyring_settings)
-		purple_request_fields_destroy(keyring_settings);
-	keyring_settings = NULL;
+	g_clear_pointer(&prefs->keyring.settings_box, gtk_widget_destroy);
+	g_clear_pointer(&prefs->keyring.settings,
+	                purple_request_fields_destroy);
 
 	purple_keyring_set_inuse(keyring, FALSE, keyring_page_pref_set_inuse,
-		keyring_page_instance);
+	                         NULL);
 }
 
 static void
-keyring_page_cleanup(void)
+keyring_page_cleanup(PidginPrefsWindow *win)
 {
-	keyring_page_instance = NULL;
-	keyring_combo = NULL;
-	keyring_vbox = NULL;
-	keyring_settings_box = NULL;
-	if (keyring_settings)
-		purple_request_fields_destroy(keyring_settings);
-	keyring_settings = NULL;
-	keyring_apply = NULL;
+	g_clear_pointer(&win->keyring.settings, purple_request_fields_destroy);
 }
 
-static GtkWidget *
-keyring_page(void)
+static void
+bind_keyring_page(PidginPrefsWindow *win)
 {
 	GList *names;
-	PidginPrefValue initial;
-
-	g_return_val_if_fail(keyring_page_instance == NULL,
-		keyring_page_instance);
-
-	keyring_page_instance = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width(GTK_CONTAINER(keyring_page_instance),
-		PIDGIN_HIG_BORDER);
 
 	/* Keyring selection */
-	keyring_vbox = GTK_BOX(pidgin_make_frame(keyring_page_instance,
-		_("Keyring")));
 	names = purple_keyring_get_options();
-	initial.type = PURPLE_PREF_STRING;
-	initial.value.string = purple_prefs_get_string("/purple/keyring/active");
-	pidgin_prefs_dropdown_from_list_with_cb(GTK_WIDGET(keyring_vbox),
-		_("Keyring:"), &keyring_combo, names, initial,
-		keyring_page_pref_changed);
+	win->keyring.active.type = PURPLE_PREF_STRING;
+	win->keyring.active.key = "/purple/keyring/active";
+	pidgin_prefs_bind_dropdown_from_list(&win->keyring.active, names);
+	/* Override the usual callback to defer changing the pref. */
+	win->keyring.active.cb = keyring_page_pref_changed;
 	g_list_free(names);
 
-	keyring_page_update_settings();
-
-	gtk_widget_show_all(keyring_page_instance);
-
-	return keyring_page_instance;
+	keyring_page_update_settings(win);
 }
 
 /*** keyring page - end *************************************************/
@@ -3561,7 +3540,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	notebook_page++;
 	bind_proxy_page(win);
 	notebook_page++;
-	prefs_notebook_add_page(notebook, _("Password Storage"), keyring_page(), notebook_page++);
+	bind_keyring_page(win);
+	notebook_page++;
 
 	bind_sound_page(win);
 	notebook_page++;
@@ -3784,6 +3764,12 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			proxy_button_clicked_cb);
 	gtk_widget_class_bind_template_callback(widget_class,
 			proxy_print_option);
+
+	/* Keyrings page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, keyring.active.combo);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, keyring.vbox);
 
 	/* Sounds page */
 	gtk_widget_class_bind_template_child(widget_class, PidginPrefsWindow,
