@@ -246,6 +246,14 @@ struct _PidginPrefsWindow {
 		GtkWidget *startup_hbox;
 		GtkWidget *startup_label;
 	} away;
+
+	/* Themes page */
+	struct {
+		GtkWidget *blist;
+		GtkWidget *status;
+		GtkWidget *sound;
+		GtkWidget *smiley;
+	} theme;
 };
 
 /* Main dialog */
@@ -1467,37 +1475,25 @@ theme_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 }
 
 /* builds a theme combo box from a list store with colums: icon preview, markup, theme name */
-static GtkWidget *
-prefs_build_theme_combo_box(GtkListStore *store, const char *current_theme, const char *type)
+static void
+prefs_build_theme_combo_box(GtkWidget *combo_box, GtkListStore *store,
+                            const char *current_theme, const char *type)
 {
-	GtkCellRenderer *cell_rend;
-	GtkWidget *combo_box;
 	GtkTargetEntry te[3] = {
 		{"text/plain", 0, 0},
 		{"text/uri-list", 0, 1},
 		{"STRING", 0, 2}
 	};
 
-	g_return_val_if_fail(store != NULL && current_theme != NULL, NULL);
+	g_return_if_fail(store != NULL && current_theme != NULL);
 
-	combo_box = gtk_combo_box_new_with_model(GTK_TREE_MODEL(store));
-
-	cell_rend = gtk_cell_renderer_pixbuf_new();
-	gtk_cell_renderer_set_fixed_size(cell_rend, PREFS_OPTIMAL_ICON_SIZE, PREFS_OPTIMAL_ICON_SIZE);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT (combo_box), cell_rend, FALSE);
-	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(combo_box), cell_rend, "pixbuf", 0, NULL);
-
-	cell_rend = gtk_cell_renderer_text_new();
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT (combo_box), cell_rend, TRUE);
-	gtk_cell_layout_set_attributes(GTK_CELL_LAYOUT(combo_box), cell_rend, "markup", 1, NULL);
-	g_object_set(cell_rend, "ellipsize", PANGO_ELLIPSIZE_END, NULL);
+	gtk_combo_box_set_model(GTK_COMBO_BOX(combo_box),
+	                        GTK_TREE_MODEL(store));
 
 	gtk_drag_dest_set(combo_box, GTK_DEST_DEFAULT_MOTION | GTK_DEST_DEFAULT_HIGHLIGHT | GTK_DEST_DEFAULT_DROP, te,
 					sizeof(te) / sizeof(GtkTargetEntry) , GDK_ACTION_COPY | GDK_ACTION_MOVE);
 
 	g_signal_connect(G_OBJECT(combo_box), "drag_data_received", G_CALLBACK(theme_dnd_recv), (gpointer) type);
-
-	return combo_box;
 }
 
 /* sets the current sound theme */
@@ -1629,95 +1625,36 @@ prefs_set_status_icon_theme_cb(GtkComboBox *combo_box, gpointer user_data)
 	}
 }
 
-static GtkWidget *
-add_theme_prefs_combo(GtkWidget *vbox,
-                      GtkSizeGroup *combo_sg, GtkSizeGroup *label_sg,
-                      GtkListStore *theme_store,
-                      GCallback combo_box_cb, gpointer combo_box_cb_user_data,
-                      const char *label_str, const char *prefs_path,
-                      const char *theme_type)
+static void
+bind_theme_page(PidginPrefsWindow *win)
 {
-	GtkWidget *label;
-	GtkWidget *combo_box = NULL;
-	GtkWidget *themesel_hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_BOX_SPACE);
-
-	label = gtk_label_new(label_str);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-	gtk_size_group_add_widget(label_sg, label);
-	gtk_box_pack_start(GTK_BOX(themesel_hbox), label, FALSE, FALSE, 0);
-
-	combo_box = prefs_build_theme_combo_box(theme_store,
-						purple_prefs_get_string(prefs_path),
-						theme_type);
-	g_signal_connect(G_OBJECT(combo_box), "changed",
-						(GCallback)combo_box_cb, combo_box_cb_user_data);
-	gtk_size_group_add_widget(combo_sg, combo_box);
-	gtk_box_pack_start(GTK_BOX(themesel_hbox), combo_box, TRUE, TRUE, 0);
-
-	gtk_box_pack_start(GTK_BOX(vbox), themesel_hbox, FALSE, FALSE, 0);
-
-	return combo_box;
-}
-
-static GtkWidget *
-theme_page(PidginPrefsWindow *win)
-{
-	GtkWidget *label;
-	GtkWidget *ret, *vbox;
-	GtkSizeGroup *label_sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-	GtkSizeGroup *combo_sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
-
-	ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width (GTK_CONTAINER (ret), PIDGIN_HIG_BORDER);
-
-	vbox = pidgin_make_frame(ret, _("Theme Selections"));
-
-	/* Instructions */
-	label = gtk_label_new(_("Select a theme that you would like to use from "
-							"the lists below.\nNew themes can be installed by "
-							"dragging and dropping them onto the theme list."));
-
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-	gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_LEFT);
-
-	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, FALSE, 0);
-	gtk_widget_show(label);
-
 	/* Buddy List Themes */
-	prefs_blist_themes_combo_box = add_theme_prefs_combo(
-		vbox, combo_sg, label_sg, prefs_blist_themes,
-		(GCallback)prefs_set_blist_theme_cb, NULL,
-		_("Buddy List Theme:"), PIDGIN_PREFS_ROOT "/blist/theme", "blist");
+	prefs_build_theme_combo_box(win->theme.blist, prefs_blist_themes,
+	                            PIDGIN_PREFS_ROOT "/blist/theme", "blist");
+	prefs_blist_themes_combo_box = win->theme.blist;
 
 	/* Status Icon Themes */
-	prefs_status_themes_combo_box = add_theme_prefs_combo(
-		vbox, combo_sg, label_sg, prefs_status_icon_themes,
-		(GCallback)prefs_set_status_icon_theme_cb, NULL,
-		_("Status Icon Theme:"), PIDGIN_PREFS_ROOT "/status/icon-theme", "icon");
+	prefs_build_theme_combo_box(win->theme.status, prefs_status_icon_themes,
+	                            PIDGIN_PREFS_ROOT "/status/icon-theme",
+	                            "icon");
+	prefs_status_themes_combo_box = win->theme.status;
 
 	/* Sound Themes */
-	prefs_sound_themes_combo_box = add_theme_prefs_combo(
-		vbox, combo_sg, label_sg, prefs_sound_themes,
-		(GCallback)prefs_set_sound_theme_cb, win,
-		_("Sound Theme:"), PIDGIN_PREFS_ROOT "/sound/theme", "sound");
+	prefs_build_theme_combo_box(win->theme.sound, prefs_sound_themes,
+	                            PIDGIN_PREFS_ROOT "/sound/theme", "sound");
+	prefs_sound_themes_combo_box = win->theme.sound;
 
 	/* Smiley Themes */
-	prefs_smiley_themes_combo_box = add_theme_prefs_combo(
-		vbox, combo_sg, label_sg, prefs_smiley_themes,
-		(GCallback)prefs_set_smiley_theme_cb, NULL,
-		_("Smiley Theme:"), PIDGIN_PREFS_ROOT "/smileys/theme", "smiley");
+	prefs_build_theme_combo_box(win->theme.smiley, prefs_smiley_themes,
+	                            PIDGIN_PREFS_ROOT "/smileys/theme",
+	                            "smiley");
+	prefs_smiley_themes_combo_box = win->theme.smiley;
 
 	/* Custom sort so "none" theme is at top of list */
 	gtk_tree_sortable_set_sort_func(GTK_TREE_SORTABLE(prefs_smiley_themes),
 	                                2, pidgin_sort_smileys, NULL, NULL);
 	gtk_tree_sortable_set_sort_column_id(GTK_TREE_SORTABLE(prefs_smiley_themes),
 										 2, GTK_SORT_ASCENDING);
-
-	gtk_widget_show_all(ret);
-
-	return ret;
 }
 
 static void
@@ -3547,7 +3484,8 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	notebook_page++;
 	bind_away_page(win);
 	notebook_page++;
-	prefs_notebook_add_page(notebook, _("Themes"), theme_page(win), notebook_page++);
+	bind_theme_page(win);
+	notebook_page++;
 #ifdef USE_VV
 	prefs_notebook_add_page(notebook, _("Voice/Video"), vv_page(win), notebook_page++);
 #endif
@@ -3820,6 +3758,24 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 			widget_class, PidginPrefsWindow, away.startup_hbox);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow, away.startup_label);
+
+	/* Themes page */
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, theme.blist);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, theme.status);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, theme.sound);
+	gtk_widget_class_bind_template_child(
+			widget_class, PidginPrefsWindow, theme.smiley);
+	gtk_widget_class_bind_template_callback(widget_class,
+			prefs_set_blist_theme_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			prefs_set_status_icon_theme_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			prefs_set_sound_theme_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+			prefs_set_smiley_theme_cb);
 }
 
 static void
