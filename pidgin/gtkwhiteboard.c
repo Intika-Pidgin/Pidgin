@@ -52,6 +52,7 @@ G_DECLARE_FINAL_TYPE(PidginWhiteboard, pidgin_whiteboard, PIDGIN, WHITEBOARD,
  * @height:       Canvas height
  * @brush_color:  Foreground color
  * @brush_size:   Brush size
+ * @brush_state:  The @PidginWhiteboardBrushState state of the brush
  *
  * A PidginWhiteboard
  */
@@ -71,18 +72,16 @@ struct _PidginWhiteboard
 	int height;
 	int brush_color;
 	int brush_size;
+	PidginWhiteboardBrushState brush_state;
+
+	/* Tracks last position of the mouse when drawing */
+	gint last_x;
+	gint last_y;
+	/* Tracks how many brush motions made */
+	gint motion_count;
 };
 
 G_DEFINE_TYPE(PidginWhiteboard, pidgin_whiteboard, GTK_TYPE_WINDOW)
-
-/******************************************************************************
- * Globals
- *****************************************************************************/
-
-static int LastX;       /* Tracks last position of the mouse when drawing */
-static int LastY;
-static int MotionCount; /* Tracks how many brush motions made */
-static PidginWhiteboardBrushState brush_state = PIDGIN_WHITEBOARD_BRUSH_UP;
 
 /******************************************************************************
  * Helpers
@@ -259,14 +258,14 @@ static gboolean pidgin_whiteboard_brush_down(GtkWidget *widget, GdkEventButton *
 	PurpleWhiteboard *wb = gtkwb->wb;
 	GList *draw_list = purple_whiteboard_get_draw_list(wb);
 
-	if (brush_state != PIDGIN_WHITEBOARD_BRUSH_UP) {
+	if (gtkwb->brush_state != PIDGIN_WHITEBOARD_BRUSH_UP) {
 		/* Potential double-click DOWN to DOWN? */
-		brush_state = PIDGIN_WHITEBOARD_BRUSH_DOWN;
+		gtkwb->brush_state = PIDGIN_WHITEBOARD_BRUSH_DOWN;
 
 		/* return FALSE; */
 	}
 
-	brush_state = PIDGIN_WHITEBOARD_BRUSH_DOWN;
+	gtkwb->brush_state = PIDGIN_WHITEBOARD_BRUSH_DOWN;
 
 	if (event->button == GDK_BUTTON_PRIMARY && gtkwb->cr != NULL) {
 		/* Check if draw_list has contents; if so, clear it */
@@ -277,13 +276,15 @@ static gboolean pidgin_whiteboard_brush_down(GtkWidget *widget, GdkEventButton *
 		}
 
 		/* Set tracking variables */
-		LastX = event->x;
-		LastY = event->y;
+		gtkwb->last_x = event->x;
+		gtkwb->last_y = event->y;
 
-		MotionCount = 0;
+		gtkwb->motion_count = 0;
 
-		draw_list = g_list_append(draw_list, GINT_TO_POINTER(LastX));
-		draw_list = g_list_append(draw_list, GINT_TO_POINTER(LastY));
+		draw_list = g_list_append(draw_list,
+		                          GINT_TO_POINTER(gtkwb->last_x));
+		draw_list = g_list_append(draw_list,
+		                          GINT_TO_POINTER(gtkwb->last_y));
 
 		pidgin_whiteboard_draw_brush_point(gtkwb->wb,
 											 event->x, event->y,
@@ -320,29 +321,28 @@ static gboolean pidgin_whiteboard_brush_motion(GtkWidget *widget, GdkEventMotion
 	}
 
 	if (state & GDK_BUTTON1_MASK && gtkwb->cr != NULL) {
-		if ((brush_state != PIDGIN_WHITEBOARD_BRUSH_DOWN) &&
-			(brush_state != PIDGIN_WHITEBOARD_BRUSH_MOTION))
-		{
-			purple_debug_error("gtkwhiteboard",
-				"***Bad brush state transition %d to MOTION\n",
-				brush_state);
+		if ((gtkwb->brush_state != PIDGIN_WHITEBOARD_BRUSH_DOWN) &&
+		    (gtkwb->brush_state != PIDGIN_WHITEBOARD_BRUSH_MOTION)) {
+			purple_debug_error(
+			        "gtkwhiteboard",
+			        "***Bad brush state transition %d to MOTION\n",
+			        gtkwb->brush_state);
 
-			brush_state = PIDGIN_WHITEBOARD_BRUSH_MOTION;
+			gtkwb->brush_state = PIDGIN_WHITEBOARD_BRUSH_MOTION;
 
 			return FALSE;
 		}
-		brush_state = PIDGIN_WHITEBOARD_BRUSH_MOTION;
+		gtkwb->brush_state = PIDGIN_WHITEBOARD_BRUSH_MOTION;
 
-		dx = x - LastX;
-		dy = y - LastY;
+		dx = x - gtkwb->last_x;
+		dy = y - gtkwb->last_y;
 
-		MotionCount++;
+		gtkwb->motion_count++;
 
 		/* NOTE 100 is a temporary constant for how many deltas/motions in a
 		 * stroke (needs UI Ops?)
 		 */
-		if(MotionCount == 100)
-		{
+		if (gtkwb->motion_count == 100) {
 			draw_list = g_list_append(draw_list, GINT_TO_POINTER(dx));
 			draw_list = g_list_append(draw_list, GINT_TO_POINTER(dy));
 
@@ -357,26 +357,27 @@ static gboolean pidgin_whiteboard_brush_motion(GtkWidget *widget, GdkEventMotion
 			}
 
 			/* Reset motion tracking */
-			MotionCount = 0;
+			gtkwb->motion_count = 0;
 
-			draw_list = g_list_append(draw_list, GINT_TO_POINTER(LastX));
-			draw_list = g_list_append(draw_list, GINT_TO_POINTER(LastY));
+			draw_list = g_list_append(
+			        draw_list, GINT_TO_POINTER(gtkwb->last_x));
+			draw_list = g_list_append(
+			        draw_list, GINT_TO_POINTER(gtkwb->last_y));
 
-			dx = x - LastX;
-			dy = y - LastY;
+			dx = x - gtkwb->last_x;
+			dy = y - gtkwb->last_y;
 		}
 
 		draw_list = g_list_append(draw_list, GINT_TO_POINTER(dx));
 		draw_list = g_list_append(draw_list, GINT_TO_POINTER(dy));
 
-		pidgin_whiteboard_draw_brush_line(gtkwb->wb,
-											LastX, LastY,
-											x, y,
-											gtkwb->brush_color, gtkwb->brush_size);
+		pidgin_whiteboard_draw_brush_line(
+		        gtkwb->wb, gtkwb->last_x, gtkwb->last_y, x, y,
+		        gtkwb->brush_color, gtkwb->brush_size);
 
 		/* Set tracking variables */
-		LastX = x;
-		LastY = y;
+		gtkwb->last_x = x;
+		gtkwb->last_y = y;
 	}
 
 	purple_whiteboard_set_draw_list(wb, draw_list);
@@ -391,25 +392,23 @@ static gboolean pidgin_whiteboard_brush_up(GtkWidget *widget, GdkEventButton *ev
 	PurpleWhiteboard *wb = gtkwb->wb;
 	GList *draw_list = purple_whiteboard_get_draw_list(wb);
 
-	if ((brush_state != PIDGIN_WHITEBOARD_BRUSH_DOWN) &&
-		(brush_state != PIDGIN_WHITEBOARD_BRUSH_MOTION))
-	{
+	if ((gtkwb->brush_state != PIDGIN_WHITEBOARD_BRUSH_DOWN) &&
+	    (gtkwb->brush_state != PIDGIN_WHITEBOARD_BRUSH_MOTION)) {
 		purple_debug_error("gtkwhiteboard",
-			"***Bad brush state transition %d to UP\n",
-			brush_state);
+		                   "***Bad brush state transition %d to UP\n",
+		                   gtkwb->brush_state);
 
-		brush_state = PIDGIN_WHITEBOARD_BRUSH_UP;
+		gtkwb->brush_state = PIDGIN_WHITEBOARD_BRUSH_UP;
 
 		return FALSE;
 	}
-	brush_state = PIDGIN_WHITEBOARD_BRUSH_UP;
+	gtkwb->brush_state = PIDGIN_WHITEBOARD_BRUSH_UP;
 
 	if (event->button == GDK_BUTTON_PRIMARY && gtkwb->cr != NULL) {
 		/* If the brush was never moved, express two sets of two deltas That's a
 		 * 'point,' but not for Yahoo!
 		 */
-		if(MotionCount == 0)
-		{
+		if (gtkwb->motion_count == 0) {
 			int index;
 
 			/* For Yahoo!, a (0 0) indicates the end of drawing */
@@ -642,6 +641,8 @@ static void
 pidgin_whiteboard_init(PidginWhiteboard *self)
 {
 	gtk_widget_init_template(GTK_WIDGET(self));
+
+	self->brush_state = PIDGIN_WHITEBOARD_BRUSH_UP;
 }
 
 static void
