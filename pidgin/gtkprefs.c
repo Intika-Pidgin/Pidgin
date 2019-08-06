@@ -2137,11 +2137,20 @@ browser_changed2_cb(const char *name, PurplePrefType type,
 
 	gtk_widget_set_sensitive(hbox, purple_strequal(browser, "custom"));
 }
+#endif /* _WIN32 */
 
 static void
 bind_browser_page(PidginPrefsWindow *win)
 {
-	if (purple_running_gnome()) {
+#ifdef _WIN32
+	/* We use the registered default browser in windows */
+	gtk_widget_hide(win->browser.page);
+	return;
+#else
+	/* if the user is running Mac OS X, hide the browsers tab */
+	if (purple_running_osx()) {
+		gtk_widget_hide(win->browser.page);
+	} else if (purple_running_gnome()) {
 		gchar *path;
 
 		gtk_stack_set_visible_child_name(GTK_STACK(win->browser.stack),
@@ -2202,8 +2211,8 @@ bind_browser_page(PidginPrefsWindow *win)
 					FALSE);
 		}
 	}
+#endif /* _WIN32 */
 }
-#endif /*_WIN32*/
 
 static void
 bind_proxy_page(PidginPrefsWindow *win)
@@ -3440,54 +3449,26 @@ vv_page(PidginPrefsWindow *win)
 }
 #endif
 
-static int
-prefs_notebook_add_page(GtkNotebook *notebook, const char *text,
-		GtkWidget *page, int ind)
-{
-	return gtk_notebook_insert_page(notebook, page, gtk_label_new(text), ind);
-}
-
 static void
 prefs_notebook_init(PidginPrefsWindow *win)
 {
+#ifdef USE_VV
 	GtkNotebook *notebook = GTK_NOTEBOOK(win->notebook);
-	int notebook_page = 0;
-
-	bind_interface_page(win);
-	notebook_page++;
-
-#ifdef _WIN32
-	/* We use the registered default browser in windows */
-	gtk_widget_hide(win->browser.page);
-#else
-	/* if the user is running Mac OS X, hide the browsers tab */
-	if (purple_running_osx()) {
-		gtk_widget_hide(win->browser.page);
-	} else {
-		bind_browser_page(win);
-		notebook_page++;
-	}
 #endif
 
+	bind_interface_page(win);
+	bind_browser_page(win);
 	bind_conv_page(win);
-	notebook_page++;
 	bind_logging_page(win);
-	notebook_page++;
 	bind_network_page(win);
-	notebook_page++;
 	bind_proxy_page(win);
-	notebook_page++;
 	bind_keyring_page(win);
-	notebook_page++;
-
 	bind_sound_page(win);
-	notebook_page++;
 	bind_away_page(win);
-	notebook_page++;
 	bind_theme_page(win);
-	notebook_page++;
 #ifdef USE_VV
-	prefs_notebook_add_page(notebook, _("Voice/Video"), vv_page(win), notebook_page++);
+	gtk_notebook_append_page(notebook, vv_page(win),
+	                         gtk_label_new(_("Voice/Video")));
 #endif
 }
 
