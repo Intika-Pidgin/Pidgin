@@ -254,6 +254,23 @@ struct _PidginPrefsWindow {
 		GtkWidget *sound;
 		GtkWidget *smiley;
 	} theme;
+
+#ifdef USE_VV
+	/* Voice/Video page */
+	struct {
+		struct {
+			GtkWidget *level;
+			GtkWidget *threshold;
+			GtkWidget *volume;
+			GstElement *pipeline;
+		} voice;
+
+		struct {
+			GtkWidget *drawing_area;
+			GstElement *pipeline;
+		} video;
+	} vv;
+#endif
 };
 
 /* Main dialog */
@@ -275,18 +292,6 @@ static GtkListStore *prefs_sound_themes;
 static GtkListStore *prefs_blist_themes;
 static GtkListStore *prefs_status_icon_themes;
 static GtkListStore *prefs_smiley_themes;
-
-#ifdef USE_VV
-
-static GtkWidget *voice_level;
-static GtkWidget *voice_threshold;
-static GtkWidget *voice_volume;
-static GstElement *voice_pipeline;
-
-static GtkWidget *video_drawing_area;
-static GstElement *video_pipeline;
-
-#endif
 
 /*
  * PROTOTYPES
@@ -903,12 +908,6 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 
 	keyring_page_cleanup(prefs);
 
-#ifdef USE_VV
-	voice_level = NULL;
-	voice_threshold = NULL;
-	voice_volume = NULL;
-	video_drawing_area = NULL;
-#endif
 	g_free(prefs->proxy.gnome_program_path);
 	g_free(prefs->browser.gnome_program_path);
 	prefs = NULL;
@@ -2946,12 +2945,14 @@ create_voice_pipeline(void)
 static void
 on_volume_change_cb(GtkWidget *w, gdouble value, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 	GstElement *volume;
 
-	if (!voice_pipeline)
+	if (!win->vv.voice.pipeline) {
 		return;
+	}
 
-	volume = gst_bin_get_by_name(GST_BIN(voice_pipeline), "volume");
+	volume = gst_bin_get_by_name(GST_BIN(win->vv.voice.pipeline), "volume");
 	g_object_set(volume, "volume",
 	             gtk_scale_button_get_value(GTK_SCALE_BUTTON(w)) * 10.0, NULL);
 }
@@ -2980,6 +2981,8 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 static gboolean
 gst_bus_cb(GstBus *bus, GstMessage *msg, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
+
 	if (GST_MESSAGE_TYPE(msg) == GST_MESSAGE_ELEMENT &&
 		gst_structure_has_name(gst_message_get_structure(msg), "level")) {
 
@@ -2992,14 +2995,18 @@ gst_bus_cb(GstBus *bus, GstMessage *msg, gpointer data)
 			GstElement *valve;
 
 			percent = gst_msg_db_to_percent(msg, "rms");
-			gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(voice_level), percent);
+			gtk_progress_bar_set_fraction(
+			        GTK_PROGRESS_BAR(win->vv.voice.level), percent);
 
 			percent = gst_msg_db_to_percent(msg, "decay");
-			threshold = gtk_range_get_value(GTK_RANGE(voice_threshold)) / 100.0;
+			threshold = gtk_range_get_value(GTK_RANGE(
+			                    win->vv.voice.threshold)) /
+			            100.0;
 			valve = gst_bin_get_by_name(GST_BIN(GST_ELEMENT_PARENT(src)), "valve");
 			g_object_set(valve, "drop", (percent < threshold), NULL);
-			g_object_set(voice_level, "text",
-			             (percent < threshold) ? _("DROP") : " ", NULL);
+			g_object_set(win->vv.voice.level, "text",
+			             (percent < threshold) ? _("DROP") : " ",
+			             NULL);
 		}
 
 		g_free(name);
@@ -3011,23 +3018,25 @@ gst_bus_cb(GstBus *bus, GstMessage *msg, gpointer data)
 static void
 voice_test_destroy_cb(GtkWidget *w, gpointer data)
 {
-	if (!voice_pipeline)
-		return;
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 
-	gst_element_set_state(voice_pipeline, GST_STATE_NULL);
-	gst_object_unref(voice_pipeline);
-	voice_pipeline = NULL;
+	if (!win->vv.voice.pipeline) {
+		return;
+	}
+
+	gst_element_set_state(win->vv.voice.pipeline, GST_STATE_NULL);
+	g_clear_pointer(&win->vv.voice.pipeline, gst_object_unref);
 }
 
 static void
-enable_voice_test(void)
+enable_voice_test(PidginPrefsWindow *win)
 {
 	GstBus *bus;
 
-	voice_pipeline = create_voice_pipeline();
-	bus = gst_pipeline_get_bus(GST_PIPELINE(voice_pipeline));
+	win->vv.voice.pipeline = create_voice_pipeline();
+	bus = gst_pipeline_get_bus(GST_PIPELINE(win->vv.voice.pipeline));
 	gst_bus_add_signal_watch(bus);
-	g_signal_connect(bus, "message", G_CALLBACK(gst_bus_cb), NULL);
+	g_signal_connect(bus, "message", G_CALLBACK(gst_bus_cb), win);
 	gst_object_unref(bus);
 }
 
@@ -3037,28 +3046,29 @@ toggle_voice_test_cb(GtkToggleButton *test, gpointer data)
 	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 
 	if (gtk_toggle_button_get_active(test)) {
-		gtk_widget_set_sensitive(voice_level, TRUE);
-		enable_voice_test();
+		gtk_widget_set_sensitive(win->vv.voice.level, TRUE);
+		enable_voice_test(win);
 
-		g_signal_connect(voice_volume, "value-changed",
-		                 G_CALLBACK(on_volume_change_cb), NULL);
+		g_signal_connect(win->vv.voice.volume, "value-changed",
+		                 G_CALLBACK(on_volume_change_cb), win);
 		g_signal_connect(test, "destroy",
-		                 G_CALLBACK(voice_test_destroy_cb), NULL);
+		                 G_CALLBACK(voice_test_destroy_cb), win);
 		g_signal_connect(win->notebook, "switch-page",
 		                 G_CALLBACK(vv_test_switch_page_cb), test);
 	} else {
-		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(voice_level), 0.0);
-		gtk_widget_set_sensitive(voice_level, FALSE);
-		g_object_disconnect(voice_volume, "any-signal::value-changed",
-		                    G_CALLBACK(on_volume_change_cb), NULL,
-		                    NULL);
+		gtk_progress_bar_set_fraction(
+		        GTK_PROGRESS_BAR(win->vv.voice.level), 0.0);
+		gtk_widget_set_sensitive(win->vv.voice.level, FALSE);
+		g_object_disconnect(win->vv.voice.volume,
+		                    "any-signal::value-changed",
+		                    G_CALLBACK(on_volume_change_cb), win, NULL);
 		g_object_disconnect(test, "any-signal::destroy",
-		                    G_CALLBACK(voice_test_destroy_cb), NULL,
+		                    G_CALLBACK(voice_test_destroy_cb), win,
 		                    NULL);
 		g_object_disconnect(win->notebook, "any-signal::switch-page",
 		                    G_CALLBACK(vv_test_switch_page_cb), test,
 		                    NULL);
-		voice_test_destroy_cb(NULL, NULL);
+		voice_test_destroy_cb(NULL, win);
 	}
 }
 
@@ -3130,9 +3140,9 @@ make_voice_test(PidginPrefsWindow *win, GtkWidget *vbox)
 	gtk_box_pack_start(GTK_BOX(vbox), level, FALSE, FALSE, 0);
 	gtk_widget_set_sensitive(level, FALSE);
 
-	voice_volume = volume;
-	voice_level = level;
-	voice_threshold = threshold;
+	win->vv.voice.volume = volume;
+	win->vv.voice.level = level;
+	win->vv.voice.threshold = threshold;
 	g_signal_connect(test, "toggled",
 	                 G_CALLBACK(toggle_voice_test_cb), win);
 }
@@ -3163,12 +3173,14 @@ create_video_pipeline(void)
 static void
 video_test_destroy_cb(GtkWidget *w, gpointer data)
 {
-	if (!video_pipeline)
-		return;
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 
-	gst_element_set_state(video_pipeline, GST_STATE_NULL);
-	gst_object_unref(video_pipeline);
-	video_pipeline = NULL;
+	if (!win->vv.video.pipeline) {
+		return;
+	}
+
+	gst_element_set_state(win->vv.video.pipeline, GST_STATE_NULL);
+	g_clear_pointer(&win->vv.video.pipeline, gst_object_unref);
 }
 
 static void
@@ -3201,10 +3213,10 @@ window_id_cb(GstBus *bus, GstMessage *msg, gulong window_id)
 }
 
 static void
-enable_video_test(void)
+enable_video_test(PidginPrefsWindow *win)
 {
 	GstBus *bus;
-	GdkWindow *window = gtk_widget_get_window(video_drawing_area);
+	GdkWindow *window = gtk_widget_get_window(win->vv.video.drawing_area);
 	gulong window_id = 0;
 
 #ifdef GDK_WINDOWING_WIN32
@@ -3229,8 +3241,8 @@ enable_video_test(void)
 #	error "Unsupported GDK windowing system"
 #endif
 
-	video_pipeline = create_video_pipeline();
-	bus = gst_pipeline_get_bus(GST_PIPELINE(video_pipeline));
+	win->vv.video.pipeline = create_video_pipeline();
+	bus = gst_pipeline_get_bus(GST_PIPELINE(win->vv.video.pipeline));
 #if GST_CHECK_VERSION(1,0,0)
 	gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL, NULL);
 #else
@@ -3240,7 +3252,8 @@ enable_video_test(void)
 	                 G_CALLBACK(window_id_cb), (gpointer)window_id);
 	gst_object_unref(bus);
 
-	gst_element_set_state(GST_ELEMENT(video_pipeline), GST_STATE_PLAYING);
+	gst_element_set_state(GST_ELEMENT(win->vv.video.pipeline),
+	                      GST_STATE_PLAYING);
 }
 
 static void
@@ -3249,19 +3262,19 @@ toggle_video_test_cb(GtkToggleButton *test, gpointer data)
 	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
 
 	if (gtk_toggle_button_get_active(test)) {
-		enable_video_test();
+		enable_video_test(win);
 		g_signal_connect(test, "destroy",
-		                 G_CALLBACK(video_test_destroy_cb), NULL);
+		                 G_CALLBACK(video_test_destroy_cb), win);
 		g_signal_connect(win->notebook, "switch-page",
 		                 G_CALLBACK(vv_test_switch_page_cb), test);
 	} else {
 		g_object_disconnect(test, "any-signal::destroy",
-		                    G_CALLBACK(video_test_destroy_cb), NULL,
+		                    G_CALLBACK(video_test_destroy_cb), win,
 		                    NULL);
 		g_object_disconnect(win->notebook, "any-signal::switch-page",
 		                    G_CALLBACK(vv_test_switch_page_cb), test,
 		                    NULL);
-		video_test_destroy_cb(NULL, NULL);
+		video_test_destroy_cb(NULL, win);
 	}
 }
 
@@ -3271,7 +3284,7 @@ make_video_test(PidginPrefsWindow *win, GtkWidget *vbox)
 	GtkWidget *test;
 	GtkWidget *video;
 
-	video_drawing_area = video = pidgin_create_video_widget();
+	win->vv.video.drawing_area = video = pidgin_create_video_widget();
 	gtk_box_pack_start(GTK_BOX(vbox), video, TRUE, TRUE, 0);
 	gtk_widget_set_size_request(GTK_WIDGET(video), 240, 180);
 
@@ -3286,6 +3299,8 @@ static void
 vv_device_changed_cb(const gchar *name, PurplePrefType type,
                      gconstpointer value, gpointer data)
 {
+	PidginPrefsWindow *win = PIDGIN_PREFS_WINDOW(data);
+
 	PurpleMediaManager *manager;
 	PurpleMediaElementInfo *info;
 
@@ -3294,12 +3309,12 @@ vv_device_changed_cb(const gchar *name, PurplePrefType type,
 	purple_media_manager_set_active_element(manager, info);
 
 	/* Refresh test viewers */
-	if (strstr(name, "audio") && voice_pipeline) {
-		voice_test_destroy_cb(NULL, NULL);
-		enable_voice_test();
-	} else if(strstr(name, "video") && video_pipeline) {
-		video_test_destroy_cb(NULL, NULL);
-		enable_video_test();
+	if (strstr(name, "audio") && win->vv.voice.pipeline) {
+		voice_test_destroy_cb(NULL, win);
+		enable_voice_test(win);
+	} else if (strstr(name, "video") && win->vv.video.pipeline) {
+		video_test_destroy_cb(NULL, win);
+		enable_video_test(win);
 	}
 }
 
@@ -3357,7 +3372,7 @@ make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
 }
 
 static GtkWidget *
-make_vv_frame(GtkWidget *parent, GtkSizeGroup *sg,
+make_vv_frame(PidginPrefsWindow *win, GtkWidget *parent, GtkSizeGroup *sg,
               const gchar *name, PurpleMediaElementType type)
 {
 	GtkWidget *vbox;
@@ -3368,8 +3383,8 @@ make_vv_frame(GtkWidget *parent, GtkSizeGroup *sg,
 	dropdown = make_vv_dropdown(vbox, sg, type);
 
 	purple_prefs_connect_callback(vbox,
-			purple_media_type_to_preference_key(type),
-			vv_device_changed_cb, vbox);
+	                              purple_media_type_to_preference_key(type),
+	                              vv_device_changed_cb, win);
 	g_signal_connect_swapped(vbox, "destroy",
 	                         G_CALLBACK(purple_prefs_disconnect_by_handle), vbox);
 
@@ -3418,26 +3433,30 @@ vv_page(PidginPrefsWindow *win)
 	manager = purple_media_manager_get();
 
 	vbox = pidgin_make_frame(ret, _("Audio"));
-	frame = make_vv_frame(vbox, sg, _("Input"),
-			PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SRC);
+	frame = make_vv_frame(win, vbox, sg, _("Input"),
+	                      PURPLE_MEDIA_ELEMENT_AUDIO |
+	                              PURPLE_MEDIA_ELEMENT_SRC);
 	g_signal_connect_object(manager, "elements-changed::audiosrc",
 			G_CALLBACK(device_list_changed_cb), frame, 0);
 
-	frame = make_vv_frame(vbox, sg, _("Output"),
-			PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SINK);
+	frame = make_vv_frame(win, vbox, sg, _("Output"),
+	                      PURPLE_MEDIA_ELEMENT_AUDIO |
+	                              PURPLE_MEDIA_ELEMENT_SINK);
 	g_signal_connect_object(manager, "elements-changed::audiosink",
 			G_CALLBACK(device_list_changed_cb), frame, 0);
 
 	make_voice_test(win, vbox);
 
 	vbox = pidgin_make_frame(ret, _("Video"));
-	frame = make_vv_frame(vbox, sg, _("Input"),
-	              PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC);
+	frame = make_vv_frame(win, vbox, sg, _("Input"),
+	                      PURPLE_MEDIA_ELEMENT_VIDEO |
+	                              PURPLE_MEDIA_ELEMENT_SRC);
 	g_signal_connect_object(manager, "elements-changed::videosrc",
 			G_CALLBACK(device_list_changed_cb), frame, 0);
 
-	frame = make_vv_frame(vbox, sg, _("Output"),
-			PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SINK);
+	frame = make_vv_frame(win, vbox, sg, _("Output"),
+	                      PURPLE_MEDIA_ELEMENT_VIDEO |
+	                              PURPLE_MEDIA_ELEMENT_SINK);
 	g_signal_connect_object(manager, "elements-changed::videosink",
 			G_CALLBACK(device_list_changed_cb), frame, 0);
 
