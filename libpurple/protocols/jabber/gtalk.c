@@ -120,6 +120,6 @@ gtalk_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 PURPLE_DEFINE_TYPE_EXTENDED(
 	GTalkProtocol, gtalk_protocol, JABBER_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
 	                                  gtalk_protocol_server_iface_init)
 );

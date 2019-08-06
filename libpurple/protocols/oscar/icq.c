@@ -70,6 +70,6 @@ icq_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 PURPLE_DEFINE_TYPE_EXTENDED(
 	ICQProtocol, icq_protocol, OSCAR_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
 	                                  icq_protocol_client_iface_init)
 );
