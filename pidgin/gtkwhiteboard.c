@@ -713,7 +713,6 @@ static void
 pidgin_whiteboard_destroy(PurpleWhiteboard *wb)
 {
 	PidginWhiteboard *gtkwb;
-	GtkWidget *colour_dialog;
 
 	g_return_if_fail(wb != NULL);
 	gtkwb = purple_whiteboard_get_ui_data(wb);
@@ -725,14 +724,6 @@ pidgin_whiteboard_destroy(PurpleWhiteboard *wb)
 	/* Clear graphical memory */
 	g_clear_pointer(&gtkwb->cr, cairo_destroy);
 	g_clear_pointer(&gtkwb->surface, cairo_surface_destroy);
-
-	colour_dialog =
-	        g_object_get_data(G_OBJECT(gtkwb->window), "colour-dialog");
-	if (colour_dialog) {
-		gtk_widget_destroy(colour_dialog);
-		g_object_set_data(G_OBJECT(gtkwb->window), "colour-dialog",
-		                  NULL);
-	}
 
 	g_clear_pointer(&gtkwb->window, gtk_widget_destroy);
 
