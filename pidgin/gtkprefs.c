@@ -783,7 +783,7 @@ pidgin_prefs_bind_dropdown_from_list(PidginPrefCombo *combo, GList *menuitems)
 static void
 pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
 {
-	GtkListStore *store = NULL;
+	GtkTreeModel *store = NULL;
 	GtkTreeIter iter;
 	GtkTreeIter active;
 
@@ -797,10 +797,9 @@ pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
 		g_return_if_reached();
 	}
 
-	store = GTK_LIST_STORE(
-			gtk_combo_box_get_model(GTK_COMBO_BOX(combo->combo)));
+	store = gtk_combo_box_get_model(GTK_COMBO_BOX(combo->combo));
 
-	if (!gtk_tree_model_get_iter_first(GTK_TREE_MODEL(store), &iter)) {
+	if (!gtk_tree_model_get_iter_first(store, &iter)) {
 		g_return_if_reached();
 	}
 
@@ -810,7 +809,7 @@ pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
 		gboolean bool_value = FALSE;
 
 		if (combo->type == PURPLE_PREF_INT) {
-			gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			gtk_tree_model_get(store, &iter,
 			                   PREF_DROPDOWN_VALUE, &int_value,
 			                   -1);
 			if (combo->value.integer == int_value) {
@@ -819,7 +818,7 @@ pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
 			}
 		}
 		else if (combo->type == PURPLE_PREF_STRING) {
-			gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			gtk_tree_model_get(store, &iter,
 			                   PREF_DROPDOWN_VALUE, &str_value,
 			                   -1);
 			if (purple_strequal(combo->value.string, str_value)) {
@@ -828,7 +827,7 @@ pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
 			}
 		}
 		else if (combo->type == PURPLE_PREF_BOOLEAN) {
-			gtk_tree_model_get(GTK_TREE_MODEL(store), &iter,
+			gtk_tree_model_get(store, &iter,
 			                   PREF_DROPDOWN_VALUE, &bool_value,
 			                   -1);
 			if (combo->value.boolean == bool_value) {
@@ -836,7 +835,7 @@ pidgin_prefs_bind_dropdown(PidginPrefCombo *combo)
 				break;
 			}
 		}
-	} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(store), &iter));
+	} while (gtk_tree_model_iter_next(store, &iter));
 
 	gtk_combo_box_set_active_iter(GTK_COMBO_BOX(combo->combo), &active);
 
