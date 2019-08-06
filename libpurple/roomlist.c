@@ -407,6 +407,70 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account)
 	return list;
 }
 
+/**************************************************************************
+ * Protocol Roomlist Interface API
+ **************************************************************************/
+#define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
+	PurpleProtocolRoomlistInterface *roomlist_iface = \
+		PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(protocol); \
+	if (roomlist_iface && roomlist_iface->funcname) \
+		roomlist_iface->funcname(__VA_ARGS__);
+
+#define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
+	PurpleProtocolRoomlistInterface *roomlist_iface = \
+		PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(protocol); \
+	if (roomlist_iface && roomlist_iface->funcname) \
+		return roomlist_iface->funcname(__VA_ARGS__); \
+	else \
+		return defaultreturn;
+
+GType
+purple_protocol_roomlist_iface_get_type(void)
+{
+	static GType type = 0;
+
+	if (G_UNLIKELY(type == 0)) {
+		static const GTypeInfo info = {
+			.class_size = sizeof(PurpleProtocolRoomlistInterface),
+		};
+
+		type = g_type_register_static(G_TYPE_INTERFACE,
+				"PurpleProtocolRoomlistInterface", &info, 0);
+	}
+	return type;
+}
+
+PurpleRoomlist *
+purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
+		PurpleConnection *gc)
+{
+	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, get_list, gc);
+}
+
+void
+purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
+		PurpleRoomlist *list)
+{
+	DEFINE_PROTOCOL_FUNC(protocol, cancel, list);
+}
+
+void
+purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
+		PurpleRoomlist *list, PurpleRoomlistRoom *category)
+{
+	DEFINE_PROTOCOL_FUNC(protocol, expand_category, list, category);
+}
+
+char *
+purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
+		PurpleRoomlistRoom *room)
+{
+	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, room_serialize, room);
+}
+
+#undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
+#undef DEFINE_PROTOCOL_FUNC
+
 /**************************************************************************/
 /* Room API                                                               */
 /**************************************************************************/

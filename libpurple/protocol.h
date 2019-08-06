@@ -561,39 +561,6 @@ struct _PurpleProtocolPrivacyInterface
 #define PURPLE_PROTOCOL_PRIVACY_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY, \
                                                 PurpleProtocolPrivacyInterface))
 
-#define PURPLE_TYPE_PROTOCOL_ROOMLIST \
-	(purple_protocol_roomlist_iface_get_type())
-
-typedef struct _PurpleProtocolRoomlistInterface PurpleProtocolRoomlistInterface;
-
-/**
- * PurpleProtocolRoomlistInterface:
- *
- * The protocol roomlist interface.
- *
- * This interface provides callbacks for room listing.
- */
-struct _PurpleProtocolRoomlistInterface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	PurpleRoomlist *(*get_list)(PurpleConnection *gc);
-
-	void (*cancel)(PurpleRoomlist *list);
-
-	void (*expand_category)(PurpleRoomlist *list,
-						 PurpleRoomlistRoom *category);
-
-	/* room list serialize */
-	char *(*room_serialize)(PurpleRoomlistRoom *room);
-};
-
-#define PURPLE_IS_PROTOCOL_ROOMLIST(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST))
-#define PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST, \
-                                                 PurpleProtocolRoomlistInterface))
-
 #define PURPLE_TYPE_PROTOCOL_MEDIA (purple_protocol_media_iface_get_type())
 
 typedef struct _PurpleProtocolMediaInterface PurpleProtocolMediaInterface;
@@ -1255,73 +1222,6 @@ void purple_protocol_privacy_iface_rem_deny(PurpleProtocol *protocol,
  */
 void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection);
-
-/**************************************************************************/
-/* Protocol Roomlist Interface API                                        */
-/**************************************************************************/
-
-/**
- * purple_protocol_roomlist_iface_get_type:
- *
- * Returns: The #GType for the protocol roomlist interface.
- *
- * Since: 3.0.0
- */
-GType purple_protocol_roomlist_iface_get_type(void);
-
-/**
- * purple_protocol_roomlist_iface_get_list:
- * @protocol: The #PurpleProtocol instance.
- * @gc: The #PurpleAccount to get the roomlist for.
- *
- * Gets the list of rooms for @gc.
- *
- * Returns: (transfer full): The roomlist for @gc.
- *
- * Since: 3.0.0
- */
-PurpleRoomlist *purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
-		PurpleConnection *gc);
-
-/**
- * purple_protocol_roomlist_iface_cancel:
- * @protocol: The #PurpleProtocol instance.
- * @list: The #PurpleRoomlist instance.
- *
- * Requesting a roomlist can take a long time.  This function cancels a request
- * that's already in progress.
- *
- * Since: 3.0.0
- */
-void purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
-		PurpleRoomlist *list);
-
-/**
- * purple_protocol_roomlist_iface_expand_category:
- * @protocol: The #PurpleProtocol instance.
- * @list: The #PurpleRoomlist instance.
- * @category: The category to expand.
- *
- * Expands the given @category for @list.
- *
- * Since: 3.0.0
- */
-void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
-		PurpleRoomlist *list, PurpleRoomlistRoom *category);
-
-/**
- * purple_protocol_roomlist_iface_room_serialize:
- * @protocol: The #PurpleProtocol instance.
- * @room: The #PurpleRoomlistRoom instance.
- *
- * Serializes @room into a string that will be displayed in a user interface.
- *
- * Returns: (transfer full): The serialized form of @room.
- *
- * Since: 3.0.0
- */
-char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
-		PurpleRoomlistRoom *room);
 
 /**************************************************************************/
 /* Protocol Media Interface API                                           */
