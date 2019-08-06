@@ -38,7 +38,7 @@ G_BEGIN_DECLS
 #define PURPLE_TYPE_MEDIA_BACKEND		(purple_media_backend_get_type())
 #define PURPLE_IS_MEDIA_BACKEND(obj)		(G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_MEDIA_BACKEND))
 #define PURPLE_MEDIA_BACKEND(obj)		(G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_MEDIA_BACKEND, PurpleMediaBackend))
-#define PURPLE_MEDIA_BACKEND_GET_INTERFACE(inst)(G_TYPE_INSTANCE_GET_INTERFACE((inst), PURPLE_TYPE_MEDIA_BACKEND, PurpleMediaBackendIface))
+#define PURPLE_MEDIA_BACKEND_GET_INTERFACE(inst)(G_TYPE_INSTANCE_GET_INTERFACE((inst), PURPLE_TYPE_MEDIA_BACKEND, PurpleMediaBackendInterface))
 
 /**
  * PurpleMediaBackend:
@@ -48,13 +48,13 @@ G_BEGIN_DECLS
 typedef struct _PurpleMediaBackend PurpleMediaBackend;
 
 /**
- * PurpleMediaBackendIface:
+ * PurpleMediaBackendInterface:
  *
  * A structure to derive media backends from.
  */
-typedef struct _PurpleMediaBackendIface PurpleMediaBackendIface;
+typedef struct _PurpleMediaBackendInterface PurpleMediaBackendInterface;
 
-struct _PurpleMediaBackendIface
+struct _PurpleMediaBackendInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface; /* The parent iface class */

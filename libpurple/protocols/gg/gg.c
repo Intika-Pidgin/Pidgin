@@ -1061,7 +1061,7 @@ ggp_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-ggp_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+ggp_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions            = ggp_get_actions;
 	client_iface->list_emblem            = ggp_list_emblem;
@@ -1075,7 +1075,7 @@ ggp_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-ggp_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+ggp_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->get_info       = ggp_pubdir_get_info_protocol;
 	server_iface->set_status     = ggp_status_set_purplestatus;
@@ -1089,14 +1089,14 @@ ggp_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-ggp_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+ggp_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = ggp_message_send_im;
 	im_iface->send_typing = ggp_send_typing;
 }
 
 static void
-ggp_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+ggp_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info          = ggp_chat_info;
 	chat_iface->info_defaults = ggp_chat_info_defaults;
@@ -1110,13 +1110,13 @@ ggp_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-ggp_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+ggp_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list = ggp_chat_roomlist_get_list;
 }
 
 static void
-ggp_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+ggp_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_deny = ggp_add_deny;
 	privacy_iface->rem_deny = ggp_rem_deny;

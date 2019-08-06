@@ -4118,7 +4118,7 @@ jabber_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-jabber_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+jabber_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions     = jabber_get_actions;
 	client_iface->list_emblem     = jabber_list_emblem;
@@ -4133,7 +4133,7 @@ jabber_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-jabber_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+jabber_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->register_user          = jabber_register_account;
 	server_iface->unregister_user        = jabber_unregister_account;
@@ -4153,14 +4153,14 @@ jabber_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-jabber_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+jabber_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = jabber_message_send_im;
 	im_iface->send_typing = jabber_send_typing;
 }
 
 static void
-jabber_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+jabber_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info               = jabber_chat_info;
 	chat_iface->info_defaults      = jabber_chat_info_defaults;
@@ -4174,14 +4174,14 @@ jabber_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-jabber_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+jabber_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_deny = jabber_add_deny;
 	privacy_iface->rem_deny = jabber_rem_deny;
 }
 
 static void
-jabber_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+jabber_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list       = jabber_roomlist_get_list;
 	roomlist_iface->cancel         = jabber_roomlist_cancel;
@@ -4196,7 +4196,7 @@ jabber_protocol_attention_iface_init(PurpleProtocolAttentionInterface *iface)
 }
 
 static void
-jabber_protocol_media_iface_init(PurpleProtocolMediaIface *media_iface)
+jabber_protocol_media_iface_init(PurpleProtocolMediaInterface *media_iface)
 {
 	media_iface->initiate_session = jabber_initiate_media;
 	media_iface->get_caps         = jabber_get_media_caps;

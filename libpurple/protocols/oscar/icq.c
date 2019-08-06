@@ -60,7 +60,7 @@ icq_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-icq_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+icq_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_account_text_table = icq_get_account_text_table;
 	client_iface->get_moods              = oscar_get_purple_moods;

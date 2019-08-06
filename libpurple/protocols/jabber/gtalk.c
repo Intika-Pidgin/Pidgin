@@ -110,7 +110,7 @@ gtalk_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-gtalk_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+gtalk_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	/* disable xmpp functions not available for gtalk */
 	server_iface->register_user   = NULL;

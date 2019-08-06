@@ -1013,7 +1013,7 @@ irc_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-irc_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+irc_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions          = irc_get_actions;
 	client_iface->normalize            = purple_normalize_nocase;
@@ -1021,7 +1021,7 @@ irc_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-irc_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+irc_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->set_status   = irc_set_status;
 	server_iface->get_info     = irc_get_info;
@@ -1032,13 +1032,13 @@ irc_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-irc_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+irc_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send = irc_im_send;
 }
 
 static void
-irc_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+irc_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info          = irc_chat_join_info;
 	chat_iface->info_defaults = irc_chat_info_defaults;
@@ -1051,7 +1051,7 @@ irc_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list = irc_roomlist_get_list;
 	roomlist_iface->cancel   = irc_roomlist_cancel;

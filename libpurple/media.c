@@ -1424,7 +1424,7 @@ purple_media_send_dtmf(PurpleMedia *media, const gchar *session_id,
 		gchar dtmf, guint8 volume, guint16 duration)
 {
 #ifdef USE_VV
-	PurpleMediaBackendIface *backend_iface = NULL;
+	PurpleMediaBackendInterface *backend_iface = NULL;
 
 	if (media)
 	{

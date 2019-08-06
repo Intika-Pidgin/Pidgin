@@ -5696,7 +5696,7 @@ oscar_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-oscar_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+oscar_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions     = oscar_get_actions;
 	client_iface->list_emblem     = oscar_list_emblem;
@@ -5709,7 +5709,7 @@ oscar_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-oscar_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+oscar_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->set_info       = oscar_set_info;
 	server_iface->get_info       = oscar_get_info;
@@ -5727,14 +5727,14 @@ oscar_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-oscar_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+oscar_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = oscar_send_im;
 	im_iface->send_typing = oscar_send_typing;
 }
 
 static void
-oscar_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+oscar_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info          = oscar_chat_info;
 	chat_iface->info_defaults = oscar_chat_info_defaults;
@@ -5746,7 +5746,7 @@ oscar_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-oscar_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+oscar_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_deny = oscar_add_deny;
 	privacy_iface->rem_deny = oscar_rem_deny;

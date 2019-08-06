@@ -646,7 +646,7 @@ gboolean purple_conversation_do_command(PurpleConversation *conv,
  *
  * Gets the maximum message size in bytes for the conversation.
  *
- * See #PurpleProtocolClientIface's <literal>get_max_message_size</literal>.
+ * See #PurpleProtocolClientInterface's <literal>get_max_message_size</literal>.
  *
  * Returns: Maximum message size, 0 if unspecified, -1 for infinite.
  */
