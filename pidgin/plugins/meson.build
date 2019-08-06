@@ -44,7 +44,7 @@ if PLUGINS
 	    build_by_default: false,
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
 
 	iconaway = library('iconaway', 'iconaway.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
@@ -55,13 +55,13 @@ if PLUGINS
 	    dependencies : [json, libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    build_by_default: false,
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
 
 	notify = library('notify', 'notify.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    build_by_default: false,
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
 
 	relnot = library('relnot', 'relnot.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
@@ -72,13 +72,13 @@ if PLUGINS
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    build_by_default: false,
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
 
 	spellchk = library('spellchk', 'spellchk.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
 	    build_by_default: false,
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
 
 	xmppconsole = library('xmppconsole', 'xmppconsole.c',
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
