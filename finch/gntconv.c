@@ -711,7 +711,7 @@ gg_create_menu(FinchConv *ggc)
 		PurpleProtocol *protocol =
 			gc ? purple_connection_get_protocol(gc) : NULL;
 
-		if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, get_info)) {
+		if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, get_info)) {
 			item = gnt_menuitem_new(_("Get Info"));
 			gnt_menu_add_item(GNT_MENU(sub), item);
 			gnt_menuitem_set_callback(item, get_info_cb, ggc);

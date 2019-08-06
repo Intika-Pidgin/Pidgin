@@ -258,7 +258,7 @@ save_account_cb(AccountEditDialog *dialog)
 		gnt_box_give_focus_to_child(GNT_BOX(accounts.window), accounts.tree);
 	}
 
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, register_user) &&
+	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, register_user) &&
 			gnt_check_box_get_checked(GNT_CHECK_BOX(dialog->regserver))) {
 		purple_account_register(account);
 	} else if (dialog->account == NULL) {
@@ -493,7 +493,7 @@ add_account_options(AccountEditDialog *dialog)
 	/* Show the registration checkbox only in a new account dialog,
 	 * and when the selected protocol has the support for it. */
 	gnt_widget_set_visible(dialog->regserver, account == NULL &&
-			PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, register_user));
+			PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, register_user));
 }
 
 static void

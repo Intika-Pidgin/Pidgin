@@ -134,7 +134,7 @@ update_keepalive(PurpleConnection *gc, gboolean on)
 
 	g_return_if_fail(priv != NULL);
 
-	if (!PURPLE_PROTOCOL_IMPLEMENTS(priv->protocol, SERVER_IFACE, keepalive))
+	if (!PURPLE_PROTOCOL_IMPLEMENTS(priv->protocol, SERVER, keepalive))
 		return;
 
 	if (on && !priv->keepalive)
@@ -949,7 +949,7 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 
 	if (regist)
 	{
-		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, register_user))
+		if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, register_user))
 			return;
 	}
 	else
@@ -964,7 +964,7 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 		}
 	}
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, connection_new))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, connection_new))
 		gc = purple_protocol_factory_iface_connection_new(protocol, account,
 				password);
 	else
@@ -1033,7 +1033,7 @@ _purple_connection_new_unregister(PurpleAccount *account, const char *password,
 		return;
 	}
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, connection_new))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, connection_new))
 		gc = purple_protocol_factory_iface_connection_new(protocol, account,
 				password);
 	else
