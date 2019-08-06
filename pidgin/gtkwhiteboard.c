@@ -37,15 +37,17 @@ typedef enum {
 	PIDGIN_WHITEBOARD_BRUSH_MOTION
 } PidginWhiteboardBrushState;
 
-typedef struct _PidginWhiteboard PidginWhiteboard;
+#define PIDGIN_TYPE_WHITEBOARD (pidgin_whiteboard_get_type())
+G_DECLARE_FINAL_TYPE(PidginWhiteboard, pidgin_whiteboard, PIDGIN, WHITEBOARD,
+                     GtkWindow)
 
 /**
  * PidginWhiteboard:
  * @cr:           Cairo context for drawing
  * @surface:      Cairo surface for drawing
  * @wb:           Backend data for this whiteboard
- * @window:       Window for the Doodle session
  * @drawing_area: Drawing area
+ * @color_button: A color chooser widget
  * @width:        Canvas width
  * @height:       Canvas height
  * @brush_color:  Foreground color
@@ -55,19 +57,23 @@ typedef struct _PidginWhiteboard PidginWhiteboard;
  */
 struct _PidginWhiteboard
 {
+	GtkWindow parent;
+
 	cairo_t *cr;
 	cairo_surface_t *surface;
 
 	PurpleWhiteboard *wb;
 
-	GtkWidget *window;
 	GtkWidget *drawing_area;
+	GtkWidget *color_button;
 
 	int width;
 	int height;
 	int brush_color;
 	int brush_size;
 };
+
+G_DEFINE_TYPE(PidginWhiteboard, pidgin_whiteboard, GTK_TYPE_WINDOW)
 
 /******************************************************************************
  * Globals
@@ -89,15 +95,13 @@ pidgin_whiteboard_rgb24_to_rgba(int color_rgb, GdkRGBA *color)
 	color->blue = (color_rgb & 0xFF) / 255.0f;
 }
 
-static gboolean whiteboard_close_cb(GtkWidget *widget, GdkEvent *event, PidginWhiteboard *gtkwb)
+static gboolean
+whiteboard_close_cb(GtkWidget *widget, GdkEvent *event,
+                    G_GNUC_UNUSED gpointer data)
 {
-	PurpleWhiteboard *wb;
+	PidginWhiteboard *gtkwb = PIDGIN_WHITEBOARD(widget);
 
-	g_return_val_if_fail(gtkwb != NULL, FALSE);
-	wb = gtkwb->wb;
-	g_return_val_if_fail(wb != NULL, FALSE);
-
-	g_object_unref(wb);
+	g_clear_object(&gtkwb->wb);
 
 	return FALSE;
 }
@@ -148,7 +152,7 @@ pidgin_whiteboard_set_canvas_as_icon(PidginWhiteboard *gtkwb)
 	/* Makes an icon from the whiteboard's canvas 'image' */
 	pixbuf = gdk_pixbuf_get_from_surface(gtkwb->surface, 0, 0, gtkwb->width,
 	                                     gtkwb->height);
-	gtk_window_set_icon(GTK_WINDOW(gtkwb->window), pixbuf);
+	gtk_window_set_icon(GTK_WINDOW(gtkwb), pixbuf);
 	g_object_unref(pixbuf);
 }
 
@@ -472,11 +476,10 @@ static void pidgin_whiteboard_button_clear_press(GtkWidget *widget, gpointer dat
 	PidginWhiteboard *gtkwb = (PidginWhiteboard*)(data);
 
 	/* Confirm whether the user really wants to clear */
-	GtkWidget *dialog = gtk_message_dialog_new(GTK_WINDOW(gtkwb->window),
-											   GTK_DIALOG_DESTROY_WITH_PARENT,
-											   GTK_MESSAGE_QUESTION,
-											   GTK_BUTTONS_YES_NO,
-											   _("Do you really want to clear?"));
+	GtkWidget *dialog = gtk_message_dialog_new(
+	        GTK_WINDOW(gtkwb), GTK_DIALOG_DESTROY_WITH_PARENT,
+	        GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+	        _("Do you really want to clear?"));
 	gint response = gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);
 
@@ -499,10 +502,10 @@ pidgin_whiteboard_button_save_press(GtkWidget *widget, gpointer _gtkwb)
 	GtkWidget *dialog;
 	int result;
 
-	dialog = gtk_file_chooser_dialog_new(_("Save File"),
-		GTK_WINDOW(gtkwb->window), GTK_FILE_CHOOSER_ACTION_SAVE,
-		GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE,
-		GTK_RESPONSE_ACCEPT, NULL);
+	dialog = gtk_file_chooser_dialog_new(
+	        _("Save File"), GTK_WINDOW(gtkwb), GTK_FILE_CHOOSER_ACTION_SAVE,
+	        GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE,
+	        GTK_RESPONSE_ACCEPT, NULL);
 
 	gtk_file_chooser_set_do_overwrite_confirmation(
 		GTK_FILE_CHOOSER(dialog), TRUE);
@@ -560,30 +563,11 @@ color_selected(GtkColorButton *button, PidginWhiteboard *gtkwb)
 static void
 pidgin_whiteboard_create(PurpleWhiteboard *wb)
 {
+	PidginWhiteboard *gtkwb;
 	PurpleBuddy *buddy;
-	GtkWidget *window;
-	GtkWidget *drawing_area;
-	GtkWidget *vbox_controls;
-	GtkWidget *hbox_canvas_and_controls;
-
-	/*
-	        --------------------------
-	        |[][][][palette[][][][][]|
-	        |------------------------|
-	        |       canvas     | con |
-	        |                  | trol|
-	        |                  | s   |
-	        |                  |     |
-	        |                  |     |
-	        --------------------------
-	*/
-	GtkWidget *clear_button;
-	GtkWidget *save_button;
-	GtkWidget *color_button;
 	GdkRGBA color;
 
-	PidginWhiteboard *gtkwb = g_new0(PidginWhiteboard, 1);
-
+	gtkwb = PIDGIN_WHITEBOARD(g_object_new(PIDGIN_TYPE_WHITEBOARD, NULL));
 	gtkwb->wb = wb;
 	purple_whiteboard_set_ui_data(wb, gtkwb);
 
@@ -608,96 +592,21 @@ pidgin_whiteboard_create(PurpleWhiteboard *wb)
 	buddy = purple_blist_find_buddy(purple_whiteboard_get_account(wb),
 	                                purple_whiteboard_get_who(wb));
 
-	window = pidgin_create_window(
-	        buddy != NULL ? purple_buddy_get_contact_alias(buddy)
-	                      : purple_whiteboard_get_who(wb),
-	        0, NULL, FALSE);
-	gtkwb->window = window;
-	gtk_widget_set_name(window, purple_whiteboard_get_who(wb));
+	gtk_window_set_title(GTK_WINDOW(gtkwb),
+	                     buddy != NULL
+	                             ? purple_buddy_get_contact_alias(buddy)
+	                             : purple_whiteboard_get_who(wb));
+	gtk_widget_set_name(GTK_WIDGET(gtkwb), purple_whiteboard_get_who(wb));
 
-	g_signal_connect(G_OBJECT(window), "delete_event",
-	                 G_CALLBACK(whiteboard_close_cb), gtkwb);
+	gtk_widget_set_size_request(GTK_WIDGET(gtkwb->drawing_area),
+	                            gtkwb->width, gtkwb->height);
 
-	hbox_canvas_and_controls = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
-	gtk_widget_show(hbox_canvas_and_controls);
-
-	gtk_container_add(GTK_CONTAINER(window), hbox_canvas_and_controls);
-	gtk_container_set_border_width(GTK_CONTAINER(window),
-	                               PIDGIN_HIG_BORDER);
-
-	/* Create the drawing area */
-	drawing_area = gtk_drawing_area_new();
-	gtkwb->drawing_area = drawing_area;
-	gtk_widget_set_size_request(GTK_WIDGET(drawing_area), gtkwb->width,
-	                            gtkwb->height);
-	gtk_box_pack_start(GTK_BOX(hbox_canvas_and_controls), drawing_area,
-	                   TRUE, TRUE, PIDGIN_HIG_BOX_SPACE);
-
-	gtk_widget_show(drawing_area);
-
-	/* Signals used to handle backing pixmap */
-	g_signal_connect(G_OBJECT(drawing_area), "draw",
-	                 G_CALLBACK(pidgin_whiteboard_draw_event), gtkwb);
-
-	g_signal_connect(G_OBJECT(drawing_area), "configure-event",
-	                 G_CALLBACK(pidgin_whiteboard_configure_event), gtkwb);
-
-	/* Event signals */
-	g_signal_connect(G_OBJECT(drawing_area), "button_press_event",
-	                 G_CALLBACK(pidgin_whiteboard_brush_down), gtkwb);
-
-	g_signal_connect(G_OBJECT(drawing_area), "motion_notify_event",
-	                 G_CALLBACK(pidgin_whiteboard_brush_motion), gtkwb);
-
-	g_signal_connect(G_OBJECT(drawing_area), "button_release_event",
-	                 G_CALLBACK(pidgin_whiteboard_brush_up), gtkwb);
-
-	gtk_widget_set_events(
-	        drawing_area,
-	        GDK_EXPOSURE_MASK | GDK_LEAVE_NOTIFY_MASK |
-	                GDK_BUTTON_PRESS_MASK | GDK_POINTER_MOTION_MASK |
-	                GDK_BUTTON_RELEASE_MASK | GDK_POINTER_MOTION_HINT_MASK);
-
-	/* Create vertical box to contain the controls */
-	vbox_controls = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_box_pack_start(GTK_BOX(hbox_canvas_and_controls), vbox_controls,
-	                   FALSE, FALSE, PIDGIN_HIG_BOX_SPACE);
-	gtk_widget_show(vbox_controls);
-
-	/* Add a clear button */
-	clear_button = gtk_button_new_from_stock(GTK_STOCK_CLEAR);
-	gtk_box_pack_start(GTK_BOX(vbox_controls), clear_button, FALSE, FALSE,
-	                   PIDGIN_HIG_BOX_SPACE);
-	gtk_widget_show(clear_button);
-	g_signal_connect(G_OBJECT(clear_button), "clicked",
-	                 G_CALLBACK(pidgin_whiteboard_button_clear_press),
-	                 gtkwb);
-
-	/* Add a save button */
-	save_button = gtk_button_new_from_stock(GTK_STOCK_SAVE);
-	gtk_box_pack_start(GTK_BOX(vbox_controls), save_button, FALSE, FALSE,
-	                   PIDGIN_HIG_BOX_SPACE);
-	gtk_widget_show(save_button);
-
-	g_signal_connect(G_OBJECT(save_button), "clicked",
-	                 G_CALLBACK(pidgin_whiteboard_button_save_press),
-	                 gtkwb);
-
-	/* Add a color selector */
-	color_button = gtk_color_button_new();
-	gtk_box_pack_start(GTK_BOX(vbox_controls), color_button, FALSE, FALSE,
-	                   PIDGIN_HIG_BOX_SPACE);
-	gtk_widget_show(color_button);
-
-	gtk_color_chooser_set_use_alpha(GTK_COLOR_CHOOSER(color_button), FALSE);
 	pidgin_whiteboard_rgb24_to_rgba(gtkwb->brush_color, &color);
-	gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(color_button), &color);
-
-	g_signal_connect(G_OBJECT(color_button), "color-set",
-	                 G_CALLBACK(color_selected), gtkwb);
+	gtk_color_chooser_set_rgba(GTK_COLOR_CHOOSER(gtkwb->color_button),
+	                           &color);
 
 	/* Make all this (window) visible */
-	gtk_widget_show(window);
+	gtk_widget_show(GTK_WIDGET(gtkwb));
 
 	pidgin_whiteboard_set_canvas_as_icon(gtkwb);
 
@@ -721,14 +630,66 @@ pidgin_whiteboard_destroy(PurpleWhiteboard *wb)
 	/* TODO Ask if user wants to save picture before the session is closed
 	 */
 
+	gtkwb->wb = NULL;
+	g_object_unref(gtkwb);
+	purple_whiteboard_set_ui_data(wb, NULL);
+}
+
+/******************************************************************************
+ * GObject implementation
+ *****************************************************************************/
+static void
+pidgin_whiteboard_init(PidginWhiteboard *self)
+{
+	gtk_widget_init_template(GTK_WIDGET(self));
+}
+
+static void
+pidgin_whiteboard_finalize(GObject *obj)
+{
+	PidginWhiteboard *gtkwb = PIDGIN_WHITEBOARD(obj);
+
 	/* Clear graphical memory */
 	g_clear_pointer(&gtkwb->cr, cairo_destroy);
 	g_clear_pointer(&gtkwb->surface, cairo_surface_destroy);
 
-	g_clear_pointer(&gtkwb->window, gtk_widget_destroy);
+	G_OBJECT_CLASS(pidgin_whiteboard_parent_class)->finalize(obj);
+}
 
-	g_free(gtkwb);
-	purple_whiteboard_set_ui_data(wb, NULL);
+static void
+pidgin_whiteboard_class_init(PidginWhiteboardClass *klass)
+{
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	obj_class->finalize = pidgin_whiteboard_finalize;
+
+	gtk_widget_class_set_template_from_resource(
+	        widget_class, "/im/pidgin/Pidgin/Whiteboard/whiteboard.ui");
+
+	gtk_widget_class_bind_template_child(widget_class, PidginWhiteboard,
+	                                     drawing_area);
+	gtk_widget_class_bind_template_child(widget_class, PidginWhiteboard,
+	                                     color_button);
+
+	gtk_widget_class_bind_template_callback(
+	        widget_class, whiteboard_close_cb);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_draw_event);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_configure_event);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_brush_down);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_brush_motion);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_brush_up);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_button_clear_press);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, pidgin_whiteboard_button_save_press);
+	gtk_widget_class_bind_template_callback(
+	        widget_class, color_selected);
 }
 
 /******************************************************************************
