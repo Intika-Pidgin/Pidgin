@@ -60,9 +60,9 @@ aim_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 PURPLE_DEFINE_TYPE_EXTENDED(
 	AIMProtocol, aim_protocol, OSCAR_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
 	                                  aim_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
+	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
 	                                  aim_protocol_privacy_iface_init)
 );
