@@ -256,13 +256,13 @@ purple_protocol_class_list_icon(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolClientInterface *client_iface = \
-		PURPLE_PROTOCOL_GET_CLIENT_IFACE(protocol); \
+		PURPLE_PROTOCOL_CLIENT_GET_IFACE(protocol); \
 	if (client_iface && client_iface->funcname) \
 		client_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolClientInterface *client_iface = \
-		PURPLE_PROTOCOL_GET_CLIENT_IFACE(protocol); \
+		PURPLE_PROTOCOL_CLIENT_GET_IFACE(protocol); \
 	if (client_iface && client_iface->funcname) \
 		return client_iface->funcname(__VA_ARGS__); \
 	else \
@@ -385,13 +385,13 @@ purple_protocol_client_iface_get_max_message_size(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolServerInterface *server_iface = \
-		PURPLE_PROTOCOL_GET_SERVER_IFACE(protocol); \
+		PURPLE_PROTOCOL_SERVER_GET_IFACE(protocol); \
 	if (server_iface && server_iface->funcname) \
 		server_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolServerInterface *server_iface = \
-		PURPLE_PROTOCOL_GET_SERVER_IFACE(protocol); \
+		PURPLE_PROTOCOL_SERVER_GET_IFACE(protocol); \
 	if (server_iface && server_iface->funcname) \
 		return server_iface->funcname(__VA_ARGS__); \
 	else \
@@ -578,13 +578,13 @@ purple_protocol_server_iface_get_public_alias(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolIMInterface *im_iface = \
-		PURPLE_PROTOCOL_GET_IM_IFACE(protocol); \
+		PURPLE_PROTOCOL_IM_GET_IFACE(protocol); \
 	if (im_iface && im_iface->funcname) \
 		im_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolIMInterface *im_iface = \
-		PURPLE_PROTOCOL_GET_IM_IFACE(protocol); \
+		PURPLE_PROTOCOL_IM_GET_IFACE(protocol); \
 	if (im_iface && im_iface->funcname) \
 		return im_iface->funcname(__VA_ARGS__); \
 	else \
@@ -628,13 +628,13 @@ purple_protocol_im_iface_send_typing(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolChatInterface *chat_iface = \
-		PURPLE_PROTOCOL_GET_CHAT_IFACE(protocol); \
+		PURPLE_PROTOCOL_CHAT_GET_IFACE(protocol); \
 	if (chat_iface && chat_iface->funcname) \
 		chat_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolChatInterface *chat_iface = \
-		PURPLE_PROTOCOL_GET_CHAT_IFACE(protocol); \
+		PURPLE_PROTOCOL_CHAT_GET_IFACE(protocol); \
 	if (chat_iface && chat_iface->funcname) \
 		return chat_iface->funcname(__VA_ARGS__); \
 	else \
@@ -735,13 +735,13 @@ purple_protocol_chat_iface_set_topic(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolPrivacyInterface *privacy_iface = \
-		PURPLE_PROTOCOL_GET_PRIVACY_IFACE(protocol); \
+		PURPLE_PROTOCOL_PRIVACY_GET_IFACE(protocol); \
 	if (privacy_iface && privacy_iface->funcname) \
 		privacy_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolPrivacyInterface *privacy_iface = \
-		PURPLE_PROTOCOL_GET_PRIVACY_IFACE(protocol); \
+		PURPLE_PROTOCOL_PRIVACY_GET_IFACE(protocol); \
 	if (privacy_iface && privacy_iface->funcname) \
 		return privacy_iface->funcname(__VA_ARGS__); \
 	else \
@@ -806,13 +806,13 @@ purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolRoomlistInterface *roomlist_iface = \
-		PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(protocol); \
+		PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(protocol); \
 	if (roomlist_iface && roomlist_iface->funcname) \
 		roomlist_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolRoomlistInterface *roomlist_iface = \
-		PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(protocol); \
+		PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(protocol); \
 	if (roomlist_iface && roomlist_iface->funcname) \
 		return roomlist_iface->funcname(__VA_ARGS__); \
 	else \
@@ -870,13 +870,13 @@ purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolMediaInterface *media_iface = \
-		PURPLE_PROTOCOL_GET_MEDIA_IFACE(protocol); \
+		PURPLE_PROTOCOL_MEDIA_GET_IFACE(protocol); \
 	if (media_iface && media_iface->funcname) \
 		media_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolMediaInterface *media_iface = \
-		PURPLE_PROTOCOL_GET_MEDIA_IFACE(protocol); \
+		PURPLE_PROTOCOL_MEDIA_GET_IFACE(protocol); \
 	if (media_iface && media_iface->funcname) \
 		return media_iface->funcname(__VA_ARGS__); \
 	else \
@@ -928,13 +928,13 @@ gboolean purple_protocol_media_iface_send_dtmf(PurpleProtocol *protocol,
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
 	PurpleProtocolFactoryInterface *factory_iface = \
-		PURPLE_PROTOCOL_GET_FACTORY_IFACE(protocol); \
+		PURPLE_PROTOCOL_FACTORY_GET_IFACE(protocol); \
 	if (factory_iface && factory_iface->funcname) \
 		factory_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
 	PurpleProtocolFactoryInterface *factory_iface = \
-		PURPLE_PROTOCOL_GET_FACTORY_IFACE(protocol); \
+		PURPLE_PROTOCOL_FACTORY_GET_IFACE(protocol); \
 	if (factory_iface && factory_iface->funcname) \
 		return factory_iface->funcname(__VA_ARGS__); \
 	else \

@@ -207,7 +207,7 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 					buddies = g_list_append(buddies, (PurpleBlistNode *)buddy);
 			}
 
-			if(PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, rename_group)) {
+			if(PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, rename_group)) {
 				purple_protocol_server_iface_rename_group(protocol, gc, old_name, source, buddies);
 			} else {
 				GList *cur, *groups = NULL;

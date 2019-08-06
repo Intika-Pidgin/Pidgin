@@ -956,7 +956,7 @@ append_proto_menu(GntMenu *menu, PurpleConnection *gc, PurpleBlistNode *node)
 	GList *list;
 	PurpleProtocol *protocol = purple_connection_get_protocol(gc);
 
-	if(!protocol || !PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT_IFACE, blist_node_menu))
+	if(!protocol || !PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, blist_node_menu))
 		return;
 
 	for(list = purple_protocol_client_iface_blist_node_menu(protocol, node); list;
@@ -1174,7 +1174,7 @@ create_buddy_menu(GntMenu *menu, PurpleBuddy *buddy)
 	PurpleConnection *gc = purple_account_get_connection(purple_buddy_get_account(buddy));
 
 	protocol = purple_connection_get_protocol(gc);
-	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, get_info))
+	if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, get_info))
 	{
 		add_custom_action(menu, _("Get Info"),
 				PURPLE_CALLBACK(finch_blist_get_buddy_info_cb), buddy);
@@ -2515,7 +2515,7 @@ reconstruct_accounts_menu(void)
 			continue;
 		protocol = purple_connection_get_protocol(gc);
 
-		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT_IFACE, get_actions)) {
+		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, get_actions)) {
 			item = gnt_menuitem_new(purple_account_get_username(account));
 			gnt_menu_add_item(GNT_MENU(sub), item);
 			build_protocol_actions(item, protocol, gc);

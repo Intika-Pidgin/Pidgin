@@ -393,7 +393,7 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account)
 
 	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), NULL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, roomlist_new))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, roomlist_new))
 		list = purple_protocol_factory_iface_roomlist_new(protocol, account);
 	else
 		list = g_object_new(PURPLE_TYPE_ROOMLIST,

@@ -244,7 +244,7 @@ struct _PurpleProtocolClientInterface
 };
 
 #define PURPLE_PROTOCOL_IS_CLIENT(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_CLIENT_IFACE))
-#define PURPLE_PROTOCOL_GET_CLIENT_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CLIENT_IFACE, \
+#define PURPLE_PROTOCOL_CLIENT_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CLIENT_IFACE, \
                                                PurpleProtocolClientInterface))
 
 #define PURPLE_TYPE_PROTOCOL_SERVER_IFACE     (purple_protocol_server_iface_get_type())
@@ -382,7 +382,7 @@ struct _PurpleProtocolServerInterface
 };
 
 #define PURPLE_PROTOCOL_IS_SERVER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_SERVER_IFACE))
-#define PURPLE_PROTOCOL_GET_SERVER_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_SERVER_IFACE, \
+#define PURPLE_PROTOCOL_SERVER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_SERVER_IFACE, \
                                                PurpleProtocolServerInterface))
 
 #define PURPLE_TYPE_PROTOCOL_IM_IFACE     (purple_protocol_im_iface_get_type())
@@ -422,7 +422,7 @@ struct _PurpleProtocolIMInterface
 };
 
 #define PURPLE_PROTOCOL_IS_IM(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_IM_IFACE))
-#define PURPLE_PROTOCOL_GET_IM_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_IM_IFACE, \
+#define PURPLE_PROTOCOL_IM_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_IM_IFACE, \
                                            PurpleProtocolIMInterface))
 
 #define PURPLE_TYPE_PROTOCOL_CHAT_IFACE     (purple_protocol_chat_iface_get_type())
@@ -521,7 +521,7 @@ struct _PurpleProtocolChatInterface
 };
 
 #define PURPLE_PROTOCOL_IS_CHAT(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_CHAT_IFACE))
-#define PURPLE_PROTOCOL_GET_CHAT_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CHAT_IFACE, \
+#define PURPLE_PROTOCOL_CHAT_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CHAT_IFACE, \
                                              PurpleProtocolChatInterface))
 
 #define PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE     (purple_protocol_privacy_iface_get_type())
@@ -558,7 +558,7 @@ struct _PurpleProtocolPrivacyInterface
 };
 
 #define PURPLE_PROTOCOL_IS_PRIVACY(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE))
-#define PURPLE_PROTOCOL_GET_PRIVACY_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE, \
+#define PURPLE_PROTOCOL_PRIVACY_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE, \
                                                 PurpleProtocolPrivacyInterface))
 
 #define PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE     (purple_protocol_roomlist_iface_get_type())
@@ -590,7 +590,7 @@ struct _PurpleProtocolRoomlistInterface
 };
 
 #define PURPLE_PROTOCOL_IS_ROOMLIST(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE))
-#define PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE, \
+#define PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE, \
                                                  PurpleProtocolRoomlistInterface))
 
 #define PURPLE_TYPE_PROTOCOL_MEDIA_IFACE     (purple_protocol_media_iface_get_type())
@@ -637,7 +637,7 @@ struct _PurpleProtocolMediaInterface
 };
 
 #define PURPLE_PROTOCOL_IS_MEDIA(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_MEDIA_IFACE))
-#define PURPLE_PROTOCOL_GET_MEDIA_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_MEDIA_IFACE, \
+#define PURPLE_PROTOCOL_MEDIA_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_MEDIA_IFACE, \
                                               PurpleProtocolMediaInterface))
 
 #define PURPLE_TYPE_PROTOCOL_FACTORY_IFACE     (purple_protocol_factory_iface_get_type())
@@ -677,13 +677,13 @@ struct _PurpleProtocolFactoryInterface
 };
 
 #define PURPLE_PROTOCOL_IS_FACTORY(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_FACTORY_IFACE))
-#define PURPLE_PROTOCOL_GET_FACTORY_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_FACTORY_IFACE, \
+#define PURPLE_PROTOCOL_FACTORY_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_FACTORY_IFACE, \
                                                 PurpleProtocolFactoryInterface))
 
 /**
  * PURPLE_PROTOCOL_IMPLEMENTS:
  * @protocol: The protocol in which to check
- * @IFACE:    The interface name in caps. e.g. <literal>CLIENT_IFACE</literal>
+ * @IFACE:    The interface name in caps. e.g. <literal>CLIENT</literal>
  * @func:     The function to check
  *
  * Returns: %TRUE if a protocol implements a function in an interface,
@@ -691,7 +691,7 @@ struct _PurpleProtocolFactoryInterface
  */
 #define PURPLE_PROTOCOL_IMPLEMENTS(protocol, IFACE, func) \
 	(PURPLE_PROTOCOL_IS_##IFACE(protocol) && \
-	 PURPLE_PROTOCOL_GET_##IFACE(protocol)->func != NULL)
+	 PURPLE_PROTOCOL_##IFACE##_GET_IFACE(protocol)->func != NULL)
 
 G_BEGIN_DECLS
 

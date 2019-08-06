@@ -519,7 +519,7 @@ PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who,
 
 	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), NULL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, whiteboard_new))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, whiteboard_new))
 		wb = purple_protocol_factory_iface_whiteboard_new(protocol, account,
 				who, state);
 	else

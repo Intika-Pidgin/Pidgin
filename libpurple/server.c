@@ -136,7 +136,7 @@ int purple_serv_send_im(PurpleConnection *gc, PurpleMessage *msg)
 
 	im = purple_conversations_find_im_with_account(recipient, account);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, IM_IFACE, send))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, IM, send))
 		val = purple_protocol_im_iface_send(protocol, gc, msg);
 
 	/*
@@ -177,7 +177,7 @@ void purple_serv_set_info(PurpleConnection *gc, const char *info)
 	if (gc) {
 		protocol = purple_connection_get_protocol(gc);
 
-		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, set_info)) {
+		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, set_info)) {
 			account = purple_connection_get_account(gc);
 
 			purple_signal_emit(purple_accounts_get_handle(),
@@ -461,7 +461,7 @@ int purple_serv_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg)
 
 	g_return_val_if_fail(msg != NULL, -EINVAL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT_IFACE, send))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT, send))
 		return purple_protocol_chat_iface_send(protocol, gc, id, msg);
 
 	return -EINVAL;
