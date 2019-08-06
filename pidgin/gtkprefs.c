@@ -259,6 +259,8 @@ struct _PidginPrefsWindow {
 	/* Voice/Video page */
 	struct {
 		struct {
+			PidginPrefCombo input;
+			PidginPrefCombo output;
 			GtkWidget *level;
 			GtkWidget *threshold;
 			GtkWidget *volume;
@@ -266,6 +268,8 @@ struct _PidginPrefsWindow {
 		} voice;
 
 		struct {
+			PidginPrefCombo input;
+			PidginPrefCombo output;
 			GtkWidget *drawing_area;
 			GstElement *pipeline;
 		} video;
@@ -3092,56 +3096,38 @@ threshold_value_changed_cb(GtkScale *scale, GtkWidget *label)
 }
 
 static void
-make_voice_test(PidginPrefsWindow *win, GtkWidget *vbox)
+bind_voice_test(PidginPrefsWindow *win, GtkBuilder *builder)
 {
-	GtkWidget *test;
-	GtkWidget *hbox;
-	GtkWidget *label;
-	GtkWidget *level;
-	GtkWidget *volume;
-	GtkWidget *threshold;
+	GObject *test;
+	GObject *label;
+	GObject *volume;
+	GObject *threshold;
 	char *tmp;
 
-	label = gtk_label_new(NULL);
-	gtk_box_pack_start(GTK_BOX(vbox), label, TRUE, TRUE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	label = gtk_label_new(_("Volume:"));
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	volume = gtk_volume_button_new();
-	gtk_box_pack_start(GTK_BOX(hbox), volume, TRUE, TRUE, 0);
+	volume = gtk_builder_get_object(builder, "vv.voice.volume");
+	win->vv.voice.volume = GTK_WIDGET(volume);
 	gtk_scale_button_set_value(GTK_SCALE_BUTTON(volume),
 			purple_prefs_get_int("/purple/media/audio/volume/input") / 100.0);
 	g_signal_connect(volume, "value-changed",
 	                 G_CALLBACK(volume_changed_cb), NULL);
 
+	label = gtk_builder_get_object(builder, "vv.voice.threshold_label");
 	tmp = g_strdup_printf(_("Silence threshold: %d%%"),
 	                      purple_prefs_get_int("/purple/media/audio/silence_threshold"));
-	label = gtk_label_new(tmp);
-	gtk_box_pack_start(GTK_BOX(vbox), label, FALSE, FALSE, 0);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
+	gtk_label_set_text(GTK_LABEL(label), tmp);
 	g_free(tmp);
-	threshold = gtk_scale_new_with_range(GTK_ORIENTATION_HORIZONTAL,
-		0, 100, 1);
-	gtk_box_pack_start(GTK_BOX(vbox), threshold, FALSE, FALSE, 0);
+
+	threshold = gtk_builder_get_object(builder, "vv.voice.threshold");
+	win->vv.voice.threshold = GTK_WIDGET(threshold);
 	gtk_range_set_value(GTK_RANGE(threshold),
 			purple_prefs_get_int("/purple/media/audio/silence_threshold"));
-	gtk_scale_set_draw_value(GTK_SCALE(threshold), FALSE);
 	g_signal_connect(threshold, "value-changed",
 	                 G_CALLBACK(threshold_value_changed_cb), label);
 
-	test = gtk_toggle_button_new_with_label(_("Test Audio"));
-	gtk_box_pack_start(GTK_BOX(vbox), test, FALSE, FALSE, 0);
+	win->vv.voice.level =
+	        GTK_WIDGET(gtk_builder_get_object(builder, "vv.voice.level"));
 
-	level = gtk_progress_bar_new();
-	gtk_box_pack_start(GTK_BOX(vbox), level, FALSE, FALSE, 0);
-	gtk_widget_set_sensitive(level, FALSE);
-
-	win->vv.voice.volume = volume;
-	win->vv.voice.level = level;
-	win->vv.voice.threshold = threshold;
+	test = gtk_builder_get_object(builder, "vv.voice.test_button");
 	g_signal_connect(test, "toggled",
 	                 G_CALLBACK(toggle_voice_test_cb), win);
 }
@@ -3278,18 +3264,30 @@ toggle_video_test_cb(GtkToggleButton *test, gpointer data)
 }
 
 static void
-make_video_test(PidginPrefsWindow *win, GtkWidget *vbox)
+bind_video_test(PidginPrefsWindow *win, GtkBuilder *builder)
 {
-	GtkWidget *test;
 	GtkWidget *video;
+	GObject *test;
+	GdkRGBA color = {0.0, 0.0, 0.0, 1.0};
 
-	win->vv.video.drawing_area = video = pidgin_create_video_widget();
-	gtk_box_pack_start(GTK_BOX(vbox), video, TRUE, TRUE, 0);
-	gtk_widget_set_size_request(GTK_WIDGET(video), 240, 180);
+	win->vv.video.drawing_area = video = GTK_WIDGET(
+	        gtk_builder_get_object(builder, "vv.video.test_area"));
+	gtk_widget_override_background_color(video, GTK_STATE_FLAG_NORMAL,
+	                                     &color);
 
-	test = gtk_toggle_button_new_with_label(_("Test Video"));
-	gtk_box_pack_start(GTK_BOX(vbox), test, FALSE, FALSE, 0);
+	/* In order to enable client shadow decorations, GtkDialog from GTK+ 3.0
+	 * uses ARGB visual which by default gets inherited by its child
+	 * widgets. XVideo adaptors on the other hand often support just depth
+	 * 24 and rendering video through xvimagesink onto a widget inside a
+	 * GtkDialog then results in no visible output.
+	 *
+	 * This ensures the default system visual of the drawing area doesn't
+	 * get overridden by the widget's parent.
+	 */
+	gtk_widget_set_visual(video, gdk_screen_get_system_visual(
+	                                     gtk_widget_get_screen(video)));
 
+	test = gtk_builder_get_object(builder, "vv.video.test_button");
 	g_signal_connect(test, "toggled",
 	                 G_CALLBACK(toggle_video_test_cb), win);
 }
@@ -3337,11 +3335,9 @@ purple_media_type_to_preference_key(PurpleMediaElementType type)
 	return NULL;
 }
 
-static GtkWidget *
-make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
-		PurpleMediaElementType element_type)
+static void
+bind_vv_dropdown(PidginPrefCombo *combo, PurpleMediaElementType element_type)
 {
-	GtkWidget *label;
 	const gchar *preference_key;
 	GList *devices;
 
@@ -3356,112 +3352,102 @@ make_vv_dropdown(GtkWidget *parent, GtkSizeGroup *size_group,
 			purple_prefs_set_string(preference_key, next->data);
 	}
 
-	label = pidgin_prefs_dropdown_from_list(parent, _("_Device"),
-			PURPLE_PREF_STRING, preference_key, devices);
-
+	combo->type = PURPLE_PREF_STRING;
+	combo->key = preference_key;
+	pidgin_prefs_bind_dropdown_from_list(combo, devices);
 	g_list_free_full(devices, g_free);
-
-	gtk_size_group_add_widget(size_group, label);
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_label_set_yalign(GTK_LABEL(label), 0.5);
-
-	/* Return the parent GtkBox of dropdown and label, which was created
-	 * in pidgin_prefs_dropdown_from_list(). */
-	return gtk_widget_get_parent(label);
 }
 
-static GtkWidget *
-make_vv_frame(PidginPrefsWindow *win, GtkWidget *parent, GtkSizeGroup *sg,
-              const gchar *name, PurpleMediaElementType type)
+static void
+bind_vv_frame(PidginPrefsWindow *win, PidginPrefCombo *combo,
+              PurpleMediaElementType type)
 {
-	GtkWidget *vbox;
-	GtkWidget *dropdown;
+	bind_vv_dropdown(combo, type);
 
-	vbox = pidgin_make_frame(parent, name);
-
-	dropdown = make_vv_dropdown(vbox, sg, type);
-
-	purple_prefs_connect_callback(vbox,
+	purple_prefs_connect_callback(combo->combo,
 	                              purple_media_type_to_preference_key(type),
 	                              vv_device_changed_cb, win);
-	g_signal_connect_swapped(vbox, "destroy",
-	                         G_CALLBACK(purple_prefs_disconnect_by_handle), vbox);
+	g_signal_connect_swapped(combo->combo, "destroy",
+	                         G_CALLBACK(purple_prefs_disconnect_by_handle),
+	                         combo->combo);
 
-	g_object_set_data(G_OBJECT(vbox), "vv_frame", vbox);
-	g_object_set_data(G_OBJECT(vbox), "vv_dropdown", dropdown);
-	g_object_set_data(G_OBJECT(vbox), "vv_size_group", sg);
-	g_object_set_data(G_OBJECT(vbox), "vv_media_type", (gpointer)type);
-
-	return vbox;
+	g_object_set_data(G_OBJECT(combo->combo), "vv_media_type",
+	                  (gpointer)type);
+	g_object_set_data(G_OBJECT(combo->combo), "vv_combo", combo);
 }
 
 static void
 device_list_changed_cb(PurpleMediaManager *manager, GtkWidget *widget)
 {
-	GtkWidget *frame;
-	GtkWidget *dropdown;
+	PidginPrefCombo *combo;
 	PurpleMediaElementType media_type;
+	GtkTreeModel *model;
 
-	gtk_widget_destroy(g_object_get_data(G_OBJECT(widget), "vv_dropdown"));
-
-	frame = g_object_get_data(G_OBJECT(widget), "vv_frame");
+	combo = g_object_get_data(G_OBJECT(widget), "vv_combo");
 	media_type = (PurpleMediaElementType)g_object_get_data(G_OBJECT(widget),
 			"vv_media_type");
 
-	dropdown = make_vv_dropdown(frame,
-			g_object_get_data(G_OBJECT(widget), "vv_size_group"),
-			media_type);
+	/* Unbind original connections so we can repopulate the combo box. */
+	g_object_disconnect(combo->combo, "any-signal::changed",
+	                    G_CALLBACK(bind_dropdown_set), combo, NULL);
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(combo->combo));
+	gtk_list_store_clear(GTK_LIST_STORE(model));
 
-	g_object_set_data(G_OBJECT(widget), "vv_dropdown", dropdown);
+	bind_vv_dropdown(combo, media_type);
 }
 
 static GtkWidget *
 vv_page(PidginPrefsWindow *win)
 {
+	GtkBuilder *builder;
 	GtkWidget *ret;
-	GtkWidget *vbox;
-	GtkWidget *frame;
-	GtkSizeGroup *sg;
 	PurpleMediaManager *manager;
 
-	ret = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, PIDGIN_HIG_CAT_SPACE);
-	gtk_container_set_border_width(GTK_CONTAINER(ret), PIDGIN_HIG_BORDER);
+	builder = gtk_builder_new_from_resource("/im/pidgin/Pidgin/Prefs/vv.ui");
+	gtk_builder_set_translation_domain(builder, PACKAGE);
 
-	sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	ret = GTK_WIDGET(gtk_builder_get_object(builder, "vv.page"));
 
 	manager = purple_media_manager_get();
 
-	vbox = pidgin_make_frame(ret, _("Audio"));
-	frame = make_vv_frame(win, vbox, sg, _("Input"),
-	                      PURPLE_MEDIA_ELEMENT_AUDIO |
-	                              PURPLE_MEDIA_ELEMENT_SRC);
+	win->vv.voice.input.combo = GTK_WIDGET(
+	        gtk_builder_get_object(builder, "vv.voice.input.combo"));
+	bind_vv_frame(win, &win->vv.voice.input,
+	              PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SRC);
 	g_signal_connect_object(manager, "elements-changed::audiosrc",
-			G_CALLBACK(device_list_changed_cb), frame, 0);
+	                        G_CALLBACK(device_list_changed_cb),
+	                        win->vv.voice.input.combo, 0);
 
-	frame = make_vv_frame(win, vbox, sg, _("Output"),
-	                      PURPLE_MEDIA_ELEMENT_AUDIO |
-	                              PURPLE_MEDIA_ELEMENT_SINK);
+	win->vv.voice.output.combo = GTK_WIDGET(
+	        gtk_builder_get_object(builder, "vv.voice.output.combo"));
+	bind_vv_frame(win, &win->vv.voice.output,
+	              PURPLE_MEDIA_ELEMENT_AUDIO | PURPLE_MEDIA_ELEMENT_SINK);
 	g_signal_connect_object(manager, "elements-changed::audiosink",
-			G_CALLBACK(device_list_changed_cb), frame, 0);
+	                        G_CALLBACK(device_list_changed_cb),
+	                        win->vv.voice.output.combo, 0);
 
-	make_voice_test(win, vbox);
+	bind_voice_test(win, builder);
 
-	vbox = pidgin_make_frame(ret, _("Video"));
-	frame = make_vv_frame(win, vbox, sg, _("Input"),
-	                      PURPLE_MEDIA_ELEMENT_VIDEO |
-	                              PURPLE_MEDIA_ELEMENT_SRC);
+	win->vv.video.input.combo = GTK_WIDGET(
+	        gtk_builder_get_object(builder, "vv.video.input.combo"));
+	bind_vv_frame(win, &win->vv.video.input,
+	              PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SRC);
 	g_signal_connect_object(manager, "elements-changed::videosrc",
-			G_CALLBACK(device_list_changed_cb), frame, 0);
+	                        G_CALLBACK(device_list_changed_cb),
+	                        win->vv.video.input.combo, 0);
 
-	frame = make_vv_frame(win, vbox, sg, _("Output"),
-	                      PURPLE_MEDIA_ELEMENT_VIDEO |
-	                              PURPLE_MEDIA_ELEMENT_SINK);
+	win->vv.video.output.combo = GTK_WIDGET(
+	        gtk_builder_get_object(builder, "vv.video.output.combo"));
+	bind_vv_frame(win, &win->vv.video.output,
+	              PURPLE_MEDIA_ELEMENT_VIDEO | PURPLE_MEDIA_ELEMENT_SINK);
 	g_signal_connect_object(manager, "elements-changed::videosink",
-			G_CALLBACK(device_list_changed_cb), frame, 0);
+	                        G_CALLBACK(device_list_changed_cb),
+	                        win->vv.video.output.combo, 0);
 
-	make_video_test(win, vbox);
+	bind_video_test(win, builder);
 
-	gtk_widget_show_all(ret);
+	g_object_ref(ret);
+	g_object_unref(builder);
 
 	return ret;
 }
@@ -3472,6 +3458,7 @@ prefs_notebook_init(PidginPrefsWindow *win)
 {
 #ifdef USE_VV
 	GtkNotebook *notebook = GTK_NOTEBOOK(win->notebook);
+	GtkWidget *vv;
 #endif
 
 	bind_interface_page(win);
@@ -3485,8 +3472,9 @@ prefs_notebook_init(PidginPrefsWindow *win)
 	bind_away_page(win);
 	bind_theme_page(win);
 #ifdef USE_VV
-	gtk_notebook_append_page(notebook, vv_page(win),
-	                         gtk_label_new(_("Voice/Video")));
+	vv = vv_page(win);
+	gtk_notebook_append_page(notebook, vv, gtk_label_new(_("Voice/Video")));
+	g_object_unref(vv);
 #endif
 }
 
