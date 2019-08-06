@@ -503,7 +503,7 @@ pidgin_whiteboard_button_save_press(GtkWidget *widget, gpointer _gtkwb)
 
 	dialog = gtk_file_chooser_dialog_new(
 	        _("Save File"), GTK_WINDOW(gtkwb), GTK_FILE_CHOOSER_ACTION_SAVE,
-	        GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL, GTK_STOCK_SAVE,
+	        _("_Cancel"), GTK_RESPONSE_CANCEL, _("_Save"),
 	        GTK_RESPONSE_ACCEPT, NULL);
 
 	gtk_file_chooser_set_do_overwrite_confirmation(
