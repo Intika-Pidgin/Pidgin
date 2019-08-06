@@ -2961,7 +2961,7 @@ zephyr_protocol_class_init(PurpleProtocolClass *klass)
 
 
 static void
-zephyr_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+zephyr_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions     = zephyr_get_actions;
 	client_iface->normalize       = zephyr_normalize;
@@ -2970,7 +2970,7 @@ zephyr_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 
 
 static void
-zephyr_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+zephyr_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->get_info   = zephyr_zloc;
 	server_iface->set_status = zephyr_set_status;
@@ -2981,7 +2981,7 @@ zephyr_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 
 
 static void
-zephyr_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+zephyr_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = zephyr_send_im;
 	im_iface->send_typing = zephyr_send_typing;
@@ -2989,7 +2989,7 @@ zephyr_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
 
 
 static void
-zephyr_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+zephyr_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info      = zephyr_chat_info;
 	chat_iface->join      = zephyr_join_chat;

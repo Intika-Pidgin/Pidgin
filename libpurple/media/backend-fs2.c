@@ -44,7 +44,7 @@ typedef struct _PurpleMediaBackendFs2Session PurpleMediaBackendFs2Session;
 /** @copydoc _PurpleMediaBackendFs2Stream */
 typedef struct _PurpleMediaBackendFs2Stream PurpleMediaBackendFs2Stream;
 
-static void purple_media_backend_iface_init(PurpleMediaBackendIface *iface);
+static void purple_media_backend_iface_init(PurpleMediaBackendInterface *iface);
 
 static gboolean
 gst_bus_cb(GstBus *bus, GstMessage *msg, PurpleMediaBackendFs2 *self);
@@ -510,7 +510,7 @@ purple_media_backend_fs2_class_init(PurpleMediaBackendFs2Class *klass)
 }
 
 static void
-purple_media_backend_iface_init(PurpleMediaBackendIface *iface)
+purple_media_backend_iface_init(PurpleMediaBackendInterface *iface)
 {
 	iface->add_stream = purple_media_backend_fs2_add_stream;
 	iface->add_remote_candidates =

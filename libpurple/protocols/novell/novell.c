@@ -3512,7 +3512,7 @@ novell_protocol_class_init(PurpleProtocolClass *klass)
 }
 
 static void
-novell_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+novell_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->status_text          = novell_status_text;
 	client_iface->tooltip_text         = novell_tooltip_text;
@@ -3523,7 +3523,7 @@ novell_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-novell_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+novell_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->get_info     = novell_get_info;
 	server_iface->set_status   = novell_set_status;
@@ -3538,14 +3538,14 @@ novell_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-novell_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+novell_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = novell_send_im;
 	im_iface->send_typing = novell_send_typing;
 }
 
 static void
-novell_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+novell_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->invite = novell_chat_invite;
 	chat_iface->leave  = novell_chat_leave;
@@ -3553,7 +3553,7 @@ novell_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-novell_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+novell_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_permit      = novell_add_permit;
 	privacy_iface->add_deny        = novell_add_deny;
