@@ -92,6 +92,7 @@ pidgin_whiteboard_rgb24_to_rgba(int color_rgb, GdkRGBA *color)
 	color->red = ((color_rgb >> 16) & 0xFF) / 255.0f;
 	color->green = ((color_rgb >> 8) & 0xFF) / 255.0f;
 	color->blue = (color_rgb & 0xFF) / 255.0f;
+	color->alpha = 1.0;
 }
 
 static gboolean
