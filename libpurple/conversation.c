@@ -192,37 +192,6 @@ common_send(PurpleConversation *conv, const char *message, PurpleMessageFlags ms
 	g_free(displayed);
 }
 
-static void
-open_log(PurpleConversation *conv)
-{
-	PurpleConversationPrivate *priv =
-			purple_conversation_get_instance_private(conv);
-	GDateTime *dt;
-
-	g_return_if_fail(priv != NULL);
-
-	dt = g_date_time_new_now_local();
-	priv->logs = g_list_append(NULL, purple_log_new(PURPLE_IS_CHAT_CONVERSATION(conv) ? PURPLE_LOG_CHAT :
-							   PURPLE_LOG_IM, priv->name, priv->account,
-							   conv, dt));
-	g_date_time_unref(dt);
-}
-
-/* Functions that deal with PurpleMessage history */
-
-static void
-add_message_to_history(PurpleConversation *conv, PurpleMessage *msg)
-{
-	PurpleConversationPrivate *priv =
-			purple_conversation_get_instance_private(conv);
-
-	g_return_if_fail(priv != NULL);
-	g_return_if_fail(msg != NULL);
-
-	g_object_ref(msg);
-	priv->message_history = g_list_prepend(priv->message_history, msg);
-}
-
 /**************************************************************************
  * Conversation API
  **************************************************************************/
@@ -515,8 +484,20 @@ purple_conversation_set_logging(PurpleConversation *conv, gboolean log)
 	if (priv->logging != log)
 	{
 		priv->logging = log;
-		if (log && priv->logs == NULL)
-			open_log(conv);
+		if (log && priv->logs == NULL) {
+			GDateTime *dt;
+			PurpleLog *log;
+
+			dt = g_date_time_new_now_local();
+			log = purple_log_new(PURPLE_IS_CHAT_CONVERSATION(conv)
+			                             ? PURPLE_LOG_CHAT
+			                             : PURPLE_LOG_IM,
+			                     priv->name, priv->account, conv,
+			                     dt);
+			g_date_time_unref(dt);
+
+			priv->logs = g_list_append(NULL, log);
+		}
 
 		g_object_notify_by_pspec(G_OBJECT(conv), properties[PROP_LOGGING]);
 
@@ -655,7 +636,8 @@ _purple_conversation_write_common(PurpleConversation *conv, PurpleMessage *pmsg)
 			ops->write_conv(conv, pmsg);
 	}
 
-	add_message_to_history(conv, pmsg);
+	g_object_ref(pmsg);
+	priv->message_history = g_list_prepend(priv->message_history, pmsg);
 
 	purple_signal_emit(purple_conversations_get_handle(),
 		(PURPLE_IS_IM_CONVERSATION(conv) ? "wrote-im-msg" : "wrote-chat-msg"),
