@@ -67,9 +67,11 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleBuddy, purple_buddy, PURPLE_TYPE_BLIST_NODE)
 void
 purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	if (priv->icon != icon)
 	{
@@ -89,29 +91,33 @@ purple_buddy_set_icon(PurpleBuddy *buddy, PurpleBuddyIcon *icon)
 PurpleBuddyIcon *
 purple_buddy_get_icon(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->icon;
 }
 
 PurpleAccount *
 purple_buddy_get_account(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->account;
 }
 
 void
 purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	purple_blist_update_buddies_cache(buddy, name);
 
@@ -129,38 +135,43 @@ purple_buddy_set_name(PurpleBuddy *buddy, const char *name)
 const char *
 purple_buddy_get_name(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->name;
 }
 
 gpointer
 purple_buddy_get_protocol_data(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->proto_data;
 }
 
 void
 purple_buddy_set_protocol_data(PurpleBuddy *buddy, gpointer data)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
 
+	priv = purple_buddy_get_instance_private(buddy);
 	priv->proto_data = data;
 }
 
 const char *purple_buddy_get_alias_only(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	if ((priv->local_alias != NULL) && (*priv->local_alias != '\0')) {
 		return priv->local_alias;
@@ -175,10 +186,12 @@ const char *purple_buddy_get_alias_only(PurpleBuddy *buddy)
 
 const char *purple_buddy_get_contact_alias(PurpleBuddy *buddy)
 {
+	PurpleBuddyPrivate *priv = NULL;
 	PurpleContact *c;
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	/* Search for an alias for the buddy. In order of precedence: */
 	/* The local buddy alias */
@@ -200,9 +213,11 @@ const char *purple_buddy_get_contact_alias(PurpleBuddy *buddy)
 
 const char *purple_buddy_get_alias(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	/* Search for an alias for the buddy. In order of precedence: */
 	/* The buddy alias */
@@ -220,12 +235,14 @@ const char *purple_buddy_get_alias(PurpleBuddy *buddy)
 void
 purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 {
+	PurpleBuddyPrivate *priv = NULL;
 	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	if ((alias != NULL) && (*alias != '\0'))
 		new_alias = purple_utf8_strip_unprintables(alias);
@@ -264,22 +281,25 @@ purple_buddy_set_local_alias(PurpleBuddy *buddy, const char *alias)
 
 const char *purple_buddy_get_local_alias(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->local_alias;
 }
 
 void
 purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 {
+	PurpleBuddyPrivate *priv = NULL;
 	PurpleIMConversation *im;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	if ((alias != NULL) && (*alias != '\0') && g_utf8_validate(alias, -1, NULL))
 		new_alias = purple_utf8_strip_unprintables(alias);
@@ -318,9 +338,11 @@ purple_buddy_set_server_alias(PurpleBuddy *buddy, const char *alias)
 
 const char *purple_buddy_get_server_alias(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	if ((priv->server_alias) && (*priv->server_alias))
 	    return priv->server_alias;
@@ -337,23 +359,26 @@ PurpleContact *purple_buddy_get_contact(PurpleBuddy *buddy)
 
 PurplePresence *purple_buddy_get_presence(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), NULL);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->presence;
 }
 
 void
 purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 {
+	PurpleBuddyPrivate *priv = NULL;
 	PurpleStatus *status;
 	PurpleBlistNode *cnode;
 	PurpleContact *contact;
 	PurpleCountingNode *contact_counter, *group_counter;
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
+
+	priv = purple_buddy_get_instance_private(buddy);
 
 	status = purple_presence_get_active_status(priv->presence);
 
@@ -411,19 +436,21 @@ purple_buddy_update_status(PurpleBuddy *buddy, PurpleStatus *old_status)
 
 PurpleMediaCaps purple_buddy_get_media_caps(PurpleBuddy *buddy)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_BUDDY(buddy), 0);
 
+	priv = purple_buddy_get_instance_private(buddy);
 	return priv->media_caps;
 }
 
 void purple_buddy_set_media_caps(PurpleBuddy *buddy, PurpleMediaCaps media_caps)
 {
-	PurpleBuddyPrivate *priv = purple_buddy_get_instance_private(buddy);
+	PurpleBuddyPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_BUDDY(buddy));
 
+	priv = purple_buddy_get_instance_private(buddy);
 	priv->media_caps = media_caps;
 
 	g_object_notify_by_pspec(G_OBJECT(buddy),

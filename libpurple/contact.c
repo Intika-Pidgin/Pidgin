@@ -59,8 +59,6 @@ purple_contact_compute_priority_buddy(PurpleContact *contact) {
 	PurpleContactPrivate *priv =
 			purple_contact_get_instance_private(contact);
 
-	g_return_if_fail(priv != NULL);
-
 	priv->priority_buddy = NULL;
 	for (bnode = PURPLE_BLIST_NODE(contact)->child;
 			bnode != NULL;
@@ -112,14 +110,14 @@ purple_contact_get_group(const PurpleContact *contact)
 void
 purple_contact_set_alias(PurpleContact *contact, const char *alias)
 {
+	PurpleContactPrivate *priv = NULL;
 	PurpleIMConversation *im;
 	PurpleBlistNode *bnode;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleContactPrivate *priv =
-			purple_contact_get_instance_private(contact);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_CONTACT(contact));
+	priv = purple_contact_get_instance_private(contact);
 
 	if ((alias != NULL) && (*alias != '\0'))
 		new_alias = purple_utf8_strip_unprintables(alias);
@@ -163,11 +161,11 @@ purple_contact_set_alias(PurpleContact *contact, const char *alias)
 
 const char *purple_contact_get_alias(PurpleContact* contact)
 {
-	PurpleContactPrivate *priv =
-			purple_contact_get_instance_private(contact);
+	PurpleContactPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CONTACT(contact), NULL);
 
+	priv = purple_contact_get_instance_private(contact);
 	if (priv->alias)
 		return priv->alias;
 
@@ -196,21 +194,21 @@ gboolean purple_contact_on_account(PurpleContact *c, PurpleAccount *account)
 
 void purple_contact_invalidate_priority_buddy(PurpleContact *contact)
 {
-	PurpleContactPrivate *priv =
-			purple_contact_get_instance_private(contact);
+	PurpleContactPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_CONTACT(contact));
 
+	priv = purple_contact_get_instance_private(contact);
 	priv->priority_valid = FALSE;
 }
 
 PurpleBuddy *purple_contact_get_priority_buddy(PurpleContact *contact)
 {
-	PurpleContactPrivate *priv =
-			purple_contact_get_instance_private(contact);
+	PurpleContactPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CONTACT(contact), NULL);
 
+	priv = purple_contact_get_instance_private(contact);
 	if (!priv->priority_valid)
 		purple_contact_compute_priority_buddy(contact);
 
