@@ -465,8 +465,6 @@ pidgin_smiley_theme_activate_impl(PurpleSmileyTheme *theme)
 	GHashTable *smap;
 	GList *it, *it2, *it3;
 
-	g_return_if_fail(priv != NULL);
-
 	if (priv->smiley_lists_map)
 		return;
 
