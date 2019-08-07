@@ -1,0 +1,94 @@
+if get_option('gevolution')
+	subdir('gevolution')
+endif
+
+if false
+	subdir('musicmessaging')
+endif
+
+if get_option('cap')
+	subdir('cap')
+endif
+
+if enable_gestures
+	subdir('gestures')
+endif
+
+subdir('disco')
+subdir('ticker')
+
+if IS_WIN32
+	subdir('win32/winprefs')
+endif
+
+if PLUGINS
+	contact_priority = library('contact_priority', 'contact_priority.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '')
+
+	extplacement = library('extplacement', 'extplacement.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    install : true, install_dir : PIDGIN_PLUGINDIR)
+
+	gtkbuddynote = library('gtkbuddynote', 'gtkbuddynote.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    install : true, install_dir : PIDGIN_PLUGINDIR)
+
+	gtk_signals_test = library('gtk_signals_test', 'gtk-signals-test.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '')
+
+	history = library('history', 'history.c',
+	    build_by_default: false,
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
+
+	iconaway = library('iconaway', 'iconaway.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    install : true, install_dir : PIDGIN_PLUGINDIR)
+
+	imgupload = library('imgupload', 'imgupload.c',
+	    dependencies : [json, libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    build_by_default: false,
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
+
+	notify = library('notify', 'notify.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    build_by_default: false,
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
+
+	relnot = library('relnot', 'relnot.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    install : true, install_dir : PIDGIN_PLUGINDIR)
+
+	screencap = library('screencap', 'screencap.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    build_by_default: false,
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
+
+	spellchk = library('spellchk', 'spellchk.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    build_by_default: false,
+	    install : false, install_dir : PIDGIN_PLUGINDIR)
+
+	xmppconsole = library('xmppconsole', 'xmppconsole.c',
+	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    name_prefix : '',
+	    install : true, install_dir : PIDGIN_PLUGINDIR)
+
+	if enable_unity
+		unity = library('unity', 'unity.c',
+		    dependencies : [UNITY, libpurple_dep, libpidgin_dep, glib],
+		    name_prefix : '',
+		    install : true, install_dir : PIDGIN_PLUGINDIR)
+	endif
+endif # PLUGINS
