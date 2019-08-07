@@ -444,10 +444,7 @@
               <object class="GtkBox" id="iface.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -807,10 +804,7 @@
               <object class="GtkBox" id="browser.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -1089,10 +1083,7 @@
               <object class="GtkBox" id="conversations.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -1566,10 +1557,7 @@
               <object class="GtkBox" id="logging.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -1719,10 +1707,7 @@
               <object class="GtkBox" id="network.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -2222,10 +2207,7 @@
               <object class="GtkBox" id="proxy.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -2550,10 +2532,7 @@
               <object class="GtkBox" id="keyring.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -2657,10 +2636,7 @@
               <object class="GtkBox" id="sound.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -3052,10 +3028,7 @@
               <object class="GtkBox" id="away.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
@@ -3395,10 +3368,7 @@
               <object class="GtkBox" id="theme.page">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="margin_left">12</property>
-                <property name="margin_right">12</property>
-                <property name="margin_top">12</property>
-                <property name="margin_bottom">12</property>
+                <property name="border_width">12</property>
                 <property name="orientation">vertical</property>
                 <property name="spacing">18</property>
                 <child>
