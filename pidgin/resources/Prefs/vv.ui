@@ -299,7 +299,7 @@ audio-volume-medium-symbolic</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkToggleButton" id="vv.voice.test_button">
+                      <object class="GtkToggleButton" id="vv.voice.test">
                         <property name="label" translatable="yes">Test Audio</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
@@ -520,7 +520,7 @@ audio-volume-medium-symbolic</property>
                       </packing>
                     </child>
                     <child>
-                      <object class="GtkToggleButton" id="vv.video.test_button">
+                      <object class="GtkToggleButton" id="vv.video.test">
                         <property name="label" translatable="yes">Test Video</property>
                         <property name="visible">True</property>
                         <property name="can_focus">True</property>
