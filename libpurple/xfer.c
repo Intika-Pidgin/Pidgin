@@ -218,9 +218,6 @@ purple_xfer_conversation_write_internal(PurpleXfer *xfer,
 	gsize size;
 	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 
-	g_return_if_fail(priv != NULL);
-	g_return_if_fail(message != NULL);
-
 	thumbnail_data = purple_xfer_get_thumbnail(xfer, &size);
 
 	im = purple_conversations_find_im_with_account(priv->who,
@@ -260,6 +257,9 @@ void
 purple_xfer_conversation_write(PurpleXfer *xfer, const gchar *message,
 	gboolean is_error)
 {
+	g_return_if_fail(PURPLE_IS_XFER(xfer));
+	g_return_if_fail(message != NULL);
+
 	purple_xfer_conversation_write_internal(xfer, message, is_error, FALSE);
 }
 

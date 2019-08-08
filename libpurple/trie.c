@@ -203,12 +203,8 @@ purple_record_list_remove(PurpleTrieRecordList *head,
  ******************************************************************************/
 
 static void
-purple_trie_states_cleanup(PurpleTrie *trie)
+purple_trie_states_cleanup(PurpleTriePrivate *priv)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
-
-	g_return_if_fail(priv != NULL);
-
 	if (priv->root_state != NULL) {
 		purple_memory_pool_cleanup(priv->states_mempool);
 		priv->root_state = NULL;
@@ -217,12 +213,10 @@ purple_trie_states_cleanup(PurpleTrie *trie)
 
 /* Allocates a state and binds it to the parent. */
 static PurpleTrieState *
-purple_trie_state_new(PurpleTrie *trie, PurpleTrieState *parent, guchar character)
+purple_trie_state_new(PurpleTriePrivate *priv, PurpleTrieState *parent,
+                      guchar character)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieState *state;
-
-	g_return_val_if_fail(priv != NULL, NULL);
 
 	state = purple_memory_pool_alloc0(priv->states_mempool,
 		sizeof(PurpleTrieState), sizeof(gpointer));
@@ -252,15 +246,12 @@ purple_trie_state_new(PurpleTrie *trie, PurpleTrieState *parent, guchar characte
 }
 
 static gboolean
-purple_trie_states_build(PurpleTrie *trie)
+purple_trie_states_build(PurpleTriePrivate *priv)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
 	PurpleTrieState *root;
 	PurpleMemoryPool *reclist_mpool;
 	PurpleTrieRecordList *reclist, *it;
 	gulong cur_len;
-
-	g_return_val_if_fail(priv != NULL, FALSE);
 
 	if (priv->root_state != NULL)
 		return TRUE;
@@ -273,7 +264,7 @@ purple_trie_states_build(PurpleTrie *trie)
 			PURPLE_TRIE_STATES_LARGE_POOL_BLOCK_SIZE);
 	}
 
-	priv->root_state = root = purple_trie_state_new(trie, NULL, '\0');
+	priv->root_state = root = purple_trie_state_new(priv, NULL, '\0');
 	g_return_val_if_fail(root != NULL, FALSE);
 	g_assert(root->longest_suffix == NULL);
 
@@ -306,8 +297,8 @@ purple_trie_states_build(PurpleTrie *trie)
 				prefix = prefix->children[character];
 			} else {
 				/* We need to create a new branch of trie. */
-				prefix = purple_trie_state_new(trie, prefix,
-					character);
+				prefix = purple_trie_state_new(priv, prefix,
+				                               character);
 				if (!prefix) {
 					g_warn_if_reached();
 					g_object_unref(reclist_mpool);
@@ -454,7 +445,7 @@ purple_trie_replace(PurpleTrie *trie, const gchar *src,
 	g_return_val_if_fail(replace_cb != NULL, g_strdup(src));
 	g_return_val_if_fail(priv != NULL, NULL);
 
-	purple_trie_states_build(trie);
+	purple_trie_states_build(priv);
 
 	machine.state = priv->root_state;
 	machine.root_state = priv->root_state;
@@ -511,7 +502,7 @@ purple_trie_multi_replace(const GSList *tries, const gchar *src,
 			return NULL;
 		}
 
-		purple_trie_states_build(trie);
+		purple_trie_states_build(priv);
 
 		machines[i].state = priv->root_state;
 		machines[i].root_state = priv->root_state;
@@ -567,7 +558,7 @@ purple_trie_find(PurpleTrie *trie, const gchar *src,
 
 	g_return_val_if_fail(priv != NULL, 0);
 
-	purple_trie_states_build(trie);
+	purple_trie_states_build(priv);
 
 	machine.state = priv->root_state;
 	machine.root_state = priv->root_state;
@@ -620,7 +611,7 @@ purple_trie_multi_find(const GSList *tries, const gchar *src,
 			return 0;
 		}
 
-		purple_trie_states_build(trie);
+		purple_trie_states_build(priv);
 
 		machines[i].state = priv->root_state;
 		machines[i].root_state = priv->root_state;
@@ -683,7 +674,7 @@ purple_trie_add(PurpleTrie *trie, const gchar *word, gpointer data)
 	/* Every change in a trie invalidates longest_suffix map.
 	 * These prefixes could be updated instead of cleaning the whole graph.
 	 */
-	purple_trie_states_cleanup(trie);
+	purple_trie_states_cleanup(priv);
 
 	rec = purple_memory_pool_alloc(priv->records_obj_mempool,
 		sizeof(PurpleTrieRecord), sizeof(gpointer));
@@ -715,7 +706,7 @@ purple_trie_remove(PurpleTrie *trie, const gchar *word)
 		return;
 
 	/* see purple_trie_add */
-	purple_trie_states_cleanup(trie);
+	purple_trie_states_cleanup(priv);
 
 	priv->records_total_size -= it->rec->word_len;
 	priv->records = purple_record_list_remove(priv->records, it);
