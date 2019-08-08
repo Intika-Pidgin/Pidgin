@@ -127,10 +127,11 @@ purple_message_new_system(const gchar *contents, PurpleMessageFlags flags)
 guint
 purple_message_get_id(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), 0);
 
+	priv = purple_message_get_instance_private(msg);
 	return priv->id;
 }
 
@@ -145,20 +146,22 @@ purple_message_find_by_id(guint id)
 const gchar *
 purple_message_get_author(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), NULL);
 
+	priv = purple_message_get_instance_private(msg);
 	return priv->author;
 }
 
 const gchar *
 purple_message_get_recipient(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), NULL);
 
+	priv = purple_message_get_instance_private(msg);
 	return priv->recipient;
 }
 
@@ -171,9 +174,10 @@ purple_message_set_author_alias(PurpleMessage *msg, const gchar *alias)
 const gchar *
 purple_message_get_author_alias(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), NULL);
+	priv = purple_message_get_instance_private(msg);
 
 	if (priv->author_alias == NULL)
 		return purple_message_get_author(msg);
@@ -190,10 +194,11 @@ purple_message_set_contents(PurpleMessage *msg, const gchar *cont)
 const gchar *
 purple_message_get_contents(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), NULL);
 
+	priv = purple_message_get_instance_private(msg);
 	return priv->contents;
 }
 
@@ -214,10 +219,11 @@ purple_message_set_time(PurpleMessage *msg, guint64 msgtime)
 guint64
 purple_message_get_time(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), 0);
 
+	priv = purple_message_get_instance_private(msg);
 	return priv->msgtime;
 }
 
@@ -230,10 +236,11 @@ purple_message_set_flags(PurpleMessage *msg, PurpleMessageFlags flags)
 PurpleMessageFlags
 purple_message_get_flags(PurpleMessage *msg)
 {
-	PurpleMessagePrivate *priv = purple_message_get_instance_private(msg);
+	PurpleMessagePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_MESSAGE(msg), 0);
 
+	priv = purple_message_get_instance_private(msg);
 	return priv->flags;
 }
 

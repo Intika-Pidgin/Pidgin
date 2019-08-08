@@ -56,77 +56,77 @@ G_DEFINE_ABSTRACT_TYPE_WITH_PRIVATE(PurpleCountingNode, purple_counting_node,
 int
 purple_counting_node_get_total_size(PurpleCountingNode *counter)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, -1);
+	g_return_val_if_fail(PURPLE_IS_COUNTING_NODE(counter), -1);
 
+	priv = purple_counting_node_get_instance_private(counter);
 	return priv->totalsize;
 }
 
 int
 purple_counting_node_get_current_size(PurpleCountingNode *counter)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, -1);
+	g_return_val_if_fail(PURPLE_IS_COUNTING_NODE(counter), -1);
 
+	priv = purple_counting_node_get_instance_private(counter);
 	return priv->currentsize;
 }
 
 int
 purple_counting_node_get_online_count(PurpleCountingNode *counter)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, -1);
+	g_return_val_if_fail(PURPLE_IS_COUNTING_NODE(counter), -1);
 
+	priv = purple_counting_node_get_instance_private(counter);
 	return priv->onlinecount;
 }
 
 void
 purple_counting_node_change_total_size(PurpleCountingNode *counter, int delta)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_COUNTING_NODE(counter));
 
+	priv = purple_counting_node_get_instance_private(counter);
 	purple_counting_node_set_total_size(counter, priv->totalsize + delta);
 }
 
 void
 purple_counting_node_change_current_size(PurpleCountingNode *counter, int delta)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_COUNTING_NODE(counter));
 
+	priv = purple_counting_node_get_instance_private(counter);
 	purple_counting_node_set_current_size(counter, priv->currentsize + delta);
 }
 
 void
 purple_counting_node_change_online_count(PurpleCountingNode *counter, int delta)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_COUNTING_NODE(counter));
 
+	priv = purple_counting_node_get_instance_private(counter);
 	purple_counting_node_set_online_count(counter, priv->onlinecount + delta);
 }
 
 void
 purple_counting_node_set_total_size(PurpleCountingNode *counter, int totalsize)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_COUNTING_NODE(counter));
 
+	priv = purple_counting_node_get_instance_private(counter);
 	priv->totalsize = totalsize;
 
 	g_object_notify_by_pspec(G_OBJECT(counter), properties[PROP_TOTAL_SIZE]);
@@ -135,11 +135,11 @@ purple_counting_node_set_total_size(PurpleCountingNode *counter, int totalsize)
 void
 purple_counting_node_set_current_size(PurpleCountingNode *counter, int currentsize)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_COUNTING_NODE(counter));
 
+	priv = purple_counting_node_get_instance_private(counter);
 	priv->currentsize = currentsize;
 
 	g_object_notify_by_pspec(G_OBJECT(counter), properties[PROP_CURRENT_SIZE]);
@@ -148,11 +148,11 @@ purple_counting_node_set_current_size(PurpleCountingNode *counter, int currentsi
 void
 purple_counting_node_set_online_count(PurpleCountingNode *counter, int onlinecount)
 {
-	PurpleCountingNodePrivate *priv =
-			purple_counting_node_get_instance_private(counter);
+	PurpleCountingNodePrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_COUNTING_NODE(counter));
 
+	priv = purple_counting_node_get_instance_private(counter);
 	priv->onlinecount = onlinecount;
 
 	g_object_notify_by_pspec(G_OBJECT(counter), properties[PROP_ONLINE_COUNT]);

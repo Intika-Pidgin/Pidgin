@@ -60,9 +60,11 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleChat, purple_chat, PURPLE_TYPE_BLIST_NODE);
 
 const char *purple_chat_get_name(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
+	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
+
+	priv = purple_chat_get_instance_private(chat);
 
 	if ((priv->alias != NULL) && (*priv->alias != '\0'))
 		return priv->alias;
@@ -72,11 +74,13 @@ const char *purple_chat_get_name(PurpleChat *chat)
 
 const char *purple_chat_get_name_only(PurpleChat *chat)
 {
+	PurpleChatPrivate *priv = NULL;
 	char *ret = NULL;
 	PurpleProtocol *protocol = NULL;
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
+
+	priv = purple_chat_get_instance_private(chat);
 
 	protocol = purple_protocols_find(purple_account_get_protocol_id(priv->account));
 
@@ -95,11 +99,13 @@ const char *purple_chat_get_name_only(PurpleChat *chat)
 void
 purple_chat_set_alias(PurpleChat *chat, const char *alias)
 {
+	PurpleChatPrivate *priv = NULL;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_CHAT(priv));
+
+	priv = purple_chat_get_instance_private(chat);
 
 	if ((alias != NULL) && (*alias != '\0'))
 		new_alias = purple_utf8_strip_unprintables(alias);
@@ -141,20 +147,22 @@ purple_chat_get_group(PurpleChat *chat)
 PurpleAccount *
 purple_chat_get_account(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
+	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
 
+	priv = purple_chat_get_instance_private(chat);
 	return priv->account;
 }
 
 GHashTable *
 purple_chat_get_components(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
+	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
 
+	priv = purple_chat_get_instance_private(chat);
 	return priv->components;
 }
 
