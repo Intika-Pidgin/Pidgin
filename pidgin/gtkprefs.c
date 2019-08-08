@@ -2969,13 +2969,9 @@ gst_msg_db_to_percent(GstMessage *msg, gchar *value_name)
 	gdouble percent;
 
 	list = gst_structure_get_value(gst_message_get_structure(msg), value_name);
-#if GST_CHECK_VERSION(1,0,0)
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	value = g_value_array_get_nth(g_value_get_boxed(list), 0);
 G_GNUC_END_IGNORE_DEPRECATIONS
-#else
-	value = gst_value_list_get_value(list, 0);
-#endif
 	value_db = g_value_get_double(value);
 	percent = pow(10, value_db / 20);
 	return (percent > 1.0) ? 1.0 : percent;
@@ -3171,30 +3167,18 @@ video_test_destroy_cb(GtkWidget *w, gpointer data)
 static void
 window_id_cb(GstBus *bus, GstMessage *msg, gulong window_id)
 {
-	if (GST_MESSAGE_TYPE(msg) != GST_MESSAGE_ELEMENT
-#if GST_CHECK_VERSION(1,0,0)
-	 || !gst_is_video_overlay_prepare_window_handle_message(msg))
-#else
-	/* there may be have-xwindow-id also, in case something went wrong */
-	 || !gst_structure_has_name(msg->structure, "prepare-xwindow-id"))
-#endif
+	if (GST_MESSAGE_TYPE(msg) != GST_MESSAGE_ELEMENT ||
+	    !gst_is_video_overlay_prepare_window_handle_message(msg)) {
 		return;
+	}
 
 	g_signal_handlers_disconnect_matched(bus,
 	                                     G_SIGNAL_MATCH_FUNC | G_SIGNAL_MATCH_DATA,
 	                                     0, 0, NULL, window_id_cb,
 	                                     (gpointer)window_id);
 
-#if GST_CHECK_VERSION(1,0,0)
 	gst_video_overlay_set_window_handle(GST_VIDEO_OVERLAY(GST_MESSAGE_SRC(msg)),
 	                                    window_id);
-#elif GST_CHECK_VERSION(0,10,31)
-	gst_x_overlay_set_window_handle(GST_X_OVERLAY(GST_MESSAGE_SRC(msg)),
-	                                window_id);
-#else
-	gst_x_overlay_set_xwindow_id(GST_X_OVERLAY(GST_MESSAGE_SRC(msg)),
-	                             window_id);
-#endif
 }
 
 static void
@@ -3228,11 +3212,7 @@ enable_video_test(PidginPrefsWindow *win)
 
 	win->vv.video.pipeline = create_video_pipeline();
 	bus = gst_pipeline_get_bus(GST_PIPELINE(win->vv.video.pipeline));
-#if GST_CHECK_VERSION(1,0,0)
 	gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL, NULL);
-#else
-	gst_bus_set_sync_handler(bus, gst_bus_sync_signal_handler, NULL);
-#endif
 	g_signal_connect(bus, "sync-message::element",
 	                 G_CALLBACK(window_id_cb), (gpointer)window_id);
 	gst_object_unref(bus);
