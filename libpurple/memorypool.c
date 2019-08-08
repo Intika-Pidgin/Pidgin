@@ -99,12 +99,13 @@ purple_memory_pool_block_new(gulong block_size)
 static gpointer
 purple_memory_pool_alloc_impl(PurpleMemoryPool *pool, gsize size, guint alignment)
 {
-	PurpleMemoryPoolPrivate *priv =
-			purple_memory_pool_get_instance_private(pool);
+	PurpleMemoryPoolPrivate *priv = NULL;
 	PurpleMemoryPoolBlock *blk;
 	gpointer mem = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_MEMORY_POOL(pool), NULL);
+
+	priv = purple_memory_pool_get_instance_private(pool);
 
 	if (priv->disabled) {
 		/* XXX: this may cause some leaks */
@@ -167,8 +168,6 @@ purple_memory_pool_cleanup_impl(PurpleMemoryPool *pool)
 			purple_memory_pool_get_instance_private(pool);
 	PurpleMemoryPoolBlock *blk;
 
-	g_return_if_fail(priv != NULL);
-
 	blk = priv->first_block;
 	priv->first_block = NULL;
 	priv->last_block = NULL;
@@ -187,11 +186,11 @@ purple_memory_pool_cleanup_impl(PurpleMemoryPool *pool)
 void
 purple_memory_pool_set_block_size(PurpleMemoryPool *pool, gulong block_size)
 {
-	PurpleMemoryPoolPrivate *priv =
-			purple_memory_pool_get_instance_private(pool);
+	PurpleMemoryPoolPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_MEMORY_POOL(pool));
 
+	priv = purple_memory_pool_get_instance_private(pool);
 	priv->block_size = block_size;
 	g_object_notify_by_pspec(G_OBJECT(pool), properties[PROP_BLOCK_SIZE]);
 }

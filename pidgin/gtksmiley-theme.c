@@ -385,32 +385,32 @@ pidgin_smiley_theme_probe(void)
 const gchar *
 pidgin_smiley_theme_get_name(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
 
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 	return priv->name;
 }
 
 const gchar *
 pidgin_smiley_theme_get_description(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
 
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 	return priv->desc;
 }
 
 GdkPixbuf *
 pidgin_smiley_theme_get_icon(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 
 	if (priv->icon == NULL)
 		return NULL;
@@ -428,11 +428,11 @@ pidgin_smiley_theme_get_icon(PidginSmileyTheme *theme)
 const gchar *
 pidgin_smiley_theme_get_author(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
 
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 	return priv->author;
 }
 

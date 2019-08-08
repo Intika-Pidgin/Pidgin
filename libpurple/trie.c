@@ -434,7 +434,7 @@ gchar *
 purple_trie_replace(PurpleTrie *trie, const gchar *src,
 	PurpleTrieReplaceCb replace_cb, gpointer user_data)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 	PurpleTrieMachine machine;
 	GString *out;
 	gsize i;
@@ -443,7 +443,9 @@ purple_trie_replace(PurpleTrie *trie, const gchar *src,
 		return NULL;
 
 	g_return_val_if_fail(replace_cb != NULL, g_strdup(src));
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_TRIE(trie), NULL);
+
+	priv = purple_trie_get_instance_private(trie);
 
 	purple_trie_states_build(priv);
 
@@ -493,14 +495,15 @@ purple_trie_multi_replace(const GSList *tries, const gchar *src,
 	machines = g_new(PurpleTrieMachine, tries_count);
 	for (i = 0; i < tries_count; i++, tries = tries->next) {
 		PurpleTrie *trie = tries->data;
-		PurpleTriePrivate *priv =
-				purple_trie_get_instance_private(trie);
+		PurpleTriePrivate *priv = NULL;
 
-		if (priv == NULL) {
+		if (!PURPLE_TRIE(trie)) {
 			g_warn_if_reached();
 			g_free(machines);
 			return NULL;
 		}
+
+		priv = purple_trie_get_instance_private(trie);
 
 		purple_trie_states_build(priv);
 
@@ -548,7 +551,7 @@ gulong
 purple_trie_find(PurpleTrie *trie, const gchar *src,
 	PurpleTrieFindCb find_cb, gpointer user_data)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 	PurpleTrieMachine machine;
 	gulong found_count = 0;
 	gsize i;
@@ -556,7 +559,9 @@ purple_trie_find(PurpleTrie *trie, const gchar *src,
 	if (src == NULL)
 		return 0;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_TRIE(trie), 0);
+
+	priv = purple_trie_get_instance_private(trie);
 
 	purple_trie_states_build(priv);
 
@@ -602,14 +607,15 @@ purple_trie_multi_find(const GSList *tries, const gchar *src,
 	machines = g_new(PurpleTrieMachine, tries_count);
 	for (i = 0; i < tries_count; i++, tries = tries->next) {
 		PurpleTrie *trie = tries->data;
-		PurpleTriePrivate *priv =
-				purple_trie_get_instance_private(trie);
+		PurpleTriePrivate *priv = NULL;
 
-		if (priv == NULL) {
+		if (!PURPLE_IS_TRIE(trie)) {
 			g_warn_if_reached();
 			g_free(machines);
 			return 0;
 		}
+
+		priv = purple_trie_get_instance_private(trie);
 
 		purple_trie_states_build(priv);
 
@@ -659,12 +665,14 @@ purple_trie_multi_find(const GSList *tries, const gchar *src,
 gboolean
 purple_trie_add(PurpleTrie *trie, const gchar *word, gpointer data)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 	PurpleTrieRecord *rec;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_TRIE(trie), FALSE);
 	g_return_val_if_fail(word != NULL, FALSE);
 	g_return_val_if_fail(word[0] != '\0', FALSE);
+
+	priv = purple_trie_get_instance_private(trie);
 
 	if (g_hash_table_lookup(priv->records_map, word) != NULL) {
 		purple_debug_warning("trie", "record exists: %s", word);
@@ -694,12 +702,14 @@ purple_trie_add(PurpleTrie *trie, const gchar *word, gpointer data)
 void
 purple_trie_remove(PurpleTrie *trie, const gchar *word)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 	PurpleTrieRecordList *it;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_TRIE(trie));
 	g_return_if_fail(word != NULL);
 	g_return_if_fail(word[0] != '\0');
+
+	priv = purple_trie_get_instance_private(trie);
 
 	it = g_hash_table_lookup(priv->records_map, word);
 	if (it == NULL)
@@ -720,10 +730,11 @@ purple_trie_remove(PurpleTrie *trie, const gchar *word)
 guint
 purple_trie_get_size(PurpleTrie *trie)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_TRIE(trie), 0);
 
+	priv = purple_trie_get_instance_private(trie);
 	return g_hash_table_size(priv->records_map);
 }
 
@@ -735,20 +746,22 @@ purple_trie_get_size(PurpleTrie *trie)
 gboolean
 purple_trie_get_reset_on_match(PurpleTrie *trie)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv, FALSE);
+	g_return_val_if_fail(PURPLE_IS_TRIE(trie), FALSE);
 
+	priv = purple_trie_get_instance_private(trie);
 	return priv->reset_on_match;
 }
 
 void
 purple_trie_set_reset_on_match(PurpleTrie *trie, gboolean reset)
 {
-	PurpleTriePrivate *priv = purple_trie_get_instance_private(trie);
+	PurpleTriePrivate *priv = NULL;
 
-	g_return_if_fail(priv);
+	g_return_if_fail(PURPLE_IS_TRIE(trie));
 
+	priv = purple_trie_get_instance_private(trie);
 	priv->reset_on_match = reset;
 	g_object_notify_by_pspec(G_OBJECT(trie), properties[PROP_RESET_ON_MATCH]);
 }

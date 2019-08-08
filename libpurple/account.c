@@ -2580,20 +2580,22 @@ purple_account_privacy_deny(PurpleAccount *account, const char *who)
 GSList *
 purple_account_privacy_get_permitted(PurpleAccount *account)
 {
-	PurpleAccountPrivate *priv = purple_account_get_instance_private(account);
+	PurpleAccountPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ACCOUNT(account), NULL);
 
+	priv = purple_account_get_instance_private(account);
 	return priv->permit;
 }
 
 GSList *
 purple_account_privacy_get_denied(PurpleAccount *account)
 {
-	PurpleAccountPrivate *priv = purple_account_get_instance_private(account);
+	PurpleAccountPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ACCOUNT(account), NULL);
 
+	priv = purple_account_get_instance_private(account);
 	return priv->deny;
 }
 

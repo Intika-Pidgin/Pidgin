@@ -107,41 +107,41 @@ void purple_whiteboard_set_ui_ops(PurpleWhiteboardUiOps *ops)
 
 void purple_whiteboard_set_protocol_ops(PurpleWhiteboard *wb, PurpleWhiteboardOps *ops)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	priv->protocol_ops = ops;
 }
 
 PurpleAccount *purple_whiteboard_get_account(PurpleWhiteboard *wb)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), NULL);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	return priv->account;
 }
 
 const char *purple_whiteboard_get_who(PurpleWhiteboard *wb)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), NULL);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	return priv->who;
 }
 
 void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	priv->state = state;
 
 	g_object_notify_by_pspec(G_OBJECT(wb), properties[PROP_STATE]);
@@ -149,11 +149,11 @@ void purple_whiteboard_set_state(PurpleWhiteboard *wb, int state)
 
 int purple_whiteboard_get_state(PurpleWhiteboard *wb)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, -1);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), -1);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	return priv->state;
 }
 
@@ -198,12 +198,12 @@ void purple_whiteboard_draw_list_destroy(GList *draw_list)
 
 gboolean purple_whiteboard_get_dimensions(PurpleWhiteboard *wb, int *width, int *height)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 	PurpleWhiteboardOps *protocol_ops;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), FALSE);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	protocol_ops = priv->protocol_ops;
 
 	if (protocol_ops && protocol_ops->get_dimensions)
@@ -223,12 +223,12 @@ void purple_whiteboard_set_dimensions(PurpleWhiteboard *wb, int width, int heigh
 
 void purple_whiteboard_send_draw_list(PurpleWhiteboard *wb, GList *list)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 	PurpleWhiteboardOps *protocol_ops;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	protocol_ops = priv->protocol_ops;
 
 	if (protocol_ops && protocol_ops->send_draw_list)
@@ -255,12 +255,12 @@ void purple_whiteboard_clear(PurpleWhiteboard *wb)
 
 void purple_whiteboard_send_clear(PurpleWhiteboard *wb)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 	PurpleWhiteboardOps *protocol_ops;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	protocol_ops = priv->protocol_ops;
 
 	if (protocol_ops && protocol_ops->clear)
@@ -269,12 +269,12 @@ void purple_whiteboard_send_clear(PurpleWhiteboard *wb)
 
 void purple_whiteboard_send_brush(PurpleWhiteboard *wb, int size, int color)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 	PurpleWhiteboardOps *protocol_ops;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	protocol_ops = priv->protocol_ops;
 
 	if (protocol_ops && protocol_ops->set_brush)
@@ -283,12 +283,12 @@ void purple_whiteboard_send_brush(PurpleWhiteboard *wb, int size, int color)
 
 gboolean purple_whiteboard_get_brush(PurpleWhiteboard *wb, int *size, int *color)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 	PurpleWhiteboardOps *protocol_ops;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), FALSE);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	protocol_ops = priv->protocol_ops;
 
 	if (protocol_ops && protocol_ops->get_brush)
@@ -307,21 +307,21 @@ void purple_whiteboard_set_brush(PurpleWhiteboard *wb, int size, int color)
 
 GList *purple_whiteboard_get_draw_list(PurpleWhiteboard *wb)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), NULL);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	return priv->draw_list;
 }
 
 void purple_whiteboard_set_draw_list(PurpleWhiteboard *wb, GList* draw_list)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	priv->draw_list = draw_list;
 
 	g_object_notify_by_pspec(G_OBJECT(wb), properties[PROP_DRAW_LIST]);
@@ -329,21 +329,21 @@ void purple_whiteboard_set_draw_list(PurpleWhiteboard *wb, GList* draw_list)
 
 void purple_whiteboard_set_protocol_data(PurpleWhiteboard *wb, gpointer proto_data)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_WHITEBOARD(wb));
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	priv->proto_data = proto_data;
 }
 
 gpointer purple_whiteboard_get_protocol_data(PurpleWhiteboard *wb)
 {
-	PurpleWhiteboardPrivate *priv =
-			purple_whiteboard_get_instance_private(wb);
+	PurpleWhiteboardPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_WHITEBOARD(wb), NULL);
 
+	priv = purple_whiteboard_get_instance_private(wb);
 	return priv->proto_data;
 }
 

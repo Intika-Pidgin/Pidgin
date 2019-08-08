@@ -97,15 +97,17 @@ gboolean purple_group_on_account(PurpleGroup *g, PurpleAccount *account) {
  * TODO: If merging, prompt the user if they want to merge.
  */
 void purple_group_set_name(PurpleGroup *source, const char *name) {
+	PurpleGroupPrivate *priv = NULL;
 	PurpleGroup *dest;
 	gchar *old_name;
 	gchar *new_name;
 	GList *moved_buddies = NULL;
 	GSList *accts;
-	PurpleGroupPrivate *priv = purple_group_get_instance_private(source);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_GROUP(source));
 	g_return_if_fail(name != NULL);
+
+	priv = purple_group_get_instance_private(source);
 
 	new_name = purple_utf8_strip_unprintables(name);
 
@@ -233,10 +235,11 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 }
 
 const char *purple_group_get_name(PurpleGroup *group) {
-	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
+	PurpleGroupPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_GROUP(group), NULL);
 
+	priv = purple_group_get_instance_private(group);
 	return priv->name;
 }
 

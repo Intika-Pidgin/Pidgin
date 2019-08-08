@@ -733,13 +733,15 @@ void
 purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
 									   GList *attrs)
 {
+	PurpleStatusPrivate *priv = NULL;
 	gboolean changed = FALSE;
 	GList *l;
 	GList *specified_attr_ids = NULL;
 	PurpleStatusType *status_type;
-	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_STATUS(status));
+
+	priv = purple_status_get_instance_private(status);
 
 	if (!active && purple_status_is_exclusive(status))
 	{
@@ -859,20 +861,22 @@ purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
 PurpleStatusType *
 purple_status_get_status_type(PurpleStatus *status)
 {
-	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
+	PurpleStatusPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_STATUS(status), NULL);
 
+	priv = purple_status_get_instance_private(status);
 	return priv->status_type;
 }
 
 PurplePresence *
 purple_status_get_presence(PurpleStatus *status)
 {
-	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
+	PurpleStatusPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_STATUS(status), NULL);
 
+	priv = purple_status_get_instance_private(status);
 	return priv->presence;
 }
 
@@ -919,10 +923,11 @@ purple_status_is_available(PurpleStatus *status)
 gboolean
 purple_status_is_active(PurpleStatus *status)
 {
-	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
+	PurpleStatusPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_STATUS(status), FALSE);
 
+	priv = purple_status_get_instance_private(status);
 	return priv->active;
 }
 
@@ -942,11 +947,12 @@ purple_status_is_online(PurpleStatus *status)
 GValue *
 purple_status_get_attr_value(PurpleStatus *status, const char *id)
 {
-	PurpleStatusPrivate *priv = purple_status_get_instance_private(status);
+	PurpleStatusPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_STATUS(status), NULL);
 	g_return_val_if_fail(id   != NULL, NULL);
 
+	priv = purple_status_get_instance_private(status);
 	return (GValue *)g_hash_table_lookup(priv->attr_values, id);
 }
 

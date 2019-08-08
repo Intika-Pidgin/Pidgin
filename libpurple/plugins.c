@@ -633,66 +633,66 @@ purple_plugin_info_get_abi_version(const PurplePluginInfo *info)
 PurplePluginActionsCb
 purple_plugin_info_get_actions_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv =
-			purple_plugin_info_get_instance_private(info);
+	PurplePluginInfoPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 
+	priv = purple_plugin_info_get_instance_private(info);
 	return priv->actions_cb;
 }
 
 PurplePluginExtraCb
 purple_plugin_info_get_extra_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv =
-			purple_plugin_info_get_instance_private(info);
+	PurplePluginInfoPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 
+	priv = purple_plugin_info_get_instance_private(info);
 	return priv->extra_cb;
 }
 
 PurplePluginPrefFrameCb
 purple_plugin_info_get_pref_frame_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv =
-			purple_plugin_info_get_instance_private(info);
+	PurplePluginInfoPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 
+	priv = purple_plugin_info_get_instance_private(info);
 	return priv->pref_frame_cb;
 }
 
 PurplePluginPrefRequestCb
 purple_plugin_info_get_pref_request_cb(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv =
-			purple_plugin_info_get_instance_private(info);
+	PurplePluginInfoPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 
+	priv = purple_plugin_info_get_instance_private(info);
 	return priv->pref_request_cb;
 }
 
 PurplePluginInfoFlags
 purple_plugin_info_get_flags(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv =
-			purple_plugin_info_get_instance_private(info);
+	PurplePluginInfoPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, 0);
+	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), 0);
 
+	priv = purple_plugin_info_get_instance_private(info);
 	return priv->flags;
 }
 
 const gchar *
 purple_plugin_info_get_error(PurplePluginInfo *info)
 {
-	PurplePluginInfoPrivate *priv =
-			purple_plugin_info_get_instance_private(info);
+	PurplePluginInfoPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 
+	priv = purple_plugin_info_get_instance_private(info);
 	return priv->error;
 }
 
