@@ -284,45 +284,6 @@ GtkWidget *pidgin_protocol_option_menu_new(const char *id,
 const char *pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu);
 
 /**
- * pidgin_account_option_menu_new:
- * @default_account: The account to select by default.
- * @show_all: Whether or not to show all accounts, or just
- *            active accounts.
- * @cb: (scope call): The callback to call when an account is selected.
- * @filter_func: (scope call): A function for checking if an account should
- *               be shown. This can be NULL.
- * @user_data: Data to pass to the callback function.
- *
- * Creates a drop-down option menu filled with accounts.
- *
- * Returns: (transfer full): The drop-down option menu.
- */
-GtkWidget *pidgin_account_option_menu_new(PurpleAccount *default_account,
-		gboolean show_all, GCallback cb,
-		PurpleFilterAccountFunc filter_func, gpointer user_data);
-
-/**
- * pidgin_account_option_menu_get_selected:
- * @optmenu: The drop-down option menu created by
- *        pidgin_account_option_menu_new.
- *
- * Gets the currently selected account from an account drop down box.
- *
- * Returns: (transfer none): Returns the PurpleAccount that is currently selected.
- */
-PurpleAccount *pidgin_account_option_menu_get_selected(GtkWidget *optmenu);
-
-/**
- * pidgin_account_option_menu_set_selected:
- * @optmenu: The GtkOptionMenu created by
- *        pidgin_account_option_menu_new.
- * @account: The PurpleAccount to select.
- *
- * Sets the currently selected account for an account drop down box.
- */
-void pidgin_account_option_menu_set_selected(GtkWidget *optmenu, PurpleAccount *account);
-
-/**
  * pidgin_setup_screenname_autocomplete:
  * @entry:       The GtkEntry on which to setup autocomplete.
  * @optmenu:     A menu for accounts, returned by pidgin_account_option_menu_new().

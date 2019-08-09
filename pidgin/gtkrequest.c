@@ -33,6 +33,7 @@
 #include "pidginstock.h"
 #include "gtkblist.h"
 #include "gtkinternal.h"
+#include "pidginaccountchooser.h"
 
 #include <gdk/gdkkeysyms.h>
 

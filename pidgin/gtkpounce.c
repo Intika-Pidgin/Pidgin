@@ -40,6 +40,7 @@
 #include "gtknotify.h"
 #include "pidginstock.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 #include "pidgintalkatu.h"
 
 #include <gdk/gdkkeysyms.h>

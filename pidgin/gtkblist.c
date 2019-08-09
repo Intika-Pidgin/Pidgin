@@ -59,6 +59,7 @@
 #include "gtkutils.h"
 #include "pidgin/minidialog.h"
 #include "pidgin/pidginabout.h"
+#include "pidgin/pidginaccountchooser.h"
 #include "pidgin/pidgindebug.h"
 #include "pidgin/pidgindebugplugininfo.h"
 #include "pidgin/pidgingdkpixbuf.h"

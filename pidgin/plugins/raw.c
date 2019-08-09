@@ -32,6 +32,7 @@
 #include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 
 #include "protocols/jabber/jabber.h"
 
