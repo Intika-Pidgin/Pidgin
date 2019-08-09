@@ -22,6 +22,7 @@
 #include "internal.h"
 #include "pidgin.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
 

@@ -26,6 +26,8 @@
 #include "prefs.h"
 #include "version.h"
 
+#include "pidginaccountchooser.h"
+
 #define CONTACT_PRIORITY_PLUGIN_ID "gtk-contact-priority"
 
 static void

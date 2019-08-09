@@ -30,6 +30,7 @@
 #include "gtkblist.h"
 #include "gtkprivacy.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 
 #include "gtk3compat.h"
 
