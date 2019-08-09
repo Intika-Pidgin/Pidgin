@@ -546,10 +546,12 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	dialog->account_widget = pidgin_account_option_menu_new(dialog->account, FALSE,
-	                         G_CALLBACK(dialog_select_account_cb), account_filter_func, dialog);
+	dialog->account_widget = pidgin_account_chooser_new(
+	        dialog->account, FALSE, G_CALLBACK(dialog_select_account_cb),
+	        account_filter_func, dialog);
 	if (!dialog->account) /* this is normally null, and we normally don't care what the first selected item is */
-		dialog->account = pidgin_account_option_menu_get_selected(dialog->account_widget);
+		dialog->account = pidgin_account_chooser_get_selected(
+		        dialog->account_widget);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
 
 	/* scrolled window */

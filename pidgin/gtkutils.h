@@ -275,7 +275,7 @@ GtkWidget *pidgin_protocol_option_menu_new(const char *id,
 /**
  * pidgin_protocol_option_menu_get_selected:
  * @optmenu: The drop-down option menu created by
- *        pidgin_account_option_menu_new.
+ *           pidgin_protocol_option_menu_new().
  *
  * Gets the currently selected protocol from a protocol drop down box.
  *
@@ -286,9 +286,9 @@ const char *pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu);
 /**
  * pidgin_setup_screenname_autocomplete:
  * @entry:       The GtkEntry on which to setup autocomplete.
- * @optmenu:     A menu for accounts, returned by pidgin_account_option_menu_new().
- *                    If @optmenu is not %NULL, it'll be updated when a username is chosen
- *                    from the autocomplete list.
+ * @optmenu: A menu for accounts, returned by pidgin_account_chooser_new(). If
+ *           @optmenu is not %NULL, it'll be updated when a username is chosen
+ *           from the autocomplete list.
  * @filter_func: (scope call): A function for checking if an autocomplete entry
  *                    should be shown. This can be %NULL.
  * @user_data:  The data to be passed to the filter_func function.

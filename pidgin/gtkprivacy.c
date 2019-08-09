@@ -356,10 +356,10 @@ privacy_dialog_new(void)
 	gtk_widget_show(label);
 
 	/* Accounts drop-down */
-	dropdown = pidgin_account_option_menu_new(NULL, FALSE,
-												G_CALLBACK(select_account_cb), NULL, dialog);
+	dropdown = pidgin_account_chooser_new(
+	        NULL, FALSE, G_CALLBACK(select_account_cb), NULL, dialog);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Set privacy for:"), NULL, dropdown, TRUE, NULL);
-	dialog->account = pidgin_account_option_menu_get_selected(dropdown);
+	dialog->account = pidgin_account_chooser_get_selected(dropdown);
 
 	/* Add the drop-down list with the allow/block types. */
 	dialog->type_menu = gtk_combo_box_text_new();
