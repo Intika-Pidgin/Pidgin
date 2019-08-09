@@ -613,8 +613,10 @@ void pidgin_disco_signed_off_cb(PurpleConnection *pc)
 			pidgin_disco_list_unref(list);
 			dialog->discolist = NULL;
 
-			gtk_widget_set_sensitive(dialog->browse_button,
-					pidgin_account_option_menu_get_selected(dialog->account_widget) != NULL);
+			gtk_widget_set_sensitive(
+			        dialog->browse_button,
+			        pidgin_account_chooser_get_selected(
+			                dialog->account_widget) != NULL);
 
 			gtk_widget_set_sensitive(dialog->register_button, FALSE);
 			gtk_widget_set_sensitive(dialog->add_button, FALSE);
@@ -654,9 +656,11 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	dialog->account_widget = pidgin_account_option_menu_new(NULL, FALSE,
-	                         G_CALLBACK(dialog_select_account_cb), account_filter_func, dialog);
-	dialog->account = pidgin_account_option_menu_get_selected(dialog->account_widget);
+	dialog->account_widget = pidgin_account_chooser_new(
+	        NULL, FALSE, G_CALLBACK(dialog_select_account_cb),
+	        account_filter_func, dialog);
+	dialog->account =
+	        pidgin_account_chooser_get_selected(dialog->account_widget);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
 
 	/* scrolled window */

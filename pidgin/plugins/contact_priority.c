@@ -42,7 +42,7 @@ account_update(GtkWidget *widget, GtkWidget *optmenu)
 {
 	PurpleAccount *account = NULL;
 
-	account = pidgin_account_option_menu_get_selected(optmenu);
+	account = pidgin_account_chooser_get_selected(optmenu);
 	purple_account_set_int(account, "score", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)));
 }
 
@@ -146,13 +146,12 @@ get_config_frame(PurplePlugin *plugin)
 	adj = GTK_ADJUSTMENT(gtk_adjustment_new(0, -500, 500, 1, 1, 1));
 	spin = gtk_spin_button_new(adj, 1, 0);
 
-	optmenu = pidgin_account_option_menu_new(NULL, TRUE,
-	                                         G_CALLBACK(select_account),
-	                                         NULL, spin);
+	optmenu = pidgin_account_chooser_new(
+	        NULL, TRUE, G_CALLBACK(select_account), NULL, spin);
 	gtk_box_pack_start(GTK_BOX(hbox), optmenu, FALSE, FALSE, 0);
 
 	/* this is where we set up the spin button we made above */
-	account = pidgin_account_option_menu_get_selected(optmenu);
+	account = pidgin_account_chooser_get_selected(optmenu);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin),
 	                          (gdouble)purple_account_get_int(account, "score", 0));
 	gtk_spin_button_set_adjustment(GTK_SPIN_BUTTON(spin), GTK_ADJUSTMENT(adj));

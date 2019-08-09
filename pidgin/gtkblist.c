@@ -1012,8 +1012,8 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 
 	data->sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
-	data->account_menu = pidgin_account_option_menu_new(account, FALSE,
-			callback_func, filter_func, data);
+	data->account_menu = pidgin_account_chooser_new(
+	        account, FALSE, callback_func, filter_func, data);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("A_ccount"), data->sg, data->account_menu, TRUE, NULL);
 
 	data->vbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
@@ -1146,7 +1146,8 @@ pidgin_blist_joinchat_show(void)
 	gtk_dialog_set_default_response(GTK_DIALOG(data->rq_data.window),
 		GTK_RESPONSE_OK);
 	data->default_chat_name = NULL;
-	data->rq_data.account = pidgin_account_option_menu_get_selected(data->rq_data.account_menu);
+	data->rq_data.account =
+	        pidgin_account_chooser_get_selected(data->rq_data.account_menu);
 
 	rebuild_chat_entries(data, NULL);
 

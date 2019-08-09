@@ -131,7 +131,7 @@ aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 }
 
 PurpleAccount *
-pidgin_account_option_menu_get_selected(GtkWidget *optmenu)
+pidgin_account_chooser_get_selected(GtkWidget *optmenu)
 {
 	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
 }
@@ -253,17 +253,15 @@ account_menu_destroyed_cb(GtkWidget *optmenu, GdkEvent *event, void *user_data)
 }
 
 void
-pidgin_account_option_menu_set_selected(GtkWidget *optmenu,
-                                        PurpleAccount *account)
+pidgin_account_chooser_set_selected(GtkWidget *optmenu, PurpleAccount *account)
 {
 	aop_option_menu_select_by_data(optmenu, account);
 }
 
 GtkWidget *
-pidgin_account_option_menu_new(PurpleAccount *default_account,
-                               gboolean show_all, GCallback cb,
-                               PurpleFilterAccountFunc filter_func,
-                               gpointer user_data)
+pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
+                           GCallback cb, PurpleFilterAccountFunc filter_func,
+                           gpointer user_data)
 {
 	GtkWidget *optmenu;
 
