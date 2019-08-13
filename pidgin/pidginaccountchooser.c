@@ -55,16 +55,16 @@ struct _PidginAccountChooser {
 G_DEFINE_TYPE(PidginAccountChooser, pidgin_account_chooser, GTK_TYPE_COMBO_BOX)
 
 static gpointer
-aop_option_menu_get_selected(GtkWidget *optmenu)
+account_chooser_get_selected(PidginAccountChooser *chooser)
 {
 	gpointer data = NULL;
 	GtkTreeIter iter;
 
-	g_return_val_if_fail(optmenu != NULL, NULL);
+	g_return_val_if_fail(chooser != NULL, NULL);
 
-	if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(optmenu), &iter)) {
+	if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
 		gtk_tree_model_get(
-		        gtk_combo_box_get_model(GTK_COMBO_BOX(optmenu)), &iter,
+		        gtk_combo_box_get_model(GTK_COMBO_BOX(chooser)), &iter,
 		        AOP_DATA_COLUMN, &data, -1);
 	}
 
@@ -72,19 +72,19 @@ aop_option_menu_get_selected(GtkWidget *optmenu)
 }
 
 static void
-aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
+account_chooser_select_by_data(GtkWidget *chooser, gpointer data)
 {
 	GtkTreeModel *model;
 	GtkTreeIter iter;
 	gpointer iter_data;
-	model = gtk_combo_box_get_model(GTK_COMBO_BOX(optmenu));
+	model = gtk_combo_box_get_model(GTK_COMBO_BOX(chooser));
 	if (gtk_tree_model_get_iter_first(model, &iter)) {
 		do {
 			gtk_tree_model_get(model, &iter, AOP_DATA_COLUMN,
 			                   &iter_data, -1);
 			if (iter_data == data) {
 				gtk_combo_box_set_active_iter(
-				        GTK_COMBO_BOX(optmenu), &iter);
+				        GTK_COMBO_BOX(chooser), &iter);
 				return;
 			}
 		} while (gtk_tree_model_iter_next(model, &iter));
@@ -164,31 +164,32 @@ set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account)
 }
 
 static void
-regenerate_account_menu(GtkWidget *chooser)
+regenerate_account_menu(PidginAccountChooser *chooser)
 {
 	PurpleAccount *account;
 
-	account = (PurpleAccount *)aop_option_menu_get_selected(chooser);
+	account = (PurpleAccount *)account_chooser_get_selected(chooser);
 
-	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), account);
+	set_account_menu(chooser, account);
 }
 
 static void
-account_menu_sign_on_off_cb(PurpleConnection *gc, GtkWidget *optmenu)
+account_menu_sign_on_off_cb(PurpleConnection *gc, PidginAccountChooser *chooser)
 {
-	regenerate_account_menu(optmenu);
+	regenerate_account_menu(chooser);
 }
 
 static void
-account_menu_added_removed_cb(PurpleAccount *account, GtkWidget *optmenu)
+account_menu_added_removed_cb(PurpleAccount *account,
+                              PidginAccountChooser *chooser)
 {
-	regenerate_account_menu(optmenu);
+	regenerate_account_menu(chooser);
 }
 
 static gboolean
-account_menu_destroyed_cb(GtkWidget *optmenu, GdkEvent *event, void *user_data)
+account_menu_destroyed_cb(GtkWidget *chooser, GdkEvent *event, void *user_data)
 {
-	purple_signals_disconnect_by_handle(optmenu);
+	purple_signals_disconnect_by_handle(chooser);
 
 	return FALSE;
 }
@@ -249,13 +250,14 @@ pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
 }
 
 PurpleAccount *
-pidgin_account_chooser_get_selected(GtkWidget *optmenu)
+pidgin_account_chooser_get_selected(GtkWidget *chooser)
 {
-	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
+	return (PurpleAccount *)account_chooser_get_selected(
+	        PIDGIN_ACCOUNT_CHOOSER(chooser));
 }
 
 void
-pidgin_account_chooser_set_selected(GtkWidget *optmenu, PurpleAccount *account)
+pidgin_account_chooser_set_selected(GtkWidget *chooser, PurpleAccount *account)
 {
-	aop_option_menu_select_by_data(optmenu, account);
+	account_chooser_select_by_data(chooser, account);
 }
