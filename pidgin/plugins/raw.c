@@ -149,7 +149,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	gtk_container_add(GTK_CONTAINER(window), hbox);
 
 	/* Account drop-down menu. */
-	dropdown = pidgin_account_chooser_new(NULL, FALSE, NULL);
+	dropdown = pidgin_account_chooser_new(NULL, FALSE);
 	g_signal_connect(dropdown, "changed", G_CALLBACK(account_changed_cb),
 	                 NULL);
 

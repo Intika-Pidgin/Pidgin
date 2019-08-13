@@ -657,8 +657,10 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	dialog->account_widget =
-	        pidgin_account_chooser_new(NULL, FALSE, account_filter_func);
+	dialog->account_widget = pidgin_account_chooser_new(NULL, FALSE);
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(dialog->account_widget),
+	        account_filter_func);
 	g_signal_connect(dialog->account_widget, "changed",
 	                 G_CALLBACK(dialog_select_account_cb), dialog);
 	dialog->account =

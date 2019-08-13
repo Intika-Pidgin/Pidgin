@@ -277,7 +277,7 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	{
 		/* Add the account type stuff. */
 		dialog->accounts_menu =
-		        pidgin_account_chooser_new(account, FALSE, NULL);
+		        pidgin_account_chooser_new(account, FALSE);
 		g_signal_connect(dialog->accounts_menu, "changed",
 		                 G_CALLBACK(select_account_cb), dialog);
 		add_pref_box(sg, vbox, _("Account type:"), dialog->accounts_menu);

@@ -147,7 +147,7 @@ get_config_frame(PurplePlugin *plugin)
 	adj = GTK_ADJUSTMENT(gtk_adjustment_new(0, -500, 500, 1, 1, 1));
 	spin = gtk_spin_button_new(adj, 1, 0);
 
-	optmenu = pidgin_account_chooser_new(NULL, TRUE, NULL);
+	optmenu = pidgin_account_chooser_new(NULL, TRUE);
 	gtk_box_pack_start(GTK_BOX(hbox), optmenu, FALSE, FALSE, 0);
 	g_signal_connect(optmenu, "changed", G_CALLBACK(select_account), spin);
 

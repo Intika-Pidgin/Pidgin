@@ -547,8 +547,11 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	dialog->account_widget = pidgin_account_chooser_new(
-	        dialog->account, FALSE, account_filter_func);
+	dialog->account_widget =
+	        pidgin_account_chooser_new(dialog->account, FALSE);
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(dialog->account_widget),
+	        account_filter_func);
 	g_signal_connect(dialog->account_widget, "changed",
 	                 G_CALLBACK(dialog_select_account_cb), dialog);
 	if (!dialog->account) /* this is normally null, and we normally don't care what the first selected item is */

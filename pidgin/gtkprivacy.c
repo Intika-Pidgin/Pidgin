@@ -356,7 +356,7 @@ privacy_dialog_new(void)
 	gtk_widget_show(label);
 
 	/* Accounts drop-down */
-	dropdown = pidgin_account_chooser_new(NULL, FALSE, NULL);
+	dropdown = pidgin_account_chooser_new(NULL, FALSE);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Set privacy for:"), NULL, dropdown, TRUE, NULL);
 	g_signal_connect(dropdown, "changed", G_CALLBACK(select_account_cb),
 	                 dialog);
