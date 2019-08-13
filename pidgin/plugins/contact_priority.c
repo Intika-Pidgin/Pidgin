@@ -39,11 +39,11 @@ select_account(GtkWidget *chooser, gpointer data)
 }
 
 static void
-account_update(GtkWidget *widget, GtkWidget *optmenu)
+account_update(GtkWidget *widget, GtkWidget *chooser)
 {
 	PurpleAccount *account = NULL;
 
-	account = pidgin_account_chooser_get_selected(optmenu);
+	account = pidgin_account_chooser_get_selected(chooser);
 	purple_account_set_int(account, "score", gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(widget)));
 }
 
@@ -78,7 +78,7 @@ get_config_frame(PurplePlugin *plugin)
 {
 	GtkWidget *ret = NULL, *hbox = NULL, *frame = NULL, *vbox = NULL;
 	GtkWidget *label = NULL, *spin = NULL, *check = NULL;
-	GtkWidget *optmenu = NULL;
+	GtkWidget *chooser = NULL;
 	GtkAdjustment *adj = NULL;
 	GtkSizeGroup *sg = NULL;
 	PurpleAccount *account = NULL;
@@ -147,17 +147,17 @@ get_config_frame(PurplePlugin *plugin)
 	adj = GTK_ADJUSTMENT(gtk_adjustment_new(0, -500, 500, 1, 1, 1));
 	spin = gtk_spin_button_new(adj, 1, 0);
 
-	optmenu = pidgin_account_chooser_new(NULL, TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), optmenu, FALSE, FALSE, 0);
-	g_signal_connect(optmenu, "changed", G_CALLBACK(select_account), spin);
+	chooser = pidgin_account_chooser_new(NULL, TRUE);
+	gtk_box_pack_start(GTK_BOX(hbox), chooser, FALSE, FALSE, 0);
+	g_signal_connect(chooser, "changed", G_CALLBACK(select_account), spin);
 
 	/* this is where we set up the spin button we made above */
-	account = pidgin_account_chooser_get_selected(optmenu);
+	account = pidgin_account_chooser_get_selected(chooser);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(spin),
 	                          (gdouble)purple_account_get_int(account, "score", 0));
 	gtk_spin_button_set_adjustment(GTK_SPIN_BUTTON(spin), GTK_ADJUSTMENT(adj));
 	g_signal_connect(G_OBJECT(spin), "value-changed",
-	                 G_CALLBACK(account_update), optmenu);
+	                 G_CALLBACK(account_update), chooser);
 	gtk_box_pack_start(GTK_BOX(hbox), spin, FALSE, FALSE, 0);
 
 	gtk_widget_show_all(ret);

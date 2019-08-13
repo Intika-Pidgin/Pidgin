@@ -286,16 +286,19 @@ const char *pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu);
 /**
  * pidgin_setup_screenname_autocomplete:
  * @entry:       The GtkEntry on which to setup autocomplete.
- * @optmenu: A menu for accounts, returned by pidgin_account_chooser_new(). If
- *           @optmenu is not %NULL, it'll be updated when a username is chosen
+ * @chooser: A menu for accounts, returned by pidgin_account_chooser_new(). If
+ *           @chooser is not %NULL, it'll be updated when a username is chosen
  *           from the autocomplete list.
  * @filter_func: (scope call): A function for checking if an autocomplete entry
  *                    should be shown. This can be %NULL.
  * @user_data:  The data to be passed to the filter_func function.
  *
- * Add autocompletion of screenames to an entry, supporting a filtering function.
+ * Add autocompletion of screenames to an entry, supporting a filtering
+ * function.
  */
-void pidgin_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *optmenu, PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data);
+void pidgin_setup_screenname_autocomplete(
+        GtkWidget *entry, GtkWidget *chooser,
+        PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data);
 
 /**
  * pidgin_screenname_autocomplete_default_filter:
