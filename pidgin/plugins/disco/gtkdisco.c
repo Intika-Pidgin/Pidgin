@@ -153,9 +153,10 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 
 static void pidgin_disco_create_tree(PidginDiscoList *pdl);
 
-static void dialog_select_account_cb(GObject *w, PurpleAccount *account,
-                                     PidginDiscoDialog *dialog)
+static void
+dialog_select_account_cb(GtkWidget *chooser, PidginDiscoDialog *dialog)
 {
+	PurpleAccount *account = pidgin_account_chooser_get_selected(chooser);
 	gboolean change = (account != dialog->account);
 	dialog->account = account;
 	gtk_widget_set_sensitive(dialog->browse_button, account != NULL);
@@ -656,9 +657,10 @@ PidginDiscoDialog *pidgin_disco_dialog_new(void)
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	dialog->account_widget = pidgin_account_chooser_new(
-	        NULL, FALSE, G_CALLBACK(dialog_select_account_cb),
-	        account_filter_func, dialog);
+	dialog->account_widget =
+	        pidgin_account_chooser_new(NULL, FALSE, account_filter_func);
+	g_signal_connect(dialog->account_widget, "changed",
+	                 G_CALLBACK(dialog_select_account_cb), dialog);
 	dialog->account =
 	        pidgin_account_chooser_get_selected(dialog->account_widget);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);

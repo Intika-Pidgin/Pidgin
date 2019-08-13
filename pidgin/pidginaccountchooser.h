@@ -38,10 +38,8 @@ G_BEGIN_DECLS
  * pidgin_account_chooser_new:
  * @default_account: The account to select by default.
  * @show_all: Whether or not to show all accounts, or just active accounts.
- * @cb: (scope call): The callback to call when an account is selected.
  * @filter_func: (scope call): A function for checking if an account should be
  *               shown. This can be %NULL.
- * @user_data: Data to pass to the callback function.
  *
  * Creates a drop-down option menu filled with accounts.
  *
@@ -50,9 +48,8 @@ G_BEGIN_DECLS
  * Since: 3.0.0
  */
 GtkWidget *pidgin_account_chooser_new(PurpleAccount *default_account,
-                                      gboolean show_all, GCallback cb,
-                                      PurpleFilterAccountFunc filter_func,
-                                      gpointer user_data);
+                                      gboolean show_all,
+                                      PurpleFilterAccountFunc filter_func);
 
 /**
  * pidgin_account_chooser_get_selected:

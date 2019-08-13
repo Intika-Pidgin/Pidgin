@@ -1012,9 +1012,11 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 
 	data->sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
-	data->account_menu = pidgin_account_chooser_new(
-	        account, FALSE, callback_func, filter_func, data);
+	data->account_menu =
+	        pidgin_account_chooser_new(account, FALSE, filter_func);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("A_ccount"), data->sg, data->account_menu, TRUE, NULL);
+	g_signal_connect(data->account_menu, "changed",
+	                 G_CALLBACK(callback_func), data);
 
 	data->vbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
 	gtk_container_set_border_width(GTK_CONTAINER(data->vbox), 0);
@@ -1107,10 +1109,11 @@ rebuild_chat_entries(PidginChatData *data, const char *default_chat_name)
 }
 
 static void
-chat_select_account_cb(GObject *w, PurpleAccount *account,
-                       PidginChatData *data)
+chat_select_account_cb(GObject *w, PidginChatData *data)
 {
-	g_return_if_fail(w != NULL);
+	PurpleAccount *account =
+	        pidgin_account_chooser_get_selected(GTK_WIDGET(w));
+
 	g_return_if_fail(data != NULL);
 	g_return_if_fail(account != NULL);
 
@@ -6866,9 +6869,10 @@ groups_tree(void)
 }
 
 static void
-add_buddy_select_account_cb(GObject *w, PurpleAccount *account,
-							PidginAddBuddyData *data)
+add_buddy_select_account_cb(GObject *w, PidginAddBuddyData *data)
 {
+	PurpleAccount *account =
+	        pidgin_account_chooser_get_selected(GTK_WIDGET(w));
 	PurpleConnection *pc = NULL;
 	PurpleProtocol *protocol = NULL;
 	gboolean invite_enabled = TRUE;
@@ -6976,11 +6980,12 @@ pidgin_blist_request_add_buddy(PurpleBuddyList *list, PurpleAccount *account,
                                const char *alias)
 {
 	PidginAddBuddyData *data = g_new0(PidginAddBuddyData, 1);
+	PidginBlistRequestData *blist_req_data = &data->rq_data;
 
 	if (account == NULL)
 		account = purple_connection_get_account(purple_connections_get_all()->data);
 
-	make_blist_request_dialog((PidginBlistRequestData *)data,
+	make_blist_request_dialog(blist_req_data,
 		account,
 		_("Add Buddy"), "add_buddy",
 		_("Add a buddy.\n"),
@@ -7037,7 +7042,8 @@ pidgin_blist_request_add_buddy(PurpleBuddyList *list, PurpleAccount *account,
 	gtk_widget_show_all(data->rq_data.window);
 
 	/* Force update of invite message entry sensitivity */
-	add_buddy_select_account_cb(NULL, account, data);
+	pidgin_account_chooser_set_selected(blist_req_data->account_menu,
+	                                    account);
 }
 
 static void

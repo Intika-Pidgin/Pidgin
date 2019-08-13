@@ -201,9 +201,9 @@ destroy_cb(GtkWidget *w, GdkEvent *event, PidginPrivacyDialog *dialog)
 }
 
 static void
-select_account_cb(GtkWidget *dropdown, PurpleAccount *account,
-				  PidginPrivacyDialog *dialog)
+select_account_cb(GtkWidget *chooser, PidginPrivacyDialog *dialog)
 {
+	PurpleAccount *account = pidgin_account_chooser_get_selected(chooser);
 	gsize i;
 
 	dialog->account = account;
@@ -356,9 +356,10 @@ privacy_dialog_new(void)
 	gtk_widget_show(label);
 
 	/* Accounts drop-down */
-	dropdown = pidgin_account_chooser_new(
-	        NULL, FALSE, G_CALLBACK(select_account_cb), NULL, dialog);
+	dropdown = pidgin_account_chooser_new(NULL, FALSE, NULL);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Set privacy for:"), NULL, dropdown, TRUE, NULL);
+	g_signal_connect(dropdown, "changed", G_CALLBACK(select_account_cb),
+	                 dialog);
 	dialog->account = pidgin_account_chooser_get_selected(dropdown);
 
 	/* Add the drop-down list with the allow/block types. */

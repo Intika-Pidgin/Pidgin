@@ -66,16 +66,6 @@ aop_option_menu_get_selected(GtkWidget *optmenu)
 }
 
 static void
-aop_menu_cb(GtkWidget *optmenu, GCallback cb)
-{
-	if (cb != NULL) {
-		((void (*)(GtkWidget *, gpointer, gpointer))cb)(
-		        optmenu, aop_option_menu_get_selected(optmenu),
-		        g_object_get_data(G_OBJECT(optmenu), "user_data"));
-	}
-}
-
-static void
 aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
 {
 	gtk_combo_box_set_model(GTK_COMBO_BOX(optmenu), new_aop_menu->model);
@@ -85,7 +75,7 @@ aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
 }
 
 static GtkWidget *
-aop_option_menu_new(AopMenu *aop_menu, GCallback cb, gpointer user_data)
+aop_option_menu_new(AopMenu *aop_menu)
 {
 	GtkWidget *optmenu = NULL;
 	GtkCellRenderer *cr = NULL;
@@ -102,10 +92,6 @@ aop_option_menu_new(AopMenu *aop_menu, GCallback cb, gpointer user_data)
 	                              AOP_NAME_COLUMN);
 
 	aop_option_menu_replace_menu(optmenu, aop_menu);
-	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
-
-	g_signal_connect(G_OBJECT(optmenu), "changed", G_CALLBACK(aop_menu_cb),
-	                 cb);
 
 	return optmenu;
 }
@@ -260,15 +246,13 @@ pidgin_account_chooser_set_selected(GtkWidget *optmenu, PurpleAccount *account)
 
 GtkWidget *
 pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
-                           GCallback cb, PurpleFilterAccountFunc filter_func,
-                           gpointer user_data)
+                           PurpleFilterAccountFunc filter_func)
 {
 	GtkWidget *optmenu;
 
 	/* Create the option menu */
 	optmenu = aop_option_menu_new(
-	        create_account_menu(default_account, filter_func, show_all), cb,
-	        user_data);
+	        create_account_menu(default_account, filter_func, show_all));
 
 	g_signal_connect(G_OBJECT(optmenu), "destroy",
 	                 G_CALLBACK(account_menu_destroyed_cb), NULL);
@@ -288,7 +272,6 @@ pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
 	        PURPLE_CALLBACK(account_menu_added_removed_cb), optmenu);
 
 	/* Set some data. */
-	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
 	g_object_set_data(G_OBJECT(optmenu), "show_all",
 	                  GINT_TO_POINTER(show_all));
 	g_object_set_data(G_OBJECT(optmenu), "filter_func", filter_func);
