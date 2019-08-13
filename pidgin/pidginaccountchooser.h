@@ -45,8 +45,6 @@ G_DECLARE_FINAL_TYPE(PidginAccountChooser, pidgin_account_chooser, PIDGIN,
  * pidgin_account_chooser_new:
  * @default_account: The account to select by default.
  * @show_all: Whether or not to show all accounts, or just active accounts.
- * @filter_func: (scope call): A function for checking if an account should be
- *               shown. This can be %NULL.
  *
  * Creates a drop-down option menu filled with accounts.
  *
@@ -55,8 +53,20 @@ G_DECLARE_FINAL_TYPE(PidginAccountChooser, pidgin_account_chooser, PIDGIN,
  * Since: 3.0.0
  */
 GtkWidget *pidgin_account_chooser_new(PurpleAccount *default_account,
-                                      gboolean show_all,
-                                      PurpleFilterAccountFunc filter_func);
+                                      gboolean show_all);
+
+/**
+ * pidgin_account_chooser_set_filter_func:
+ * @chooser: The account chooser combo box.
+ * @filter_func: A function for checking if an account should be shown. This
+ *               can be %NULL to remove any filter.
+ *
+ * Set the filter function used to determine which accounts to show.
+ *
+ * Since: 3.0.0
+ */
+void pidgin_account_chooser_set_filter_func(
+        PidginAccountChooser *chooser, PurpleFilterAccountFunc filter_func);
 
 /**
  * pidgin_account_chooser_get_selected:

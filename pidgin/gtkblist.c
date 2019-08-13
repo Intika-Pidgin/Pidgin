@@ -1012,8 +1012,9 @@ make_blist_request_dialog(PidginBlistRequestData *data, PurpleAccount *account,
 
 	data->sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
 
-	data->account_menu =
-	        pidgin_account_chooser_new(account, FALSE, filter_func);
+	data->account_menu = pidgin_account_chooser_new(account, FALSE);
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(data->account_menu), filter_func);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("A_ccount"), data->sg, data->account_menu, TRUE, NULL);
 	g_signal_connect(data->account_menu, "changed",
 	                 G_CALLBACK(callback_func), data);

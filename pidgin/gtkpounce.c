@@ -593,7 +593,7 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	gtk_size_group_add_widget(sg, label);
 
 	dialog->account_menu =
-	        pidgin_account_chooser_new(dialog->account, TRUE, NULL);
+	        pidgin_account_chooser_new(dialog->account, TRUE);
 	g_signal_connect(dialog->account_menu, "changed",
 	                 G_CALLBACK(pounce_choose_cb), dialog);
 

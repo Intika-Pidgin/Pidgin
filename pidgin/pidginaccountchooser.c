@@ -234,17 +234,25 @@ pidgin_account_chooser_init(PidginAccountChooser *chooser)
  * Public API
  *****************************************************************************/
 GtkWidget *
-pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
-                           PurpleFilterAccountFunc filter_func)
+pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all)
 {
 	PidginAccountChooser *chooser = NULL;
 
 	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, NULL);
 	chooser->show_all = show_all;
-	chooser->filter_func = filter_func;
 	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account);
 
 	return GTK_WIDGET(chooser);
+}
+
+void
+pidgin_account_chooser_set_filter_func(PidginAccountChooser *chooser,
+                                       PurpleFilterAccountFunc filter_func)
+{
+	g_return_if_fail(PIDGIN_IS_ACCOUNT_CHOOSER(chooser));
+
+	chooser->filter_func = filter_func;
+	regenerate_account_menu(chooser);
 }
 
 PurpleAccount *
