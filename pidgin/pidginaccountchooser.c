@@ -40,14 +40,17 @@ enum
  * Structs
  *****************************************************************************/
 
-typedef struct {
-	GtkTreeModel *model;
-	gint default_item;
-} AopMenu;
+struct _PidginAccountChooser {
+	GtkComboBox parent;
+
+	GtkListStore *model;
+};
 
 /******************************************************************************
  * Code
  *****************************************************************************/
+G_DEFINE_TYPE(PidginAccountChooser, pidgin_account_chooser, GTK_TYPE_COMBO_BOX)
+
 static gpointer
 aop_option_menu_get_selected(GtkWidget *optmenu)
 {
@@ -63,37 +66,6 @@ aop_option_menu_get_selected(GtkWidget *optmenu)
 	}
 
 	return data;
-}
-
-static void
-aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
-{
-	gtk_combo_box_set_model(GTK_COMBO_BOX(optmenu), new_aop_menu->model);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(optmenu),
-	                         new_aop_menu->default_item);
-	g_free(new_aop_menu);
-}
-
-static GtkWidget *
-aop_option_menu_new(AopMenu *aop_menu)
-{
-	GtkWidget *optmenu = NULL;
-	GtkCellRenderer *cr = NULL;
-
-	optmenu = gtk_combo_box_new();
-	gtk_widget_show(optmenu);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu),
-	                           cr = gtk_cell_renderer_pixbuf_new(), FALSE);
-	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "pixbuf",
-	                              AOP_ICON_COLUMN);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu),
-	                           cr = gtk_cell_renderer_text_new(), TRUE);
-	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "text",
-	                              AOP_NAME_COLUMN);
-
-	aop_option_menu_replace_menu(optmenu, aop_menu);
-
-	return optmenu;
 }
 
 static void
@@ -122,17 +94,16 @@ pidgin_account_chooser_get_selected(GtkWidget *optmenu)
 	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
 }
 
-static AopMenu *
-create_account_menu(PurpleAccount *default_account,
-                    PurpleFilterAccountFunc filter_func, gboolean show_all)
+static void
+set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
+                 PurpleFilterAccountFunc filter_func, gboolean show_all)
 {
-	AopMenu *aop_menu = NULL;
 	PurpleAccount *account;
 	GdkPixbuf *pixbuf = NULL;
 	GList *list;
 	GList *p;
-	GtkListStore *ls;
 	GtkTreeIter iter;
+	gint default_item = 0;
 	gint i;
 	gchar buf[256];
 
@@ -142,13 +113,7 @@ create_account_menu(PurpleAccount *default_account,
 		list = purple_connections_get_all();
 	}
 
-	ls = gtk_list_store_new(AOP_COLUMN_COUNT, GDK_TYPE_PIXBUF,
-	                        G_TYPE_STRING, G_TYPE_POINTER);
-
-	aop_menu = g_malloc0(sizeof(AopMenu));
-	aop_menu->default_item = 0;
-	aop_menu->model = GTK_TREE_MODEL(ls);
-
+	gtk_list_store_clear(chooser->model);
 	for (p = list, i = 0; p != NULL; p = p->next, i++) {
 		if (show_all) {
 			account = (PurpleAccount *)p->data;
@@ -185,21 +150,21 @@ create_account_menu(PurpleAccount *default_account,
 			           purple_account_get_protocol_name(account));
 		}
 
-		gtk_list_store_append(ls, &iter);
-		gtk_list_store_set(ls, &iter, AOP_ICON_COLUMN, pixbuf,
-		                   AOP_NAME_COLUMN, buf, AOP_DATA_COLUMN,
-		                   account, -1);
+		gtk_list_store_append(chooser->model, &iter);
+		gtk_list_store_set(chooser->model, &iter, AOP_ICON_COLUMN,
+		                   pixbuf, AOP_NAME_COLUMN, buf,
+		                   AOP_DATA_COLUMN, account, -1);
 
 		if (pixbuf) {
 			g_object_unref(pixbuf);
 		}
 
 		if (default_account && account == default_account) {
-			aop_menu->default_item = i;
+			default_item = i;
 		}
 	}
 
-	return aop_menu;
+	gtk_combo_box_set_active(GTK_COMBO_BOX(chooser), default_item);
 }
 
 static void
@@ -214,8 +179,8 @@ regenerate_account_menu(GtkWidget *optmenu)
 	        g_object_get_data(G_OBJECT(optmenu), "show_all"));
 	filter_func = g_object_get_data(G_OBJECT(optmenu), "filter_func");
 
-	aop_option_menu_replace_menu(
-	        optmenu, create_account_menu(account, filter_func, show_all));
+	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(optmenu), account, filter_func,
+	                 show_all);
 }
 
 static void
@@ -248,33 +213,55 @@ GtkWidget *
 pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
                            PurpleFilterAccountFunc filter_func)
 {
-	GtkWidget *optmenu;
+	GtkWidget *chooser = NULL;
 
 	/* Create the option menu */
-	optmenu = aop_option_menu_new(
-	        create_account_menu(default_account, filter_func, show_all));
+	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, NULL);
+	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account,
+	                 filter_func, show_all);
 
-	g_signal_connect(G_OBJECT(optmenu), "destroy",
-	                 G_CALLBACK(account_menu_destroyed_cb), NULL);
+	/* Set some data. */
+	g_object_set_data(G_OBJECT(chooser), "show_all",
+	                  GINT_TO_POINTER(show_all));
+	g_object_set_data(G_OBJECT(chooser), "filter_func", filter_func);
+
+	return chooser;
+}
+
+/******************************************************************************
+ * GObject implementation
+ *****************************************************************************/
+static void
+pidgin_account_chooser_class_init(PidginAccountChooserClass *klass)
+{
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	gtk_widget_class_set_template_from_resource(
+	        widget_class, "/im/pidgin/Pidgin/Accounts/chooser.ui");
+
+	gtk_widget_class_bind_template_child(widget_class, PidginAccountChooser,
+	                                     model);
+
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        account_menu_destroyed_cb);
+}
+
+static void
+pidgin_account_chooser_init(PidginAccountChooser *chooser)
+{
+	gtk_widget_init_template(GTK_WIDGET(chooser));
 
 	/* Register the purple sign on/off event callbacks. */
 	purple_signal_connect(
-	        purple_connections_get_handle(), "signed-on", optmenu,
-	        PURPLE_CALLBACK(account_menu_sign_on_off_cb), optmenu);
+	        purple_connections_get_handle(), "signed-on", chooser,
+	        PURPLE_CALLBACK(account_menu_sign_on_off_cb), chooser);
 	purple_signal_connect(
-	        purple_connections_get_handle(), "signed-off", optmenu,
-	        PURPLE_CALLBACK(account_menu_sign_on_off_cb), optmenu);
+	        purple_connections_get_handle(), "signed-off", chooser,
+	        PURPLE_CALLBACK(account_menu_sign_on_off_cb), chooser);
 	purple_signal_connect(
-	        purple_accounts_get_handle(), "account-added", optmenu,
-	        PURPLE_CALLBACK(account_menu_added_removed_cb), optmenu);
+	        purple_accounts_get_handle(), "account-added", chooser,
+	        PURPLE_CALLBACK(account_menu_added_removed_cb), chooser);
 	purple_signal_connect(
-	        purple_accounts_get_handle(), "account-removed", optmenu,
-	        PURPLE_CALLBACK(account_menu_added_removed_cb), optmenu);
-
-	/* Set some data. */
-	g_object_set_data(G_OBJECT(optmenu), "show_all",
-	                  GINT_TO_POINTER(show_all));
-	g_object_set_data(G_OBJECT(optmenu), "filter_func", filter_func);
-
-	return optmenu;
+	        purple_accounts_get_handle(), "account-removed", chooser,
+	        PURPLE_CALLBACK(account_menu_added_removed_cb), chooser);
 }
