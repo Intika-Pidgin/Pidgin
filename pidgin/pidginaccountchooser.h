@@ -46,7 +46,7 @@ G_DECLARE_FINAL_TYPE(PidginAccountChooser, pidgin_account_chooser, PIDGIN,
  * @default_account: The account to select by default.
  * @show_all: Whether or not to show all accounts, or just active accounts.
  *
- * Creates a drop-down option menu filled with accounts.
+ * Creates a combo box filled with accounts.
  *
  * Returns: (transfer full): The account chooser combo box.
  *
@@ -83,9 +83,8 @@ PurpleAccount *pidgin_account_chooser_get_selected(GtkWidget *chooser);
 
 /**
  * pidgin_account_chooser_set_selected:
- * @chooser: The GtkOptionMenu created by
- *        pidgin_account_chooser_new.
- * @account: The PurpleAccount to select.
+ * @chooser: The chooser created by pidgin_account_chooser_new().
+ * @account: The #PurpleAccount to select.
  *
  * Sets the currently selected account for an account combo box.
  *
