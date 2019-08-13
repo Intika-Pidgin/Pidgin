@@ -44,6 +44,9 @@ struct _PidginAccountChooser {
 	GtkComboBox parent;
 
 	GtkListStore *model;
+
+	PurpleFilterAccountFunc filter_func;
+	gboolean show_all;
 };
 
 /******************************************************************************
@@ -89,8 +92,7 @@ aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 }
 
 static void
-set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
-                 PurpleFilterAccountFunc filter_func, gboolean show_all)
+set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account)
 {
 	PurpleAccount *account;
 	GdkPixbuf *pixbuf = NULL;
@@ -101,7 +103,7 @@ set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
 	gint i;
 	gchar buf[256];
 
-	if (show_all) {
+	if (chooser->show_all) {
 		list = purple_accounts_get_all();
 	} else {
 		list = purple_connections_get_all();
@@ -109,7 +111,7 @@ set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
 
 	gtk_list_store_clear(chooser->model);
 	for (p = list, i = 0; p != NULL; p = p->next, i++) {
-		if (show_all) {
+		if (chooser->show_all) {
 			account = (PurpleAccount *)p->data;
 		} else {
 			PurpleConnection *gc = (PurpleConnection *)p->data;
@@ -117,7 +119,7 @@ set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
 			account = purple_connection_get_account(gc);
 		}
 
-		if (filter_func && !filter_func(account)) {
+		if (chooser->filter_func && !chooser->filter_func(account)) {
 			i--;
 			continue;
 		}
@@ -127,7 +129,7 @@ set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
 
 		if (pixbuf) {
 			if (purple_account_is_disconnected(account) &&
-			    show_all && purple_connections_get_all()) {
+			    chooser->show_all && purple_connections_get_all()) {
 				gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf,
 				                                 0.0, FALSE);
 			}
@@ -162,19 +164,13 @@ set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
 }
 
 static void
-regenerate_account_menu(GtkWidget *optmenu)
+regenerate_account_menu(GtkWidget *chooser)
 {
-	gboolean show_all;
 	PurpleAccount *account;
-	PurpleFilterAccountFunc filter_func;
 
-	account = (PurpleAccount *)aop_option_menu_get_selected(optmenu);
-	show_all = GPOINTER_TO_INT(
-	        g_object_get_data(G_OBJECT(optmenu), "show_all"));
-	filter_func = g_object_get_data(G_OBJECT(optmenu), "filter_func");
+	account = (PurpleAccount *)aop_option_menu_get_selected(chooser);
 
-	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(optmenu), account, filter_func,
-	                 show_all);
+	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), account);
 }
 
 static void
@@ -242,19 +238,14 @@ GtkWidget *
 pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
                            PurpleFilterAccountFunc filter_func)
 {
-	GtkWidget *chooser = NULL;
+	PidginAccountChooser *chooser = NULL;
 
-	/* Create the option menu */
 	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, NULL);
-	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account,
-	                 filter_func, show_all);
+	chooser->show_all = show_all;
+	chooser->filter_func = filter_func;
+	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account);
 
-	/* Set some data. */
-	g_object_set_data(G_OBJECT(chooser), "show_all",
-	                  GINT_TO_POINTER(show_all));
-	g_object_set_data(G_OBJECT(chooser), "filter_func", filter_func);
-
-	return chooser;
+	return GTK_WIDGET(chooser);
 }
 
 PurpleAccount *
