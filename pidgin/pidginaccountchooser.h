@@ -28,11 +28,18 @@
  * @title: Pidgin Account Chooser Combo Box Widget
  */
 
+#include <gtk/gtk.h>
+
 #include "pidgin.h"
 
 #include "account.h"
 
 G_BEGIN_DECLS
+
+#define PIDGIN_TYPE_ACCOUNT_CHOOSER (pidgin_account_chooser_get_type())
+
+G_DECLARE_FINAL_TYPE(PidginAccountChooser, pidgin_account_chooser, PIDGIN,
+                     ACCOUNT_CHOOSER, GtkComboBox)
 
 /**
  * pidgin_account_chooser_new:
