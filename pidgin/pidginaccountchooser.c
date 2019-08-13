@@ -88,12 +88,6 @@ aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 	}
 }
 
-PurpleAccount *
-pidgin_account_chooser_get_selected(GtkWidget *optmenu)
-{
-	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
-}
-
 static void
 set_account_menu(PidginAccountChooser *chooser, PurpleAccount *default_account,
                  PurpleFilterAccountFunc filter_func, gboolean show_all)
@@ -203,31 +197,6 @@ account_menu_destroyed_cb(GtkWidget *optmenu, GdkEvent *event, void *user_data)
 	return FALSE;
 }
 
-void
-pidgin_account_chooser_set_selected(GtkWidget *optmenu, PurpleAccount *account)
-{
-	aop_option_menu_select_by_data(optmenu, account);
-}
-
-GtkWidget *
-pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
-                           PurpleFilterAccountFunc filter_func)
-{
-	GtkWidget *chooser = NULL;
-
-	/* Create the option menu */
-	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, NULL);
-	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account,
-	                 filter_func, show_all);
-
-	/* Set some data. */
-	g_object_set_data(G_OBJECT(chooser), "show_all",
-	                  GINT_TO_POINTER(show_all));
-	g_object_set_data(G_OBJECT(chooser), "filter_func", filter_func);
-
-	return chooser;
-}
-
 /******************************************************************************
  * GObject implementation
  *****************************************************************************/
@@ -264,4 +233,38 @@ pidgin_account_chooser_init(PidginAccountChooser *chooser)
 	purple_signal_connect(
 	        purple_accounts_get_handle(), "account-removed", chooser,
 	        PURPLE_CALLBACK(account_menu_added_removed_cb), chooser);
+}
+
+/******************************************************************************
+ * Public API
+ *****************************************************************************/
+GtkWidget *
+pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
+                           PurpleFilterAccountFunc filter_func)
+{
+	GtkWidget *chooser = NULL;
+
+	/* Create the option menu */
+	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, NULL);
+	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account,
+	                 filter_func, show_all);
+
+	/* Set some data. */
+	g_object_set_data(G_OBJECT(chooser), "show_all",
+	                  GINT_TO_POINTER(show_all));
+	g_object_set_data(G_OBJECT(chooser), "filter_func", filter_func);
+
+	return chooser;
+}
+
+PurpleAccount *
+pidgin_account_chooser_get_selected(GtkWidget *optmenu)
+{
+	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
+}
+
+void
+pidgin_account_chooser_set_selected(GtkWidget *optmenu, PurpleAccount *account)
+{
+	aop_option_menu_select_by_data(optmenu, account);
 }
