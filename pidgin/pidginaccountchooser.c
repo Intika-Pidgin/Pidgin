@@ -60,8 +60,6 @@ account_chooser_get_selected(PidginAccountChooser *chooser)
 	gpointer data = NULL;
 	GtkTreeIter iter;
 
-	g_return_val_if_fail(chooser != NULL, NULL);
-
 	if (gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
 		gtk_tree_model_get(
 		        gtk_combo_box_get_model(GTK_COMBO_BOX(chooser)), &iter,
@@ -252,6 +250,8 @@ pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all,
 PurpleAccount *
 pidgin_account_chooser_get_selected(GtkWidget *chooser)
 {
+	g_return_val_if_fail(PIDGIN_IS_ACCOUNT_CHOOSER(chooser), NULL);
+
 	return (PurpleAccount *)account_chooser_get_selected(
 	        PIDGIN_ACCOUNT_CHOOSER(chooser));
 }
@@ -259,5 +259,7 @@ pidgin_account_chooser_get_selected(GtkWidget *chooser)
 void
 pidgin_account_chooser_set_selected(GtkWidget *chooser, PurpleAccount *account)
 {
+	g_return_if_fail(PIDGIN_IS_ACCOUNT_CHOOSER(chooser));
+
 	account_chooser_select_by_data(chooser, account);
 }
