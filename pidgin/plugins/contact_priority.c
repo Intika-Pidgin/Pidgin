@@ -31,8 +31,9 @@
 #define CONTACT_PRIORITY_PLUGIN_ID "gtk-contact-priority"
 
 static void
-select_account(GtkWidget *widget, PurpleAccount *account, gpointer data)
+select_account(GtkWidget *chooser, gpointer data)
 {
+	PurpleAccount *account = pidgin_account_chooser_get_selected(chooser);
 	gtk_spin_button_set_value(GTK_SPIN_BUTTON(data),
 	                          (gdouble)purple_account_get_int(account, "score", 0));
 }
@@ -146,9 +147,9 @@ get_config_frame(PurplePlugin *plugin)
 	adj = GTK_ADJUSTMENT(gtk_adjustment_new(0, -500, 500, 1, 1, 1));
 	spin = gtk_spin_button_new(adj, 1, 0);
 
-	optmenu = pidgin_account_chooser_new(
-	        NULL, TRUE, G_CALLBACK(select_account), NULL, spin);
+	optmenu = pidgin_account_chooser_new(NULL, TRUE, NULL);
 	gtk_box_pack_start(GTK_BOX(hbox), optmenu, FALSE, FALSE, 0);
+	g_signal_connect(optmenu, "changed", G_CALLBACK(select_account), spin);
 
 	/* this is where we set up the spin button we made above */
 	account = pidgin_account_chooser_get_selected(optmenu);

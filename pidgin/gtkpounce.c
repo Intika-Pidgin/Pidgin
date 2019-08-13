@@ -392,10 +392,9 @@ entry_key_press_cb(GtkWidget *widget, GdkEventKey *event,
 }
 
 static void
-pounce_choose_cb(GtkWidget *item, PurpleAccount *account,
-				 PidginPounceDialog *dialog)
+pounce_choose_cb(GtkWidget *chooser, PidginPounceDialog *dialog)
 {
-	dialog->account = account;
+	dialog->account = pidgin_account_chooser_get_selected(chooser);
 }
 
 static void
@@ -593,9 +592,10 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 	gtk_widget_show(label);
 	gtk_size_group_add_widget(sg, label);
 
-	dialog->account_menu = pidgin_account_chooser_new(
-	        dialog->account, TRUE, G_CALLBACK(pounce_choose_cb), NULL,
-	        dialog);
+	dialog->account_menu =
+	        pidgin_account_chooser_new(dialog->account, TRUE, NULL);
+	g_signal_connect(dialog->account_menu, "changed",
+	                 G_CALLBACK(pounce_choose_cb), dialog);
 
 	gtk_box_pack_start(GTK_BOX(hbox), dialog->account_menu, FALSE, FALSE, 0);
 	gtk_widget_show(dialog->account_menu);

@@ -209,10 +209,9 @@ add_cb(GtkWidget *w, GevoNewPersonDialog *dialog)
 }
 
 static void
-select_account_cb(GObject *w, PurpleAccount *account,
-				  GevoNewPersonDialog *dialog)
+select_account_cb(GtkWidget *chooser, GevoNewPersonDialog *dialog)
 {
-	dialog->account = account;
+	dialog->account = pidgin_account_chooser_get_selected(chooser);
 }
 
 void
@@ -277,9 +276,10 @@ gevo_new_person_dialog_show(EBook *book, EContact *contact,
 	if (!person_only)
 	{
 		/* Add the account type stuff. */
-		dialog->accounts_menu = pidgin_account_chooser_new(
-		        account, FALSE, G_CALLBACK(select_account_cb), NULL,
-		        dialog);
+		dialog->accounts_menu =
+		        pidgin_account_chooser_new(account, FALSE, NULL);
+		g_signal_connect(dialog->accounts_menu, "changed",
+		                 G_CALLBACK(select_account_cb), dialog);
 		add_pref_box(sg, vbox, _("Account type:"), dialog->accounts_menu);
 
 		/* Username */

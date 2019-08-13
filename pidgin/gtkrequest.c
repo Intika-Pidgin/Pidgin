@@ -268,9 +268,10 @@ field_choice_option_cb(GtkRadioButton *button, PurpleRequestField *field)
 }
 
 static void
-field_account_cb(GObject *w, PurpleAccount *account, PurpleRequestField *field)
+field_account_cb(GObject *w, PurpleRequestField *field)
 {
-	purple_request_field_account_set_value(field, account);
+	purple_request_field_account_set_value(
+	        field, pidgin_account_chooser_get_selected(GTK_WIDGET(w)));
 }
 
 static void
@@ -1354,8 +1355,9 @@ create_account_field(PurpleRequestField *field)
 	widget = pidgin_account_chooser_new(
 	        purple_request_field_account_get_default_value(field),
 	        purple_request_field_account_get_show_all(field),
-	        G_CALLBACK(field_account_cb),
-	        purple_request_field_account_get_filter(field), field);
+	        purple_request_field_account_get_filter(field));
+	g_signal_connect(widget, "changed", G_CALLBACK(field_account_cb),
+	                 field);
 
 	gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
 	g_signal_connect(widget, "changed",
