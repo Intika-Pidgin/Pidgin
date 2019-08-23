@@ -1,5 +1,5 @@
 # vi:et:ts=2 sw=2 sts=2
-image: pidgin/builder-debian:buster
+image: pidgin/builders:subproject-build
 pipelines:
   default:
     - step:
