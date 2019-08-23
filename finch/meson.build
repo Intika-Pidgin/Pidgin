@@ -196,7 +196,7 @@ if enable_consoleui
 
 		gnome.generate_gir(libfinch,
 		    sources : introspection_sources,
-		    includes : [libgnt_gir[0], libpurple_gir[0]],
+		    includes : [libgnt_gir[0], libpurple_gir[0], gplugin_gir],
 		    namespace : 'Finch',
 		    symbol_prefix : 'finch',
 		    identifier_prefix : 'Finch',
