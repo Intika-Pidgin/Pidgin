@@ -65,20 +65,6 @@ static const gchar *xmpp_prpls[] = {
 	"prpl-jabber", "prpl-gtalk", NULL
 };
 
-#define EMPTY_HTML \
-"<html><head><style type='text/css'>" \
-	"body { word-wrap: break-word; margin: 0; }" \
-	"div.tab { padding-left: 1em; }" \
-	"div.info { color: #777777; }" \
-	"div.incoming { background-color: #ffcece; }" \
-	"div.outgoing { background-color: #dcecc4; }" \
-	"span.bracket { color: #940f8c; }" \
-	"span.tag { color: #8b1dab; font-weight: bold; }" \
-	"span.attr { color: #a02961; font-weight: bold; }" \
-	"span.value { color: #324aa4; }" \
-	"span.xmlns { color: #2cb12f; font-weight: bold;}" \
-"</style></head></html>"
-
 static gboolean
 xmppconsole_is_xmpp_account(PurpleAccount *account)
 {
