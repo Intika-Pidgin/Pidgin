@@ -16,6 +16,7 @@ endif
 
 subdir('disco')
 subdir('ticker')
+subdir('xmppconsole')
 
 if IS_WIN32
 	subdir('win32/winprefs')
@@ -79,11 +80,6 @@ if PLUGINS
 	    name_prefix : '',
 	    build_by_default: false,
 	    install : false, install_dir : PIDGIN_PLUGINDIR)
-
-	xmppconsole = library('xmppconsole', 'xmppconsole.c',
-	    dependencies : [libpurple_dep, libpidgin_dep, glib],
-	    name_prefix : '',
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	if enable_unity
 		unity = library('unity', 'unity.c',
