@@ -22,30 +22,38 @@
 #ifndef PIDGIN_XMPP_DISCO_UI_H
 #define PIDGIN_XMPP_DISCO_UI_H
 
-typedef struct _PidginDiscoDialog PidginDiscoDialog;
+#include <gtk/gtk.h>
+
 typedef struct _PidginDiscoList PidginDiscoList;
 
 #include "xmppdisco.h"
 
-struct _PidginDiscoDialog {
-	GtkWidget *window;
-	GtkWidget *account_widget;
+G_BEGIN_DECLS
 
-	GtkWidget *sw;
+struct _PidginDiscoDialog {
+	GtkDialog parent;
+
+	GtkWidget *account_chooser;
+
 	GtkWidget *progress;
 
 	GtkWidget *stop_button;
 	GtkWidget *browse_button;
 	GtkWidget *register_button;
 	GtkWidget *add_button;
-	GtkWidget *close_button;
 	XmppDiscoService *selected;
 
+	GtkTreeView *tree;
+	GtkTreeStore *model;
 	PurpleAccount *account;
 	PidginDiscoList *discolist;
 
 	gpointer *prompt_handle;
 };
+
+#define PIDGIN_TYPE_DISCO_DIALOG (pidgin_disco_dialog_get_type())
+G_DECLARE_FINAL_TYPE(PidginDiscoDialog, pidgin_disco_dialog, PIDGIN,
+                     DISCO_DIALOG, GtkDialog)
 
 struct _PidginDiscoList {
 	PurpleConnection *pc;
@@ -56,10 +64,13 @@ struct _PidginDiscoList {
 	guint fetch_count;
 
 	PidginDiscoDialog *dialog;
-	GtkTreeStore *model;
-	GtkWidget *tree;
 	GHashTable *services;
 };
+
+/**
+ * Registers dynamic GObjects.
+ */
+void pidgin_disco_dialog_register(PurplePlugin *plugin);
 
 /**
  * Shows a new service discovery dialog.
@@ -79,4 +90,7 @@ PidginDiscoList *pidgin_disco_list_ref(PidginDiscoList *list);
 void pidgin_disco_list_unref(PidginDiscoList *list);
 
 void pidgin_disco_list_set_in_progress(PidginDiscoList *list, gboolean in_progress);
+
+G_END_DECLS
+
 #endif /* PIDGIN_XMPP_DISCO_UI_H */
