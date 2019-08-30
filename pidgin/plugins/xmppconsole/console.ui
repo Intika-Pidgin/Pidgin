@@ -1,0 +1,200 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Generated with glade 3.22.1 -->
+<interface>
+  <requires lib="gtk+" version="3.18"/>
+  <object class="GtkTextBuffer" id="entry_buffer">
+    <signal name="changed" handler="entry_changed_cb" swapped="no"/>
+  </object>
+  <object class="GtkTextTagTable" id="tags.table">
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.info">
+        <property name="foreground_rgba">rgb(119,119,119)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.incoming">
+        <property name="paragraph_background_rgba">rgb(255,206,206)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.outgoing">
+        <property name="paragraph_background_rgba">rgb(220,236,196)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.bracket">
+        <property name="foreground_rgba">rgb(148,15,140)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.tag">
+        <property name="foreground_rgba">rgb(139,29,171)</property>
+        <property name="weight">700</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.attr">
+        <property name="foreground_rgba">rgb(160,41,97)</property>
+        <property name="weight">700</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.value">
+        <property name="foreground_rgba">rgb(50,74,164)</property>
+      </object>
+    </child>
+    <child type="tag">
+      <object class="GtkTextTag" id="tags.xmlns">
+        <property name="foreground_rgba">rgb(44,177,47)</property>
+        <property name="weight">700</property>
+      </object>
+    </child>
+  </object>
+  <object class="GtkTextBuffer" id="buffer">
+    <property name="tag_table">tags.table</property>
+  </object>
+  <object class="GtkWindow" id="PidginXmppConsole">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">XMPP Console</property>
+    <property name="default_width">580</property>
+    <property name="default_height">400</property>
+    <signal name="destroy" handler="console_destroy" swapped="no"/>
+    <child>
+      <placeholder/>
+    </child>
+    <child>
+      <object class="GtkBox">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="orientation">vertical</property>
+        <child>
+          <object class="GtkBox" id="hbox">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="margin_left">6</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Account:</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkComboBoxText" id="dropdown">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <signal name="changed" handler="dropdown_changed_cb" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">1</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="shadow_type">etched-in</property>
+            <child>
+              <object class="GtkTextView">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="editable">False</property>
+                <property name="wrap_mode">word</property>
+                <property name="buffer">buffer</property>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkToolbar">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="toolbar_style">text</property>
+            <child>
+              <object class="GtkToolButton" id="iq">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label">&lt;iq/&gt;</property>
+                <signal name="clicked" handler="iq_clicked_cb" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">False</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="presence">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label">&lt;presence/&gt;</property>
+                <signal name="clicked" handler="presence_clicked_cb" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">False</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkToolButton" id="message">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label">&lt;message/&gt;</property>
+                <signal name="clicked" handler="message_clicked_cb" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="homogeneous">False</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">2</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkScrolledWindow" id="sw">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="shadow_type">etched-in</property>
+            <child>
+              <object class="GtkTextView" id="entry">
+                <property name="visible">True</property>
+                <property name="can_focus">True</property>
+                <property name="wrap_mode">word</property>
+                <property name="buffer">entry_buffer</property>
+                <signal name="key-press-event" handler="message_send_cb" object="PidginXmppConsole" swapped="no"/>
+              </object>
+            </child>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">False</property>
+            <property name="position">3</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+</interface>
