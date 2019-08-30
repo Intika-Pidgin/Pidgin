@@ -39,7 +39,6 @@ typedef struct {
 	GtkWidget *window;
 	GtkWidget *hbox;
 	GtkWidget *dropdown;
-	GtkWidget *view;
 	GtkTextBuffer *buffer;
 	struct {
 		GtkTextTag *info;
@@ -757,11 +756,8 @@ dropdown_changed_cb(GtkComboBox *widget, gpointer nul)
 static void
 create_console(PurplePluginAction *action)
 {
-	GtkWidget *vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 6);
-	GtkWidget *label;
-	GtkWidget *toolbar;
+	GtkBuilder *builder;
 	GList *connections;
-	GtkToolItem *button;
 	GtkCssProvider *entry_css;
 	GtkStyleContext *context;
 
@@ -772,17 +768,17 @@ create_console(PurplePluginAction *action)
 
 	console = g_new0(XmppConsole, 1);
 
-	console->window = pidgin_create_window(_("XMPP Console"), PIDGIN_HIG_BORDER, NULL, TRUE);
-	g_signal_connect(G_OBJECT(console->window), "destroy", G_CALLBACK(console_destroy), NULL);
-	gtk_window_set_default_size(GTK_WINDOW(console->window), 580, 400);
-	gtk_container_add(GTK_CONTAINER(console->window), vbox);
+	builder = gtk_builder_new_from_resource(
+	        "/im/pidgin/Pidgin/Plugin/XMPPConsole/console.ui");
+	gtk_builder_set_translation_domain(builder, PACKAGE);
+	console->window = GTK_WIDGET(
+	        gtk_builder_get_object(builder, "PidginXmppConsole"));
+	gtk_builder_add_callback_symbol(builder, "console_destroy",
+	                                G_CALLBACK(console_destroy));
 
-	console->hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), console->hbox, FALSE, FALSE, 0);
-	label = gtk_label_new(_("Account: "));
-	gtk_label_set_xalign(GTK_LABEL(label), 0.0);
-	gtk_box_pack_start(GTK_BOX(console->hbox), label, FALSE, FALSE, 0);
-	console->dropdown = gtk_combo_box_text_new();
+	console->hbox = GTK_WIDGET(gtk_builder_get_object(builder, "hbox"));
+	console->dropdown =
+	        GTK_WIDGET(gtk_builder_get_object(builder, "dropdown"));
 	for (connections = purple_connections_get_all(); connections; connections = connections->next) {
 		PurpleConnection *gc = connections->data;
 		if (xmppconsole_is_xmpp_account(purple_connection_get_account(gc))) {
@@ -795,33 +791,27 @@ create_console(PurplePluginAction *action)
 		}
 	}
 	gtk_combo_box_set_active(GTK_COMBO_BOX(console->dropdown), 0);
-	gtk_box_pack_start(GTK_BOX(console->hbox), console->dropdown, TRUE, TRUE, 0);
-	g_signal_connect(G_OBJECT(console->dropdown), "changed", G_CALLBACK(dropdown_changed_cb), NULL);
+	gtk_builder_add_callback_symbol(builder, "dropdown_changed_cb",
+	                                G_CALLBACK(dropdown_changed_cb));
 
-	console->view = gtk_text_view_new();
-	gtk_text_view_set_editable(GTK_TEXT_VIEW(console->view), FALSE);
-	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(console->view), GTK_WRAP_WORD);
-
-	console->buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(console->view));
-	console->tags.info = gtk_text_buffer_create_tag(console->buffer, "info",
-	                                                "foreground", "#777777", NULL);
-	console->tags.incoming = gtk_text_buffer_create_tag(console->buffer, "incoming",
-	                                                    "paragraph-background", "#ffcece", NULL);
-	console->tags.outgoing = gtk_text_buffer_create_tag(console->buffer, "outgoing",
-	                                                    "paragraph-background", "#dcecc4", NULL);
-	console->tags.bracket = gtk_text_buffer_create_tag(console->buffer, "bracket",
-	                                                   "foreground", "#940f8c", NULL);
-	console->tags.tag = gtk_text_buffer_create_tag(console->buffer, "tag",
-	                                               "foreground", "#8b1dab",
-	                                               "weight", PANGO_WEIGHT_BOLD, NULL);
-	console->tags.attr = gtk_text_buffer_create_tag(console->buffer, "attr",
-	                                                "foreground", "#a02961",
-	                                                "weight", PANGO_WEIGHT_BOLD, NULL);
-	console->tags.value = gtk_text_buffer_create_tag(console->buffer, "value",
-	                                                 "foreground", "#324aa4", NULL);
-	console->tags.xmlns = gtk_text_buffer_create_tag(console->buffer, "xmlns",
-	                                                 "foreground", "#2cb12f",
-	                                                 "weight", PANGO_WEIGHT_BOLD, NULL);
+	console->buffer =
+	        GTK_TEXT_BUFFER(gtk_builder_get_object(builder, "buffer"));
+	console->tags.info =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.info"));
+	console->tags.incoming =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.incoming"));
+	console->tags.outgoing =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.outgoing"));
+	console->tags.bracket =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.bracket"));
+	console->tags.tag =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.tag"));
+	console->tags.attr =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.attr"));
+	console->tags.value =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.value"));
+	console->tags.xmlns =
+	        GTK_TEXT_TAG(gtk_builder_get_object(builder, "tags.xmlns"));
 
 	if (console->count == 0) {
 		GtkTextIter start, end;
@@ -829,30 +819,13 @@ create_console(PurplePluginAction *action)
 		gtk_text_buffer_get_bounds(console->buffer, &start, &end);
 		gtk_text_buffer_apply_tag(console->buffer, console->tags.info, &start, &end);
 	}
-	gtk_box_pack_start(GTK_BOX(vbox),
-		pidgin_make_scrollable(console->view, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_ETCHED_IN, -1, -1),
-		TRUE, TRUE, 0);
 
-	toolbar = gtk_toolbar_new();
-	button = gtk_tool_button_new(NULL, "<iq/>");
-	gtk_tool_item_set_is_important(button, TRUE);
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(iq_clicked_cb), NULL);
-	gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(button));
+	gtk_builder_add_callback_symbols(
+	        builder, "iq_clicked_cb", G_CALLBACK(iq_clicked_cb),
+	        "presence_clicked_cb", G_CALLBACK(presence_clicked_cb),
+	        "message_clicked_cb", G_CALLBACK(message_clicked_cb), NULL);
 
-	button = gtk_tool_button_new(NULL, "<presence/>");
-	gtk_tool_item_set_is_important(button, TRUE);
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(presence_clicked_cb), NULL);
-	gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(button));
-
-	button = gtk_tool_button_new(NULL, "<message/>");
-	gtk_tool_item_set_is_important(button, TRUE);
-	g_signal_connect(G_OBJECT(button), "clicked", G_CALLBACK(message_clicked_cb), NULL);
-	gtk_container_add(GTK_CONTAINER(toolbar), GTK_WIDGET(button));
-
-	gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
-
-	console->entry = gtk_text_view_new();
-	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(console->entry), GTK_WRAP_WORD);
+	console->entry = GTK_WIDGET(gtk_builder_get_object(builder, "entry"));
 	entry_css = gtk_css_provider_new();
 	gtk_css_provider_load_from_data(entry_css,
 	                                "textview." GTK_STYLE_CLASS_ERROR " text {background-color:#ffcece;}",
@@ -860,18 +833,23 @@ create_console(PurplePluginAction *action)
 	context = gtk_widget_get_style_context(console->entry);
 	gtk_style_context_add_provider(context, GTK_STYLE_PROVIDER(entry_css),
 	                               GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-	console->entry_buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(console->entry));
-	g_signal_connect(G_OBJECT(console->entry),"key-press-event", G_CALLBACK(message_send_cb), console);
+	console->entry_buffer = GTK_TEXT_BUFFER(
+	        gtk_builder_get_object(builder, "entry_buffer"));
+	gtk_builder_add_callback_symbol(builder, "message_send_cb",
+	                                G_CALLBACK(message_send_cb));
 
-	console->sw = pidgin_make_scrollable(console->entry, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_ETCHED_IN, -1, -1);
-	gtk_box_pack_start(GTK_BOX(vbox), console->sw, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(console->entry_buffer), "changed", G_CALLBACK(entry_changed_cb), NULL);
+	console->sw = GTK_WIDGET(gtk_builder_get_object(builder, "sw"));
+	gtk_builder_add_callback_symbol(builder, "entry_changed_cb",
+	                                G_CALLBACK(entry_changed_cb));
 
 	entry_changed_cb(console->entry_buffer, NULL);
 
 	gtk_widget_show_all(console->window);
 	if (console->count < 2)
 		gtk_widget_hide(console->hbox);
+
+	gtk_builder_connect_signals(builder, console);
+	g_object_unref(builder);
 }
 
 static GList *
