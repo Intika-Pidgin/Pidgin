@@ -43,6 +43,18 @@ gtk_menu_popup_at_pointer(GtkMenu *menu, const GdkEvent *trigger_event)
 	               event ? event->button : 0, gdk_event_get_time(event));
 }
 
+static inline void
+gtk_popover_popup(GtkPopover *popover)
+{
+	gtk_widget_show(GTK_WIDGET(popover));
+}
+
+static inline void
+gtk_popover_popdown(GtkPopover *popover)
+{
+	gtk_widget_hide(GTK_WIDGET(popover));
+}
+
 #endif /* 3.22.0 */
 
 #endif /* _PIDGINGTK3COMPAT_H_ */
