@@ -415,11 +415,7 @@ regex_popup_cb(GtkEntry *entry, GtkEntryIconPosition icon_pos, GdkEvent *event,
 
 	gtk_entry_get_icon_area(entry, icon_pos, &rect);
 	gtk_popover_set_pointing_to(GTK_POPOVER(win->popover), &rect);
-#if GTK_CHECK_VERSION(3,22,0)
 	gtk_popover_popup(GTK_POPOVER(win->popover));
-#else
-	gtk_widget_show(win->popover);
-#endif
 }
 
 static void
