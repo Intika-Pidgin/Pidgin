@@ -55,6 +55,30 @@ typedef struct {
 	GtkWidget *sw;
 	int count;
 	GList *accounts;
+
+	struct {
+		GtkPopover *popover;
+		GtkEntry *to;
+		GtkComboBoxText *type;
+	} iq;
+
+	struct {
+		GtkPopover *popover;
+		GtkEntry *to;
+		GtkComboBoxText *type;
+		GtkComboBoxText *show;
+		GtkEntry *status;
+		GtkEntry *priority;
+	} presence;
+
+	struct {
+		GtkPopover *popover;
+		GtkEntry *to;
+		GtkComboBoxText *type;
+		GtkEntry *body;
+		GtkEntry *subject;
+		GtkEntry *thread;
+	} message;
 } XmppConsole;
 
 XmppConsole *console = NULL;
@@ -318,195 +342,65 @@ load_text_and_set_caret(const gchar *pre_text, const gchar *post_text)
 	gtk_text_buffer_end_user_action(console->entry_buffer);
 }
 
-static void iq_clicked_cb(GtkWidget *w, gpointer nul)
+static void
+popover_closed_cb(GtkPopover *popover, gpointer data)
 {
-	GtkWidget *vbox, *hbox, *to_entry, *label, *type_combo;
-	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	GtkToggleToolButton *button = GTK_TOGGLE_TOOL_BUTTON(data);
+
+	gtk_toggle_tool_button_set_active(button, FALSE);
+}
+
+static void
+toggle_button_toggled_cb(GtkToolButton *button, gpointer data)
+{
+	GtkPopover *popover = GTK_POPOVER(data);
+
+	gtk_popover_popup(popover);
+}
+
+static void
+iq_clicked_cb(GtkWidget *w, gpointer data)
+{
+	XmppConsole *console = (XmppConsole *)data;
 	const gchar *to;
-	int result;
 	char *stanza;
 
-	GtkWidget *dialog = gtk_dialog_new_with_buttons("<iq/>",
-							GTK_WINDOW(console->window),
-							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-							_("_Cancel"),
-							GTK_RESPONSE_REJECT,
-							_("_OK"),
-							GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_dialog_set_default_response (GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
-	gtk_container_set_border_width(GTK_CONTAINER(dialog), 12);
-	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("To:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	to_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (to_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), to_entry, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	label = gtk_label_new("Type:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	type_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "get");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "set");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "result");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "error");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(type_combo), 0);
-	gtk_box_pack_start(GTK_BOX(hbox), type_combo, FALSE, FALSE, 0);
-
-	gtk_widget_show_all(vbox);
-
-	result = gtk_dialog_run(GTK_DIALOG(dialog));
-	if (result != GTK_RESPONSE_ACCEPT) {
-		gtk_widget_destroy(dialog);
-		return;
-	}
-
-	to = gtk_entry_get_text(GTK_ENTRY(to_entry));
-	stanza = g_strdup_printf("<iq %s%s%s id='console%x' type='%s'>",
-				 to && *to ? "to='" : "",
-				 to && *to ? to : "",
-				 to && *to ? "'" : "",
-				 g_random_int(),
-				 gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(type_combo)));
+	to = gtk_entry_get_text(console->iq.to);
+	stanza = g_strdup_printf(
+	        "<iq %s%s%s id='console%x' type='%s'>", to && *to ? "to='" : "",
+	        to && *to ? to : "", to && *to ? "'" : "", g_random_int(),
+	        gtk_combo_box_text_get_active_text(console->iq.type));
 	load_text_and_set_caret(stanza, "</iq>");
 	gtk_widget_grab_focus(console->entry);
 	g_free(stanza);
 
-	gtk_widget_destroy(dialog);
-	g_object_unref(sg);
+	/* Reset everything. */
+	gtk_entry_set_text(console->iq.to, "");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(console->iq.type), 0);
+	gtk_popover_popdown(console->iq.popover);
 }
 
-static void presence_clicked_cb(GtkWidget *w, gpointer nul)
+static void
+presence_clicked_cb(GtkWidget *w, gpointer data)
 {
-	GtkWidget *vbox;
-	GtkWidget *hbox;
-	GtkWidget *to_entry;
-	GtkWidget *status_entry;
-	GtkWidget *priority_entry;
-	GtkWidget *label;
-	GtkWidget *show_combo;
-	GtkWidget *type_combo;
-	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	XmppConsole *console = (XmppConsole *)data;
 	const gchar *to, *status, *priority;
 	gchar *type, *show;
-	int result;
 	char *stanza;
 
-	GtkWidget *dialog = gtk_dialog_new_with_buttons("<presence/>",
-							GTK_WINDOW(console->window),
-							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-							_("_Cancel"),
-							GTK_RESPONSE_REJECT,
-							_("_OK"),
-							GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_dialog_set_default_response (GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
-	gtk_container_set_border_width(GTK_CONTAINER(dialog), 12);
-	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("To:");
-	gtk_size_group_add_widget(sg, label);
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	to_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (to_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), to_entry, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	label = gtk_label_new("Type:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	type_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "default");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "unavailable");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "subscribe");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "unsubscribe");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "subscribed");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "unsubscribed");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "probe");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "error");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(type_combo), 0);
-	gtk_box_pack_start(GTK_BOX(hbox), type_combo, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	label = gtk_label_new("Show:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	show_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(show_combo), "default");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(show_combo), "away");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(show_combo), "dnd");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(show_combo), "xa");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(show_combo), "chat");
-
-	gtk_combo_box_set_active(GTK_COMBO_BOX(show_combo), 0);
-	gtk_box_pack_start(GTK_BOX(hbox), show_combo, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("Status:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	status_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (status_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), status_entry, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("Priority:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	priority_entry = gtk_spin_button_new_with_range(-128, 127, 1);
-	gtk_spin_button_set_value(GTK_SPIN_BUTTON(priority_entry), 0);
-	gtk_box_pack_start(GTK_BOX(hbox), priority_entry, FALSE, FALSE, 0);
-
-	gtk_widget_show_all(vbox);
-
-	result = gtk_dialog_run(GTK_DIALOG(dialog));
-	if (result != GTK_RESPONSE_ACCEPT) {
-		gtk_widget_destroy(dialog);
-		return;
-	}
-
-	to = gtk_entry_get_text(GTK_ENTRY(to_entry));
-	type = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(type_combo));
+	to = gtk_entry_get_text(console->presence.to);
+	type = gtk_combo_box_text_get_active_text(console->presence.type);
 	if (purple_strequal(type, "default")) {
 		g_free(type);
 		type = g_strdup("");
 	}
-	show = gtk_combo_box_text_get_active_text(GTK_COMBO_BOX_TEXT(show_combo));
+	show = gtk_combo_box_text_get_active_text(console->presence.show);
 	if (purple_strequal(show, "default")) {
 		g_free(show);
 		show = g_strdup("");
 	}
-	status = gtk_entry_get_text(GTK_ENTRY(status_entry));
-	priority = gtk_entry_get_text(GTK_ENTRY(priority_entry));
+	status = gtk_entry_get_text(console->presence.status);
+	priority = gtk_entry_get_text(console->presence.priority);
 	if (purple_strequal(priority, "0"))
 		priority = "";
 
@@ -539,141 +433,55 @@ static void presence_clicked_cb(GtkWidget *w, gpointer nul)
 	g_free(type);
 	g_free(show);
 
-	gtk_widget_destroy(dialog);
-	g_object_unref(sg);
+	/* Reset everything. */
+	gtk_entry_set_text(console->presence.to, "");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(console->presence.type), 0);
+	gtk_combo_box_set_active(GTK_COMBO_BOX(console->presence.show), 0);
+	gtk_entry_set_text(console->presence.status, "");
+	gtk_entry_set_text(console->presence.priority, "0");
+	gtk_popover_popdown(console->presence.popover);
 }
 
-static void message_clicked_cb(GtkWidget *w, gpointer nul)
+static void
+message_clicked_cb(GtkWidget *w, gpointer data)
 {
-	GtkWidget *vbox;
-	GtkWidget *hbox;
-	GtkWidget *to_entry;
-	GtkWidget *body_entry;
-	GtkWidget *thread_entry;
-	GtkWidget *subject_entry;
-	GtkWidget *label;
-	GtkWidget *type_combo;
-	GtkSizeGroup *sg = gtk_size_group_new(GTK_SIZE_GROUP_HORIZONTAL);
+	XmppConsole *console = (XmppConsole *)data;
 	const gchar *to, *body, *thread, *subject;
 	char *stanza;
-	int result;
 
-	GtkWidget *dialog = gtk_dialog_new_with_buttons("<message/>",
-							GTK_WINDOW(console->window),
-							GTK_DIALOG_MODAL | GTK_DIALOG_DESTROY_WITH_PARENT,
-							_("_Cancel"),
-							GTK_RESPONSE_REJECT,
-							_("_OK"),
-							GTK_RESPONSE_ACCEPT,
-							NULL);
-	gtk_dialog_set_default_response (GTK_DIALOG(dialog), GTK_RESPONSE_ACCEPT);
-	gtk_container_set_border_width(GTK_CONTAINER(dialog), 12);
-	vbox = gtk_dialog_get_content_area(GTK_DIALOG(dialog));
+	to = gtk_entry_get_text(console->message.to);
+	body = gtk_entry_get_text(console->message.body);
+	thread = gtk_entry_get_text(console->message.thread);
+	subject = gtk_entry_get_text(console->message.subject);
 
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
+	stanza = g_strdup_printf(
+	        "<message %s%s%s id='console%x' type='%s'>"
+	        "%s%s%s%s%s%s%s%s%s",
 
-	label = gtk_label_new("To:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
+	        *to ? "to='" : "", *to ? to : "", *to ? "'" : "",
+	        g_random_int(),
+	        gtk_combo_box_text_get_active_text(console->message.type),
 
-	to_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (to_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), to_entry, FALSE, FALSE, 0);
+	        *body ? "<body>" : "", *body ? body : "",
+	        *body ? "</body>" : "",
 
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-	label = gtk_label_new("Type:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-	type_combo = gtk_combo_box_text_new();
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "chat");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "headline");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "groupchat");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "normal");
-	gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(type_combo), "error");
-	gtk_combo_box_set_active(GTK_COMBO_BOX(type_combo), 0);
-	gtk_box_pack_start(GTK_BOX(hbox), type_combo, FALSE, FALSE, 0);
+	        *subject ? "<subject>" : "", *subject ? subject : "",
+	        *subject ? "</subject>" : "",
 
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("Body:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	body_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (body_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), body_entry, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("Subject:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	subject_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (subject_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), subject_entry, FALSE, FALSE, 0);
-
-	hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-	gtk_box_pack_start(GTK_BOX(vbox), hbox, FALSE, FALSE, 0);
-
-	label = gtk_label_new("Thread:");
-	gtk_label_set_xalign(GTK_LABEL(label), 0);
-	gtk_size_group_add_widget(sg, label);
-	gtk_box_pack_start(GTK_BOX(hbox), label, FALSE, FALSE, 0);
-
-	thread_entry = gtk_entry_new();
-	gtk_entry_set_activates_default (GTK_ENTRY (thread_entry), TRUE);
-	gtk_box_pack_start(GTK_BOX(hbox), thread_entry, FALSE, FALSE, 0);
-
-	gtk_widget_show_all(vbox);
-
-	result = gtk_dialog_run(GTK_DIALOG(dialog));
-	if (result != GTK_RESPONSE_ACCEPT) {
-		gtk_widget_destroy(dialog);
-		return;
-	}
-
-	to = gtk_entry_get_text(GTK_ENTRY(to_entry));
-	body = gtk_entry_get_text(GTK_ENTRY(body_entry));
-	thread = gtk_entry_get_text(GTK_ENTRY(thread_entry));
-	subject = gtk_entry_get_text(GTK_ENTRY(subject_entry));
-
-	stanza = g_strdup_printf("<message %s%s%s id='console%x' type='%s'>"
-	                         "%s%s%s%s%s%s%s%s%s",
-
-	                         *to ? "to='" : "",
-	                         *to ? to : "",
-	                         *to ? "'" : "",
-	                         g_random_int(),
-	                         gtk_combo_box_text_get_active_text(
-                               GTK_COMBO_BOX_TEXT(type_combo)),
-
-	                         *body ? "<body>" : "",
-	                         *body ? body : "",
-	                         *body ? "</body>" : "",
-
-	                         *subject ? "<subject>" : "",
-	                         *subject ? subject : "",
-	                         *subject ? "</subject>" : "",
-
-	                         *thread ? "<thread>" : "",
-	                         *thread ? thread : "",
-	                         *thread ? "</thread>" : "");
+	        *thread ? "<thread>" : "", *thread ? thread : "",
+	        *thread ? "</thread>" : "");
 
 	load_text_and_set_caret(stanza, "</message>");
 	gtk_widget_grab_focus(console->entry);
 	g_free(stanza);
 
-	gtk_widget_destroy(dialog);
-	g_object_unref(sg);
+	/* Reset everything. */
+	gtk_entry_set_text(console->message.to, "");
+	gtk_combo_box_set_active(GTK_COMBO_BOX(console->message.type), 0);
+	gtk_entry_set_text(console->message.body, "");
+	gtk_entry_set_text(console->message.subject, "0");
+	gtk_entry_set_text(console->message.thread, "0");
+	gtk_popover_popdown(console->message.popover);
 }
 
 static void
@@ -820,10 +628,48 @@ create_console(PurplePluginAction *action)
 		gtk_text_buffer_apply_tag(console->buffer, console->tags.info, &start, &end);
 	}
 
+	/* Popover for <iq/> button. */
+	console->iq.popover =
+	        GTK_POPOVER(gtk_builder_get_object(builder, "iq.popover"));
+	console->iq.to = GTK_ENTRY(gtk_builder_get_object(builder, "iq.to"));
+	console->iq.type =
+	        GTK_COMBO_BOX_TEXT(gtk_builder_get_object(builder, "iq.type"));
+
+	/* Popover for <presence/> button. */
+	console->presence.popover = GTK_POPOVER(
+	        gtk_builder_get_object(builder, "presence.popover"));
+	console->presence.to =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "presence.to"));
+	console->presence.type = GTK_COMBO_BOX_TEXT(
+	        gtk_builder_get_object(builder, "presence.type"));
+	console->presence.show = GTK_COMBO_BOX_TEXT(
+	        gtk_builder_get_object(builder, "presence.show"));
+	console->presence.status =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "presence.status"));
+	console->presence.priority =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "presence.priority"));
+
+	/* Popover for <message/> button. */
+	console->message.popover =
+	        GTK_POPOVER(gtk_builder_get_object(builder, "message.popover"));
+	console->message.to =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "message.to"));
+	console->message.type = GTK_COMBO_BOX_TEXT(
+	        gtk_builder_get_object(builder, "message.type"));
+	console->message.body =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "message.body"));
+	console->message.subject =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "message.subject"));
+	console->message.thread =
+	        GTK_ENTRY(gtk_builder_get_object(builder, "message.thread"));
+
 	gtk_builder_add_callback_symbols(
-	        builder, "iq_clicked_cb", G_CALLBACK(iq_clicked_cb),
-	        "presence_clicked_cb", G_CALLBACK(presence_clicked_cb),
-	        "message_clicked_cb", G_CALLBACK(message_clicked_cb), NULL);
+	        builder, "toggle_button_toggled_cb",
+	        G_CALLBACK(toggle_button_toggled_cb), "popover_closed_cb",
+	        G_CALLBACK(popover_closed_cb), "iq_clicked_cb",
+	        G_CALLBACK(iq_clicked_cb), "presence_clicked_cb",
+	        G_CALLBACK(presence_clicked_cb), "message_clicked_cb",
+	        G_CALLBACK(message_clicked_cb), NULL);
 
 	console->entry = GTK_WIDGET(gtk_builder_get_object(builder, "entry"));
 	entry_css = gtk_css_provider_new();
