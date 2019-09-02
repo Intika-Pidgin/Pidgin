@@ -3,7 +3,7 @@ if PLUGINS
 	    'xmppconsole.gresource.xml',
 	    c_name : 'xmppconsole')
 
-	xmppconsole = library('xmppconsole',
+	library('xmppconsole',
 	    'xmppconsole.c', xmppconsole_resource,
 	    dependencies : [libpurple_dep, libpidgin_dep, glib],
 	    name_prefix : '',
