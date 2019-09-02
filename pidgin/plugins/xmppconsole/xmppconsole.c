@@ -268,23 +268,22 @@ entry_changed_cb(GtkTextBuffer *buffer, void *data)
 {
 	GtkTextIter start, end;
 	char *xmlstr, *str;
-#if 0
+	GtkTextIter iter;
 	int wrapped_lines;
 	int lines;
 	GdkRectangle oneline;
 	int height;
 	int pad_top, pad_inside, pad_bottom;
-#endif
 	PurpleXmlNode *node;
 	GtkStyleContext *style;
 
-#if 0
-	/* TODO WebKit: Do entry auto-sizing... */
 	wrapped_lines = 1;
 	gtk_text_buffer_get_start_iter(buffer, &iter);
 	gtk_text_view_get_iter_location(GTK_TEXT_VIEW(console->entry), &iter, &oneline);
-	while (gtk_text_view_forward_display_line(GTK_TEXT_VIEW(console->entry), &iter))
+	while (gtk_text_view_forward_display_line(GTK_TEXT_VIEW(console->entry),
+	                                          &iter)) {
 		wrapped_lines++;
+	}
 
 	lines = gtk_text_buffer_get_line_count(buffer);
 
@@ -300,12 +299,13 @@ entry_changed_cb(GtkTextBuffer *buffer, void *data)
 	height += (oneline.height + pad_inside) * (wrapped_lines - lines);
 
 	gtk_widget_set_size_request(console->sw, -1, height + 6);
-#endif
 
 	gtk_text_buffer_get_bounds(buffer, &start, &end);
 	str = gtk_text_buffer_get_text(buffer, &start, &end, FALSE);
-	if (!str)
+	if (!str) {
 		return;
+	}
+
 	xmlstr = g_strdup_printf("<xml>%s</xml>", str);
 	node = purple_xmlnode_from_str(xmlstr, -1);
 	style = gtk_widget_get_style_context(console->entry);
