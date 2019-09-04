@@ -649,6 +649,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 		return FALSE;
 	}
 
+	pidgin_disco_dialog_register(plugin);
+
 	purple_signal_connect(purple_connections_get_handle(), "signing-off",
 	                      plugin, PURPLE_CALLBACK(signed_off_cb), NULL);
 
