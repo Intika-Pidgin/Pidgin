@@ -4375,7 +4375,7 @@ setup_common_pane(PidginConversation *gtkconv)
 
 	/* Setup the entry widget and all signals */
 	gtkconv->editor = talkatu_editor_new();
-	talkatu_editor_set_buffer(TALKATU_BUFFER(gtkconv->editor), talkatu_html_buffer_new());
+	talkatu_editor_set_buffer(TALKATU_EDITOR(gtkconv->editor), talkatu_html_buffer_new());
 	gtk_box_pack_start(GTK_BOX(gtkconv->lower_hbox), gtkconv->editor, TRUE, TRUE, 0);
 
 	view = talkatu_editor_get_view(TALKATU_EDITOR(gtkconv->editor));
