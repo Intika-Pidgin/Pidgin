@@ -1061,6 +1061,7 @@ finch_write_conv(PurpleConversation *conv, PurpleMessage *msg)
 				name, msgflags);
 		gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(ggconv->tv), me ? " " : ": ", GNT_TEXT_FLAG_NORMAL);
 		g_free(name);
+		g_free(msg_text);
 	} else
 		fl = GNT_TEXT_FLAG_DIM;
 

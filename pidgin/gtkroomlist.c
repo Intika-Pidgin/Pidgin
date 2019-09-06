@@ -22,6 +22,7 @@
 #include "internal.h"
 #include "pidgin.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
 
@@ -104,9 +105,10 @@ static gint delete_win_cb(GtkWidget *w, GdkEventAny *e, gpointer d)
 	return FALSE;
 }
 
-static void dialog_select_account_cb(GObject *w, PurpleAccount *account,
-				     PidginRoomlistDialog *dialog)
+static void
+dialog_select_account_cb(GtkWidget *chooser, PidginRoomlistDialog *dialog)
 {
+	PurpleAccount *account = pidgin_account_chooser_get_selected(chooser);
 	gboolean change = (account != dialog->account);
 	dialog->account = account;
 
@@ -545,10 +547,16 @@ pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 	gtk_widget_show(vbox2);
 
 	/* accounts dropdown list */
-	dialog->account_widget = pidgin_account_option_menu_new(dialog->account, FALSE,
-	                         G_CALLBACK(dialog_select_account_cb), account_filter_func, dialog);
+	dialog->account_widget =
+	        pidgin_account_chooser_new(dialog->account, FALSE);
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(dialog->account_widget),
+	        account_filter_func);
+	g_signal_connect(dialog->account_widget, "changed",
+	                 G_CALLBACK(dialog_select_account_cb), dialog);
 	if (!dialog->account) /* this is normally null, and we normally don't care what the first selected item is */
-		dialog->account = pidgin_account_option_menu_get_selected(dialog->account_widget);
+		dialog->account = pidgin_account_chooser_get_selected(
+		        dialog->account_widget);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
 
 	/* scrolled window */
