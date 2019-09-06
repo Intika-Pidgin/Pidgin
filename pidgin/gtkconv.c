@@ -1837,8 +1837,9 @@ refocus_entry_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		return FALSE;
 	}
 
-	gtk_widget_grab_focus(gtkconv->entry);
-	gtk_widget_event(gtkconv->entry, (GdkEvent *)event);
+	gtk_widget_grab_focus(gtkconv->editor);
+	gtk_widget_event(talkatu_editor_get_view(gtkconv->editor),
+	                 (GdkEvent *)event);
 
 	return TRUE;
 }
@@ -4537,7 +4538,7 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 
 	g_signal_connect_swapped(G_OBJECT(pane), "focus",
 	                         G_CALLBACK(gtk_widget_grab_focus),
-	                         gtkconv->entry);
+	                         gtkconv->editor);
 
 	if (hidden)
 		pidgin_conv_window_add_gtkconv(hidden_convwin, gtkconv);
