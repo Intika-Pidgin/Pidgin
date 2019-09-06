@@ -1,4 +1,4 @@
 [wrap-hg]
 directory = gplugin
 url = https://bitbucket.com/gplugin/gplugin
-revision = default
+revision = develop

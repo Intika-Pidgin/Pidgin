@@ -1,11 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <glade-catalog name="pidgin" version="@PURPLE_MAJOR_VERSION@.@PURPLE_MINOR_VERSION@" library="pidgin3">
   <glade-widget-classes>
+    <glade-widget-class name="PidginAccountChooser" generic-name="account_chooser" title="AccountChooser"/>
     <glade-widget-class name="PidginInviteDialog" generic-name="invite_dialog" title="InviteDialog"/>
     <glade-widget-class name="PidginMenuTray" generic-name="menu_tray" title="MenuTray"/>
     <glade-widget-class name="PidginScrollBook" generic-name="scroll_book" title="ScrollBook"/>
   </glade-widget-classes>
   <glade-widget-group name="pidgin" title="Pidgin">
+    <glade-widget-class-ref name="PidginAccountChooser"/>
     <glade-widget-class-ref name="PidginInviteDialog"/>
     <glade-widget-class-ref name="PidginMenuTray"/>
     <glade-widget-class-ref name="PidginScrollBook"/>

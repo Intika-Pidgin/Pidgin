@@ -32,6 +32,7 @@
 #include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 
 #include "protocols/jabber/jabber.h"
 
@@ -98,10 +99,9 @@ text_sent_cb(GtkEntry *entry)
 }
 
 static void
-account_changed_cb(GtkWidget *dropdown, PurpleAccount *new_account,
-				   void *user_data)
+account_changed_cb(GtkWidget *chooser, void *user_data)
 {
-	account = new_account;
+	account = pidgin_account_chooser_get_selected(chooser);
 }
 
 static PidginPluginInfo *
@@ -149,8 +149,9 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	gtk_container_add(GTK_CONTAINER(window), hbox);
 
 	/* Account drop-down menu. */
-	dropdown = pidgin_account_option_menu_new(NULL, FALSE,
-			G_CALLBACK(account_changed_cb), NULL, NULL);
+	dropdown = pidgin_account_chooser_new(NULL, FALSE);
+	g_signal_connect(dropdown, "changed", G_CALLBACK(account_changed_cb),
+	                 NULL);
 
 	if (purple_connections_get_all())
 		account = (PurpleAccount *)purple_connections_get_all()->data;
