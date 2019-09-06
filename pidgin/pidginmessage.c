@@ -53,7 +53,7 @@ pidgin_message_set_message(PidginMessage *msg, PurpleMessage *purple_msg) {
 
 		g_object_freeze_notify(G_OBJECT(msg));
 		g_object_notify_by_pspec(G_OBJECT(msg), properties[PROP_MESSAGE]);
-		g_object_notify_by_pspec(G_OBJECT(msg), properties[PROP_TIMESTAMP]);
+		g_object_notify(G_OBJECT(msg), "timestamp");
 		g_object_thaw_notify(G_OBJECT(msg));
 	}
 }
