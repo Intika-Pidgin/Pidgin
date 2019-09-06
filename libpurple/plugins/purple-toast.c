@@ -53,14 +53,11 @@ _purple_toast_show_notification(const gchar *title,
 {
 	GNotification *notification = g_notification_new(title);
 
-	g_message("title: %s", title);
-	g_message("body: %s", body);
-	g_message("icon: %p", icon);
-
 	g_notification_set_body(notification, body);
 
-	if(G_IS_ICON(icon))
+	if(G_IS_ICON(icon)) {
 		g_notification_set_icon(notification, icon);
+	}
 
 	g_application_send_notification(_purple_toast_get_application(),
 	                                NULL,
@@ -98,17 +95,19 @@ _purple_toast_find_icon(PurpleAccount *account,
 		image = purple_buddy_icons_find_account_icon(account);
 		if(PURPLE_IS_IMAGE(image)) {
 			path = purple_image_get_path(image);
-			g_message("toast path: %p", path);
+
 			if(path) {
 				GFile *file = g_file_new_for_path(path);
-				g_message("toast file: %p", file);
+
 				icon = g_file_icon_new(file);
+
 				g_object_unref(G_OBJECT(file));
 			}
 			g_object_unref(G_OBJECT(image));
 		}
 
 		if(!G_IS_ICON(icon)) {
+			/* fallback to something sane as we couldn't load a buddy icon */
 		}
 	}
 
@@ -142,8 +141,8 @@ _purple_toast_im_message_received(PurpleAccount *account,
 
 static void
 _purple_toast_chat_message_received(PurpleAccount *account,
-                                    char *sender,
-                                    char *message,
+                                    gchar *sender,
+                                    gchar *message,
                                     PurpleConversation *conv,
                                     PurpleMessageFlags flags,
                                     gpointer data)
@@ -158,14 +157,16 @@ _purple_toast_chat_message_received(PurpleAccount *account,
 	if(chat_name) {
 		PurpleChat *chat = purple_blist_find_chat(account, chat_name);
 
-		if(chat)
+		if(chat) {
 			chat_name = purple_chat_get_name(chat);
+		}
 	}
 
 	from = sender;
 	buddy = purple_blist_find_buddy(account, sender);
-	if(PURPLE_IS_BUDDY(buddy))
+	if(PURPLE_IS_BUDDY(buddy)) {
 		from = purple_buddy_get_alias(buddy);
+	}
 
 	title = g_strdup_printf("%s : %s", chat_name, from);
 
