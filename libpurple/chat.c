@@ -62,7 +62,7 @@ const char *purple_chat_get_name(PurpleChat *chat)
 {
 	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
 
 	priv = purple_chat_get_instance_private(chat);
 
@@ -78,7 +78,7 @@ const char *purple_chat_get_name_only(PurpleChat *chat)
 	char *ret = NULL;
 	PurpleProtocol *protocol = NULL;
 
-	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
 
 	priv = purple_chat_get_instance_private(chat);
 
@@ -103,7 +103,7 @@ purple_chat_set_alias(PurpleChat *chat, const char *alias)
 	char *old_alias;
 	char *new_alias = NULL;
 
-	g_return_if_fail(PURPLE_IS_CHAT(priv));
+	g_return_if_fail(PURPLE_IS_CHAT(chat));
 
 	priv = purple_chat_get_instance_private(chat);
 
@@ -149,7 +149,7 @@ purple_chat_get_account(PurpleChat *chat)
 {
 	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
 
 	priv = purple_chat_get_instance_private(chat);
 	return priv->account;
@@ -160,7 +160,7 @@ purple_chat_get_components(PurpleChat *chat)
 {
 	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(PURPLE_IS_CHAT(priv), NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
 
 	priv = purple_chat_get_instance_private(chat);
 	return priv->components;
