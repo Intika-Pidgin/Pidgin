@@ -4340,6 +4340,7 @@ setup_common_pane(PidginConversation *gtkconv)
 	gtkconv->history_buffer = talkatu_history_buffer_new();
 	gtkconv->history = talkatu_history_new();
 	gtk_text_view_set_buffer(GTK_TEXT_VIEW(gtkconv->history), gtkconv->history_buffer);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(gtkconv->history), GTK_WRAP_WORD);
 	gtk_container_add(GTK_CONTAINER(sw), gtkconv->history);
 
 	if (chat) {
