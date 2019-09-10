@@ -1806,6 +1806,7 @@ entry_key_press_cb(GtkWidget *entry, GdkEventKey *event, gpointer data)
 static gboolean
 refocus_entry_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
+	GtkWidget *view = NULL;
 	PidginConversation *gtkconv = data;
 
 	/* If we have a valid key for the conversation display, then exit */
@@ -1837,9 +1838,9 @@ refocus_entry_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		return FALSE;
 	}
 
-	gtk_widget_grab_focus(gtkconv->editor);
-	gtk_widget_event(talkatu_editor_get_view(gtkconv->editor),
-	                 (GdkEvent *)event);
+	view = talkatu_editor_get_view(TALKATU_EDITOR(gtkconv->editor));
+	gtk_widget_grab_focus(view);
+	gtk_widget_event(view, (GdkEvent *)event);
 
 	return TRUE;
 }
