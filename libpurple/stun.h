@@ -85,7 +85,7 @@ struct _PurpleStunNatDiscovery {
 	PurpleStunNatType type;
 	char publicip[16];
 	char *servername;
-	time_t lookup_time;
+	gint64 lookup_time;
 };
 
 typedef void (*PurpleStunCallback) (PurpleStunNatDiscovery *discovery);
