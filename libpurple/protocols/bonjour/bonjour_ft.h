@@ -19,8 +19,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA
  */
-#ifndef _BONJOUR_FT_H_
-#define _BONJOUR_FT_H_
+#ifndef PURPLE_BONJOUR_BONJOUR_FT_H
+#define PURPLE_BONJOUR_BONJOUR_FT_H
+
 #include "network.h"
 #include "proxy.h"
 
@@ -59,4 +60,4 @@ void xep_xfer_register(GTypeModule *module);
 
 G_END_DECLS
 
-#endif
+#endif /* PURPLE_BONJOUR_BONJOUR_FT_H */

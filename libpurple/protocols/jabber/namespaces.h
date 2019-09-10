@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef PURPLE_JABBER_NAMESPACES_H_
-#define PURPLE_JABBER_NAMESPACES_H_
+#ifndef PURPLE_JABBER_NAMESPACES_H
+#define PURPLE_JABBER_NAMESPACES_H
 
 #define NS_XMPP_BIND "urn:ietf:params:xml:ns:xmpp-bind"
 #define NS_XMPP_CLIENT "jabber:client"
@@ -114,4 +114,4 @@
 /* Apple extension(s) */
 #define NS_APPLE_IDLE "http://www.apple.com/xmpp/idle"
 
-#endif /* PURPLE_JABBER_NAMESPACES_H_ */
+#endif /* PURPLE_JABBER_NAMESPACES_H */

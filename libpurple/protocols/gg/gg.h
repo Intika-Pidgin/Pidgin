@@ -20,9 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-
-#ifndef _PURPLE_GG_H
-#define _PURPLE_GG_H
+#ifndef PURPLE_GG_GG_H
+#define PURPLE_GG_GG_H
 
 #define GGP_UIN_LEN_MAX 10
 
@@ -92,4 +91,4 @@ uin_t ggp_own_uin(PurpleConnection *gc);
 
 void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond);
 
-#endif /* _PURPLE_GG_H */
+#endif /* PURPLE_GG_GG_H */

@@ -1,5 +1,5 @@
-#ifndef __INTERNAL_H__
-#define __INTERNAL_H__
+#ifndef PURPLE_ZEPHYR_INTERNAL_H
+#define PURPLE_ZEPHYR_INTERNAL_H
 
 #include <sysdep.h>
 
@@ -118,5 +118,4 @@ Code_t Z_WaitForNotice __P((ZNotice_t *notice,
 			    int (*pred) __P((ZNotice_t *, void *)), void *arg,
 			    int timeout));
 
-#endif /* __INTERNAL_H__ */
-
+#endif /* PURPLE_ZEPHYR_INTERNAL_H */

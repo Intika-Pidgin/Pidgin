@@ -8,8 +8,8 @@
  *	file "mit-copyright.h".
  */
 
-#ifndef __ZEPHYR_H__
-#define __ZEPHYR_H__
+#ifndef PURPLE_ZEPHYR_ZEPHYR_INTERNAL_H
+#define PURPLE_ZEPHYR_ZEPHYR_INTERNAL_H
 
 #include <config.h>
 
@@ -336,4 +336,4 @@ void ZSetDebug ZP((void (*)(ZCONST char *, va_list, void *), void *));
 #define USER_STARTUP		"STARTUP"	/* Opcode: Come out of it */
 #define USER_EXIT		"EXIT"		/* Opcode: Exit the client */
 
-#endif /* __ZEPHYR_H__ */
+#endif /* PURPLE_ZEPHYR_ZEPHYR_INTERNAL_H */

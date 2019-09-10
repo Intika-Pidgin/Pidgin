@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_CONFERENCE_H__
-#define __NM_CONFERENCE_H__
+#ifndef PURPLE_NOVELL_NMCONFERENCE_H
+#define PURPLE_NOVELL_NMCONFERENCE_H
 
 typedef struct _NMConference NMConference;
 
@@ -164,4 +164,4 @@ void nm_conference_set_data(NMConference * conference, gpointer data);
  */
 gpointer nm_conference_get_data(NMConference * conference);
 
-#endif
+#endif /* PURPLE_NOVELL_NMCONFERENCE_H */

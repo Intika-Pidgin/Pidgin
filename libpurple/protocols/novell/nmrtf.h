@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NMRTF_H__
-#define __NMRTF_H__
+#ifndef PURPLE_NOVELL_NMRTF_H
+#define PURPLE_NOVELL_NMRTF_H
 
 typedef struct _NMRtfContext NMRtfContext;
 
@@ -27,4 +27,4 @@ NMRtfContext *nm_rtf_init(void);
 char *nm_rtf_strip_formatting(NMRtfContext *ctx, const char *input);
 void nm_rtf_deinit(NMRtfContext *ctx);
 
-#endif
+#endif /* PURPLE_NOVELL_NMRTF_H */

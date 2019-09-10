@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_ID_H_
-#define _FACEBOOK_ID_H_
+#ifndef PURPLE_FACEBOOK_ID_H
+#define PURPLE_FACEBOOK_ID_H
 
 /**
  * SECTION:id
@@ -128,4 +128,4 @@
  */
 typedef gint64 FbId;
 
-#endif /* _FACEBOOK_ID_H_ */
+#endif /* PURPLE_FACEBOOK_ID_H */

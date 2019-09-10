@@ -25,8 +25,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_MESSAGE_PRPL_H
-#define _GGP_MESSAGE_PRPL_H
+
+#ifndef PURPLE_GG_MESSAGE_PRPL_H
+#define PURPLE_GG_MESSAGE_PRPL_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -45,4 +46,4 @@ void ggp_message_got_multilogon(PurpleConnection *gc,
 int ggp_message_send_im(PurpleConnection *gc, PurpleMessage *msg);
 gchar * ggp_message_format_to_gg(PurpleConversation *conv, const gchar *text);
 
-#endif /* _GGP_MESSAGE_PRPL_H */
+#endif /* PURPLE_GG_MESSAGE_PRPL_H */

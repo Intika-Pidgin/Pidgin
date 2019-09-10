@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _ICQ_H_
-#define _ICQ_H_
+
+#ifndef PURPLE_OSCAR_ICQ_H
+#define PURPLE_OSCAR_ICQ_H
 
 #include "oscar.h"
 
@@ -51,4 +52,4 @@ void icq_protocol_register_type(PurplePlugin *plugin);
  */
 G_MODULE_EXPORT GType icq_protocol_get_type(void);
 
-#endif /* _ICQ_H_ */
+#endif /* PURPLE_OSCAR_ICQ_H */

@@ -8,8 +8,8 @@
  *	"mit-copyright.h".
  */
 
-#ifndef __SYSDEP_H__
-#define __SYSDEP_H__
+#ifndef PURPLE_ZEPHYR_SYSDEP_H
+#define PURPLE_ZEPHYR_SYSDEP_H
 
 #include <config.h>
 #include <stdio.h>
@@ -157,5 +157,4 @@ ZEPHYR_INT32 gethostid(void);
 #define MSG_BSIZE BUFSIZ
 #endif
 
-#endif /* __SYSDEP_H__ */
-
+#endif /* PURPLE_ZEPHYR_SYSDEP_H */

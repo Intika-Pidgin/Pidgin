@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_SERVCONN_H
-#define _GGP_SERVCONN_H
+#ifndef PURPLE_GG_SERVCONN_H
+#define PURPLE_GG_SERVCONN_H
 
 #include <internal.h>
 #include <accountopt.h>
@@ -40,4 +40,4 @@ void ggp_servconn_add_server(const gchar *server);
 GSList * ggp_servconn_get_servers(void);
 void ggp_servconn_remote_disconnect(PurpleConnection *gc);
 
-#endif /* _GGP_SERVCONN_H */
+#endif /* PURPLE_GG_SERVCONN_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_JSON_H_
-#define _FACEBOOK_JSON_H_
+#ifndef PURPLE_FACEBOOK_JSON_H
+#define PURPLE_FACEBOOK_JSON_H
 
 /**
  * SECTION:json
@@ -482,4 +482,4 @@ fb_json_values_next_str(FbJsonValues *values, const gchar *defval);
 gchar *
 fb_json_values_next_str_dup(FbJsonValues *values, const gchar *defval);
 
-#endif /* _FACEBOOK_JSON_H_ */
+#endif /* PURPLE_FACEBOOK_JSON_H */

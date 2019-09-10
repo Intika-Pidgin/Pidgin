@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_XDATA_H_
-#define PURPLE_JABBER_XDATA_H_
+
+#ifndef PURPLE_JABBER_XDATA_H
+#define PURPLE_JABBER_XDATA_H
 
 #include "jabber.h"
 #include "xmlnode.h"
@@ -52,4 +53,4 @@ void *jabber_x_data_request_with_actions(JabberStream *js, PurpleXmlNode *packet
  */
 gchar *jabber_x_data_get_formtype(const PurpleXmlNode *form);
 
-#endif /* PURPLE_JABBER_XDATA_H_ */
+#endif /* PURPLE_JABBER_XDATA_H */

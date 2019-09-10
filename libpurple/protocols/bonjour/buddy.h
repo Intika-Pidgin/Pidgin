@@ -14,8 +14,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
-#ifndef _BONJOUR_BUDDY
-#define _BONJOUR_BUDDY
+#ifndef PURPLE_BONJOUR_BUDDY_H
+#define PURPLE_BONJOUR_BUDDY_H
 
 #include <glib.h>
 
@@ -111,4 +111,4 @@ void bonjour_buddy_got_buddy_icon(BonjourBuddy *buddy, gconstpointer data, gsize
  */
 void bonjour_buddy_delete(BonjourBuddy *buddy);
 
-#endif
+#endif /* PURPLE_BONJOUR_BUDDY_H */

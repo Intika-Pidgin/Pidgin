@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_PUBDIR_PROTOCOL_H
-#define _GGP_PUBDIR_PROTOCOL_H
+#ifndef PURPLE_GG_PUBDIR_PRPL_H
+#define PURPLE_GG_PUBDIR_PRPL_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -70,4 +70,4 @@ void ggp_pubdir_search(PurpleConnection *gc,
 
 void ggp_pubdir_set_info(PurpleConnection *gc);
 
-#endif /* _GGP_PUBDIR_PROTOCOL_H */
+#endif /* PURPLE_GG_PUBDIR_PRPL_H */

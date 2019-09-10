@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_H_
-#define PURPLE_JABBER_H_
+
+#ifndef PURPLE_JABBER_JABBER_H
+#define PURPLE_JABBER_JABBER_H
 
 typedef enum {
 	JABBER_CAP_NONE           = 0,
@@ -429,4 +430,4 @@ gboolean jabber_initiate_media(PurpleAccount *account, const char *who,
 PurpleMediaCaps jabber_get_media_caps(PurpleAccount *account, const char *who);
 gboolean jabber_can_receive_file(PurpleProtocolXfer *xfer, PurpleConnection *gc, const gchar *who);
 
-#endif /* PURPLE_JABBER_H_ */
+#endif /* PURPLE_JABBER_JABBER_H */
