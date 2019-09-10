@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_MESSAGE_H_
-#define PURPLE_JABBER_MESSAGE_H_
+
+#ifndef PURPLE_JABBER_MESSAGE_H
+#define PURPLE_JABBER_MESSAGE_H
 
 #include "buddy.h"
 #include "jabber.h"
@@ -78,4 +79,4 @@ gboolean jabber_buzz_isenabled(JabberStream *js, const gchar *namespace);
 
 gboolean jabber_custom_smileys_isenabled(JabberStream *js, const gchar *namespace);
 
-#endif /* PURPLE_JABBER_MESSAGE_H_ */
+#endif /* PURPLE_JABBER_MESSAGE_H */

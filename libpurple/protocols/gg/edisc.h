@@ -25,8 +25,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_EDISC_H
-#define _GGP_EDISC_H
+
+#ifndef PURPLE_GG_EDISC_H
+#define PURPLE_GG_EDISC_H
 
 #include <internal.h>
 
@@ -55,4 +56,4 @@ PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *prplxfer, PurpleConnect
 
 G_END_DECLS
 
-#endif /* _GGP_EDISC_H */
+#endif /* PURPLE_GG_EDISC_H */

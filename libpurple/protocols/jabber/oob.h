@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_OOB_H_
-#define PURPLE_JABBER_OOB_H_
+
+#ifndef PURPLE_JABBER_OOB_H
+#define PURPLE_JABBER_OOB_H
 
 #include "jabber.h"
 
@@ -38,4 +39,4 @@ void jabber_oob_xfer_register(GTypeModule *module);
 
 G_END_DECLS
 
-#endif /* PURPLE_JABBER_OOB_H_ */
+#endif /* PURPLE_JABBER_OOB_H */

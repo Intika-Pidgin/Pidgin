@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_USER_RECORD_H__
-#define __NM_USER_RECORD_H__
+#ifndef PURPLE_NOVELL_NMUSERRECORD_H
+#define PURPLE_NOVELL_NMUSERRECORD_H
 
 #include <glib.h>
 
@@ -270,4 +270,4 @@ const char *nm_property_get_value(NMProperty * property);
  */
 void nm_user_record_copy(NMUserRecord * dest, NMUserRecord * src);
 
-#endif
+#endif /* PURPLE_NOVELL_NMUSERRECORD_H */

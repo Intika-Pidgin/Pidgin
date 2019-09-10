@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_IRC_H
-#define _PURPLE_IRC_H
+#ifndef PURPLE_IRC_IRC_H
+#define PURPLE_IRC_IRC_H
 
 #include <glib.h>
 #include <gmodule.h>
@@ -246,4 +246,5 @@ void irc_xfer_register(GTypeModule *module);
 PurpleXfer *irc_dccsend_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 void irc_dccsend_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 void irc_dccsend_recv(struct irc_conn *irc, const char *from, const char *msg);
-#endif /* _PURPLE_IRC_H */
+
+#endif /* PURPLE_IRC_IRC_H */

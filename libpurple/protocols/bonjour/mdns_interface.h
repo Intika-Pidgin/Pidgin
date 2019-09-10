@@ -14,8 +14,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
-#ifndef _BONJOUR_MDNS_INTERFACE
-#define _BONJOUR_MDNS_INTERFACE
+#ifndef PURPLE_BONJOUR_MDNS_INTERFACE_H
+#define PURPLE_BONJOUR_MDNS_INTERFACE_H
 
 #include "mdns_types.h"
 #include "buddy.h"
@@ -36,4 +36,4 @@ void _mdns_delete_buddy(BonjourBuddy *buddy);
 
 void _mdns_retrieve_buddy_icon(BonjourBuddy* buddy);
 
-#endif
+#endif /* PURPLE_BONJOUR_MDNS_INTERFACE_H */

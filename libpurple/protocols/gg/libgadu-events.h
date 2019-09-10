@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_LIBGADU_EVENTS_H
-#define _GGP_LIBGADU_EVENTS_H
+#ifndef PURPLE_GG_LIBGADU_EVENTS_H
+#define PURPLE_GG_LIBGADU_EVENTS_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -40,4 +40,4 @@ void ggp_events_user_data(PurpleConnection *gc,
 
 void ggp_events_json(PurpleConnection *gc, struct gg_event_json_event *ev);
 
-#endif /* _GGP_LIBGADU_EVENTS_H */
+#endif /* PURPLE_GG_LIBGADU_EVENTS_H */

@@ -22,8 +22,9 @@
  * AIM Callback Types
  *
  */
-#ifndef _SNACTYPES_H_
-#define _SNACTYPES_H_
+
+#ifndef PURPLE_OSCAR_SNACTYPES_H
+#define PURPLE_OSCAR_SNACTYPES_H
 
 /*
  * SNAC Families.
@@ -284,4 +285,4 @@
 /* SNAC flags */
 #define AIM_SNACFLAGS_DESTRUCTOR 0x0001
 
-#endif /* _SNACTYPES_H_ */
+#endif /* PURPLE_OSCAR_SNACTYPES_H */

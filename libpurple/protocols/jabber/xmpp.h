@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _XMPP_H_
-#define _XMPP_H_
+
+#ifndef PURPLE_JABBER_XMPP_H
+#define PURPLE_JABBER_XMPP_H
 
 #include "jabber.h"
 
@@ -51,4 +52,4 @@ void xmpp_protocol_register_type(PurplePlugin *plugin);
  */
 G_MODULE_EXPORT GType xmpp_protocol_get_type(void);
 
-#endif /* _XMPP_H_ */
+#endif /* PURPLE_JABBER_XMPP_H */

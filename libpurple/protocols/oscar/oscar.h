@@ -26,8 +26,8 @@
  *
  */
 
-#ifndef _OSCAR_H_
-#define _OSCAR_H_
+#ifndef PURPLE_OSCAR_OSCAR_H
+#define PURPLE_OSCAR_OSCAR_H
 
 #include "internal.h"
 #include "circularbuffer.h"
@@ -1375,4 +1375,4 @@ void oscar_init_account_options(PurpleProtocol *protocol, gboolean is_icq);
 
 G_END_DECLS
 
-#endif /* _OSCAR_H_ */
+#endif /* PURPLE_OSCAR_OSCAR_H */

@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_AUTH_DIGEST_MD5_H_
-#define PURPLE_JABBER_AUTH_DIGEST_MD5_H_
+
+#ifndef PURPLE_JABBER_AUTH_DIGEST_MD5_H
+#define PURPLE_JABBER_AUTH_DIGEST_MD5_H
 
 #include "internal.h"
 
@@ -36,4 +37,4 @@
  */
 GHashTable *jabber_auth_digest_md5_parse(const char *challenge);
 
-#endif /* PURPLE_JABBER_AUTH_DIGEST_MD5_H_ */
+#endif /* PURPLE_JABBER_AUTH_DIGEST_MD5_H */

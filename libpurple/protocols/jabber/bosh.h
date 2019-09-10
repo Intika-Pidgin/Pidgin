@@ -22,8 +22,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
-#ifndef PURPLE_JABBER_BOSH_H_
-#define PURPLE_JABBER_BOSH_H_
+
+#ifndef PURPLE_JABBER_BOSH_H
+#define PURPLE_JABBER_BOSH_H
 
 typedef struct _PurpleJabberBOSHConnection PurpleJabberBOSHConnection;
 
@@ -51,4 +52,4 @@ jabber_bosh_connection_send(PurpleJabberBOSHConnection *conn,
 void
 jabber_bosh_connection_send_keepalive(PurpleJabberBOSHConnection *conn);
 
-#endif /* PURPLE_JABBER_BOSH_H_ */
+#endif /* PURPLE_JABBER_BOSH_H */

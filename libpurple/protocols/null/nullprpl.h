@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _NULL_H_
-#define _NULL_H_
+
+#ifndef PURPLE_NULL_NULLPRPL_H
+#define PURPLE_NULL_NULLPRPL_H
 
 #include "protocol.h"
 
@@ -46,4 +47,4 @@ typedef struct
  */
 G_MODULE_EXPORT GType null_protocol_get_type(void);
 
-#endif /* _NULL_H_ */
+#endif /* PURPLE_NULL_NULLPRPL_H */

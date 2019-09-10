@@ -14,8 +14,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
-#ifndef _BONJOUR_MDNS_TYPES
-#define _BONJOUR_MDNS_TYPES
+#ifndef PURPLE_BONJOUR_MDNS_TYPES_H
+#define PURPLE_BONJOUR_MDNS_TYPES_H
 
 #include <glib.h>
 #include "account.h"
@@ -42,4 +42,4 @@ typedef enum {
 	PUBLISH_UPDATE
 } PublishType;
 
-#endif
+#endif /* PURPLE_BONJOUR_MDNS_TYPES_H */

@@ -8,8 +8,8 @@
  * with this package.
  */
 
-#ifndef __COM_ERR_H
-#define __COM_ERR_H
+#ifndef PURPLE_ZEPHYR_COM_ERR_H
+#define PURPLE_ZEPHYR_COM_ERR_H
 
 #define COM_ERR_BUF_LEN 25
 
@@ -35,4 +35,4 @@ error_handler_t reset_com_err_hook ETP((void));
 
 #undef ETP
 
-#endif /* ! defined(__COM_ERR_H) */
+#endif /* PURPLE_ZEPHYR_COM_ERR_H */

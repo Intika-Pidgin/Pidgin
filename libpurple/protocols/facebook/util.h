@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_UTIL_H_
-#define _FACEBOOK_UTIL_H_
+#ifndef PURPLE_FACEBOOK_UTIL_H
+#define PURPLE_FACEBOOK_UTIL_H
 
 /**
  * SECTION:util
@@ -347,4 +347,4 @@ fb_util_zlib_deflate(const GByteArray *bytes, GError **error);
 GByteArray *
 fb_util_zlib_inflate(const GByteArray *bytes, GError **error);
 
-#endif /* _FACEBOOK_UTIL_H_ */
+#endif /* PURPLE_FACEBOOK_UTIL_H */

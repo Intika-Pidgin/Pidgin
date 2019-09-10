@@ -18,8 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
-#ifndef _VISIBILITY_H_
-#define _VISIBILITY_H_
+#ifndef PURPLE_OSCAR_VISIBILITY_H
+#define PURPLE_OSCAR_VISIBILITY_H
 
 #include "oscar.h"
 #include "plugins.h"
@@ -29,4 +29,4 @@ PurpleActionMenu * create_visibility_menu_item(OscarData *od, const char *bname)
 void oscar_show_visible_list(PurpleProtocolAction *action);
 void oscar_show_invisible_list(PurpleProtocolAction *action);
 
-#endif
+#endif /* PURPLE_OSCAR_VISIBILITY_H */

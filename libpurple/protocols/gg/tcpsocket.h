@@ -25,8 +25,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_TCPSOCKET_H
-#define _GGP_TCPSOCKET_H
+
+#ifndef PURPLE_GG_TCPSOCKET_H
+#define PURPLE_GG_TCPSOCKET_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -37,4 +38,4 @@ ggp_tcpsocket_setup(PurpleConnection *gc, struct gg_login_params *glp);
 PurpleInputCondition
 ggp_tcpsocket_inputcond_gg_to_purple(enum gg_check_t check);
 
-#endif /* _GGP_TCPSOCKET_H */
+#endif /* PURPLE_GG_TCPSOCKET_H */
