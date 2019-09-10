@@ -646,7 +646,7 @@ display_log_viewer(struct log_viewer_hash *ht, GList *logs, const char *title,
 
 	/* Log size ************/
 	if(log_size) {
-		char *sz_txt = purple_str_size_to_units(log_size);
+		char *sz_txt = g_format_size(log_size);
 		char *text = g_strdup_printf("<span weight='bold'>%s</span> %s",
 		                             _("Total log size:"), sz_txt);
 		gtk_label_set_markup(GTK_LABEL(lv->size_label), text);

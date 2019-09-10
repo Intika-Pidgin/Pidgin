@@ -1183,17 +1183,6 @@ gchar *purple_strcasereplace(const char *string, const char *delimiter,
 const char *purple_strcasestr(const char *haystack, const char *needle);
 
 /**
- * purple_str_size_to_units:
- * @size: The size
- *
- * Returns a string representing a filesize in the appropriate
- * units (MB, KB, GB, etc.)
- *
- * Returns: The string in units form. This must be freed.
- */
-char *purple_str_size_to_units(goffset size);
-
-/**
  * purple_str_seconds_to_string:
  * @sec: The seconds.
  *
