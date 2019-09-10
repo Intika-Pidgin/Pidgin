@@ -398,7 +398,8 @@ update_plugin_list(void *data)
 			name = g_markup_escape_text(
 			        _(gplugin_plugin_info_get_name(ginfo)), -1);
 		} else {
-			char *tmp = g_path_get_basename(purple_plugin_get_filename(plug));
+			char *tmp = g_path_get_basename(
+			        gplugin_plugin_get_filename(plug));
 			name = g_markup_escape_text(tmp, -1);
 			g_free(tmp);
 		}
@@ -704,7 +705,7 @@ static void prefs_plugin_sel (GtkTreeSelection *sel, GtkTreeModel *model)
 	gtk_label_set_text(plugin_authors, authors);
 	g_free(authors);
 
-	gtk_label_set_text(plugin_filename, purple_plugin_get_filename(plug));
+	gtk_label_set_text(plugin_filename, gplugin_plugin_get_filename(plug));
 
 	g_free(plugin_website_uri);
 	plugin_website_uri = g_strdup(gplugin_plugin_info_get_website(ginfo));
