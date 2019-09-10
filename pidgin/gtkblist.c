@@ -8222,7 +8222,8 @@ pidgin_blist_update_plugin_actions(void)
 		}
 
 		menuitem = gtk_menu_item_new_with_mnemonic(
-				_(purple_plugin_info_get_name(info)));
+		        _(gplugin_plugin_info_get_name(
+		                GPLUGIN_PLUGIN_INFO(info))));
 		gtk_menu_item_set_submenu(GTK_MENU_ITEM(menuitem), submenu);
 		gtk_widget_show(menuitem);
 		plugin_menu_items = g_slist_prepend(plugin_menu_items,

@@ -264,7 +264,7 @@ static void
 selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer null)
 {
 	PurplePlugin *plugin = current;
-	PurplePluginInfo *info;
+	GPluginPluginInfo *info;
 	char *text, *authors = NULL;
 	const char * const *authorlist;
 	GList *list = NULL, *iter = NULL;
@@ -272,8 +272,8 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	if (!plugin)
 		return;
 
-	info = purple_plugin_get_info(plugin);
-	authorlist = purple_plugin_info_get_authors(info);
+	info = GPLUGIN_PLUGIN_INFO(purple_plugin_get_info(plugin));
+	authorlist = gplugin_plugin_info_get_authors(info);
 
 	if (authorlist)
 		authors = g_strjoinv(", ", (gchar **)authorlist);
@@ -294,15 +294,17 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 
 	/* XXX: Use formatting and stuff */
 	gnt_text_view_clear(GNT_TEXT_VIEW(plugins.aboot));
-	text = g_strdup_printf((g_strv_length((gchar **)authorlist) > 1 ?
-			_("Name: %s\nVersion: %s\nDescription: %s\nAuthors: %s\nWebsite: %s\nFilename: %s\n") :
-			_("Name: %s\nVersion: %s\nDescription: %s\nAuthor: %s\nWebsite: %s\nFilename: %s\n")),
-			SAFE(_(purple_plugin_info_get_name(info))),
-			SAFE(_(purple_plugin_info_get_version(info))),
-			SAFE(_(purple_plugin_info_get_description(info))),
-			SAFE(authors),
-			SAFE(_(purple_plugin_info_get_website(info))),
-			SAFE(purple_plugin_get_filename(plugin)));
+	text = g_strdup_printf(
+	        (g_strv_length((gchar **)authorlist) > 1
+	                 ? _("Name: %s\nVersion: %s\nDescription: %s\nAuthors: "
+	                     "%s\nWebsite: %s\nFilename: %s\n")
+	                 : _("Name: %s\nVersion: %s\nDescription: %s\nAuthor: "
+	                     "%s\nWebsite: %s\nFilename: %s\n")),
+	        SAFE(_(gplugin_plugin_info_get_name(info))),
+	        SAFE(_(gplugin_plugin_info_get_version(info))),
+	        SAFE(_(gplugin_plugin_info_get_description(info))),
+	        SAFE(authors), SAFE(_(gplugin_plugin_info_get_website(info))),
+	        SAFE(purple_plugin_get_filename(plugin)));
 
 	gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(plugins.aboot),
 			text, GNT_TEXT_FLAG_NORMAL);
@@ -330,8 +332,14 @@ reset_plugin_window(GntWidget *window, gpointer null)
 static int
 plugin_compare(PurplePlugin *p1, PurplePlugin *p2)
 {
-	char *s1 = g_utf8_strup(purple_plugin_info_get_name(purple_plugin_get_info(p1)), -1);
-	char *s2 = g_utf8_strup(purple_plugin_info_get_name(purple_plugin_get_info(p2)), -1);
+	char *s1 =
+	        g_utf8_strup(gplugin_plugin_info_get_name(GPLUGIN_PLUGIN_INFO(
+	                             purple_plugin_get_info(p1))),
+	                     -1);
+	char *s2 =
+	        g_utf8_strup(gplugin_plugin_info_get_name(GPLUGIN_PLUGIN_INFO(
+	                             purple_plugin_get_info(p2))),
+	                     -1);
 	int ret = g_utf8_collate(s1, s2);
 	g_free(s1);
 	g_free(s2);
@@ -385,7 +393,8 @@ configure_plugin_cb(GntWidget *button, gpointer null)
 
 		gnt_box_set_toplevel(GNT_BOX(window), TRUE);
 		gnt_box_set_title(GNT_BOX(window),
-				purple_plugin_info_get_name(info));
+		                  gplugin_plugin_info_get_name(
+		                          GPLUGIN_PLUGIN_INFO(info)));
 		gnt_box_set_alignment(GNT_BOX(window), GNT_ALIGN_MID);
 
 		box = priv->pref_frame_cb();
@@ -483,10 +492,14 @@ void finch_plugins_show_all(void)
 		if (purple_plugin_is_internal(plug))
 			continue;
 
-		gnt_tree_add_choice(GNT_TREE(tree), plug,
-				gnt_tree_create_row(GNT_TREE(tree),
-				purple_plugin_info_get_name(purple_plugin_get_info(plug))),
-				NULL, NULL);
+		gnt_tree_add_choice(
+		        GNT_TREE(tree), plug,
+		        gnt_tree_create_row(
+		                GNT_TREE(tree),
+		                gplugin_plugin_info_get_name(
+		                        GPLUGIN_PLUGIN_INFO(
+		                                purple_plugin_get_info(plug)))),
+		        NULL, NULL);
 		gnt_tree_set_choice(GNT_TREE(tree), plug, purple_plugin_is_loaded(plug));
 		if (!g_list_find_custom(seen, purple_plugin_get_filename(plug),
 				(GCompareFunc)strcmp))
