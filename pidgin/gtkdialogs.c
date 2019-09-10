@@ -165,6 +165,7 @@ void pidgin_dialogs_plugins_info(void)
 	GList *plugins, *l = NULL;
 	PurplePlugin *plugin = NULL;
 	PurplePluginInfo *info;
+	GPluginPluginInfo *ginfo;
 	PurplePluginExtraCb extra_cb;
 	char *title = g_strdup_printf(_("%s Plugin Information"), PIDGIN_NAME);
 	char *pname = NULL, *authors, *pauthors, *pextra;
@@ -183,10 +184,12 @@ void pidgin_dialogs_plugins_info(void)
 	for(l = plugins; l; l = l->next) {
 		plugin = PURPLE_PLUGIN(l->data);
 		info = purple_plugin_get_info(plugin);
+		ginfo = GPLUGIN_PLUGIN_INFO(info);
 		extra_cb = purple_plugin_info_get_extra_cb(info);
 
-		pname = g_markup_escape_text(purple_plugin_info_get_name(info), -1);
-		authorlist = purple_plugin_info_get_authors(info);
+		pname = g_markup_escape_text(
+		        gplugin_plugin_info_get_name(ginfo), -1);
+		authorlist = gplugin_plugin_info_get_authors(ginfo);
 
 		if (authorlist) {
 			authors = g_strjoinv(", ", (gchar **)authorlist);
@@ -201,10 +204,10 @@ void pidgin_dialogs_plugins_info(void)
 		else
 			pauthors = NULL;
 
-		pver = purple_plugin_info_get_version(info);
-		plicense = purple_plugin_info_get_license_id(info);
-		pwebsite = purple_plugin_info_get_website(info);
-		pid = purple_plugin_info_get_id(info);
+		pver = gplugin_plugin_info_get_version(ginfo);
+		plicense = gplugin_plugin_info_get_license_id(ginfo);
+		pwebsite = gplugin_plugin_info_get_website(ginfo);
+		pid = gplugin_plugin_info_get_id(ginfo);
 		ploadable = !purple_plugin_info_get_error(info);
 		ploaded = purple_plugin_is_loaded(plugin);
 
