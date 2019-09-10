@@ -65,8 +65,8 @@ struct _PurpleXferPrivate {
 	int watcher;                 /* Watcher.                            */
 
 	goffset bytes_sent;          /* The number of bytes sent.           */
-	time_t start_time;           /* When the transfer of data began.    */
-	time_t end_time;             /* When the transfer of data ended.    */
+	gint64 start_time;           /* When the transfer of data began.    */
+	gint64 end_time;             /* When the transfer of data ended.    */
 
 	size_t current_buffer_size;  /* This gradually increases for fast
 	                                 network connections.               */
@@ -883,7 +883,7 @@ purple_xfer_get_remote_port(PurpleXfer *xfer)
 	return priv->remote_port;
 }
 
-time_t
+gint64
 purple_xfer_get_start_time(PurpleXfer *xfer)
 {
 	PurpleXferPrivate *priv = NULL;
@@ -894,7 +894,7 @@ purple_xfer_get_start_time(PurpleXfer *xfer)
 	return priv->start_time;
 }
 
-time_t
+gint64
 purple_xfer_get_end_time(PurpleXfer *xfer)
 {
 	PurpleXferPrivate *priv = NULL;
@@ -1514,7 +1514,7 @@ begin_transfer(PurpleXfer *xfer, PurpleInputCondition cond)
 		);
 	}
 
-	priv->start_time = time(NULL);
+	priv->start_time = g_get_monotonic_time();
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_START_TIME]);
 
@@ -1664,7 +1664,7 @@ purple_xfer_end(PurpleXfer *xfer)
 		return;
 	}
 
-	priv->end_time = time(NULL);
+	priv->end_time = g_get_monotonic_time();
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_END_TIME]);
 
@@ -1736,7 +1736,7 @@ purple_xfer_cancel_local(PurpleXfer *xfer)
 	purple_request_close_with_handle(xfer);
 
 	purple_xfer_set_status(xfer, PURPLE_XFER_STATUS_CANCEL_LOCAL);
-	priv->end_time = time(NULL);
+	priv->end_time = g_get_monotonic_time();
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_END_TIME]);
 
@@ -1803,7 +1803,7 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 
 	purple_request_close_with_handle(xfer);
 	purple_xfer_set_status(xfer, PURPLE_XFER_STATUS_CANCEL_REMOTE);
-	priv->end_time = time(NULL);
+	priv->end_time = g_get_monotonic_time();
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_END_TIME]);
 
@@ -2093,22 +2093,10 @@ purple_xfer_get_property(GObject *obj, guint param_id, GValue *value,
 			g_value_set_int64(value, purple_xfer_get_bytes_sent(xfer));
 			break;
 		case PROP_START_TIME:
-#if SIZEOF_TIME_T == 4
-			g_value_set_int(value, purple_xfer_get_start_time(xfer));
-#elif SIZEOF_TIME_T == 8
 			g_value_set_int64(value, purple_xfer_get_start_time(xfer));
-#else
-#error Unknown size of time_t
-#endif
 			break;
 		case PROP_END_TIME:
-#if SIZEOF_TIME_T == 4
-			g_value_set_int(value, purple_xfer_get_end_time(xfer));
-#elif SIZEOF_TIME_T == 8
 			g_value_set_int64(value, purple_xfer_get_end_time(xfer));
-#else
-#error Unknown size of time_t
-#endif
 			break;
 		case PROP_STATUS:
 			g_value_set_enum(value, purple_xfer_get_status(xfer));
@@ -2274,43 +2262,16 @@ purple_xfer_class_init(PurpleXferClass *klass)
 				G_MININT64, G_MAXINT64, 0,
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-	properties[PROP_START_TIME] =
-#if SIZEOF_TIME_T == 4
-		g_param_spec_int
-#elif SIZEOF_TIME_T == 8
-		g_param_spec_int64
-#else
-#error Unknown size of time_t
-#endif
-				("start-time", "Start time",
-				"The time the transfer of a file started.",
-#if SIZEOF_TIME_T == 4
-				G_MININT, G_MAXINT, 0,
-#elif SIZEOF_TIME_T == 8
-				G_MININT64, G_MAXINT64, 0,
-#else
-#error Unknown size of time_t
-#endif
-				G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+	properties[PROP_START_TIME] = g_param_spec_int64(
+	        "start-time", "Start time",
+	        "The monotonic time the transfer of a file started.",
+	        G_MININT64, G_MAXINT64, 0,
+	        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
-	properties[PROP_END_TIME] =
-#if SIZEOF_TIME_T == 4
-		g_param_spec_int
-#elif SIZEOF_TIME_T == 8
-		g_param_spec_int64
-#else
-#error Unknown size of time_t
-#endif
-				("end-time", "End time",
-				"The time the transfer of a file ended.",
-#if SIZEOF_TIME_T == 4
-				G_MININT, G_MAXINT, 0,
-#elif SIZEOF_TIME_T == 8
-				G_MININT64, G_MAXINT64, 0,
-#else
-#error Unknown size of time_t
-#endif
-				G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+	properties[PROP_END_TIME] = g_param_spec_int64(
+	        "end-time", "End time",
+	        "The monotonic time the transfer of a file ended.", G_MININT64,
+	        G_MAXINT64, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
 	properties[PROP_STATUS] = g_param_spec_enum("status", "Status",
 				"The current status for the file transfer.",

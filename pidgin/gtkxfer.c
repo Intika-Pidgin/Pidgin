@@ -114,20 +114,21 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 {
 	double kb_sent, kb_rem;
 	double kbps = 0.0;
-	time_t elapsed, now;
+	gint64 now;
+	gint64 elapsed = 0;
 
-	now = purple_xfer_get_end_time(xfer);
-	if (now == 0)
-		now = time(NULL);
+	elapsed = purple_xfer_get_start_time(xfer);
+	if (elapsed > 0) {
+		now = purple_xfer_get_end_time(xfer);
+		if (now == 0) {
+			now = g_get_monotonic_time();
+		}
+		elapsed = now - elapsed;
+	}
 
 	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1024.0;
 	kb_rem  = purple_xfer_get_bytes_remaining(xfer) / 1024.0;
-	elapsed = purple_xfer_get_start_time(xfer);
-	if (elapsed > 0)
-		elapsed = now - elapsed;
-	else
-		elapsed = 0;
-	kbps    = (elapsed > 0 ? (kb_sent / elapsed) : 0);
+	kbps = (elapsed > 0 ? (kb_sent * G_USEC_PER_SEC) / elapsed : 0);
 
 	if (kbsec != NULL) {
 		*kbsec = g_strdup_printf(_("%.2f KiB/s"), kbps);
@@ -138,18 +139,15 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 		int h, m, s;
 		int secs_elapsed;
 
-		if (purple_xfer_get_start_time(xfer) > 0)
-		{
-			secs_elapsed = now - purple_xfer_get_start_time(xfer);
+		if (purple_xfer_get_start_time(xfer) > 0) {
+			secs_elapsed = elapsed / G_USEC_PER_SEC;
 
 			h = secs_elapsed / 3600;
 			m = (secs_elapsed % 3600) / 60;
 			s = secs_elapsed % 60;
 
 			*time_elapsed = g_strdup_printf("%d:%02d:%02d", h, m, s);
-		}
-		else
-		{
+		} else {
 			*time_elapsed = g_strdup(_("Not started"));
 		}
 	}

@@ -394,16 +394,20 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
 	char prog_str[5];
 	double kb_sent;
 	double kbps = 0.0;
-	time_t elapsed, now;
+	gint64 now;
+	gint64 elapsed = 0;
 	char *kbsec;
 	gboolean send;
 
-	if ((now = purple_xfer_get_end_time(xfer)) == 0)
-		now = time(NULL);
+	if (purple_xfer_get_start_time(xfer) > 0) {
+		if ((now = purple_xfer_get_end_time(xfer)) == 0) {
+			now = g_get_monotonic_time();
+		}
+		elapsed = now - purple_xfer_get_start_time(xfer);
+	}
 
 	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1024.0;
-	elapsed = (purple_xfer_get_start_time(xfer) > 0 ? now - purple_xfer_get_start_time(xfer) : 0);
-	kbps    = (elapsed > 0 ? (kb_sent / elapsed) : 0);
+	kbps = (elapsed > 0 ? (kb_sent * G_USEC_PER_SEC) / elapsed : 0);
 
 	g_return_if_fail(xfer_dialog != NULL);
 	g_return_if_fail(xfer != NULL);
