@@ -661,8 +661,8 @@ peer_oft_sendcb_init(PurpleXfer *xfer)
 	if (size > G_MAXUINT32)
 	{
 		gchar *tmp, *size1, *size2;
-		size1 = purple_str_size_to_units(size);
-		size2 = purple_str_size_to_units(G_MAXUINT32);
+		size1 = g_format_size(size);
+		size2 = g_format_size(G_MAXUINT32);
 		tmp = g_strdup_printf(_("File %s is %s, which is larger than "
 				"the maximum size of %s."),
 				purple_xfer_get_local_filename(xfer), size1, size2);

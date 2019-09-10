@@ -595,8 +595,8 @@ peer_odc_recv_frame(PeerConnection *conn, ByteStream *bs)
 			PurpleAccount *account;
 			PurpleIMConversation *im;
 
-			size1 = purple_str_size_to_units(frame->payload.len);
-			size2 = purple_str_size_to_units(DIRECTIM_MAX_FILESIZE);
+			size1 = g_format_size(frame->payload.len);
+			size2 = g_format_size(DIRECTIM_MAX_FILESIZE);
 			tmp = g_strdup_printf(_("%s tried to send you a %s file, but we only allow files up to %s over Direct IM.  Try using file transfer instead.\n"), conn->bn, size1, size2);
 			g_free(size1);
 			g_free(size2);

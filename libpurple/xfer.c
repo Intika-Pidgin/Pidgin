@@ -455,7 +455,7 @@ purple_xfer_ask_recv(PurpleXfer *xfer)
 		if (purple_xfer_get_filename(xfer) != NULL)
 		{
 			size = purple_xfer_get_size(xfer);
-			size_buf = purple_str_size_to_units(size);
+			size_buf = g_format_size_full(size, G_FORMAT_SIZE_LONG_FORMAT);
 			buf = g_strdup_printf(_("%s wants to send you %s (%s)"),
 						  buddy ? purple_buddy_get_alias(buddy) : priv->who,
 						  purple_xfer_get_filename(xfer), size_buf);

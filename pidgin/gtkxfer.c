@@ -126,12 +126,12 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 		elapsed = now - elapsed;
 	}
 
-	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1024.0;
-	kb_rem  = purple_xfer_get_bytes_remaining(xfer) / 1024.0;
+	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1000.0;
+	kb_rem  = purple_xfer_get_bytes_remaining(xfer) / 1000.0;
 	kbps = (elapsed > 0 ? (kb_sent * G_USEC_PER_SEC) / elapsed : 0);
 
 	if (kbsec != NULL) {
-		*kbsec = g_strdup_printf(_("%.2f KiB/s"), kbps);
+		*kbsec = g_strdup_printf(_("%.2f KB/s"), kbps);
 	}
 
 	if (time_elapsed != NULL)
@@ -859,8 +859,8 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 
 	type = purple_xfer_get_xfer_type(xfer);
 
-	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
-	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
+	size_str = g_format_size(purple_xfer_get_size(xfer));
+	remaining_str = g_format_size(purple_xfer_get_bytes_remaining(xfer));
 
 	icon_name = (type == PURPLE_XFER_TYPE_RECEIVE ?  "go-down" : "go-up");
 
@@ -990,8 +990,8 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 	}
 	data->last_updated_time = current_time;
 
-	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
-	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
+	size_str = g_format_size(purple_xfer_get_size(xfer));
+	remaining_str = g_format_size(purple_xfer_get_bytes_remaining(xfer));
 
 	gtk_list_store_set(xfer_dialog->model, &data->iter,
 					   COLUMN_PROGRESS, (gint)(purple_xfer_get_progress(xfer) * 100),
