@@ -374,16 +374,6 @@ gboolean purple_plugin_unload(PurplePlugin *plugin, GError **error);
 gboolean purple_plugin_is_loaded(PurplePlugin *plugin);
 
 /**
- * purple_plugin_get_filename:
- * @plugin: The plugin.
- *
- * Returns a plugin's filename, along with the path.
- *
- * Returns: The plugin's filename.
- */
-const gchar *purple_plugin_get_filename(PurplePlugin *plugin);
-
-/**
  * purple_plugin_get_info:
  * @plugin: The plugin.
  *

@@ -264,6 +264,7 @@ static void
 selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer null)
 {
 	PurplePlugin *plugin = current;
+	const gchar *filename;
 	GPluginPluginInfo *info;
 	char *text, *authors = NULL;
 	const char * const *authorlist;
@@ -272,6 +273,7 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	if (!plugin)
 		return;
 
+	filename = gplugin_plugin_get_filename(GPLUGIN_PLUGIN(plugin));
 	info = GPLUGIN_PLUGIN_INFO(purple_plugin_get_info(plugin));
 	authorlist = gplugin_plugin_info_get_authors(info);
 
@@ -284,11 +286,11 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	 * quickly find the plugin in the list.
 	 * I probably mean 'plugin developers' by 'users' here. */
 	list = g_object_get_data(G_OBJECT(widget), "seen-list");
-	if (list)
-		iter = g_list_find_custom(list, purple_plugin_get_filename(plugin),
-					(GCompareFunc)strcmp);
+	if (list) {
+		iter = g_list_find_custom(list, filename, (GCompareFunc)strcmp);
+	}
 	if (!iter) {
-		list = g_list_prepend(list, g_strdup(purple_plugin_get_filename(plugin)));
+		list = g_list_prepend(list, g_strdup(filename));
 		g_object_set_data(G_OBJECT(widget), "seen-list", list);
 	}
 
@@ -304,7 +306,7 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	        SAFE(_(gplugin_plugin_info_get_version(info))),
 	        SAFE(_(gplugin_plugin_info_get_description(info))),
 	        SAFE(authors), SAFE(_(gplugin_plugin_info_get_website(info))),
-	        SAFE(purple_plugin_get_filename(plugin)));
+	        SAFE(filename));
 
 	gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(plugins.aboot),
 			text, GNT_TEXT_FLAG_NORMAL);
@@ -501,9 +503,10 @@ void finch_plugins_show_all(void)
 		                                purple_plugin_get_info(plug)))),
 		        NULL, NULL);
 		gnt_tree_set_choice(GNT_TREE(tree), plug, purple_plugin_is_loaded(plug));
-		if (!g_list_find_custom(seen, purple_plugin_get_filename(plug),
-				(GCompareFunc)strcmp))
+		if (!g_list_find_custom(seen, gplugin_plugin_get_filename(plug),
+		                        (GCompareFunc)strcmp)) {
 			gnt_tree_set_row_flags(GNT_TREE(tree), plug, GNT_TEXT_FLAG_BOLD);
+		}
 	}
 	g_list_free(plugin_list);
 
