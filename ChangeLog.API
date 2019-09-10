@@ -68,21 +68,12 @@ version 3.0.0 (??/??/????):
 		* PurplePluginInfoFlags (PURPLE_PLUGIN_INFO_FLAGS_INTERNAL and
 		  PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD)
 		* purple_plugin_get_dependent_plugins
-		* purple_plugin_get_filename
 		* purple_plugin_is_internal
 		* purple_plugin_info_new
 		* purple_plugin_get_info
-		* purple_plugin_info_get_abi_version
 		* purple_plugin_info_get_actions_cb
-		* purple_plugin_info_get_category
-		* purple_plugin_info_get_dependencies
 		* purple_plugin_info_get_error
 		* purple_plugin_info_get_extra_cb
-		* purple_plugin_info_get_flags
-		* purple_plugin_info_get_icon
-		* purple_plugin_info_get_license_id
-		* purple_plugin_info_get_license_text
-		* purple_plugin_info_get_license_url
 		* purple_plugin_info_get_pref_frame_cb
 		* purple_plugin_info_get_pref_request_cb
 		* purple_plugin_info_get_ui_data
