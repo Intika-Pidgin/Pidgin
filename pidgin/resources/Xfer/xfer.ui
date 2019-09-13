@@ -14,8 +14,8 @@
       <column type="gchararray"/>
       <!-- column-name remaining -->
       <column type="gchararray"/>
-      <!-- column-name data -->
-      <column type="gpointer"/>
+      <!-- column-name xfer -->
+      <column type="PurpleXfer"/>
     </columns>
   </object>
   <template class="PidginXferDialog" parent="GtkDialog">

@@ -99,10 +99,9 @@ enum
 	COLUMN_FILENAME,
 	COLUMN_SIZE,
 	COLUMN_REMAINING,
-	COLUMN_DATA,
+	COLUMN_XFER,
 	NUM_COLUMNS
 };
-
 
 /**************************************************************************
  * Utility Functions
@@ -196,10 +195,10 @@ update_title_progress(PidginXferDialog *dialog)
 		PurpleXfer *xfer = NULL;
 
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model),
-				&iter, COLUMN_DATA, &val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         COLUMN_XFER, &val);
+		xfer = g_value_get_object(&val);
 
-		xfer = g_value_get_pointer(&val);
 		if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_STARTED) {
 			num_active_xfers++;
 			total_bytes_xferred += purple_xfer_get_bytes_sent(xfer);
@@ -419,10 +418,9 @@ selection_changed_cb(GtkTreeSelection *selection, PidginXferDialog *dialog)
 		gtk_widget_set_sensitive(dialog->expander, TRUE);
 
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model),
-								 &iter, COLUMN_DATA, &val);
-
-		xfer = g_value_get_pointer(&val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         COLUMN_XFER, &val);
+		xfer = g_value_get_object(&val);
 
 		update_detailed_info(dialog, xfer);
 
@@ -717,16 +715,14 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	utf8 = g_filename_to_utf8(lfilename, -1, NULL, NULL, NULL);
 	g_free(lfilename);
 	lfilename = utf8;
-	gtk_list_store_set(dialog->model, &data->iter,
-					   COLUMN_STATUS, icon_name,
-					   COLUMN_PROGRESS, 0,
-					   COLUMN_FILENAME, (type == PURPLE_XFER_TYPE_RECEIVE)
-					                     ? purple_xfer_get_filename(xfer)
-							     : lfilename,
-					   COLUMN_SIZE, size_str,
-					   COLUMN_REMAINING, _("Waiting for transfer to begin"),
-					   COLUMN_DATA, xfer,
-					   -1);
+	gtk_list_store_set(dialog->model, &data->iter, COLUMN_STATUS, icon_name,
+	                   COLUMN_PROGRESS, 0, COLUMN_FILENAME,
+	                   (type == PURPLE_XFER_TYPE_RECEIVE)
+	                           ? purple_xfer_get_filename(xfer)
+	                           : lfilename,
+	                   COLUMN_SIZE, size_str, COLUMN_REMAINING,
+	                   _("Waiting for transfer to begin"), COLUMN_XFER,
+	                   xfer, -1);
 	g_free(lfilename);
 
 	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(dialog->tree));
@@ -888,10 +884,10 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 		PurpleXfer *next;
 
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model),
-				&iter, COLUMN_DATA, &val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         COLUMN_XFER, &val);
+		next = g_value_get_object(&val);
 
-		next = g_value_get_pointer(&val);
 		if (!purple_xfer_is_completed(next))
 			return;
 
