@@ -54,17 +54,9 @@ typedef GPluginPlugin PurplePlugin;
 typedef GPluginPluginInterface PurplePluginInterface;
 
 #define PURPLE_TYPE_PLUGIN_INFO             (purple_plugin_info_get_type())
-#define PURPLE_PLUGIN_INFO(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfo))
-#define PURPLE_PLUGIN_INFO_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfoClass))
-#define PURPLE_IS_PLUGIN_INFO(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PLUGIN_INFO))
-#define PURPLE_IS_PLUGIN_INFO_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_PLUGIN_INFO))
-#define PURPLE_PLUGIN_INFO_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfoClass))
-
 typedef struct _PurplePluginInfo PurplePluginInfo;
-typedef struct _PurplePluginInfoClass PurplePluginInfoClass;
 
 #define PURPLE_TYPE_PLUGIN_ACTION  (purple_plugin_action_get_type())
-
 typedef struct _PurplePluginAction PurplePluginAction;
 
 #include "pluginpref.h"
@@ -143,16 +135,6 @@ struct _PurplePluginInfo {
 
 	/*< public >*/
 	gpointer ui_data;
-};
-
-struct _PurplePluginInfoClass {
-	GPluginPluginInfoClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
 };
 
 /**
@@ -463,7 +445,8 @@ GSList *purple_plugin_get_dependent_plugins(PurplePlugin *plugin);
  *
  * Returns: The #GType for the #PurplePluginInfo object.
  */
-GType purple_plugin_info_get_type(void);
+G_DECLARE_FINAL_TYPE(PurplePluginInfo, purple_plugin_info, PURPLE, PLUGIN_INFO,
+                     GPluginPluginInfo)
 
 /**
  * purple_plugin_info_new:

@@ -629,19 +629,8 @@ purple_plugin_action_copy(PurplePluginAction *action)
 	return purple_plugin_action_new(action->label, action->callback);
 }
 
-GType
-purple_plugin_action_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		type = g_boxed_type_register_static("PurplePluginAction",
-				(GBoxedCopyFunc)purple_plugin_action_copy,
-				(GBoxedFreeFunc)purple_plugin_action_free);
-	}
-
-	return type;
-}
+G_DEFINE_BOXED_TYPE(PurplePluginAction, purple_plugin_action,
+                    purple_plugin_action_copy, purple_plugin_action_free)
 
 /**************************************************************************
  * Plugins API
