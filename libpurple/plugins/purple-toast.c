@@ -29,9 +29,11 @@ G_MODULE_EXPORT GPluginPluginInfo *gplugin_query(GError **error);
 G_MODULE_EXPORT gboolean gplugin_load(GPluginPlugin *plugin, GError **error);
 G_MODULE_EXPORT gboolean gplugin_unload(GPluginPlugin *plugin, GError **error);
 
-
+/******************************************************************************
+ * Helpers
+ *****************************************************************************/
 static GApplication *
-_purple_toast_get_application(void) {
+purple_toast_get_application(void) {
 	static GApplication *application = NULL;
 
 	if(G_UNLIKELY(application == NULL)) {
@@ -47,9 +49,9 @@ _purple_toast_get_application(void) {
 }
 
 static void
-_purple_toast_show_notification(const gchar *title,
-                                const gchar *body,
-                                GIcon *icon)
+purple_toast_show_notification(const gchar *title,
+                               const gchar *body,
+                               GIcon *icon)
 {
 	GNotification *notification = g_notification_new(title);
 	gchar *stripped = purple_markup_strip_html(body);
@@ -61,7 +63,7 @@ _purple_toast_show_notification(const gchar *title,
 		g_notification_set_icon(notification, icon);
 	}
 
-	g_application_send_notification(_purple_toast_get_application(),
+	g_application_send_notification(purple_toast_get_application(),
 	                                NULL,
 	                                notification);
 
@@ -69,9 +71,9 @@ _purple_toast_show_notification(const gchar *title,
 }
 
 static GIcon *
-_purple_toast_find_icon(PurpleAccount *account,
-                        PurpleBuddy *buddy,
-                        const gchar *sender)
+purple_toast_find_icon(PurpleAccount *account,
+                       PurpleBuddy *buddy,
+                       const gchar *sender)
 {
 	GIcon *icon = NULL;
 
@@ -107,24 +109,25 @@ _purple_toast_find_icon(PurpleAccount *account,
 			}
 			g_object_unref(G_OBJECT(image));
 		}
-
-		if(!G_IS_ICON(icon)) {
-			/* fallback to something sane as we couldn't load a buddy icon */
-		}
 	}
 
-	g_message("toast icon : %p", icon);
+	/* We should probably have a fallback, but we need a libpurple or
+	 * pidgin icon or something to make that happen.
+	 */
 
 	return icon;
 }
 
+/******************************************************************************
+ * Callbacks
+ *****************************************************************************/
 static void
-_purple_toast_im_message_received(PurpleAccount *account,
-                                  const gchar *sender,
-                                  const gchar *message,
-                                  PurpleConversation *conv,
-                                  PurpleMessageFlags flags,
-                                  gpointer data)
+purple_toast_im_message_received(PurpleAccount *account,
+                                 const gchar *sender,
+                                 const gchar *message,
+                                 PurpleConversation *conv,
+                                 PurpleMessageFlags flags,
+                                 gpointer data)
 {
 	PurpleBuddy *buddy = NULL;
 	GIcon *icon = NULL;
@@ -132,9 +135,9 @@ _purple_toast_im_message_received(PurpleAccount *account,
 
 	buddy = purple_blist_find_buddy(account, sender);
 	title = PURPLE_IS_BUDDY(buddy) ? purple_buddy_get_alias(buddy) : sender;
-	icon = _purple_toast_find_icon(account, buddy, sender);
+	icon = purple_toast_find_icon(account, buddy, sender);
 
-	_purple_toast_show_notification(title, message, icon);
+	purple_toast_show_notification(title, message, icon);
 
 	if(G_IS_ICON(icon)) {
 		g_object_unref(G_OBJECT(icon));
@@ -142,12 +145,12 @@ _purple_toast_im_message_received(PurpleAccount *account,
 }
 
 static void
-_purple_toast_chat_message_received(PurpleAccount *account,
-                                    gchar *sender,
-                                    gchar *message,
-                                    PurpleConversation *conv,
-                                    PurpleMessageFlags flags,
-                                    gpointer data)
+purple_toast_chat_message_received(PurpleAccount *account,
+                                   gchar *sender,
+                                   gchar *message,
+                                   PurpleConversation *conv,
+                                   PurpleMessageFlags flags,
+                                   gpointer data)
 {
 	PurpleBuddy *buddy = NULL;
 	GIcon *icon = NULL;
@@ -173,16 +176,19 @@ _purple_toast_chat_message_received(PurpleAccount *account,
 	title = g_strdup_printf("%s : %s", chat_name, from);
 
 	/* figure out the icon */
-	icon = _purple_toast_find_icon(account, buddy, sender);
+	icon = purple_toast_find_icon(account, buddy, sender);
 
 	/* show the notification */
-	_purple_toast_show_notification(title, message, icon);
+	purple_toast_show_notification(title, message, icon);
 
 	/* clean up our memory */
 	g_free(title);
 	g_object_unref(G_OBJECT(icon));
 }
 
+/******************************************************************************
+ * Plugin Exports
+ *****************************************************************************/
 G_MODULE_EXPORT GPluginPluginInfo *
 gplugin_query(GError **error) {
 	PurplePluginInfo *info = NULL;
@@ -211,14 +217,14 @@ gplugin_load(GPluginPlugin *plugin, GError **error) {
 	purple_signal_connect(conv_handle,
 	                      "received-im-msg",
 	                      plugin,
-	                      PURPLE_CALLBACK(_purple_toast_im_message_received),
+	                      PURPLE_CALLBACK(purple_toast_im_message_received),
 	                      NULL
 	);
 
 	purple_signal_connect(conv_handle,
 	                      "received-chat-msg",
 	                      plugin,
-	                      PURPLE_CALLBACK(_purple_toast_chat_message_received),
+	                      PURPLE_CALLBACK(purple_toast_chat_message_received),
 	                      NULL
 	);
 
