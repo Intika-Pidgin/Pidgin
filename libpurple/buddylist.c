@@ -2071,6 +2071,15 @@ purple_blist_save_account(PurpleBuddyList *list, PurpleAccount *account)
 {
 	PurpleBuddyListClass *klass = NULL;
 
+	/* XXX: There's a chicken and egg problem with the accounts api, where
+	 * it'll call this function before purple_blist_init is called, this will
+	 * cause the following g_return_if_fail to fail, and muck up the logs.  We
+	 * need to find a better fix for this, but this gets rid of it for now.
+	 */
+	if(G_UNLIKELY(list == NULL && purplebuddylist == NULL)) {
+		return;
+	}
+
 	g_return_if_fail(PURPLE_IS_BUDDY_LIST(list));
 
 	klass = PURPLE_BUDDY_LIST_GET_CLASS(list);
