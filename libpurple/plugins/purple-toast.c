@@ -52,8 +52,10 @@ _purple_toast_show_notification(const gchar *title,
                                 GIcon *icon)
 {
 	GNotification *notification = g_notification_new(title);
+	gchar *stripped = purple_markup_strip_html(body);
 
-	g_notification_set_body(notification, body);
+	g_notification_set_body(notification, stripped);
+	g_free(stripped);
 
 	if(G_IS_ICON(icon)) {
 		g_notification_set_icon(notification, icon);
