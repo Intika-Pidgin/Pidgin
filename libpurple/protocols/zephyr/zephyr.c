@@ -2912,8 +2912,9 @@ static GList *zephyr_get_actions(PurpleConnection *gc)
 
 
 static void
-zephyr_protocol_init(PurpleProtocol *protocol)
+zephyr_protocol_init(ZephyrProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 	char *tmp = get_exposure_level();
 
@@ -2951,12 +2952,20 @@ zephyr_protocol_init(PurpleProtocol *protocol)
 
 
 static void
-zephyr_protocol_class_init(PurpleProtocolClass *klass)
+zephyr_protocol_class_init(ZephyrProtocolClass *klass)
 {
-	klass->login        = zephyr_login;
-	klass->close        = zephyr_close;
-	klass->status_types = zephyr_status_types;
-	klass->list_icon    = zephyr_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = zephyr_login;
+	protocol_class->close = zephyr_close;
+	protocol_class->status_types = zephyr_status_types;
+	protocol_class->list_icon = zephyr_list_icon;
+}
+
+
+static void
+zephyr_protocol_class_finalize(G_GNUC_UNUSED ZephyrProtocolClass *klass)
+{
 }
 
 
@@ -3002,22 +3011,20 @@ zephyr_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 }
 
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	ZephyrProtocol, zephyr_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        ZephyrProtocol, zephyr_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  zephyr_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      zephyr_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  zephyr_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      zephyr_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  zephyr_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      zephyr_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  zephyr_protocol_chat_iface_init)
-);
-
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      zephyr_protocol_chat_iface_init));
 
 static PurplePluginInfo *plugin_query(GError **error)
 {
@@ -3040,7 +3047,7 @@ static PurplePluginInfo *plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	zephyr_protocol_register_type(plugin);
+	zephyr_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(ZEPHYR_TYPE_PROTOCOL, error);
 	if (!my_protocol)

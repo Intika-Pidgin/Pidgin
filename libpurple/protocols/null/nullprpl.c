@@ -986,36 +986,38 @@ static gboolean null_offline_message(const PurpleBuddy *buddy) {
  * Initialize the protocol instance. see protocol.h for more information.
  */
 static void
-null_protocol_init(PurpleProtocol *protocol)
+null_protocol_init(NullProtocol *self)
 {
-  PurpleAccountUserSplit *split;
-  PurpleAccountOption *option;
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+	PurpleAccountUserSplit *split;
+	PurpleAccountOption *option;
 
-  protocol->id        = "prpl-null";
-  protocol->name      = "Null - Testing Protocol";
-  protocol->options   = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC;
-  protocol->icon_spec = purple_buddy_icon_spec_new(
-      "png,jpg,gif",                   /* format */
-      0,                               /* min_width */
-      0,                               /* min_height */
-      128,                             /* max_width */
-      128,                             /* max_height */
-      10000,                           /* max_filesize */
-      PURPLE_ICON_SCALE_DISPLAY        /* scale_rules */
-  );
+	protocol->id = "prpl-null";
+	protocol->name = "Null - Testing Protocol";
+	protocol->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC;
+	protocol->icon_spec = purple_buddy_icon_spec_new(
+	        "png,jpg,gif",            /* format */
+	        0,                        /* min_width */
+	        0,                        /* min_height */
+	        128,                      /* max_width */
+	        128,                      /* max_height */
+	        10000,                    /* max_filesize */
+	        PURPLE_ICON_SCALE_DISPLAY /* scale_rules */
+	);
 
-  /* see accountopt.h for information about user splits and protocol options */
-  split = purple_account_user_split_new(
-    _("Example user split"),  /* text shown to user */
-    "default",                /* default value */
-    '@');                     /* field separator */
-  option = purple_account_option_string_new(
-    _("Example option"),      /* text shown to user */
-    "example",                /* pref name */
-    "default");               /* default value */
+	/* see accountopt.h for information about user splits and protocol
+	 * options */
+	split = purple_account_user_split_new(
+	        _("Example user split"), /* text shown to user */
+	        "default",               /* default value */
+	        '@');                    /* field separator */
+	option = purple_account_option_string_new(
+	        _("Example option"), /* text shown to user */
+	        "example",           /* pref name */
+	        "default");          /* default value */
 
-  protocol->user_splits = g_list_append(NULL, split);
-  protocol->account_options = g_list_append(NULL, option);
+	protocol->user_splits = g_list_append(NULL, split);
+	protocol->account_options = g_list_append(NULL, option);
 }
 
 /*
@@ -1024,12 +1026,19 @@ null_protocol_init(PurpleProtocol *protocol)
  */
 
 static void
-null_protocol_class_init(PurpleProtocolClass *klass)
+null_protocol_class_init(NullProtocolClass *klass)
 {
-  klass->login        = null_login;
-  klass->close        = null_close;
-  klass->status_types = null_status_types;
-  klass->list_icon    = null_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = null_login;
+	protocol_class->close = null_close;
+	protocol_class->status_types = null_status_types;
+	protocol_class->list_icon = null_list_icon;
+}
+
+static void
+null_protocol_class_finalize(G_GNUC_UNUSED NullProtocolClass *klass)
+{
 }
 
 static void
@@ -1109,27 +1118,26 @@ null_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_ifac
  * to register this type with the type system, and null_protocol_get_type()
  * which returns the registered GType.
  */
-PURPLE_DEFINE_TYPE_EXTENDED(
-  NullProtocol, null_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        NullProtocol, null_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-                                    null_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      null_protocol_client_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-                                    null_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      null_protocol_server_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-                                    null_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      null_protocol_im_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-                                    null_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      null_protocol_chat_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-                                    null_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      null_protocol_privacy_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
-                                    null_protocol_roomlist_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      null_protocol_roomlist_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -1158,8 +1166,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
   PurpleCmdId id;
 
   /* register the NULL_TYPE_PROTOCOL type in the type system. this function
-   * is defined by PURPLE_DEFINE_TYPE_EXTENDED. */
-  null_protocol_register_type(plugin);
+   * is defined by G_DEFINE_DYNAMIC_TYPE_EXTENDED. */
+  null_protocol_register_type(G_TYPE_MODULE(plugin));
 
   /* add the protocol to the core */
   my_protocol = purple_protocols_add(NULL_TYPE_PROTOCOL, error);

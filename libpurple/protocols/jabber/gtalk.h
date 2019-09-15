@@ -44,7 +44,8 @@ typedef struct
 /**
  * Registers the GTalkProtocol type in the type system.
  */
-void gtalk_protocol_register_type(PurplePlugin *plugin);
+G_GNUC_INTERNAL
+void gtalk_protocol_register(PurplePlugin *plugin);
 
 /**
  * Returns the GType for the GTalkProtocol object.

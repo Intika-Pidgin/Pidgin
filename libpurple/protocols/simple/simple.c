@@ -2146,8 +2146,9 @@ static void simple_close(PurpleConnection *gc)
 }
 
 static void
-simple_protocol_init(PurpleProtocol *protocol)
+simple_protocol_init(SIMPLEProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 
@@ -2176,12 +2177,19 @@ simple_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-simple_protocol_class_init(PurpleProtocolClass *klass)
+simple_protocol_class_init(SIMPLEProtocolClass *klass)
 {
-	klass->login        = simple_login;
-	klass->close        = simple_close;
-	klass->status_types = simple_status_types;
-	klass->list_icon    = simple_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = simple_login;
+	protocol_class->close = simple_close;
+	protocol_class->status_types = simple_status_types;
+	protocol_class->list_icon = simple_list_icon;
+}
+
+static void
+simple_protocol_class_finalize(G_GNUC_UNUSED SIMPLEProtocolClass *klass)
+{
 }
 
 static void
@@ -2201,15 +2209,14 @@ simple_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 	im_iface->send_typing = simple_typing;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	SIMPLEProtocol, simple_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        SIMPLEProtocol, simple_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  simple_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      simple_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  simple_protocol_im_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      simple_protocol_im_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -2238,7 +2245,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	simple_protocol_register_type(plugin);
+	simple_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(SIMPLE_TYPE_PROTOCOL, error);
 	if (!my_protocol)

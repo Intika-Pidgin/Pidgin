@@ -78,17 +78,6 @@ version 3.0.0 (??/??/????):
 		* purple_plugin_info_get_pref_request_cb
 		* purple_plugin_info_get_ui_data
 		* purple_plugin_info_set_ui_data
-		* purple_plugin_register_type
-		* purple_plugin_add_interface
-		* PURPLE_DEFINE_TYPE
-		* PURPLE_DEFINE_TYPE_EXTENDED
-		* PURPLE_IMPLEMENT_INTERFACE_STATIC
-		* PURPLE_IMPLEMENT_INTERFACE
-		* PURPLE_DEFINE_DYNAMIC_TYPE
-		* PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED
-		* PURPLE_IMPLEMENT_INTERFACE_DYNAMIC
-		* PURPLE_DEFINE_STATIC_TYPE
-		* PURPLE_DEFINE_STATIC_TYPE_EXTENDED
 		* PurpleProtocol, inherits GObject. Please see the documentation for
 		  details.
 		* PurpleProtocolAction

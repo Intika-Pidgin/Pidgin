@@ -1000,8 +1000,9 @@ ggp_get_max_message_size(PurpleConversation *conv)
 }
 
 static void
-ggp_protocol_init(PurpleProtocol *protocol)
+ggp_protocol_init(GGPProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 	GList *encryption_options = NULL;
 	GList *protocol_version = NULL;
@@ -1052,12 +1053,19 @@ ggp_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-ggp_protocol_class_init(PurpleProtocolClass *klass)
+ggp_protocol_class_init(GGPProtocolClass *klass)
 {
-	klass->login        = ggp_login;
-	klass->close        = ggp_close;
-	klass->status_types = ggp_status_types;
-	klass->list_icon    = ggp_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = ggp_login;
+	protocol_class->close = ggp_close;
+	protocol_class->status_types = ggp_status_types;
+	protocol_class->list_icon = ggp_list_icon;
+}
+
+static void
+ggp_protocol_class_finalize(G_GNUC_UNUSED GGPProtocolClass *klass)
+{
 }
 
 static void
@@ -1130,30 +1138,29 @@ ggp_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer    = ggp_edisc_xfer_send_new;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	GGPProtocol, ggp_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        GGPProtocol, ggp_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  ggp_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      ggp_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  ggp_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      ggp_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  ggp_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      ggp_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  ggp_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      ggp_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
-	                                  ggp_protocol_roomlist_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      ggp_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-	                                  ggp_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      ggp_protocol_privacy_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  ggp_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      ggp_protocol_xfer_iface_init));
 
 static gchar *
 plugin_extra(PurplePlugin *plugin)
@@ -1189,7 +1196,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	ggp_protocol_register_type(plugin);
+	ggp_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	ggp_xfer_register(G_TYPE_MODULE(plugin));
 
