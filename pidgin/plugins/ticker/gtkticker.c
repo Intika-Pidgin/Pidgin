@@ -65,8 +65,15 @@ static GType gtk_ticker_child_type   (GtkContainer     *container);
 
 static GtkContainerClass *parent_class = NULL;
 
+G_DEFINE_DYNAMIC_TYPE(GtkTicker, gtk_ticker, GTK_TYPE_CONTAINER);
 
-PURPLE_DEFINE_TYPE(GtkTicker, gtk_ticker, GTK_TYPE_CONTAINER);
+/* This exists solely because the above macro makes gtk_ticker_register_type
+ * static. */
+void
+gtk_ticker_register(PurplePlugin *plugin)
+{
+	gtk_ticker_register_type(G_TYPE_MODULE(plugin));
+}
 
 static void gtk_ticker_finalize(GObject *object) {
 	gtk_ticker_stop_scroll(GTK_TICKER(object));
@@ -98,6 +105,11 @@ static void gtk_ticker_class_init (GtkTickerClass *class)
 	container_class->remove = gtk_ticker_remove_real;
 	container_class->forall = gtk_ticker_forall;
 	container_class->child_type = gtk_ticker_child_type;
+}
+
+static void
+gtk_ticker_class_finalize(G_GNUC_UNUSED GtkTickerClass *klass)
+{
 }
 
 static GType gtk_ticker_child_type (GtkContainer *container)

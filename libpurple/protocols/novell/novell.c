@@ -3486,8 +3486,9 @@ novell_get_max_message_size(PurpleConversation *conv)
 }
 
 static void
-novell_protocol_init(PurpleProtocol *protocol)
+novell_protocol_init(NovellProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 
 	protocol->id   = "prpl-novell";
@@ -3503,12 +3504,19 @@ novell_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-novell_protocol_class_init(PurpleProtocolClass *klass)
+novell_protocol_class_init(NovellProtocolClass *klass)
 {
-	klass->login        = novell_login;
-	klass->close        = novell_close;
-	klass->status_types = novell_status_types;
-	klass->list_icon    = novell_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = novell_login;
+	protocol_class->close = novell_close;
+	protocol_class->status_types = novell_status_types;
+	protocol_class->list_icon = novell_list_icon;
+}
+
+static void
+novell_protocol_class_finalize(G_GNUC_UNUSED NovellProtocolClass *klass)
+{
 }
 
 static void
@@ -3562,24 +3570,23 @@ novell_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface
 	privacy_iface->set_permit_deny = novell_set_permit_deny;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	NovellProtocol, novell_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        NovellProtocol, novell_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  novell_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      novell_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  novell_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      novell_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  novell_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      novell_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  novell_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      novell_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-	                                  novell_protocol_privacy_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      novell_protocol_privacy_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -3602,7 +3609,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	novell_protocol_register_type(plugin);
+	novell_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(NOVELL_TYPE_PROTOCOL, error);
 	if (!my_protocol)

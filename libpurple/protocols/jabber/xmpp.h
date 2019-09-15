@@ -44,7 +44,8 @@ typedef struct
 /**
  * Registers the XMPPProtocol type in the type system.
  */
-void xmpp_protocol_register_type(PurplePlugin *plugin);
+G_GNUC_INTERNAL
+void xmpp_protocol_register(PurplePlugin *plugin);
 
 /**
  * Returns the GType for the XMPPProtocol object.

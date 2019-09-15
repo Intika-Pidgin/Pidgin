@@ -5197,65 +5197,72 @@ static void mw_log_handler(const gchar *domain, GLogLevelFlags flags,
   }
 }
 
-
 static void
-mw_protocol_init(PurpleProtocol *protocol)
+mw_protocol_init(mwProtocol *self)
 {
-  PurpleAccountUserSplit *split;
-  PurpleAccountOption *opt;
-  GList *l = NULL;
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+	PurpleAccountUserSplit *split;
+	PurpleAccountOption *opt;
+	GList *l = NULL;
 
-  protocol->id      = PROTOCOL_ID;
-  protocol->name    = PROTOCOL_NAME;
+	protocol->id = PROTOCOL_ID;
+	protocol->name = PROTOCOL_NAME;
 
-  /* set up the preferences */
-  purple_prefs_add_none(MW_PROTOCOL_OPT_BASE);
-  purple_prefs_add_int(MW_PROTOCOL_OPT_BLIST_ACTION, BLIST_CHOICE_DEFAULT);
+	/* set up the preferences */
+	purple_prefs_add_none(MW_PROTOCOL_OPT_BASE);
+	purple_prefs_add_int(MW_PROTOCOL_OPT_BLIST_ACTION,
+	                     BLIST_CHOICE_DEFAULT);
 
-  /* set up account ID as user:server */
-  split = purple_account_user_split_new(_("Server"),
-                                        MW_PLUGIN_DEFAULT_HOST, ':');
-  protocol->user_splits = g_list_append(protocol->user_splits, split);
+	/* set up account ID as user:server */
+	split = purple_account_user_split_new(_("Server"),
+	                                      MW_PLUGIN_DEFAULT_HOST, ':');
+	protocol->user_splits = g_list_append(protocol->user_splits, split);
 
-  /* remove dead preferences */
-  purple_prefs_remove(MW_PROTOCOL_OPT_PSYCHIC);
-  purple_prefs_remove(MW_PROTOCOL_OPT_SAVE_DYNAMIC);
+	/* remove dead preferences */
+	purple_prefs_remove(MW_PROTOCOL_OPT_PSYCHIC);
+	purple_prefs_remove(MW_PROTOCOL_OPT_SAVE_DYNAMIC);
 
-  /* port to connect to */
-  opt = purple_account_option_int_new(_("Port"), MW_KEY_PORT,
-            MW_PLUGIN_DEFAULT_PORT);
-  l = g_list_append(l, opt);
+	/* port to connect to */
+	opt = purple_account_option_int_new(_("Port"), MW_KEY_PORT,
+	                                    MW_PLUGIN_DEFAULT_PORT);
+	l = g_list_append(l, opt);
 
-  { /* copy the old force login setting from prefs if it's
-       there. Don't delete the preference, since there may be more
-       than one account that wants to check for it. */
-    gboolean b = FALSE;
-    const char *label = _("Force login (ignore server redirects)");
+	{ /* copy the old force login setting from prefs if it's
+	     there. Don't delete the preference, since there may be more
+	     than one account that wants to check for it. */
+		gboolean b = FALSE;
+		const char *label = _("Force login (ignore server redirects)");
 
-    if(purple_prefs_exists(MW_PROTOCOL_OPT_FORCE_LOGIN))
-      b = purple_prefs_get_bool(MW_PROTOCOL_OPT_FORCE_LOGIN);
+		if (purple_prefs_exists(MW_PROTOCOL_OPT_FORCE_LOGIN))
+			b = purple_prefs_get_bool(MW_PROTOCOL_OPT_FORCE_LOGIN);
 
-    opt = purple_account_option_bool_new(label, MW_KEY_FORCE, b);
-    l = g_list_append(l, opt);
-  }
+		opt = purple_account_option_bool_new(label, MW_KEY_FORCE, b);
+		l = g_list_append(l, opt);
+	}
 
-  /* pretend to be Sametime Connect */
-  opt = purple_account_option_bool_new(_("Hide client identity"),
-             MW_KEY_FAKE_IT, FALSE);
-  l = g_list_append(l, opt);
+	/* pretend to be Sametime Connect */
+	opt = purple_account_option_bool_new(_("Hide client identity"),
+	                                     MW_KEY_FAKE_IT, FALSE);
+	l = g_list_append(l, opt);
 
-  protocol->account_options = l;
-  l = NULL;
+	protocol->account_options = l;
+	l = NULL;
 }
 
+static void
+mw_protocol_class_init(mwProtocolClass *klass)
+{
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = mw_protocol_login;
+	protocol_class->close = mw_protocol_close;
+	protocol_class->status_types = mw_protocol_status_types;
+	protocol_class->list_icon = mw_protocol_list_icon;
+}
 
 static void
-mw_protocol_class_init(PurpleProtocolClass *klass)
+mw_protocol_class_finalize(G_GNUC_UNUSED mwProtocolClass *klass)
 {
-  klass->login        = mw_protocol_login;
-  klass->close        = mw_protocol_close;
-  klass->status_types = mw_protocol_status_types;
-  klass->list_icon    = mw_protocol_list_icon;
 }
 
 
@@ -5331,29 +5338,26 @@ mw_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
   xfer_iface->new_xfer    = mw_protocol_new_xfer;
 }
 
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        mwProtocol, mw_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-  mwProtocol, mw_protocol, PURPLE_TYPE_PROTOCOL, 0,
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      mw_protocol_client_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-                                    mw_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      mw_protocol_server_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-                                    mw_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      mw_protocol_im_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-                                    mw_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      mw_protocol_chat_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-                                    mw_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      mw_protocol_privacy_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-                                    mw_protocol_privacy_iface_init)
-
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-                                    mw_protocol_xfer_iface_init)
-);
-
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      mw_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -5383,7 +5387,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
   GLogLevelFlags logflags =
     G_LOG_LEVEL_MASK | G_LOG_FLAG_FATAL | G_LOG_FLAG_RECURSION;
 
-  mw_protocol_register_type(plugin);
+  mw_protocol_register_type(G_TYPE_MODULE(plugin));
 
   mw_xfer_register_type(G_TYPE_MODULE(plugin));
 

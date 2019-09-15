@@ -5677,8 +5677,10 @@ void oscar_init_account_options(PurpleProtocol *protocol, gboolean is_icq)
 }
 
 static void
-oscar_protocol_init(PurpleProtocol *protocol)
+oscar_protocol_init(OscarProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+
 	protocol->options   = OPT_PROTO_MAIL_CHECK | OPT_PROTO_INVITE_MESSAGE |
 	                      OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE;
 	protocol->icon_spec = purple_buddy_icon_spec_new("gif,jpeg,bmp,ico",
@@ -5688,11 +5690,18 @@ oscar_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-oscar_protocol_class_init(PurpleProtocolClass *klass)
+oscar_protocol_class_init(OscarProtocolClass *klass)
 {
-	klass->login        = oscar_login;
-	klass->close        = oscar_close;
-	klass->status_types = oscar_status_types;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = oscar_login;
+	protocol_class->close = oscar_close;
+	protocol_class->status_types = oscar_status_types;
+}
+
+static void
+oscar_protocol_class_finalize(G_GNUC_UNUSED OscarProtocolClass *klass)
+{
 }
 
 static void
@@ -5760,27 +5769,27 @@ oscar_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer    = oscar_new_xfer;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	OscarProtocol, oscar_protocol, PURPLE_TYPE_PROTOCOL, G_TYPE_FLAG_ABSTRACT,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        OscarProtocol, oscar_protocol, PURPLE_TYPE_PROTOCOL,
+        G_TYPE_FLAG_ABSTRACT,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  oscar_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      oscar_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  oscar_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      oscar_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  oscar_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      oscar_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  oscar_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      oscar_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-	                                  oscar_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      oscar_protocol_privacy_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  oscar_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      oscar_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -5803,10 +5812,10 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	oscar_protocol_register_type(plugin);
+	oscar_protocol_register_type(G_TYPE_MODULE(plugin));
 
-	aim_protocol_register_type(plugin);
-	icq_protocol_register_type(plugin);
+	aim_protocol_register(plugin);
+	icq_protocol_register(plugin);
 
 	oscar_xfer_register(G_TYPE_MODULE(plugin));
 

@@ -43,18 +43,23 @@ static FinchBlistManager *default_manager;
  * GObject code
  */
 static void
-finch_grouping_node_init(FinchGroupingNode *node)
+finch_grouping_node_init(G_GNUC_UNUSED FinchGroupingNode *node)
 {
 }
 
 static void
-finch_grouping_node_class_init(FinchGroupingNodeClass *klass)
+finch_grouping_node_class_init(G_GNUC_UNUSED FinchGroupingNodeClass *klass)
+{
+}
+
+static void
+finch_grouping_node_class_finalize(G_GNUC_UNUSED FinchGroupingNodeClass *klass)
 {
 }
 
 GType finch_grouping_node_get_type(void);
-PURPLE_DEFINE_TYPE(FinchGroupingNode, finch_grouping_node,
-                   PURPLE_TYPE_BLIST_NODE);
+G_DEFINE_DYNAMIC_TYPE(FinchGroupingNode, finch_grouping_node,
+                      PURPLE_TYPE_BLIST_NODE);
 
 /**
  * Online/Offline
@@ -360,7 +365,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	finch_grouping_node_register_type(plugin);
+	finch_grouping_node_register_type(G_TYPE_MODULE(plugin));
 
 	default_manager = finch_blist_manager_find("default");
 
