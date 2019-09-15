@@ -587,7 +587,7 @@ purple_plugin_info_set_ui_data(PurplePluginInfo *info, gpointer ui_data)
 }
 
 gpointer
-purple_plugin_info_get_ui_data(const PurplePluginInfo *info)
+purple_plugin_info_get_ui_data(PurplePluginInfo *info)
 {
 	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 

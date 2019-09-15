@@ -649,7 +649,7 @@ void purple_plugin_info_set_ui_data(PurplePluginInfo *info, gpointer ui_data);
  *          convenience field provided to the UIs--it is not
  *          used by the libpurple core.
  */
-gpointer purple_plugin_info_get_ui_data(const PurplePluginInfo *info);
+gpointer purple_plugin_info_get_ui_data(PurplePluginInfo *info);
 
 /**************************************************************************/
 /* PluginAction API                                                       */
