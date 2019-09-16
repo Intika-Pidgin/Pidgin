@@ -18,9 +18,9 @@
 #include <pwd.h>
 #endif
 
-static char *get_localvarfile __P((void));
-static char *get_varval __P((char *fn, char *val));
-static int varline __P((char *bfr, char *var));
+static char *get_localvarfile(void);
+static char *get_varval(char *fn, char *val);
+static int varline(char *bfr, char *var);
 
 char *ZGetVariable(var)
     char *var;

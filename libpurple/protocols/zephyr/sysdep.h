@@ -46,23 +46,7 @@
 #include <sys/cdefs.h>
 #endif
 
-/* Because we have public header files (and our prototypes need to agree with
- * those header files, use __STDC__ to guess whether the compiler can handle
- * stdarg, const, and prototypes. */
-#ifdef __STDC__
-# include <stdarg.h>
-# define VA_START(ap, last) va_start(ap, last)
-# ifndef __P
-#  define __P(x) x
-# endif
-#else
-# include <varargs.h>
-# define VA_START(ap, last) va_start(ap)
-# define const
-# ifndef __P
-#  define __P(x) ()
-# endif
-#endif
+#include <stdarg.h>
 
 /* openlog(). */
 #ifdef LOG_AUTH

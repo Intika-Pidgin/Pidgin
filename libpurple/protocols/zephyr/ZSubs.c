@@ -11,11 +11,10 @@
 
 #include "internal.h"
 
-static Code_t Z_Subscriptions __P((register ZSubscription_t *sublist,
-				   int nitems, unsigned int port,
-				   char *opcode, int authit));
-static Code_t subscr_sendoff __P((ZNotice_t *notice, char **lyst, int num,
-				  int authit));
+static Code_t Z_Subscriptions(register ZSubscription_t *sublist, int nitems,
+                              unsigned int port, char *opcode, int authit);
+static Code_t subscr_sendoff(ZNotice_t *notice, char **lyst, int num,
+                             int authit);
 
 Code_t ZSubscribeTo(sublist, nitems, port)
     ZSubscription_t *sublist;
