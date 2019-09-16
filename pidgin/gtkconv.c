@@ -1590,19 +1590,18 @@ static gboolean
 update_typing_deleting_cb(PidginConversation *gtkconv)
 {
 	PurpleIMConversation *im = PURPLE_IM_CONVERSATION(gtkconv->active_conv);
-	GtkTextBuffer *buffer= NULL;
+	GtkTextBuffer *buffer = NULL;
 
 	buffer = talkatu_editor_get_buffer(TALKATU_EDITOR(gtkconv->editor));
 
-	if (!talkatu_buffer_get_is_empty(buffer)) {
+	if (!talkatu_buffer_get_is_empty(TALKATU_BUFFER(buffer))) {
 		/* We deleted all the text, so turn off typing. */
 		purple_im_conversation_stop_send_typed_timeout(im);
 
 		purple_serv_send_typing(purple_conversation_get_connection(gtkconv->active_conv),
 						 purple_conversation_get_name(gtkconv->active_conv),
 						 PURPLE_IM_NOT_TYPING);
-	}
-	else {
+	} else {
 		/* We're deleting, but not all of it, so it counts as typing. */
 		got_typing_keypress(gtkconv, FALSE);
 	}
