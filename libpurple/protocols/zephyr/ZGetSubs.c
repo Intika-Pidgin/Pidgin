@@ -10,8 +10,6 @@
 
 #include "internal.h"
 
-#define min(a,b) ((a)<(b)?(a):(b))
-
 /* Prototype for -Wmissing-prototypes */
 Code_t ZGetSubscriptions(ZSubscription_t *subscription, int *numsubs);
 
@@ -25,8 +23,10 @@ Code_t ZGetSubscriptions(ZSubscription_t *subscription, int *numsubs)
     if (__subscriptions_next == __subscriptions_num)
 	return (ZERR_NOMORESUBSCRIPTIONS);
 
-    for (i=0;i<min(*numsubs, __subscriptions_num-__subscriptions_next);i++)
-	subscription[i] = __subscriptions_list[i+__subscriptions_next];
+	for (i = 0; i < MIN(*numsubs, __subscriptions_num - __subscriptions_next);
+	     i++) {
+		subscription[i] = __subscriptions_list[i + __subscriptions_next];
+	}
 
     if (__subscriptions_num-__subscriptions_next < *numsubs)
 	*numsubs = __subscriptions_num-__subscriptions_next;

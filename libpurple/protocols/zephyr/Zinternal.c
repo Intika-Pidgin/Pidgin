@@ -61,8 +61,6 @@ void (*__Z_debug_print) __P((const char *fmt, va_list args, void *closure));
 void *__Z_debug_print_closure;
 #endif
 
-#define min(a,b) ((a)<(b)?(a):(b))
-
 static int Z_AddField __P((char **ptr, const char *field, char *end));
 static int find_or_insert_uid __P((ZUnique_Id_t *uid, ZNotice_Kind_t kind));
 
@@ -890,7 +888,7 @@ Code_t Z_SendFragmentedNotice(notice, len, cert_func, send_func)
 	    (void) memcpy((char *)&partnotice.z_uid.zuid_addr, &__My_addr,
 			  sizeof(__My_addr));
 	}
-	message_len = min(notice->z_message_len-offset, fragsize);
+	message_len = MIN(notice->z_message_len - offset, fragsize);
 	partnotice.z_message = (char*)notice->z_message+offset;
 	partnotice.z_message_len = message_len;
 	if ((retval = Z_FormatAuthHeader(&partnotice, buffer, Z_MAXHEADERLEN,

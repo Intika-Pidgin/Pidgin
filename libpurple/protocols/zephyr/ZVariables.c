@@ -202,13 +202,10 @@ static int varline(bfr, var)
     while (*cp && !isspace(*cp) && (*cp != '='))
 	cp++;
 
-#ifndef WIN32
-#define max(a,b) ((a > b) ? (a) : (b))
-#endif
-
-    if (g_ascii_strncasecmp(bfr, var, max(strlen(var), (gsize)(cp - bfr))))
-	return(0);			/* var is not the var in
-					   bfr ==> no match */
+	if (g_ascii_strncasecmp(bfr, var, MAX(strlen(var), (gsize)(cp - bfr)))) {
+		/* var is not the var in bfr ==> no match */
+		return 0;
+	}
 
     cp = strchr(bfr, '=');
     if (!cp)
