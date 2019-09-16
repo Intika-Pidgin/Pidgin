@@ -13,26 +13,14 @@
 
 #define COM_ERR_BUF_LEN 25
 
-/* Use __STDC__ to guess whether we can use stdarg, prototypes, and const.
- * This is a public header file, so autoconf can't help us here. */
-#ifdef __STDC__
-# include <stdarg.h>
-# define ETP(x) x
-# define ETCONST const
-#else
-# define ETP(x) ()
-# define ETCONST
-#endif
+#include <stdarg.h>
 
-typedef void (*error_handler_t) ETP((ETCONST char *, long, ETCONST char *,
-				     va_list));
+typedef void (*error_handler_t)(const char *, long, const char *, va_list);
 extern error_handler_t com_err_hook;
-void com_err ETP((ETCONST char *, long, ETCONST char *, ...));
-ETCONST char *error_message ETP((long));
-ETCONST char *error_message_r ETP((long, char *));
-error_handler_t set_com_err_hook ETP((error_handler_t));
-error_handler_t reset_com_err_hook ETP((void));
-
-#undef ETP
+void com_err(const char *, long, const char *, ...);
+const char *error_message(long);
+const char *error_message_r(long, char *);
+error_handler_t set_com_err_hook(error_handler_t);
+error_handler_t reset_com_err_hook(void);
 
 #endif /* PURPLE_ZEPHYR_COM_ERR_H */

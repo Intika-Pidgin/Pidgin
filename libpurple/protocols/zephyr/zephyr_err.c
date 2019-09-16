@@ -1,12 +1,5 @@
 #include "zephyr_err.h"
 
-#ifdef __STDC__
-#define NOARGS void
-#else
-#define NOARGS
-#define const
-#endif
-
 static const char * const text[] = {
 	"Packet too long or buffer too small",
 	"Notice header too large",
@@ -49,7 +42,9 @@ static const struct error_table et = { text, -772103680L, 23 };
 
 static struct et_list link = { 0, 0 };
 
-void initialize_zeph_error_table (NOARGS) {
+void
+initialize_zeph_error_table(void)
+{
     if (!link.table) {
         link.next = _et_list;
         link.table = &et;
