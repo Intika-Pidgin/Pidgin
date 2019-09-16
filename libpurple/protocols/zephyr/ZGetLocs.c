@@ -10,8 +10,6 @@
 
 #include "internal.h"
 
-#define min(a,b) ((a)<(b)?(a):(b))
-
 /* Prototype for -Wmissing-prototypes */
 Code_t ZGetLocations(ZLocations_t *location, int *numlocs);
 
@@ -25,8 +23,9 @@ Code_t ZGetLocations(ZLocations_t *location, int *numlocs)
     if (__locate_next == __locate_num)
 	return (ZERR_NOMORELOCS);
 
-    for (i=0;i<min(*numlocs, __locate_num-__locate_next);i++)
-	location[i] = __locate_list[i+__locate_next];
+	for (i = 0; i < MIN(*numlocs, __locate_num - __locate_next); i++) {
+		location[i] = __locate_list[i + __locate_next];
+	}
 
     if (__locate_num-__locate_next < *numlocs)
 	*numlocs = __locate_num-__locate_next;
