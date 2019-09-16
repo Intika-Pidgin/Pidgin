@@ -119,20 +119,6 @@ icon_spec_free(PurpleProtocol *protocol)
 	protocol->icon_spec = NULL;
 }
 
-void
-purple_protocol_override(PurpleProtocol *protocol,
-                         PurpleProtocolOverrideFlags flags)
-{
-	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
-
-	if (flags & PURPLE_PROTOCOL_OVERRIDE_USER_SPLITS)
-		user_splits_free(protocol);
-	if (flags & PURPLE_PROTOCOL_OVERRIDE_PROTOCOL_OPTIONS)
-		account_options_free(protocol);
-	if (flags & PURPLE_PROTOCOL_OVERRIDE_ICON_SPEC)
-		icon_spec_free(protocol);
-}
-
 /**************************************************************************
  * GObject stuff
  **************************************************************************/
