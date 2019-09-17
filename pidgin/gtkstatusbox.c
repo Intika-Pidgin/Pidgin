@@ -713,7 +713,7 @@ pidgin_status_box_refresh(PidginStatusBox *status_box)
 }
 
 static PurpleStatusType *
-find_status_type_by_index(const PurpleAccount *account, gint active)
+find_status_type_by_index(PurpleAccount *account, gint active)
 {
 	GList *l = purple_account_get_status_types(account);
 	gint i;

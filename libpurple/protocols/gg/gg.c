@@ -594,9 +594,9 @@ void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond)
 }
 
 static gint
-gg_uri_handler_find_account(gconstpointer a, gconstpointer b)
+gg_uri_handler_find_account(PurpleAccount *account,
+                            G_GNUC_UNUSED gconstpointer data)
 {
-	PurpleAccount *account = PURPLE_ACCOUNT(a);
 	const gchar *protocol_id;
 
 	protocol_id = purple_account_get_protocol_id(account);
@@ -630,8 +630,8 @@ gg_uri_handler(const gchar *scheme, const gchar *screenname,
 
 	/* Find online Gadu-Gadu account */
 	accounts = purple_accounts_get_all();
-	account_node = g_list_find_custom(accounts, NULL,
-			gg_uri_handler_find_account);
+	account_node = g_list_find_custom(
+	        accounts, NULL, (GCompareFunc)gg_uri_handler_find_account);
 
 	if (account_node == NULL) {
 		return FALSE;
