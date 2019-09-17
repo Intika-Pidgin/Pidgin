@@ -32,7 +32,7 @@ static int  gettimeofday(struct timeval* tv, struct timezone* tz){
 
 Code_t Z_WaitForNotice (notice, pred, arg, timeout)
      ZNotice_t *notice;
-     int (*pred) __P((ZNotice_t *, void *));
+     int (*pred)(ZNotice_t *, void *);
      void *arg;
      int timeout;
 {

@@ -1292,10 +1292,13 @@ purple_keyring_init(void)
 	plugins = purple_plugins_find_all();
 	for (it = plugins; it != NULL; it = it->next) {
 		PurplePlugin *plugin = PURPLE_PLUGIN(it->data);
-		PurplePluginInfo *info = purple_plugin_get_info(plugin);
+		GPluginPluginInfo *info =
+		        GPLUGIN_PLUGIN_INFO(purple_plugin_get_info(plugin));
 
-		if (strncmp(purple_plugin_info_get_id(info), "keyring-", 8) != 0)
+		if (!purple_str_has_prefix(gplugin_plugin_info_get_id(info),
+		                           "keyring-")) {
 			continue;
+		}
 
 		if (purple_plugin_is_loaded(plugin))
 			continue;

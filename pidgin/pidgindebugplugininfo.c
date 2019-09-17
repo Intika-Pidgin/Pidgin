@@ -61,9 +61,10 @@ G_DEFINE_TYPE_WITH_PRIVATE(PidginDebugPluginInfo, pidgin_debug_plugin_info, GTK_
 static gint
 purple_debug_plugin_compare_plugin_id(gconstpointer a, gconstpointer b) {
 	return g_strcmp0(
-		purple_plugin_info_get_id(purple_plugin_get_info(PURPLE_PLUGIN(a))),
-		purple_plugin_info_get_id(purple_plugin_get_info(PURPLE_PLUGIN(b)))
-	);
+	        gplugin_plugin_info_get_id(GPLUGIN_PLUGIN_INFO(
+	                purple_plugin_get_info(PURPLE_PLUGIN((gpointer)a)))),
+	        gplugin_plugin_info_get_id(GPLUGIN_PLUGIN_INFO(
+	                purple_plugin_get_info(PURPLE_PLUGIN((gpointer)b)))));
 }
 
 static gchar *
@@ -82,7 +83,9 @@ pidgin_debug_plugin_info_build_html(void) {
 		PurplePlugin *plugin = PURPLE_PLUGIN(l->data);
 		PurplePluginInfo *info = purple_plugin_get_info(plugin);
 		PurplePluginExtraCb extra_cb;
-		gchar *name = g_markup_escape_text(purple_plugin_info_get_name(info), -1);
+		gchar *name = g_markup_escape_text(
+		        gplugin_plugin_info_get_name(GPLUGIN_PLUGIN_INFO(info)),
+		        -1);
 		gchar *version, *license, *website, *id;
 		gchar *authors = NULL, *extra = NULL;
 		const gchar *error_message = NULL;
