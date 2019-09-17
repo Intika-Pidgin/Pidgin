@@ -183,7 +183,10 @@ purple_toast_chat_message_received(PurpleAccount *account,
 
 	/* clean up our memory */
 	g_free(title);
-	g_object_unref(G_OBJECT(icon));
+
+	if(G_IS_ICON(icon)) {
+		g_object_unref(G_OBJECT(icon));
+	}
 }
 
 /******************************************************************************
