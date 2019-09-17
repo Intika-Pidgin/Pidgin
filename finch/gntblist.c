@@ -2482,7 +2482,8 @@ reconstruct_plugins_menu(void)
 		if (!purple_plugin_info_get_actions_cb(info))
 			continue;
 
-		item = gnt_menuitem_new(_(purple_plugin_info_get_name(info)));
+		item = gnt_menuitem_new(_(gplugin_plugin_info_get_name(
+		        GPLUGIN_PLUGIN_INFO(info))));
 		gnt_menu_add_item(GNT_MENU(sub), item);
 		build_plugin_actions(item, plugin);
 	}

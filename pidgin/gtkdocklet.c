@@ -661,8 +661,9 @@ docklet_plugin_actions(GtkWidget *menu)
 		if (!purple_plugin_info_get_actions_cb(info))
 			continue;
 
-		menuitem =
-			gtk_image_menu_item_new_with_label(_(purple_plugin_info_get_name(info)));
+		menuitem = gtk_image_menu_item_new_with_label(
+		        _(gplugin_plugin_info_get_name(
+		                GPLUGIN_PLUGIN_INFO(info))));
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
 		submenu = gtk_menu_new();
