@@ -1368,10 +1368,11 @@ static gint check_loc(gpointer data)
 
 #endif /* WIN32 */
 
-static char *get_exposure_level(void)
+static const gchar *
+get_exposure_level(void)
 {
 	/* XXX add real error reporting */
-	char *exposure = ZGetVariable("exposure");
+	const gchar *exposure = ZGetVariable("exposure");
 
 	if (!exposure)
 		return EXPOSE_REALMVIS;
@@ -1551,22 +1552,20 @@ static void process_anyone(PurpleConnection *gc)
 	g_free(filename);
 }
 
-static char* normalize_zephyr_exposure(const char* exposure) {
-	char *exp2 = g_strstrip(g_ascii_strup(exposure,-1));
+static gchar *
+normalize_zephyr_exposure(const gchar *exposure)
+{
+	gchar *exp2 = g_strstrip(g_ascii_strup(exposure, -1));
 
-	if (!exp2)
-		return EXPOSE_REALMVIS;
-	if (!g_ascii_strcasecmp(exp2, EXPOSE_NONE))
-		return EXPOSE_NONE;
-	if (!g_ascii_strcasecmp(exp2, EXPOSE_OPSTAFF))
-		return EXPOSE_OPSTAFF;
-	if (!g_ascii_strcasecmp(exp2, EXPOSE_REALMANN))
-		return EXPOSE_REALMANN;
-	if (!g_ascii_strcasecmp(exp2, EXPOSE_NETVIS))
-		return EXPOSE_NETVIS;
-	if (!g_ascii_strcasecmp(exp2, EXPOSE_NETANN))
-		return EXPOSE_NETANN;
-	return EXPOSE_REALMVIS;
+	if (!exp2) {
+		return g_strdup(EXPOSE_REALMVIS);
+	}
+	if (g_str_equal(exp2, EXPOSE_NONE) || g_str_equal(exp2, EXPOSE_OPSTAFF) ||
+	    g_str_equal(exp2, EXPOSE_REALMANN) ||
+	    g_str_equal(exp2, EXPOSE_NETVIS) || g_str_equal(exp2, EXPOSE_NETANN)) {
+		return exp2;
+	}
+	return g_strdup(EXPOSE_REALMVIS);
 }
 
 static void zephyr_login(PurpleAccount * account)
@@ -1594,7 +1593,7 @@ static void zephyr_login(PurpleAccount * account)
 	zephyr->account = account;
 
 	/* Make sure that the exposure (visibility) is set to a sane value */
-	zephyr->exposure=g_strdup(normalize_zephyr_exposure(exposure));
+	zephyr->exposure = normalize_zephyr_exposure(exposure);
 
 	if (purple_account_get_bool(purple_connection_get_account(gc),"use_tzc",0)) {
 		zephyr->connection_type = PURPLE_ZEPHYR_TZC;
@@ -2915,7 +2914,7 @@ static void
 zephyr_protocol_init(PurpleProtocol *protocol)
 {
 	PurpleAccountOption *option;
-	char *tmp = get_exposure_level();
+	const gchar *tmp = get_exposure_level();
 
 	protocol->id      = "prpl-zephyr";
 	protocol->name    = "Zephyr";

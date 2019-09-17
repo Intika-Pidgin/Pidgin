@@ -19,13 +19,14 @@
 #endif
 
 static char *get_localvarfile(void);
-static char *get_varval(char *fn, char *val);
-static int varline(char *bfr, char *var);
+static const gchar *get_varval(const gchar *fn, const gchar *val);
+static int varline(const gchar *bfr, const gchar *var);
 
-char *ZGetVariable(var)
-    char *var;
+const gchar *
+ZGetVariable(const gchar *var)
 {
-	char *varfile, *ret;
+	gchar *varfile;
+	const gchar *ret;
 
 	if ((varfile = get_localvarfile()) == NULL)
 		return ((char *)0);
@@ -162,12 +163,11 @@ static char *get_localvarfile(void)
     return g_strconcat(base, "/.zephyr.vars", NULL);
 }
 
-static char *get_varval(fn, var)
-    char *fn;
-    char *var;
+static const gchar *
+get_varval(const gchar *fn, const gchar *var)
 {
     FILE *fp;
-    static char varbfr[512];
+    static gchar varbfr[512];
     int i;
 
     fp = fopen(fn, "r");
@@ -188,12 +188,10 @@ static char *get_varval(fn, var)
 
 /* If the variable in the line bfr[] is the same as var, return index to
    the variable value, else return 0. */
-static int varline(bfr, var)
-    char *bfr;
-    char *var;
+static int
+varline(const gchar *bfr, const gchar *var)
 {
-    register char *cp;
-
+	register const gchar *cp;
 
     if (!bfr[0] || bfr[0] == '#')	/* comment or null line */
 	return (0);
