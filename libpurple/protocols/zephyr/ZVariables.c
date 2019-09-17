@@ -193,24 +193,30 @@ varline(const gchar *bfr, const gchar *var)
 {
 	register const gchar *cp;
 
-    if (!bfr[0] || bfr[0] == '#')	/* comment or null line */
-	return (0);
+	if (!bfr[0] || bfr[0] == '#') {
+		/* comment or null line */
+		return (0);
+	}
 
-    cp = bfr;
-    while (*cp && !isspace(*cp) && (*cp != '='))
-	cp++;
+	cp = bfr;
+	while (*cp && !isspace(*cp) && (*cp != '=')) {
+		cp++;
+	}
 
 	if (g_ascii_strncasecmp(bfr, var, MAX(strlen(var), (gsize)(cp - bfr)))) {
 		/* var is not the var in bfr ==> no match */
 		return 0;
 	}
 
-    cp = strchr(bfr, '=');
-    if (!cp)
-	return(0);
-    cp++;
-    while (*cp && isspace(*cp))		/* space up to variable value */
+	cp = strchr(bfr, '=');
+	if (!cp) {
+		return (0);
+	}
 	cp++;
+	while (*cp && isspace(*cp)) {
+		/* space up to variable value */
+		cp++;
+	}
 
-    return (cp - bfr);			/* return index */
+	return (cp - bfr); /* return index */
 }
