@@ -6367,10 +6367,10 @@ update_chat_topic(PurpleChatConversation *chat, const char *old, const char *new
 
 /* Compare two PurpleMessages, according to time in ascending order. */
 static int
-message_compare(gconstpointer p1, gconstpointer p2)
+message_compare(PurpleMessage *m1, PurpleMessage *m2)
 {
-	const PurpleMessage *m1 = p1, *m2 = p2;
-	return (purple_message_get_time(m1) > purple_message_get_time(m2));
+	guint64 t1 = purple_message_get_time(m1), t2 = purple_message_get_time(m2);
+	return (t1 > t2) - (t1 < t2);
 }
 
 /* Adds some message history to the gtkconv. This happens in a idle-callback. */
@@ -6417,7 +6417,7 @@ add_message_history_to_gtkconv(gpointer data)
 					msgs = g_list_prepend(msgs, msg);
 			}
 		}
-		msgs = g_list_sort(msgs, message_compare);
+		msgs = g_list_sort(msgs, (GCompareFunc)message_compare);
 		for (; msgs; msgs = g_list_delete_link(msgs, msgs)) {
 			PurpleMessage *msg = msgs->data;
 			/* XXX: see above - should it be active_conv? */
@@ -6484,7 +6484,7 @@ gboolean pidgin_conv_attach_to_conversation(PurpleConversation *conv)
 					pidgin_conv_attach(convs->data);
 					list = g_list_concat(list, g_list_copy(purple_conversation_get_message_history(convs->data)));
 				}
-			list = g_list_sort(list, message_compare);
+			list = g_list_sort(list, (GCompareFunc)message_compare);
 			gtkconv->attach_current = list;
 			list = g_list_last(list);
 		} else if (PURPLE_IS_CHAT_CONVERSATION(conv)) {

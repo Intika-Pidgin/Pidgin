@@ -2262,7 +2262,7 @@ static const char *zephyr_normalize(const PurpleAccount *account, const char *wh
 		return who;
 	}
 
-	gc = purple_account_get_connection(account);
+	gc = purple_account_get_connection((PurpleAccount *)account);
 	if (gc == NULL)
 		return NULL;
 

@@ -67,9 +67,9 @@ static const char *simple_list_icon(PurpleAccount *a, PurpleBuddy *b) {
 }
 
 static gint
-simple_uri_handler_find_account(gconstpointer a, gconstpointer b)
+simple_uri_handler_find_account(PurpleAccount *account,
+                                G_GNUC_UNUSED gconstpointer data)
 {
-	PurpleAccount *account = PURPLE_ACCOUNT(a);
 	const gchar *protocol_id;
 
 	protocol_id = purple_account_get_protocol_id(account);
@@ -104,8 +104,8 @@ simple_uri_handler(const gchar *scheme, const gchar *screenname,
 
 	/* Find online SIMPLE account */
 	accounts = purple_accounts_get_all();
-	account_node = g_list_find_custom(accounts, NULL,
-			simple_uri_handler_find_account);
+	account_node = g_list_find_custom(
+	        accounts, NULL, (GCompareFunc)simple_uri_handler_find_account);
 
 	if (account_node == NULL) {
 		return FALSE;
