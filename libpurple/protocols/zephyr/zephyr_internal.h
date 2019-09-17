@@ -141,7 +141,7 @@ typedef Code_t (*Z_AuthProc)(ZNotice_t *, char *, int, int *);
 Code_t ZMakeAuthentication(ZNotice_t *, char *, int, int *);
 
 char *ZGetSender(void);
-char *ZGetVariable(char *);
+const gchar *ZGetVariable(const gchar *);
 Code_t ZSetVariable(char *var, char *value);
 Code_t ZUnsetVariable(char *var);
 int ZGetWGPort(void);
