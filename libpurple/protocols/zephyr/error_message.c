@@ -9,7 +9,7 @@
 #include "com_err.h"
 #include <sysdep.h>
 
-char *error_table_name_r __P((int, char *));
+char *error_table_name_r(int, char *);
 
 struct et_list * _et_list = (struct et_list *) NULL;
 
