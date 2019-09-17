@@ -324,8 +324,12 @@ debug_command_cb(PurpleConversation *conv,
 		const GList *plugins = purple_plugins_get_loaded();
 		if (plugins) {
 			for (; plugins; plugins = plugins->next) {
-				PurplePluginInfo *info = purple_plugin_get_info(PURPLE_PLUGIN(plugins->data));
-				str = g_string_append(str, purple_plugin_info_get_name(info));
+				GPluginPluginInfo *info = GPLUGIN_PLUGIN_INFO(
+				        purple_plugin_get_info(
+				                PURPLE_PLUGIN(plugins->data)));
+				str = g_string_append(
+				        str,
+				        gplugin_plugin_info_get_name(info));
 
 				if (plugins->next)
 					str = g_string_append(str, ", ");

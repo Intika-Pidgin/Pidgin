@@ -95,7 +95,8 @@ plugin_loading_cb(GObject *manager, PurplePlugin *plugin, GError **error,
 
 	if (priv->error) {
 		purple_debug_error("plugins", "Failed to load plugin %s: %s",
-				           purple_plugin_get_filename(plugin), priv->error);
+		                   gplugin_plugin_get_filename(plugin),
+		                   priv->error);
 
 		g_set_error(error, PURPLE_PLUGINS_DOMAIN, 0,
 				    "Plugin is not loadable: %s", priv->error);
@@ -120,7 +121,7 @@ plugin_loaded_cb(GObject *manager, PurplePlugin *plugin)
 	loaded_plugins = g_list_prepend(loaded_plugins, plugin);
 
 	purple_debug_info("plugins", "Loaded plugin %s\n",
-	                  purple_plugin_get_filename(plugin));
+	                  gplugin_plugin_get_filename(plugin));
 
 	purple_signal_emit(purple_plugins_get_handle(), "plugin-load", plugin);
 }
@@ -136,7 +137,7 @@ plugin_unloading_cb(GObject *manager, PurplePlugin *plugin, GError **error,
 	info = purple_plugin_get_info(plugin);
 	if (info) {
 		purple_debug_info("plugins", "Unloading plugin %s\n",
-		                  purple_plugin_get_filename(plugin));
+		                  gplugin_plugin_get_filename(plugin));
 	}
 
 	return TRUE;
@@ -185,8 +186,8 @@ purple_plugin_load(PurplePlugin *plugin, GError **error)
 
 	if (!gplugin_manager_load_plugin(plugin, &err)) {
 		purple_debug_error("plugins", "Failed to load plugin %s: %s",
-				purple_plugin_get_filename(plugin),
-				(err ? err->message : "Unknown reason"));
+		                   gplugin_plugin_get_filename(plugin),
+		                   err ? err->message : "Unknown reason");
 
 		if (error)
 			*error = g_error_copy(err);
@@ -210,8 +211,8 @@ purple_plugin_unload(PurplePlugin *plugin, GError **error)
 
 	if (!gplugin_manager_unload_plugin(plugin, &err)) {
 		purple_debug_error("plugins", "Failed to unload plugin %s: %s",
-				purple_plugin_get_filename(plugin),
-				(err ? err->message : "Unknown reason"));
+		                   gplugin_plugin_get_filename(plugin),
+		                   err ? err->message : "Unknown reason");
 
 		if (error)
 			*error = g_error_copy(err);
@@ -229,14 +230,6 @@ purple_plugin_is_loaded(PurplePlugin *plugin)
 	g_return_val_if_fail(plugin != NULL, FALSE);
 
 	return (gplugin_plugin_get_state(plugin) == GPLUGIN_PLUGIN_STATE_LOADED);
-}
-
-const gchar *
-purple_plugin_get_filename(PurplePlugin *plugin)
-{
-	g_return_val_if_fail(plugin != NULL, NULL);
-
-	return gplugin_plugin_get_filename(plugin);
 }
 
 PurplePluginInfo *
@@ -395,9 +388,10 @@ static void
 purple_plugin_info_constructed(GObject *object)
 {
 	PurplePluginInfo *info = PURPLE_PLUGIN_INFO(object);
+	GPluginPluginInfo *ginfo = GPLUGIN_PLUGIN_INFO(info);
 	PurplePluginInfoPrivate *priv =
 			purple_plugin_info_get_instance_private(info);
-	const char *id = purple_plugin_info_get_id(info);
+	const char *id = gplugin_plugin_info_get_id(ginfo);
 	guint32 version;
 
 	G_OBJECT_CLASS(purple_plugin_info_parent_class)->constructed(object);
@@ -413,7 +407,7 @@ purple_plugin_info_constructed(GObject *object)
 				id, priv->error);
 	}
 
-	version = purple_plugin_info_get_abi_version(info);
+	version = gplugin_plugin_info_get_abi_version(ginfo);
 	if (PURPLE_PLUGIN_ABI_MAJOR_VERSION(version) != PURPLE_MAJOR_VERSION ||
 		PURPLE_PLUGIN_ABI_MINOR_VERSION(version) > PURPLE_MINOR_VERSION)
 	{
@@ -518,118 +512,6 @@ purple_plugin_info_new(const char *first_property, ...)
 	return PURPLE_PLUGIN_INFO(info);
 }
 
-const gchar *
-purple_plugin_info_get_id(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_id(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_name(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_name(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_version(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_version(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_category(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_category(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_summary(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_summary(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_description(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_description(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar * const *
-purple_plugin_info_get_authors(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_authors(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_website(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_website(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_icon(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_icon(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_license_id(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_license_id(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_license_text(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_license_text(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar *
-purple_plugin_info_get_license_url(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_license_url(GPLUGIN_PLUGIN_INFO(info));
-}
-
-const gchar * const *
-purple_plugin_info_get_dependencies(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, NULL);
-
-	return gplugin_plugin_info_get_dependencies(GPLUGIN_PLUGIN_INFO(info));
-}
-
-guint32
-purple_plugin_info_get_abi_version(const PurplePluginInfo *info)
-{
-	g_return_val_if_fail(info != NULL, 0);
-
-	return gplugin_plugin_info_get_abi_version(GPLUGIN_PLUGIN_INFO(info));
-}
-
 PurplePluginActionsCb
 purple_plugin_info_get_actions_cb(PurplePluginInfo *info)
 {
@@ -705,7 +587,7 @@ purple_plugin_info_set_ui_data(PurplePluginInfo *info, gpointer ui_data)
 }
 
 gpointer
-purple_plugin_info_get_ui_data(const PurplePluginInfo *info)
+purple_plugin_info_get_ui_data(PurplePluginInfo *info)
 {
 	g_return_val_if_fail(PURPLE_IS_PLUGIN_INFO(info), NULL);
 
@@ -822,7 +704,7 @@ purple_plugins_refresh(void)
 		if (!priv->unloaded && purple_plugin_info_get_flags(info) &
 				PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD) {
 			purple_debug_info("plugins", "Auto-loading plugin %s\n",
-			                  purple_plugin_get_filename(plugin));
+			                  gplugin_plugin_get_filename(plugin));
 			purple_plugin_load(plugin, NULL);
 		}
 	}
@@ -863,7 +745,8 @@ purple_plugins_find_by_filename(const char *filename)
 	for (l = plugins; l != NULL; l = l->next) {
 		PurplePlugin *plugin = PURPLE_PLUGIN(l->data);
 
-		if (purple_strequal(purple_plugin_get_filename(plugin), filename)) {
+		if (purple_strequal(gplugin_plugin_get_filename(plugin),
+		                    filename)) {
 			g_list_free(plugins);
 			return plugin;
 		}
@@ -892,7 +775,9 @@ purple_plugins_save_loaded(const char *key)
 			continue;
 
 		if (!g_list_find(plugins_to_disable, plugin))
-			files = g_list_append(files, (gchar *)purple_plugin_get_filename(plugin));
+			files = g_list_append(
+			        files,
+			        (gchar *)gplugin_plugin_get_filename(plugin));
 	}
 
 	purple_prefs_set_path_list(key, files);
