@@ -13,5 +13,6 @@
     <file compressed="true">Prefs/prefs.ui</file>
     <file compressed="true">Prefs/vv.ui</file>
     <file compressed="true">Whiteboard/whiteboard.ui</file>
+    <file compressed="true">Xfer/xfer.ui</file>
   </gresource>
 </gresources>
