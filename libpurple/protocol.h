@@ -39,7 +39,6 @@ typedef struct _PurpleProtocol PurpleProtocol;
 typedef struct _PurpleProtocolClass PurpleProtocolClass;
 
 #include "account.h"
-#include "accountopt.h"
 #include "buddyicon.h"
 #include "buddylist.h"
 #include "connection.h"
@@ -51,6 +50,7 @@ typedef struct _PurpleProtocolClass PurpleProtocolClass;
 #include "message.h"
 #include "notify.h"
 #include "plugins.h"
+#include "purpleaccountoption.h"
 #include "purpleaccountusersplit.h"
 #include "roomlist.h"
 #include "status.h"

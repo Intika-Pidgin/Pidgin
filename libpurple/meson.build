@@ -1,7 +1,6 @@
 purple_coresources = [
 	'account.c',
 	'accounts.c',
-	'accountopt.c',
 	'action.c',
 	'attention.c',
 	'blistnode.c',
@@ -49,6 +48,7 @@ purple_coresources = [
 	'protocol.c',
 	'protocols.c',
 	'purple-gio.c',
+	'purpleaccountoption.c',
 	'purpleaccountusersplit.c',
 	'queuedoutputstream.c',
 	'request.c',
@@ -84,7 +84,6 @@ purple_coresources = [
 purple_coreheaders = [
 	'account.h',
 	'accounts.h',
-	'accountopt.h',
 	'action.h',
 	'attention.h',
 	'blistnode.h',
@@ -128,6 +127,7 @@ purple_coreheaders = [
 	'protocol.h',
 	'protocols.h',
 	'purple-gio.h',
+	'purpleaccountoption.h',
 	'purpleaccountusersplit.h',
 	'queuedoutputstream.h',
 	'request.h',

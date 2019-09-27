@@ -23,7 +23,6 @@
 #include "internal.h"
 
 #include "account.h"
-#include "accountopt.h"
 #include "buddylist.h"
 #include "core.h"
 #include "cmds.h"
@@ -36,6 +35,7 @@
 #include "pluginpref.h"
 #include "proxy.h"
 #include "protocol.h"
+#include "purpleaccountoption.h"
 #include "request.h"
 #include "server.h"
 #include "status.h"

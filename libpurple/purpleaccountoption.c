@@ -20,7 +20,7 @@
  */
 #include "internal.h"
 
-#include "accountopt.h"
+#include "purpleaccountoption.h"
 #include "util.h"
 #include "glibcompat.h"
 

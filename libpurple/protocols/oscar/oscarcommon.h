@@ -29,10 +29,10 @@
 
 #include "internal.h"
 
-#include "accountopt.h"
 #include "protocol.h"
 #include "version.h"
 #include "notify.h"
+#include "purpleaccountoption.h"
 #include "status.h"
 
 #define AIM_DEFAULT_LOGIN_SERVER "login.oscar.aol.com"
