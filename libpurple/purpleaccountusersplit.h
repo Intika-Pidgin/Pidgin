@@ -67,6 +67,8 @@ PurpleAccountUserSplit *purple_account_user_split_new(const gchar *text, const g
  * Creates a copy of @split.
  *
  * Returns: (transfer full): A copy of @split.
+ *
+ * Since: 3.0.0
  */
 PurpleAccountUserSplit *purple_account_user_split_copy(PurpleAccountUserSplit *split);
 
