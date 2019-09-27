@@ -21,10 +21,13 @@ if PLUGINS
 	endif
 
 	if enable_kwallet
-		kwallet_moc = moc.process('kwallet.cpp')
+		kwallet_moc = qt5.preprocess(
+			moc_headers: 'purplekwallet.h',
+			dependencies: qt5_dep,
+		)
 
-		kwallet_plugin = library('kwallet', 'kwallet.cpp', kwallet_moc,
-		    dependencies : [kwallet, qt4, libpurple_dep],
+		kwallet_plugin = library('kwallet', 'kwallet.cpp', 'purplekwallet.h', kwallet_moc,
+		    dependencies : [kwallet, qt5_dep, libpurple_dep],
 		    name_prefix : '',
 		    install : true, install_dir : PURPLE_PLUGINDIR)
 	endif

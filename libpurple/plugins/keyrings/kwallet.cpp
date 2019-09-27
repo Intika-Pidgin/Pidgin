@@ -28,13 +28,13 @@
 #include "account.h"
 #include "core.h"
 #include "debug.h"
-#include "keyring.h"
 #include "plugins.h"
 #include "version.h"
 
 #include <QQueue>
 #include <QCoreApplication>
-#include <kwallet.h>
+
+#include "purplekwallet.h"
 
 #define KWALLET_NAME        N_("KWallet")
 #define KWALLET_DESCRIPTION N_("This plugin will store passwords in KWallet.")
@@ -48,81 +48,6 @@
 
 PurpleKeyring *keyring_handler = NULL;
 QCoreApplication *qCoreApp = NULL;
-
-namespace KWalletPlugin {
-
-class request
-{
-	public:
-		virtual ~request();
-		virtual void detailedAbort(enum PurpleKeyringError error) = 0;
-		void abort();
-		virtual void execute(KWallet::Wallet *wallet) = 0;
-
-	protected:
-		gpointer data;
-		PurpleAccount *account;
-		QString password;
-		bool noPassword;
-};
-
-class engine : private QObject, private QQueue<request*>
-{
-	Q_OBJECT
-
-	public:
-		engine();
-		~engine();
-		void queue(request *req);
-		void abortAll();
-		static engine *instance(bool create);
-		static void closeInstance(void);
-
-	private slots:
-		void walletOpened(bool opened);
-		void walletClosed();
-
-	private:
-		static engine *pinstance;
-
-		bool connected;
-		bool failed;
-		bool closing;
-		bool externallyClosed;
-		bool busy;
-		bool closeAfterBusy;
-
-		KWallet::Wallet *wallet;
-
-		void reopenWallet();
-		void executeRequests();
-};
-
-class save_request : public request
-{
-	public:
-		save_request(PurpleAccount *account, const char *password,
-			PurpleKeyringSaveCallback cb, void *data);
-		void detailedAbort(enum PurpleKeyringError error);
-		void execute(KWallet::Wallet *wallet);
-
-	private:
-		PurpleKeyringSaveCallback callback;
-};
-
-class read_request : public request
-{
-	public:
-		read_request(PurpleAccount *account,
-			PurpleKeyringReadCallback cb, void *data);
-		void detailedAbort(enum PurpleKeyringError error);
-		void execute(KWallet::Wallet *wallet);
-
-	private:
-		PurpleKeyringReadCallback callback;
-};
-
-}
 
 static gboolean
 kwallet_is_enabled(void)
@@ -572,5 +497,3 @@ plugin_unload(PurplePlugin *plugin, GError **error)
 PURPLE_PLUGIN_INIT(kwallet_keyring, plugin_query, plugin_load, plugin_unload);
 
 } /* extern "C" */
-
-#include "kwallet.moc"
