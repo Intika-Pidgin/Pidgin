@@ -22,7 +22,6 @@
 #include "internal.h"
 
 #include "account.h"
-#include "accountopt.h"
 #include "action.h"
 #include "blistnode.h"
 #include "buddy.h"
@@ -42,6 +41,7 @@
 #include "presence.h"
 #include "protocol.h"
 #include "protocols.h"
+#include "purpleaccountoption.h"
 #include "request.h"
 #include "roomlist.h"
 #include "server.h"

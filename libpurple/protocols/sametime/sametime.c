@@ -33,7 +33,6 @@
 
 /* purple includes */
 #include "account.h"
-#include "accountopt.h"
 #include "action.h"
 #include "circularbuffer.h"
 #include "conversation.h"
@@ -43,6 +42,7 @@
 #include "notify.h"
 #include "plugins.h"
 #include "protocol.h"
+#include "purpleaccountoption.h"
 #include "purpleaccountusersplit.h"
 #include "request.h"
 #include "version.h"

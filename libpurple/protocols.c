@@ -21,12 +21,12 @@
  *
  */
 #include "internal.h"
-#include "accountopt.h"
 #include "conversation.h"
 #include "debug.h"
 #include "network.h"
 #include "notify.h"
 #include "protocol.h"
+#include "purpleaccountoption.h"
 #include "request.h"
 #include "util.h"
 
