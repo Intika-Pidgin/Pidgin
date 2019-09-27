@@ -648,7 +648,12 @@ void purple_connection_update_last_received(PurpleConnection *gc)
 	 * keepalive mechanism is inactive.
 	 */
 	if (priv->keepalive) {
-		purple_timeout_reset(priv->keepalive, purple_protocol_server_iface_get_keepalive_interval(priv->protocol));
+		gint64 seconds_from_now = purple_protocol_server_iface_get_keepalive_interval(priv->protocol);
+
+		g_source_set_ready_time(
+			priv->keepalive,
+			g_get_monotonic_time() + (seconds_from_now * G_USEC_PER_SEC)
+		);
 	}
 }
 
