@@ -932,16 +932,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 }
 
 
-/**************************************************************************/
-/* GLib Event Loop Functions                                              */
-/**************************************************************************/
-
-void purple_timeout_reset(GSource *source, gint64 seconds_from_now)
-{
-	g_source_set_ready_time(source, g_get_monotonic_time() + (seconds_from_now * G_USEC_PER_SEC));
-}
-
-
 /**************************************************************************
  * Markup Functions
  **************************************************************************/
