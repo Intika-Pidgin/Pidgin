@@ -24,6 +24,7 @@
 #include "chat.h"
 #include "core.h"
 #include "plugins.h"
+#include "purpleaccountusersplit.h"
 
 #include "xmpp.h"
 

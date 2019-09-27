@@ -51,6 +51,7 @@ typedef struct _PurpleProtocolClass PurpleProtocolClass;
 #include "message.h"
 #include "notify.h"
 #include "plugins.h"
+#include "purpleaccountusersplit.h"
 #include "roomlist.h"
 #include "status.h"
 #include "whiteboard.h"

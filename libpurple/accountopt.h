@@ -44,16 +44,6 @@
  */
 typedef struct _PurpleAccountOption		PurpleAccountOption;
 
-/**
- * PurpleAccountUserSplit:
- *
- * A username split.
- *
- * This is used by some protocols to separate the fields of the username
- * into more human-readable components.
- */
-typedef struct _PurpleAccountUserSplit	PurpleAccountUserSplit;
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -335,108 +325,6 @@ const GSList * purple_account_option_string_get_hints(const PurpleAccountOption 
  *          purple_account_set_string() to set the option.
  */
 GList *purple_account_option_get_list(const PurpleAccountOption *option);
-
-
-/**************************************************************************/
-/* Account User Split API                                                 */
-/**************************************************************************/
-
-/**
- * purple_account_user_split_new:
- * @text:          The text of the option.
- * @default_value: The default value.
- * @sep:           The field separator.
- *
- * Creates a new account username split.
- *
- * Returns: The new user split.
- */
-PurpleAccountUserSplit *purple_account_user_split_new(const char *text,
-												  const char *default_value,
-												  char sep);
-
-/**
- * purple_account_user_split_destroy:
- * @split: The split to destroy.
- *
- * Destroys an account username split.
- */
-void purple_account_user_split_destroy(PurpleAccountUserSplit *split);
-
-/**
- * purple_account_user_split_get_text:
- * @split: The account username split.
- *
- * Returns the text for an account username split.
- *
- * Returns: The account username split's text.
- */
-const char *purple_account_user_split_get_text(const PurpleAccountUserSplit *split);
-
-/**
- * purple_account_user_split_get_default_value:
- * @split: The account username split.
- *
- * Returns the default string value for an account split.
- *
- * Returns: The default string.
- */
-const char *purple_account_user_split_get_default_value(
-		const PurpleAccountUserSplit *split);
-
-/**
- * purple_account_user_split_get_separator:
- * @split: The account username split.
- *
- * Returns the field separator for an account split.
- *
- * Returns: The field separator.
- */
-char purple_account_user_split_get_separator(const PurpleAccountUserSplit *split);
-
-/**
- * purple_account_user_split_get_reverse:
- * @split: The account username split.
- *
- * Returns the 'reverse' value for an account split.
- *
- * Returns: The 'reverse' value.
- */
-gboolean purple_account_user_split_get_reverse(const PurpleAccountUserSplit *split);
-
-/**
- * purple_account_user_split_set_reverse:
- * @split:   The account username split.
- * @reverse: The 'reverse' value
- *
- * Sets the 'reverse' value for an account split.
- */
-void purple_account_user_split_set_reverse(PurpleAccountUserSplit *split, gboolean reverse);
-
-/**
- * purple_account_user_split_is_constant:
- * @split: The account username split.
- *
- * Returns the constant parameter for an account split.
- *
- * When split is constant, it does not need to be displayed
- * in configuration dialog.
- *
- * Returns: %TRUE, if the split is constant.
- */
-gboolean
-purple_account_user_split_is_constant(const PurpleAccountUserSplit *split);
-
-/**
- * purple_account_user_split_set_constant:
- * @split:    The account username split.
- * @constant: %TRUE, if the split is a constant part.
- *
- * Sets the constant parameter of account split.
- */
-void
-purple_account_user_split_set_constant(PurpleAccountUserSplit *split,
-	gboolean constant);
 
 G_END_DECLS
 

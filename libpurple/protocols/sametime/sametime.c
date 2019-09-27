@@ -43,6 +43,7 @@
 #include "notify.h"
 #include "plugins.h"
 #include "protocol.h"
+#include "purpleaccountusersplit.h"
 #include "request.h"
 #include "version.h"
 
