@@ -18,35 +18,32 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#include "internal.h"
 
 #include "purpleaccountusersplit.h"
-#include "util.h"
-#include "glibcompat.h"
 
-/*
- * A username split.
- *
- * This is used by some protocols to separate the fields of the username
- * into more human-readable components.
- */
-struct _PurpleAccountUserSplit
-{
-	char *text;             /* The text that will appear to the user. */
-	char *default_value;    /* The default value.                     */
-	char  field_sep;        /* The field separator.                   */
-	gboolean reverse;       /* TRUE if the separator should be found
-							   starting a the end of the string, FALSE
-							   otherwise                                 */
+/******************************************************************************
+ * Structs
+ *****************************************************************************/
+struct _PurpleAccountUserSplit {
+	gchar *text;
+	gchar *default_value;
+	gchar  field_sep;
+	gboolean reverse;
 	gboolean constant;
 };
 
-/**************************************************************************
- * Account User Split API
- **************************************************************************/
+/******************************************************************************
+ * Public API
+ *****************************************************************************/
+G_DEFINE_BOXED_TYPE(
+	PurpleAccountUserSplit,
+	purple_account_user_split,
+	purple_account_user_split_copy,
+	purple_account_user_split_destroy
+);
+
 PurpleAccountUserSplit *
-purple_account_user_split_new(const char *text, const char *default_value,
-							char sep)
+purple_account_user_split_new(const gchar *text, const gchar *default_value, gchar sep)
 {
 	PurpleAccountUserSplit *split;
 
@@ -63,6 +60,19 @@ purple_account_user_split_new(const char *text, const char *default_value,
 	return split;
 }
 
+PurpleAccountUserSplit *
+purple_account_user_split_copy(PurpleAccountUserSplit *split) {
+	PurpleAccountUserSplit *newsplit = NULL;
+
+	newsplit = purple_account_user_split_new(split->text, split->default_value, split->field_sep);
+
+	newsplit->reverse = split->reverse;
+	newsplit->constant = split->constant;
+
+	return newsplit;
+}
+
+
 void
 purple_account_user_split_destroy(PurpleAccountUserSplit *split)
 {
@@ -73,7 +83,7 @@ purple_account_user_split_destroy(PurpleAccountUserSplit *split)
 	g_free(split);
 }
 
-const char *
+const gchar *
 purple_account_user_split_get_text(const PurpleAccountUserSplit *split)
 {
 	g_return_val_if_fail(split != NULL, NULL);
@@ -81,7 +91,7 @@ purple_account_user_split_get_text(const PurpleAccountUserSplit *split)
 	return split->text;
 }
 
-const char *
+const gchar *
 purple_account_user_split_get_default_value(const PurpleAccountUserSplit *split)
 {
 	g_return_val_if_fail(split != NULL, NULL);
@@ -129,3 +139,4 @@ purple_account_user_split_set_constant(PurpleAccountUserSplit *split,
 
 	split->constant = constant;
 }
+

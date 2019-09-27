@@ -19,20 +19,20 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef PURPLE_ACCOUNT_SPLIT_H
-#define PURPLE_ACCOUNT_SPLIT_H
+#ifndef PURPLE_ACCOUNT_USER_SPLIT_H
+#define PURPLE_ACCOUNT_USER_SPLIT_H
+
 /**
- * SECTION:accountopt
- * @section_id: libpurple-accountopt
- * @short_description: <filename>accountopt.h</filename>
- * @title: Account Options API
+ * SECTION:accountusersplit
+ * @section_id: libpurple-account-user-split
+ * @short_description: Username splitting
+ * @title: Account Username Splitting API
  */
 
-#include "prefs.h"
+#include <glib.h>
+#include <glib-object.h>
 
-/**************************************************************************/
-/* Data Structures                                                        */
-/**************************************************************************/
+#define PURPLE_TYPE_ACCOUNT_USER_SPLIT (purple_account_user_split_get_type())
 
 /**
  * PurpleAccountUserSplit:
@@ -46,9 +46,7 @@ typedef struct _PurpleAccountUserSplit	PurpleAccountUserSplit;
 
 G_BEGIN_DECLS
 
-/**************************************************************************/
-/* Account User Split API                                                 */
-/**************************************************************************/
+GType purple_account_user_split_get_type(void);
 
 /**
  * purple_account_user_split_new:
@@ -60,9 +58,17 @@ G_BEGIN_DECLS
  *
  * Returns: The new user split.
  */
-PurpleAccountUserSplit *purple_account_user_split_new(const char *text,
-												  const char *default_value,
-												  char sep);
+PurpleAccountUserSplit *purple_account_user_split_new(const gchar *text, const gchar *default_value, gchar sep);
+
+/**
+ * purple_account_user_split_copy:
+ * @split: The split to copy.
+ *
+ * Creates a copy of @split.
+ *
+ * Returns: (transfer full): A copy of @split.
+ */
+PurpleAccountUserSplit *purple_account_user_split_copy(PurpleAccountUserSplit *split);
 
 /**
  * purple_account_user_split_destroy:
@@ -80,7 +86,7 @@ void purple_account_user_split_destroy(PurpleAccountUserSplit *split);
  *
  * Returns: The account username split's text.
  */
-const char *purple_account_user_split_get_text(const PurpleAccountUserSplit *split);
+const gchar *purple_account_user_split_get_text(const PurpleAccountUserSplit *split);
 
 /**
  * purple_account_user_split_get_default_value:
@@ -90,8 +96,7 @@ const char *purple_account_user_split_get_text(const PurpleAccountUserSplit *spl
  *
  * Returns: The default string.
  */
-const char *purple_account_user_split_get_default_value(
-		const PurpleAccountUserSplit *split);
+const gchar *purple_account_user_split_get_default_value(const PurpleAccountUserSplit *split);
 
 /**
  * purple_account_user_split_get_separator:
@@ -101,7 +106,7 @@ const char *purple_account_user_split_get_default_value(
  *
  * Returns: The field separator.
  */
-char purple_account_user_split_get_separator(const PurpleAccountUserSplit *split);
+gchar purple_account_user_split_get_separator(const PurpleAccountUserSplit *split);
 
 /**
  * purple_account_user_split_get_reverse:
@@ -133,8 +138,7 @@ void purple_account_user_split_set_reverse(PurpleAccountUserSplit *split, gboole
  *
  * Returns: %TRUE, if the split is constant.
  */
-gboolean
-purple_account_user_split_is_constant(const PurpleAccountUserSplit *split);
+gboolean purple_account_user_split_is_constant(const PurpleAccountUserSplit *split);
 
 /**
  * purple_account_user_split_set_constant:
@@ -143,10 +147,8 @@ purple_account_user_split_is_constant(const PurpleAccountUserSplit *split);
  *
  * Sets the constant parameter of account split.
  */
-void
-purple_account_user_split_set_constant(PurpleAccountUserSplit *split,
-	gboolean constant);
+void purple_account_user_split_set_constant(PurpleAccountUserSplit *split, gboolean constant);
 
 G_END_DECLS
 
-#endif /* PURPLE_ACCOUNT_SPLIT_H */
+#endif /* PURPLE_ACCOUNT_USER_SPLIT_H */
