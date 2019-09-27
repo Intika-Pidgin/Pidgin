@@ -726,7 +726,7 @@ int pidgin_start(int argc, char *argv[])
 	pidgin_setup_error_handler();
 #endif
 
-	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
+	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin3",
 #if GLIB_CHECK_VERSION(2, 48, 0)
 				G_APPLICATION_CAN_OVERRIDE_APP_ID |
 #endif
