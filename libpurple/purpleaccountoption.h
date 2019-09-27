@@ -19,8 +19,12 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef PURPLE_ACCOUNTOPT_H
-#define PURPLE_ACCOUNTOPT_H
+#ifndef PURPLE_ACCOUNT_OPTION_H
+#define PURPLE_ACCOUNT_OPTION_H
+
+#include <glib.h>
+#include <glib-object.h>
+
 /**
  * SECTION:accountopt
  * @section_id: libpurple-accountopt
@@ -28,11 +32,7 @@
  * @title: Account Options API
  */
 
-#include "prefs.h"
-
-/**************************************************************************/
-/* Data Structures                                                        */
-/**************************************************************************/
+#define PURPLE_TYPE_ACCOUNT_OPTION (purple_account_option_get_type())
 
 /**
  * PurpleAccountOption:
@@ -46,9 +46,7 @@ typedef struct _PurpleAccountOption		PurpleAccountOption;
 
 G_BEGIN_DECLS
 
-/**************************************************************************/
-/* Account Option API                                                     */
-/**************************************************************************/
+GType purple_account_option_get_type(void);
 
 /**
  * purple_account_option_new:
@@ -63,8 +61,19 @@ G_BEGIN_DECLS
  *
  * Returns: The account option.
  */
-PurpleAccountOption *purple_account_option_new(PurplePrefType type,
-	const char *text, const char *pref_name);
+PurpleAccountOption *purple_account_option_new(PurplePrefType type, const gchar *text, const gchar *pref_name);
+
+/**
+ * purple_account_option_copy:
+ * @option: The option to copy.
+ *
+ * Creates a newly allocated copy of @option.
+ *
+ * Returns: (transfer: full): A new copy of @option.
+ *
+ * Since: 3.0.0
+ */
+PurpleAccountOption *purple_account_option_copy(PurpleAccountOption *option);
 
 /**
  * purple_account_option_bool_new:
@@ -76,8 +85,7 @@ PurpleAccountOption *purple_account_option_new(PurplePrefType type,
  *
  * Returns: The account option.
  */
-PurpleAccountOption *purple_account_option_bool_new(const char *text,
-	const char *pref_name, gboolean default_value);
+PurpleAccountOption *purple_account_option_bool_new(const gchar *text, const gchar *pref_name, gboolean default_value);
 
 /**
  * purple_account_option_int_new:
@@ -89,8 +97,7 @@ PurpleAccountOption *purple_account_option_bool_new(const char *text,
  *
  * Returns: The account option.
  */
-PurpleAccountOption *purple_account_option_int_new(const char *text,
-	const char *pref_name, int default_value);
+PurpleAccountOption *purple_account_option_int_new(const gchar *text, const gchar *pref_name, gint default_value);
 
 /**
  * purple_account_option_string_new:
@@ -102,8 +109,7 @@ PurpleAccountOption *purple_account_option_int_new(const char *text,
  *
  * Returns: The account option.
  */
-PurpleAccountOption *purple_account_option_string_new(const char *text,
-	const char *pref_name, const char *default_value);
+PurpleAccountOption *purple_account_option_string_new(const gchar *text, const gchar *pref_name, const gchar *default_value);
 
 /**
  * purple_account_option_list_new:
@@ -123,8 +129,7 @@ PurpleAccountOption *purple_account_option_string_new(const char *text,
  *
  * Returns: The account option.
  */
-PurpleAccountOption *purple_account_option_list_new(const char *text,
-	const char *pref_name, GList *list);
+PurpleAccountOption *purple_account_option_list_new(const gchar *text, const gchar *pref_name, GList *list);
 
 /**
  * purple_account_option_destroy:
@@ -141,8 +146,7 @@ void purple_account_option_destroy(PurpleAccountOption *option);
  *
  * Sets the default boolean value for an account option.
  */
-void purple_account_option_set_default_bool(PurpleAccountOption *option,
-										  gboolean value);
+void purple_account_option_set_default_bool(PurpleAccountOption *option, gboolean value);
 
 /**
  * purple_account_option_set_default_int:
@@ -151,8 +155,7 @@ void purple_account_option_set_default_bool(PurpleAccountOption *option,
  *
  * Sets the default integer value for an account option.
  */
-void purple_account_option_set_default_int(PurpleAccountOption *option,
-										 int value);
+void purple_account_option_set_default_int(PurpleAccountOption *option, gint value);
 
 /**
  * purple_account_option_set_default_string:
@@ -161,8 +164,7 @@ void purple_account_option_set_default_int(PurpleAccountOption *option,
  *
  * Sets the default string value for an account option.
  */
-void purple_account_option_set_default_string(PurpleAccountOption *option,
-											const char *value);
+void purple_account_option_set_default_string(PurpleAccountOption *option, const gchar *value);
 
 /**
  * purple_account_option_string_set_masked:
@@ -173,8 +175,7 @@ void purple_account_option_set_default_string(PurpleAccountOption *option,
  * as a hint to the UI that the option's value should be obscured from
  * view, like a password.
  */
-void
-purple_account_option_string_set_masked(PurpleAccountOption *option, gboolean masked);
+void purple_account_option_string_set_masked(PurpleAccountOption *option, gboolean masked);
 
 /**
  * purple_account_option_string_set_hints:
@@ -186,8 +187,7 @@ purple_account_option_string_set_masked(PurpleAccountOption *option, gboolean ma
  * The list passed will be owned by the account option, and the
  * strings inside will be freed automatically.
  */
-void purple_account_option_string_set_hints(PurpleAccountOption *option,
-	GSList *hints);
+void purple_account_option_string_set_hints(PurpleAccountOption *option, GSList *hints);
 
 /**
  * purple_account_option_set_list:
@@ -213,8 +213,7 @@ void purple_account_option_set_list(PurpleAccountOption *option, GList *values);
  *
  * Adds an item to a list account option.
  */
-void purple_account_option_add_list_item(PurpleAccountOption *option,
-									   const char *key, const char *value);
+void purple_account_option_add_list_item(PurpleAccountOption *option, const gchar *key, const gchar *value);
 
 /**
  * purple_account_option_get_pref_type:
@@ -234,7 +233,7 @@ PurplePrefType purple_account_option_get_pref_type(const PurpleAccountOption *op
  *
  * Returns: The account option's text.
  */
-const char *purple_account_option_get_text(const PurpleAccountOption *option);
+const gchar *purple_account_option_get_text(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_get_setting:
@@ -246,7 +245,7 @@ const char *purple_account_option_get_text(const PurpleAccountOption *option);
  *
  * Returns: The option's name.
  */
-const char *purple_account_option_get_setting(const PurpleAccountOption *option);
+const gchar *purple_account_option_get_setting(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_get_default_bool:
@@ -266,7 +265,7 @@ gboolean purple_account_option_get_default_bool(const PurpleAccountOption *optio
  *
  * Returns: The default integer value.
  */
-int purple_account_option_get_default_int(const PurpleAccountOption *option);
+gint purple_account_option_get_default_int(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_get_default_string:
@@ -276,8 +275,7 @@ int purple_account_option_get_default_int(const PurpleAccountOption *option);
  *
  * Returns: The default string value.
  */
-const char *purple_account_option_get_default_string(
-	const PurpleAccountOption *option);
+const gchar *purple_account_option_get_default_string(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_get_default_list_value:
@@ -287,8 +285,7 @@ const char *purple_account_option_get_default_string(
  *
  * Returns: The default list string value.
  */
-const char *purple_account_option_get_default_list_value(
-	const PurpleAccountOption *option);
+const gchar *purple_account_option_get_default_list_value(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_string_get_masked:
@@ -300,8 +297,7 @@ const char *purple_account_option_get_default_list_value(
  *
  * Returns: %TRUE if the option's value should be obscured.
  */
-gboolean
-purple_account_option_string_get_masked(const PurpleAccountOption *option);
+gboolean purple_account_option_string_get_masked(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_string_get_hints:
@@ -311,7 +307,7 @@ purple_account_option_string_get_masked(const PurpleAccountOption *option);
  *
  * Returns: (element-type utf8) (transfer none): A list of hints.
  */
-const GSList * purple_account_option_string_get_hints(const PurpleAccountOption *option);
+const GSList *purple_account_option_string_get_hints(const PurpleAccountOption *option);
 
 /**
  * purple_account_option_get_list:
@@ -328,4 +324,4 @@ GList *purple_account_option_get_list(const PurpleAccountOption *option);
 
 G_END_DECLS
 
-#endif /* PURPLE_ACCOUNTOPT_H */
+#endif /* PURPLE_ACCOUNT_OPTION_H */

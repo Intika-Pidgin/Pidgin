@@ -21,6 +21,7 @@
 #include "internal.h"
 
 #include "purpleaccountoption.h"
+#include "prefs.h"
 #include "util.h"
 #include "glibcompat.h"
 
@@ -32,16 +33,16 @@
  */
 struct _PurpleAccountOption
 {
-	PurplePrefType type;      /* The type of value.                     */
+	PurplePrefType type;    /* The type of value.                     */
 
-	char *text;             /* The text that will appear to the user. */
-	char *pref_name;        /* The name of the associated preference. */
+	gchar *text;            /* The text that will appear to the user. */
+	gchar *pref_name;       /* The name of the associated preference. */
 
 	union
 	{
 		gboolean boolean;   /* The default boolean value.             */
-		int integer;        /* The default integer value.             */
-		char *string;       /* The default string value.              */
+		gint integer;       /* The default integer value.             */
+		gchar *string;      /* The default string value.              */
 		GList *list;        /* The default list value.                */
 
 	} default_value;
@@ -58,6 +59,13 @@ struct _PurpleAccountOption
 		} string;
 	} params;
 };
+
+G_DEFINE_BOXED_TYPE(
+	PurpleAccountOption,
+	purple_account_option,
+	purple_account_option_copy,
+	purple_account_option_destroy
+);
 
 PurpleAccountOption *
 purple_account_option_new(PurplePrefType type, const char *text,
@@ -76,6 +84,26 @@ purple_account_option_new(PurplePrefType type, const char *text,
 	option->pref_name = g_strdup(pref_name);
 
 	return option;
+}
+
+PurpleAccountOption *
+purple_account_option_copy(PurpleAccountOption *option) {
+	PurpleAccountOption *opt = NULL;
+
+	g_return_val_if_fail(option, NULL);
+
+	opt = g_new0(PurpleAccountOption, 1);
+	*opt = *option;
+
+	opt->text = g_strdup(option->text);
+	opt->pref_name = g_strdup(option->pref_name);
+
+	if(opt->type == PURPLE_PREF_STRING) {
+		opt->default_value.string = g_strdup(option->default_value.string);
+		opt->params.string.hints = g_list_copy(option->params.string.hints);
+	}
+
+	return opt;
 }
 
 PurpleAccountOption *
