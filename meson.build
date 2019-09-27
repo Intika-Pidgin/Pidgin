@@ -690,76 +690,18 @@ endif
 #######################################################################
 
 enable_kwallet = get_option('kwallet') and not IS_WIN32
-enable_kwallet = false
 
 if enable_kwallet
 	# Ensure C++ compiler works
 	add_languages('cpp')
 	cxx_compiler = meson.get_compiler('cpp')
+	add_project_arguments('-DHAVE_CONFIG_H=1', language : 'cpp')
 
-	qt4 = dependency('qt4', modules : 'Core', required : force_deps)
-	enable_kwallet = qt4.found()
-endif
+	qt5 = import('qt5')
 
-if enable_kwallet
-#	AC_MSG_CHECKING([for metaobject compiler])
-#	MOC=`$PKG_CONFIG --variable=moc_location QtCore`
-#	AC_SUBST(MOC)
-#	AC_MSG_RESULT([$MOC])
-#
-#	KWALLET_CXXFLAGS=''
-#	KWALLET_LIBS=''
-#	if test -z '$with_kwallet_includes' || test -z '$with_kwallet_libs'; then
-#		AC_CHECK_PROG(KDE4_CONFIG, kde4-config, kde4-config, no)
-#		if test 'x$KDE4_CONFIG' = 'xno'; then
-#			enable_kwallet = false
-#			if test 'x$force_deps' = 'xyes'; then
-#				AC_MSG_ERROR([
-#kde4-config not found. $KDE4_CONFIG
-#Use -Dkwallet=false if you do not need KWallet support.
-#])
-#			fi
-#		fi
-#	fi
-endif
+	qt5_dep = dependency('qt5', modules: ['Core'])
 
-if enable_kwallet
-#	if test 'x$KDE4_CONFIG' != 'xno'; then
-#		KWALLET_CXXFLAGS='$QT4_CFLAGS -I`$KDE4_CONFIG --path include`'
-#	fi
-#	CPPFLAGS='$CPPFLAGS $KWALLET_CXXFLAGS'
-#	AC_CHECK_HEADER([kwallet.h], , [
-#		enable_kwallet = false
-#		if test 'x$force_deps' = 'xyes'; then
-#			AC_MSG_ERROR([
-#KWallet development headers not found.
-#Use -Dkwallet=false if you do not need KWallet support.
-#])
-#		fi
-#])
-endif
-
-if enable_kwallet
-#	AC_MSG_CHECKING([for KWallet libraries])
-#	if test 'x$KDE4_CONFIG' != 'xno'; then
-#		KWALLET_LIBS='-L`$KDE4_CONFIG --install lib`/kde4/devel -lkdeui'
-#	else
-#		KWALLET_LIBS='-lkdeui'
-#	fi
-#	KWALLET_LIBS='$KWALLET_LIBS'
-#	LIBS='$LIBS $KWALLET_LIBS $QT4_LIBS'
-#	AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <kwallet.h>],
-#		[KWallet::Wallet::LocalWallet();])], [AC_MSG_RESULT([yes])],
-#		[
-#			AC_MSG_RESULT(no)
-#			enable_kwallet = false
-#			if test 'x$force_deps' = 'xyes'; then
-#				AC_MSG_ERROR([
-#KWallet development libraries not found.
-#Use -Dkwallet=false if you do not need KWallet support.
-#])
-#			fi
-#		])
+	kwallet = dependency('KF5Wallet')
 endif
 
 #######################################################################
