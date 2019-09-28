@@ -51,22 +51,9 @@
  * it with code to include your own config.h or similar.  If you're going to
  * provide for translation, you'll also need to setup the gettext macros. */
 #include "internal.h"
+#include <purple.h>
 
 #include "nullprpl.h"
-
-#include "account.h"
-#include "accountopt.h"
-#include "buddylist.h"
-#include "cmds.h"
-#include "conversation.h"
-#include "connection.h"
-#include "debug.h"
-#include "notify.h"
-#include "plugins.h"
-#include "roomlist.h"
-#include "status.h"
-#include "util.h"
-#include "version.h"
 
 /*
  * reference to the protocol instance, used for registering signals, prefs,
@@ -855,10 +842,10 @@ static const char *null_normalize(const PurpleAccount *acct,
 }
 
 static void null_set_buddy_icon(PurpleConnection *gc,
-                                    PurpleStoredImage *img) {
+                                    PurpleImage *img) {
  purple_debug_info("nullprpl", "setting %s's buddy icon to %s\n",
                    purple_account_get_username(purple_connection_get_account(gc)),
-                   img ? purple_imgstore_get_filename(img) : "(null)");
+                   img ? purple_image_get_path(img) : "(null)");
 }
 
 static void null_remove_group(PurpleConnection *gc, PurpleGroup *group) {
@@ -975,10 +962,13 @@ static void null_roomlist_expand_category(PurpleRoomlist *list,
                    purple_roomlist_room_get_name(category));
 }
 
+/* PurpleClientIface->offline_message takes a const PurpleBuddy *, this needs
+ * to change, but didn't want to do that in this pull request.
+ */
 static gboolean null_offline_message(const PurpleBuddy *buddy) {
   purple_debug_info("nullprpl",
                     "reporting that offline messages are supported for %s\n",
-                    purple_buddy_get_name(buddy));
+                    purple_buddy_get_name((PurpleBuddy *)buddy));
   return TRUE;
 }
 
@@ -1155,8 +1145,6 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-  PurpleCmdId id;
-
   /* register the NULL_TYPE_PROTOCOL type in the type system. this function
    * is defined by PURPLE_DEFINE_TYPE_EXTENDED. */
   null_protocol_register_type(plugin);
