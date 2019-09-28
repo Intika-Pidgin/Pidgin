@@ -582,7 +582,7 @@ pidgin_startup_cb(GApplication *app, gpointer user_data)
 		}
 	}
 
-	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
+	search_path = g_build_filename(purple_config_dir(), "gtk-3.0.css", NULL);
 
 	provider = gtk_css_provider_new();
 	gui_check = gtk_css_provider_load_from_path(provider, search_path, &error);

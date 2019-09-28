@@ -608,8 +608,7 @@ pidgin_save_accels(gpointer data)
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
-	                            "accels", NULL);
+	filename = g_build_filename(purple_config_dir(), "accels", NULL);
 	purple_debug(PURPLE_DEBUG_MISC, "accels", "saving accels to %s\n", filename);
 	gtk_accel_map_save(filename);
 	g_free(filename);
@@ -623,8 +622,7 @@ pidgin_load_accels()
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
-	                            "accels", NULL);
+	filename = g_build_filename(purple_config_dir(), "accels", NULL);
 	gtk_accel_map_load(filename);
 	g_free(filename);
 }
