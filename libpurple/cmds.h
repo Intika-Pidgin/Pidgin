@@ -39,9 +39,9 @@
  * @PURPLE_CMD_STATUS_FAILED: The command failed to execute.
  * @PURPLE_CMD_STATUS_NOT_FOUND: The command was not found.
  * @PURPLE_CMD_STATUS_WRONG_ARGS: The wrong number of arguments were passed.
- * @PURPLE_CMD_STATUS_WRONG_PROTOCOL: The command was wrong with the wrong
+ * @PURPLE_CMD_STATUS_WRONG_PROTOCOL: The command was run with the wrong
  *                                    protocol.
- * @PURPLE_CMD_STATUS_WRONG_TYPE: Command was ran against the wrong type of
+ * @PURPLE_CMD_STATUS_WRONG_TYPE: The Command was ran against the wrong type of
  *                                conversation.
  *
  * The possible results of running a command with purple_cmd_do_command().
@@ -57,9 +57,9 @@ typedef enum {
 
 /**
  * PurpleCmdRet:
- * @PURPLE_CMD_RET_OK:       Everything's okay; Don't look for another command
- *                           to call.
- * @PURPLE_CMD_RET_FAILED:   The command failed, but stop looking.
+ * @PURPLE_CMD_RET_OK: Everything's okay; Don't look for another command to
+ *                     call.
+ * @PURPLE_CMD_RET_FAILED: The command failed, but stop looking.
  * @PURPLE_CMD_RET_CONTINUE: Continue, looking for other commands with the same
  *                           name to call.
  *
@@ -111,8 +111,8 @@ typedef guint PurpleCmdId;
  * @PURPLE_CMD_P_VERY_HIGH: Highest priority.
  *
  * Commands are registered from multiple locations which leads to name
- * collisions.  PurpleCmdPriority is used to determine which command to will
- * be run.
+ * collisions.  PurpleCmdPriority is used to determine which command will be
+ * run.
  */
 typedef enum {
 	PURPLE_CMD_P_VERY_LOW  = -1000,
