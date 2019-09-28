@@ -157,6 +157,10 @@ struct _PurplePluginInfoClass {
 
 /**
  * PurplePluginAction:
+ * @label: The label to display in the user interface.
+ * @callback: The function to call when the user wants to perform this action.
+ * @plugin: The plugin that this action belongs to.
+ * @user_data: User data to pass to @callback.
  *
  * Represents an action that the plugin can perform. This shows up in the Tools
  * menu, under a submenu with the name of the plugin.
