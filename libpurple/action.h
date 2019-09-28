@@ -45,8 +45,7 @@ typedef struct _PurpleActionMenu PurpleActionMenu;
  * PurpleProtocolAction:
  * @label: A translated string to be shown in a user interface.
  * @callback: The function to call when the user wants to perform this action.
- * @connection: The connection to that this connection should be performed
- *              against.
+ * @connection: The connection that this action should be performed against.
  * @user_data: User data to pass to @callback.
  *
  * Represents an action that the protocol can perform. This shows up in the
