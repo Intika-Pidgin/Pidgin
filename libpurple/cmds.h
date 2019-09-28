@@ -18,6 +18,7 @@
 
 #ifndef PURPLE_CMDS_H
 #define PURPLE_CMDS_H
+
 /**
  * SECTION:cmds
  * @section_id: libpurple-cmds
@@ -28,12 +29,20 @@
 
 #include "conversation.h"
 
-/**************************************************************************/
-/* Structures                                                             */
-/**************************************************************************/
+/******************************************************************************
+ * Structures
+ *****************************************************************************/
 
 /**
  * PurpleCmdStatus:
+ * @PURPLE_CMD_STATUS_OK: The command executed successfully.
+ * @PURPLE_CMD_STATUS_FAILED: The command failed to execute.
+ * @PURPLE_CMD_STATUS_NOT_FOUND: The command was not found.
+ * @PURPLE_CMD_STATUS_WRONG_ARGS: The wrong number of arguments were passed.
+ * @PURPLE_CMD_STATUS_WRONG_PROTOCOL: The command was wrong with the wrong
+ *                                    protocol.
+ * @PURPLE_CMD_STATUS_WRONG_TYPE: Command was ran against the wrong type of
+ *                                conversation.
  *
  * The possible results of running a command with purple_cmd_do_command().
  */
@@ -71,10 +80,14 @@ typedef enum {
 
 /**
  * PurpleCmdFunc:
+ * @conversation: The #PurpleConversation where the command is being run.
+ * @cmd: The name of the command.
+ * @args: The arguments to the command.
+ * @error: (out): A return address for a #GError.
+ * @data: User data to pass to the function.
  *
  * A function implementing a command, as passed to purple_cmd_register().
  */
-/* TODO document the arguments to these functions. */
 typedef PurpleCmdRet (*PurpleCmdFunc)(PurpleConversation *conversation, const gchar *cmd,
                                   gchar **args, gchar **error, void *data);
 /**
@@ -86,6 +99,21 @@ typedef PurpleCmdRet (*PurpleCmdFunc)(PurpleConversation *conversation, const gc
  */
 typedef guint PurpleCmdId;
 
+/**
+ * PurpleCmdPriority:
+ * @PURPLE_CMD_P_VERY_LOW: Lowest priority.
+ * @PURPLE_CMD_P_LOW: Low priority.
+ * @PURPLE_CMD_P_DEFAULT: Default priority.
+ * @PURPLE_CMD_P_PROTOCOL: Priority for protocol plugins.
+ * @PURPLE_CMD_P_PLUGIN: Priority for plugins.
+ * @PURPLE_CMD_P_ALIAS: Priority for aliasing commands.
+ * @PURPLE_CMD_P_HIGH: High priority.
+ * @PURPLE_CMD_P_VERY_HIGH: Highest priority.
+ *
+ * Commands are registered from multiple locations which leads to name
+ * collisions.  PurpleCmdPriority is used to determine which command to will
+ * be run.
+ */
 typedef enum {
 	PURPLE_CMD_P_VERY_LOW  = -1000,
 	PURPLE_CMD_P_LOW       =     0,
