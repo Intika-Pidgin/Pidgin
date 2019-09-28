@@ -30,8 +30,8 @@
  *
  * A smiley theme is a set of standard smileys, that may be displayed in user's
  * message window instead of their textual representations. It may be
- * categorized depending on the selected protocol, as in #PidginSmileyTheme, but
- * it's up to the UI to choose behavior.
+ * categorized depending on the selected protocol, but it's up to the UI to
+ * choose behavior.
  */
 
 #include <glib-object.h>
