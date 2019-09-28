@@ -1541,7 +1541,7 @@ void
 purple_xfer_ui_ready(PurpleXfer *xfer)
 {
 	PurpleXferPrivate *priv = NULL;
-	PurpleInputCondition cond;
+	PurpleInputCondition cond = 0;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
@@ -1858,7 +1858,7 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 void
 purple_xfer_error(PurpleXferType type, PurpleAccount *account, const gchar *who, const gchar *msg)
 {
-	gchar *title;
+	gchar *title = NULL;
 
 	g_return_if_fail(msg  != NULL);
 
