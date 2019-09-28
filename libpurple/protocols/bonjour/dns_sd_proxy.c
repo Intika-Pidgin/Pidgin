@@ -1,5 +1,4 @@
 /*
- *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -20,6 +19,8 @@
  */
 
 #include "internal.h"
+#include <purple.h>
+
 #include "dns_sd_proxy.h"
 
 static DNSServiceErrorType (DNSSD_API* _DNSServiceAddRecord)(DNSServiceRef sdRef, DNSRecordRef *RecordRef, DNSServiceFlags flags,
