@@ -1,6 +1,4 @@
 /**
- * @file irc.h
- *
  * purple
  *
  * Copyright (C) 2003, 2012 Ethan Blanton <elb@pidgin.im>
@@ -30,10 +28,7 @@
 #include <sasl/sasl.h>
 #endif
 
-#include "circularbuffer.h"
-#include "xfer.h"
-#include "queuedoutputstream.h"
-#include "roomlist.h"
+#include <purple.h>
 
 #define IRC_TYPE_PROTOCOL             (irc_protocol_get_type())
 #define IRC_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), IRC_TYPE_PROTOCOL, IRCProtocol))
