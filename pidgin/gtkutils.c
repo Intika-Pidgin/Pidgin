@@ -1084,7 +1084,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 	GStatBuf st;
 	GError *err = NULL;
 	PurpleConversation *conv;
-	PidginConversation *gtkconv;
 	PurpleBuddy *buddy;
 	PurpleContact *contact;
 	PurpleImage *img;
@@ -1116,7 +1115,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		break;
 	case DND_IM_IMAGE:
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(data->account, data->who));
-		gtkconv = PIDGIN_CONVERSATION(conv);
 
 		if (!g_file_get_contents(data->filename, &filedata, &size,
 					 &err)) {

@@ -285,8 +285,8 @@ pidgin_scroll_book_init (PidginScrollBook *scroll_book)
 	/* Right arrow */
 	eb = gtk_event_box_new();
 	gtk_box_pack_end(GTK_BOX(scroll_book->hbox), eb, FALSE, FALSE, 0);
-	icon = g_themed_icon_new_from_names(
-	        right_arrow_icon_names, G_N_ELEMENTS(right_arrow_icon_names));
+	icon = g_themed_icon_new_from_names((char **)right_arrow_icon_names,
+	                                    G_N_ELEMENTS(right_arrow_icon_names));
 	scroll_book->right_arrow =
 	        gtk_image_new_from_gicon(icon, GTK_ICON_SIZE_BUTTON);
 	g_object_unref(icon);
@@ -300,8 +300,8 @@ pidgin_scroll_book_init (PidginScrollBook *scroll_book)
 	/* Left arrow */
 	eb = gtk_event_box_new();
 	gtk_box_pack_end(GTK_BOX(scroll_book->hbox), eb, FALSE, FALSE, 0);
-	icon = g_themed_icon_new_from_names(
-	        left_arrow_icon_names, G_N_ELEMENTS(left_arrow_icon_names));
+	icon = g_themed_icon_new_from_names((char **)left_arrow_icon_names,
+	                                    G_N_ELEMENTS(left_arrow_icon_names));
 	scroll_book->left_arrow =
 	        gtk_image_new_from_gicon(icon, GTK_ICON_SIZE_BUTTON);
 	g_object_unref(icon);

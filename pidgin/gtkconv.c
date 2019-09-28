@@ -4033,18 +4033,18 @@ minimum_entry_lines_pref_cb(const char *name,
                             gconstpointer value,
                             gpointer data)
 {
+#if 0
 	GList *l = purple_conversations_get_all();
 	PurpleConversation *conv;
 	while (l != NULL)
 	{
-#if 0
 		conv = (PurpleConversation *)l->data;
 
 		if (PIDGIN_IS_PIDGIN_CONVERSATION(conv))
 			resize_webview_cb(PIDGIN_CONVERSATION(conv));
-#endif
 		l = l->next;
 	}
+#endif
 }
 
 static void
@@ -4472,7 +4472,6 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	GtkWidget *pane = NULL;
 	GtkWidget *tab_cont;
 	PurpleBlistNode *convnode;
-	GtkTargetList *targets;
 
 	if (PURPLE_IS_IM_CONVERSATION(conv) && (gtkconv = pidgin_conv_find_gtkconv(conv))) {
 		purple_conversation_set_ui_data(conv, gtkconv);
