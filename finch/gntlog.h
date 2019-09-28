@@ -41,6 +41,7 @@ typedef struct _FinchLogViewer FinchLogViewer;
  * @tree:   The tree representing said treestore
  * @text:   The text to display said logs
  * @entry:  The search entry, in which search terms are entered
+ * @label:  The label for the log viewer
  * @flags:  The most recently used log flags
  * @search: The string currently being searched for
  *
