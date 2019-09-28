@@ -51,22 +51,7 @@ null_write_conv(PurpleConversation *conv, PurpleMessage *msg)
 
 static PurpleConversationUiOps null_conv_uiops =
 {
-	NULL,                      /* create_conversation  */
-	NULL,                      /* destroy_conversation */
-	NULL,                      /* write_chat           */
-	NULL,                      /* write_im             */
-	null_write_conv,           /* write_conv           */
-	NULL,                      /* chat_add_users       */
-	NULL,                      /* chat_rename_user     */
-	NULL,                      /* chat_remove_users    */
-	NULL,                      /* chat_update_user     */
-	NULL,                      /* present              */
-	NULL,                      /* has_focus            */
-	NULL,                      /* send_confirm         */
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	.write_conv = null_write_conv,
 };
 
 static void
@@ -81,17 +66,7 @@ null_ui_init(void)
 
 static PurpleCoreUiOps null_core_uiops =
 {
-	NULL,
-	NULL,
-	null_ui_init,
-	NULL,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL,
-	NULL
+	.ui_init = null_ui_init,
 };
 
 static void
