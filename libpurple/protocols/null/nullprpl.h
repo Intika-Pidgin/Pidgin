@@ -1,4 +1,5 @@
-/* purple
+/*
+ * purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -23,7 +24,7 @@
 #ifndef PURPLE_NULL_NULLPRPL_H
 #define PURPLE_NULL_NULLPRPL_H
 
-#include "protocol.h"
+#include <purple.h>
 
 #define NULL_TYPE_PROTOCOL             (null_protocol_get_type())
 #define NULL_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), NULL_TYPE_PROTOCOL, NullProtocol))
