@@ -39,7 +39,7 @@
  * finch_start:
  * @argc: Address of the argc parameter of your main() function (or 0 if argv
  *        is %NULL). This will be changed if any arguments were handled.
- * @argv: Address of the argv parameter of main(), or NULL. Any options
+ * @argv: Address of the argv parameter of main(), or %NULL. Any options
  *        understood by Finch are stripped before return.
  *
  * Start finch with the given command line arguments.
