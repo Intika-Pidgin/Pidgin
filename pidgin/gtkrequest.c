@@ -2347,21 +2347,6 @@ pidgin_request_fields(const char *title, const char *primary,
 }
 
 static void
-file_yes_no_cb(PidginRequestData *data, gint id)
-{
-	/* Only call the callback if yes was selected, otherwise the request
-	 * (eg. file transfer) will be cancelled, then when a new filename is chosen
-	 * things go BOOM */
-	if (id == 1) {
-		if (data->cbs[1] != NULL)
-			((PurpleRequestFileCb)data->cbs[1])(data->user_data, data->u.file.name);
-		purple_request_close(data->type, data);
-	} else {
-		pidgin_clear_cursor(GTK_WIDGET(data->dialog));
-	}
-}
-
-static void
 file_ok_check_if_exists_cb(GtkWidget *widget, gint response, PidginRequestData *data)
 {
 	gchar *current_folder;
@@ -2385,16 +2370,10 @@ file_ok_check_if_exists_cb(GtkWidget *widget, gint response, PidginRequestData *
 		}
 		g_free(current_folder);
 	}
-	if ((data->u.file.savedialog == TRUE) &&
-		(g_file_test(data->u.file.name, G_FILE_TEST_EXISTS))) {
-		purple_request_action(data, NULL, _("That file already exists"),
-							_("Would you like to overwrite it?"), 0,
-							NULL,
-							data, 2,
-							_("Overwrite"), G_CALLBACK(file_yes_no_cb),
-							_("Choose New Name"), G_CALLBACK(file_yes_no_cb));
-	} else
-		file_yes_no_cb(data, 1);
+	if (data->cbs[1] != NULL) {
+		((PurpleRequestFileCb)data->cbs[1])(data->user_data, data->u.file.name);
+	}
+	purple_request_close(data->type, data);
 }
 
 static void *
@@ -2430,6 +2409,8 @@ pidgin_request_file(const char *title, const char *filename,
 						GTK_RESPONSE_ACCEPT,
 						NULL);
 	gtk_dialog_set_default_response(GTK_DIALOG(filesel), GTK_RESPONSE_ACCEPT);
+	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(filesel),
+	                                               TRUE);
 
 	pidgin_request_add_help(GTK_DIALOG(filesel), cpar);
 
