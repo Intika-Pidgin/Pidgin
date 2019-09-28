@@ -159,7 +159,7 @@ purple_theme_manager_refresh(void)
 	                            &loaders);
 
 	/* Add themes from ~/.purple */
-	path = g_build_filename(purple_user_dir(), "themes", NULL);
+	path = g_build_filename(purple_data_dir(), "themes", NULL);
 	purple_theme_manager_build_dir(loaders, path);
 	g_free(path);
 
