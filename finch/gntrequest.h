@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_REQUEST_H
-#define _GNT_REQUEST_H
+#ifndef GNT_REQUEST_H
+#define GNT_REQUEST_H
+
 /**
  * SECTION:gntrequest
  * @section_id: finch-gntrequest
@@ -60,11 +61,13 @@ void finch_request_uninit(void);
 
 /**
  * finch_request_save_in_prefs:
+ * @data: No longer used, set to %NULL.
+ * @fields: The #PurpleRequestFields to save.
  *
  * Save the request fields in preferences where the id attribute of each field is the
  * id of a preference.
  */
-void finch_request_save_in_prefs(gpointer null, PurpleRequestFields *fields);
+void finch_request_save_in_prefs(gpointer data, PurpleRequestFields *fields);
 
 /**
  * finch_request_field_get_widget:
@@ -76,4 +79,4 @@ void finch_request_save_in_prefs(gpointer null, PurpleRequestFields *fields);
  */
 GntWidget *finch_request_field_get_widget(PurpleRequestField *field);
 
-#endif
+#endif /* GNT_REQUEST_H */

@@ -858,7 +858,7 @@ void finch_request_uninit()
 {
 }
 
-void finch_request_save_in_prefs(gpointer null, PurpleRequestFields *allfields)
+void finch_request_save_in_prefs(gpointer data, PurpleRequestFields *allfields)
 {
 	GList *list;
 	for (list = purple_request_fields_get_groups(allfields); list; list = list->next) {
