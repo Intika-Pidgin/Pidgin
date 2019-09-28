@@ -25,11 +25,7 @@
  */
 
 #include "internal.h"
-#include "account.h"
-#include "core.h"
-#include "debug.h"
-#include "plugins.h"
-#include "version.h"
+#include <purple.h>
 
 #include <QQueue>
 #include <QCoreApplication>

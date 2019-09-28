@@ -18,12 +18,7 @@
  */
 #include "internal.h"
 
-#include <action.h>
-#include <debug.h>
-#include <notify.h>
-#include <request.h>
-#include <signals.h>
-#include <version.h>
+#include <purple.h>
 
 static void
 dont_do_it_cb(PurpleBlistNode *node, const char *note)

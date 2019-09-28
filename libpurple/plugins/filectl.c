@@ -16,14 +16,7 @@
 #include <ctype.h>
 
 #include "internal.h"
-#include "account.h"
-#include "config.h"
-#include "core.h"
-#include "conversation.h"
-#include "debug.h"
-#include "eventloop.h"
-#include "util.h"
-#include "version.h"
+#include <purple.h>
 
 #define FILECTL_PLUGIN_ID "core-filectl"
 static int check;
