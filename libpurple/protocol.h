@@ -817,7 +817,7 @@ const char *purple_protocol_client_iface_list_emblem(PurpleProtocol *protocol,
 /**
  * purple_protocol_client_iface_status_text:
  * @protocol: The #PurpleProtocol instance.
- * @buddy: The #ProtocolBuddy instance.
+ * @buddy: The #PurpleBuddy instance.
  *
  * Gets the status text for @buddy.
  *
