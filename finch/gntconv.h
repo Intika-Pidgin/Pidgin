@@ -58,15 +58,15 @@ typedef enum
 
 /**
  * FinchConv:
- * @list:
- * @active_conv:
- * @window:
- * @entry:
- * @tv:
- * @menu:
- * @info:
- * @plugins:
- * @flags:
+ * @list: A list of conversations being displayed in this window.
+ * @active_conv: The active conversation.
+ * @window: The #GntWindow for the conversation.
+ * @entry: The #GntEntry for input.
+ * @tv: The #GntTextView that displays the history.
+ * @menu: The menu for the conversation.
+ * @info: The info widget that shows the information about the conversation.
+ * @plugins: The #GntMenuItem for plugins.
+ * @flags: The flags for the conversation.
  *
  * A Finch conversation.
  */
