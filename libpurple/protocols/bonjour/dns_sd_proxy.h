@@ -1,5 +1,4 @@
 /*
- *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -21,7 +20,9 @@
 #ifndef PURPLE_BONJOUR_DNS_SD_PROXY_H
 #define PURPLE_BONJOUR_DNS_SD_PROXY_H
 
-#include <config.h>
+#if HAVE_CONFIG_H
+# include <config.h>
+#endif /* HAVE_CONFIG_H */
 
 #ifndef _MSC_VER
 #include <stdint.h>
