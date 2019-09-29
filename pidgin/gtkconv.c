@@ -2246,7 +2246,7 @@ custom_icon_sel_cb(const char *filename, gpointer data)
 static void
 set_custom_icon_cb(GtkWidget *widget, PurpleContact *contact)
 {
-	GtkWidget *win = NULL;
+	GtkFileChooserNative *win = NULL;
 
 	/* Should not happen as menu item should be disabled. */
 	g_return_if_fail(contact != NULL);
@@ -2259,9 +2259,9 @@ set_custom_icon_cb(GtkWidget *widget, PurpleContact *contact)
 		win = pidgin_buddy_icon_chooser_new(GTK_WINDOW(toplevel),
 		                                    custom_icon_sel_cb, contact);
 		g_object_set_data_full(G_OBJECT(contact), "buddy-icon-chooser", win,
-		                       (GDestroyNotify)gtk_widget_destroy);
+		                       (GDestroyNotify)g_object_unref);
 	}
-	gtk_widget_show_all(win);
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(win));
 }
 
 static void

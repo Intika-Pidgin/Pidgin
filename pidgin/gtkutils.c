@@ -108,7 +108,7 @@ typedef struct
 } PidginCompletionData;
 
 struct _icon_chooser {
-	GtkWidget *icon_filesel;
+	GtkFileChooserNative *icon_filesel;
 	GtkWidget *icon_preview;
 	GtkWidget *icon_text;
 
@@ -1900,10 +1900,6 @@ icon_filesel_choose_cb(GtkWidget *widget, gint response, struct _icon_chooser *d
 	char *filename, *current_folder;
 
 	if (response != GTK_RESPONSE_ACCEPT) {
-		if (response == GTK_RESPONSE_CANCEL) {
-			gtk_widget_destroy(dialog->icon_filesel);
-		}
-		dialog->icon_filesel = NULL;
 		if (dialog->callback)
 			dialog->callback(NULL, dialog->data);
 		g_free(dialog);
@@ -1920,7 +1916,6 @@ icon_filesel_choose_cb(GtkWidget *widget, gint response, struct _icon_chooser *d
 
 	if (dialog->callback)
 		dialog->callback(filename, dialog->data);
-	gtk_widget_destroy(dialog->icon_filesel);
 	g_free(filename);
 	g_free(dialog);
 }
@@ -1964,8 +1959,11 @@ icon_preview_change_cb(GtkFileChooser *widget, struct _icon_chooser *dialog)
 	g_free(markup);
 }
 
-
-GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char *, gpointer), gpointer data) {
+GtkFileChooserNative *
+pidgin_buddy_icon_chooser_new(GtkWindow *parent,
+                              void (*callback)(const char *, gpointer),
+                              gpointer data)
+{
 	struct _icon_chooser *dialog = g_new0(struct _icon_chooser, 1);
 
 	GtkWidget *vbox;
@@ -1976,13 +1974,9 @@ GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(cons
 
 	current_folder = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/filelocations/last_icon_folder");
 
-	dialog->icon_filesel = gtk_file_chooser_dialog_new(_("Buddy Icon"),
-							   parent,
-							   GTK_FILE_CHOOSER_ACTION_OPEN,
-							   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-							   GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
-							   NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(dialog->icon_filesel), GTK_RESPONSE_ACCEPT);
+	dialog->icon_filesel = gtk_file_chooser_native_new(
+	        _("Buddy Icon"), parent, GTK_FILE_CHOOSER_ACTION_OPEN, _("_Open"),
+	        _("_Cancel"));
 	if ((current_folder != NULL) && (*current_folder != '\0'))
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog->icon_filesel),
 						    current_folder);
@@ -2005,11 +1999,6 @@ GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(cons
 	g_signal_connect(G_OBJECT(dialog->icon_filesel), "response",
 					 G_CALLBACK(icon_filesel_choose_cb), dialog);
 	icon_preview_change_cb(NULL, dialog);
-
-#ifdef _WIN32
-	g_signal_connect(G_OBJECT(dialog->icon_filesel), "show",
-		G_CALLBACK(winpidgin_ensure_onscreen), dialog->icon_filesel);
-#endif
 
 	return dialog->icon_filesel;
 }

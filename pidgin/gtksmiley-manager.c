@@ -180,14 +180,15 @@ edit_dialog_image_choosen(const char *filename, gpointer _edit_dialog)
 static void
 edit_dialog_image_choose(GtkWidget *widget, gpointer _edit_dialog)
 {
-	GtkWidget *file_chooser;
+	GtkFileChooserNative *file_chooser;
 	file_chooser = pidgin_buddy_icon_chooser_new(
 		GTK_WINDOW(gtk_widget_get_toplevel(widget)),
 		edit_dialog_image_choosen, _edit_dialog);
 	gtk_window_set_title(GTK_WINDOW(file_chooser), _("Custom Smiley"));
 	gtk_window_set_role(GTK_WINDOW(file_chooser),
 		"file-selector-custom-smiley");
-	gtk_widget_show_all(file_chooser);
+	gtk_native_dialog_run(GTK_NATIVE_DIALOG(file_chooser));
+	g_object_unref(file_chooser);
 }
 
 
