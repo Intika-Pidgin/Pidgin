@@ -1,6 +1,4 @@
 /**
- * @file gnttinyurl.c
- *
  * Copyright (C) 2009 Richard Nelson <wabz@whatsbeef.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,7 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-
 #include "internal.h"
 #include <glib.h>
 
@@ -26,7 +23,6 @@
 #define PREFS_BASE          "/plugins/gnt/tinyurl"
 #define PREF_LENGTH  PREFS_BASE "/length"
 #define PREF_URL  PREFS_BASE "/url"
-
 
 #include <conversation.h>
 #include <http.h>
