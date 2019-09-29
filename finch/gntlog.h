@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FINCHLOG_H_
-#define _FINCHLOG_H_
+#ifndef FINCH_LOG_H
+#define FINCH_LOG_H
+
 /**
  * SECTION:gntlog
  * @section_id: finch-gntlog
@@ -93,4 +94,5 @@ void *finch_log_get_handle(void);
  */
 void finch_log_uninit(void);
 
-#endif
+#endif /* FINCH_LOG_H */
+

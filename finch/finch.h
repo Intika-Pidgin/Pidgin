@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FINCH_H_
-#define _FINCH_H_
+#ifndef FINCH_H
+#define FINCH_H
 
 /**
  * SECTION:finch
@@ -46,4 +46,5 @@
  */
 gboolean finch_start(int *argc, char ***argv);
 
-#endif
+#endif /* FINCH_H */
+

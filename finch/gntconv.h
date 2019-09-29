@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_CONV_H
-#define _GNT_CONV_H
+#ifndef FINCH_CONV_H
+#define FINCH_CONV_H
+
 /**
  * SECTION:gntconv
  * @section_id: finch-gntconv
@@ -169,4 +170,5 @@ void finch_conversation_set_active(PurpleConversation *conv);
  */
 void finch_conversation_set_info_widget(PurpleConversation *conv, GntWidget *widget);
 
-#endif
+#endif /* FINCH_CONV_H */
+
