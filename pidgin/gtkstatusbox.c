@@ -445,7 +445,7 @@ destroy_icon_box(PidginStatusBox *statusbox)
 	g_clear_object(&statusbox->buddy_icon);
 	g_clear_object(&statusbox->buddy_icon_hover);
 
-	g_clear_pointer(&statusbox->buddy_icon_sel, gtk_widget_destroy);
+	g_clear_object(&statusbox->buddy_icon_sel);
 
 	g_clear_pointer(&statusbox->icon_box_menu, gtk_widget_destroy);
 
@@ -1410,12 +1410,10 @@ remove_buddy_icon_cb(GtkWidget *w, PidginStatusBox *box)
 static void
 choose_buddy_icon_cb(GtkWidget *w, PidginStatusBox *box)
 {
-	if (box->buddy_icon_sel) {
-		gtk_window_present(GTK_WINDOW(box->buddy_icon_sel));
-	} else {
+	if (box->buddy_icon_sel == NULL) {
 		box->buddy_icon_sel = pidgin_buddy_icon_chooser_new(GTK_WINDOW(gtk_widget_get_toplevel(w)), icon_choose_cb, box);
-		gtk_widget_show_all(box->buddy_icon_sel);
 	}
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(box->buddy_icon_sel));
 }
 
 static void
@@ -1430,7 +1428,7 @@ icon_choose_cb(const char *filename, gpointer data)
 			buddy_icon_set_cb(filename, box);
 	}
 
-	box->buddy_icon_sel = NULL;
+	g_clear_object(&box->buddy_icon_sel);
 }
 
 static void

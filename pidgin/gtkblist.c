@@ -1686,14 +1686,15 @@ set_node_custom_icon_cb(const gchar *filename, gpointer data)
 static void
 set_node_custom_icon(GtkWidget *w, PurpleBlistNode *node)
 {
-	GtkWidget *win = g_object_get_data(G_OBJECT(node), "buddy-icon-chooser");
+	GtkFileChooserNative *win =
+	        g_object_get_data(G_OBJECT(node), "buddy-icon-chooser");
 	if (win == NULL) {
 		win = pidgin_buddy_icon_chooser_new(NULL, set_node_custom_icon_cb,
 		                                    node);
 		g_object_set_data_full(G_OBJECT(node), "buddy-icon-chooser", win,
-		                       (GDestroyNotify)gtk_widget_destroy);
+		                       g_object_unref);
 	}
-	gtk_widget_show_all(win);
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(win));
 }
 
 static void
