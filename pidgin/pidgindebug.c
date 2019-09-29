@@ -819,13 +819,17 @@ pidgin_debug_ui_init(PidginDebugUi *self)
 	/* Register the glib/gtk log handlers. */
 	REGISTER_G_LOG_HANDLER(NULL);
 	REGISTER_G_LOG_HANDLER("Gdk");
-	REGISTER_G_LOG_HANDLER("Gtk");
 	REGISTER_G_LOG_HANDLER("GdkPixbuf");
 	REGISTER_G_LOG_HANDLER("GLib");
-	REGISTER_G_LOG_HANDLER("GModule");
 	REGISTER_G_LOG_HANDLER("GLib-GObject");
+	REGISTER_G_LOG_HANDLER("GModule");
+	REGISTER_G_LOG_HANDLER("Gnt"); /* just in case we find a gnt plugin */
+	REGISTER_G_LOG_HANDLER("GPlugin");
+	REGISTER_G_LOG_HANDLER("GPluginGtk");
 	REGISTER_G_LOG_HANDLER("GThread");
+	REGISTER_G_LOG_HANDLER("Gtk");
 	REGISTER_G_LOG_HANDLER("Json");
+	REGISTER_G_LOG_HANDLER("Talkatu");
 #ifdef USE_GSTREAMER
 	REGISTER_G_LOG_HANDLER("GStreamer");
 #endif
