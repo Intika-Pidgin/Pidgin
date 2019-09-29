@@ -1680,14 +1680,19 @@ set_node_custom_icon_cb(const gchar *filename, gpointer data)
 		purple_buddy_icons_node_set_custom_icon_from_file(node,
 		                                                  filename);
 	}
+	g_object_set_data(G_OBJECT(data), "buddy-icon-chooser", NULL);
 }
 
 static void
 set_node_custom_icon(GtkWidget *w, PurpleBlistNode *node)
 {
-	/* This doesn't keep track of the returned dialog (so that successive
-	 * calls could be made to re-display that dialog). Do we want that? */
-	GtkWidget *win = pidgin_buddy_icon_chooser_new(NULL, set_node_custom_icon_cb, node);
+	GtkWidget *win = g_object_get_data(G_OBJECT(node), "buddy-icon-chooser");
+	if (win == NULL) {
+		win = pidgin_buddy_icon_chooser_new(NULL, set_node_custom_icon_cb,
+		                                    node);
+		g_object_set_data_full(G_OBJECT(node), "buddy-icon-chooser", win,
+		                       (GDestroyNotify)gtk_widget_destroy);
+	}
 	gtk_widget_show_all(win);
 }
 
