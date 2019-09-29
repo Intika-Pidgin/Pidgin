@@ -31,10 +31,6 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-/* Purple headers */
-#include <plugins.h>
-#include <version.h>
-
 #include <purple.h>
 
 #define PREF_PREFIX		"/plugins/core/" PLUGIN_ID
