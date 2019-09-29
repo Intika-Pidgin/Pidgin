@@ -1,6 +1,4 @@
 /**
- * @file grouping.c  Provides different grouping options.
- *
  * Copyright (C) 2008 Sadrul Habib Chowdhury <sadrul@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
