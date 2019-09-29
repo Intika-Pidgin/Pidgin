@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_STATUS_H
-#define _GNT_STATUS_H
+#ifndef FINCH_STATUS_H
+#define FINCH_STATUS_H
+
 /**
  * SECTION:gntstatus
  * @section_id: finch-gntstatus
@@ -50,4 +51,5 @@ void finch_savedstatus_show_all(void);
  */
 void finch_savedstatus_edit(PurpleSavedStatus *saved);
 
-#endif
+#endif /* FINCH_STATUS_H */
+
