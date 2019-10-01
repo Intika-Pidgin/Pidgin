@@ -160,8 +160,7 @@ finch_plugin_info_new(const char *first_property, ...)
 static void
 free_stringlist(GList *list)
 {
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static gboolean
@@ -325,8 +324,7 @@ reset_plugin_window(GntWidget *window, gpointer null)
 {
 	GList *list = g_object_get_data(G_OBJECT(plugins.tree), "seen-list");
 	purple_prefs_set_path_list("/finch/plugins/seen", list);
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 
 	plugins.window = NULL;
 	plugins.tree = NULL;

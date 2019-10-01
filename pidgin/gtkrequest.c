@@ -1569,8 +1569,7 @@ datasheet_get_selected_row(GtkWidget *sheet_widget)
 
 	sel_list = gtk_tree_selection_get_selected_rows(selection, &model);
 	gtk_tree_model_get_iter(model, &iter, sel_list->data);
-	g_list_foreach(sel_list, (GFunc)gtk_tree_path_free, NULL);
-	g_list_free(sel_list);
+	g_list_free_full(sel_list, (GDestroyNotify)gtk_tree_path_free);
 
 	gtk_tree_model_get(model, &iter, 0, &key, -1);
 

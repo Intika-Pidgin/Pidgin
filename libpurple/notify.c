@@ -266,8 +266,7 @@ purple_notify_searchresults_free(PurpleNotifySearchResults *results)
 
 	for (l = results->rows; l; l = g_list_delete_link(l, l)) {
 		GList *row = l->data;
-		g_list_foreach(row, (GFunc)g_free, NULL);
-		g_list_free(row);
+		g_list_free_full(row, g_free);
 	}
 
 	for (l = results->columns; l; l = g_list_delete_link(l, l)) {

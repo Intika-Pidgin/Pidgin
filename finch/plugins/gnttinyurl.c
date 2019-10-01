@@ -237,11 +237,6 @@ static void url_fetched(PurpleHttpConnection *http_conn,
 	purple_debug_info("TinyURL", "Conversation no longer exists... :(\n");
 }
 
-static void free_urls(gpointer data, gpointer null)
-{
-	g_free(data);
-}
-
 static gboolean writing_msg(PurpleConversation *conv, PurpleMessage *msg, gpointer _unused)
 {
 	GString *t;
@@ -252,9 +247,7 @@ static gboolean writing_msg(PurpleConversation *conv, PurpleMessage *msg, gpoint
 		return FALSE;
 
 	urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
-	if (urls != NULL) /* message was cancelled somewhere? Reset. */
-		g_list_foreach(urls, free_urls, NULL);
-	g_list_free(urls);
+	g_list_free_full(urls, g_free);
 	urls = extract_urls(purple_message_get_contents(msg));
 	if (!urls)
 		return FALSE;
@@ -362,9 +355,7 @@ static void
 free_conv_urls(PurpleConversation *conv)
 {
 	GList *urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
-	if (urls)
-		g_list_foreach(urls, free_urls, NULL);
-	g_list_free(urls);
+	g_list_free_full(urls, g_free);
 }
 
 static void

@@ -1487,8 +1487,7 @@ purple_chat_conversation_finalize(GObject *object)
 	g_hash_table_destroy(priv->users);
 	priv->users = NULL;
 
-	g_list_foreach(priv->ignored, (GFunc)g_free, NULL);
-	g_list_free(priv->ignored);
+	g_list_free_full(priv->ignored, g_free);
 	priv->ignored = NULL;
 
 	g_free(priv->who);

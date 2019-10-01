@@ -345,8 +345,7 @@ pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 		gtk_tree_model_get(GTK_TREE_MODEL(pounce_dialog->treemodel), &iter,
 				PIDGIN_POUNCE_DATA, &pounce_data,
 				-1);
-		g_list_foreach(list, (GFunc)gtk_tree_path_free, NULL);
-		g_list_free(list);
+		g_list_free_full(list, (GDestroyNotify)gtk_tree_path_free);
 
 		pounces = purple_pounces_get_all();
 		for (; pounces != NULL; pounces = pounces->next) {
@@ -499,8 +498,7 @@ searchresults_callback_wrapper_cb(GtkWidget *widget, PidginNotifySearchResultsBu
 
 	button = bd->button;
 	button->callback(purple_account_get_connection(data->account), row, data->user_data);
-	g_list_foreach(row, (GFunc)g_free, NULL);
-	g_list_free(row);
+	g_list_free_full(row, g_free);
 }
 
 /* copy-paste from gtkrequest.c */

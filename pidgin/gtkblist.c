@@ -2127,8 +2127,7 @@ add_buddies_from_vcard(const char *protocol_id, PurpleGroup *group, GList *list,
 		}
 	}
 
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static gboolean
