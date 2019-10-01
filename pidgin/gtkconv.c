@@ -236,8 +236,7 @@ close_this_sucker(gpointer data)
 {
 	PidginConversation *gtkconv = data;
 	GList *list = g_list_copy(gtkconv->convs);
-	g_list_foreach(list, (GFunc)g_object_unref, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_object_unref);
 	return FALSE;
 }
 
@@ -4661,8 +4660,7 @@ pidgin_conv_destroy(PurpleConversation *conv)
 	}
 
 	gtkconv->send_history = g_list_first(gtkconv->send_history);
-	g_list_foreach(gtkconv->send_history, (GFunc)g_free, NULL);
-	g_list_free(gtkconv->send_history);
+	g_list_free_full(gtkconv->send_history, g_free);
 
 	if (gtkconv->attach_timer) {
 		g_source_remove(gtkconv->attach_timer);

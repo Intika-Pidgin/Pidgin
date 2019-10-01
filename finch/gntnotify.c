@@ -378,8 +378,7 @@ notify_button_activated(GntWidget *widget, PurpleNotifySearchButton *b)
 	list = gnt_tree_get_selection_text_list(GNT_TREE(g_object_get_data(G_OBJECT(widget), "notify-tree")));
 
 	b->callback(purple_account_get_connection(account), list, data);
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static void

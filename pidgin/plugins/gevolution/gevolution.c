@@ -110,8 +110,7 @@ update_ims_from_contact(EContact *contact, const char *name,
 		g_free(me);
 	}
 
-	g_list_foreach(ims, (GFunc)g_free, NULL);
-	g_list_free(ims);
+	g_list_free_full(ims, g_free);
 }
 
 static void
