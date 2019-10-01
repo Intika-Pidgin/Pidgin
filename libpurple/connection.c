@@ -648,7 +648,18 @@ void purple_connection_update_last_received(PurpleConnection *gc)
 	 * keepalive mechanism is inactive.
 	 */
 	if (priv->keepalive) {
-		purple_timeout_reset(priv->keepalive, purple_protocol_server_iface_get_keepalive_interval(priv->protocol));
+		/* The #GTimeoutSource API doesn't expose a function to reset when a
+		 * #GTimeoutSource will dispatch the next time, but because it works to
+		 * directly call g_source_set_ready_time() on a #GTimeoutSource, and since
+		 * it seems unlikely that the implementation will change, we just do that
+		 * for now as a workaround for this API shortcoming.
+		 */
+		gint64 seconds_from_now = purple_protocol_server_iface_get_keepalive_interval(priv->protocol);
+
+		g_source_set_ready_time(
+			priv->keepalive,
+			g_get_monotonic_time() + (seconds_from_now * G_USEC_PER_SEC)
+		);
 	}
 }
 

@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_AVATAR_H
-#define _GGP_AVATAR_H
+#ifndef PURPLE_GG_AVATAR_H
+#define PURPLE_GG_AVATAR_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -50,4 +50,4 @@ void ggp_avatar_buddy_remove(PurpleConnection *gc, uin_t uin);
 
 void ggp_avatar_own_set(PurpleConnection *gc, PurpleImage *img);
 
-#endif /* _GGP_AVATAR_H */
+#endif /* PURPLE_GG_AVATAR_H */

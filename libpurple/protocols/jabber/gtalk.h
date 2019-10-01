@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _GTALK_H_
-#define _GTALK_H_
+
+#ifndef PURPLE_JABBER_GTALK_H
+#define PURPLE_JABBER_GTALK_H
 
 #include "jabber.h"
 
@@ -52,4 +53,4 @@ void gtalk_protocol_register(PurplePlugin *plugin);
  */
 G_MODULE_EXPORT GType gtalk_protocol_get_type(void);
 
-#endif /* _GTALK_H_ */
+#endif /* PURPLE_JABBER_GTALK_H */

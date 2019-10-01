@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef _PURPLE_JABBER_USERAVATAR_H_
-#define _PURPLE_JABBER_USERAVATAR_H_
+#ifndef PURPLE_JABBER_USERAVATAR_H
+#define PURPLE_JABBER_USERAVATAR_H
 
 #include "jabber.h"
 #include "image.h"
@@ -34,4 +34,4 @@ void jabber_avatar_set(JabberStream *js, PurpleImage *img);
 
 void jabber_avatar_fetch_mine(JabberStream *js);
 
-#endif /* _PURPLE_JABBER_USERAVATAR_H_ */
+#endif /* PURPLE_JABBER_USERAVATAR_H */

@@ -1,6 +1,4 @@
 /**
- * @file gnthistory.c Show log from previous conversation
- *
  * Copyright (C) 2006 Sadrul Habib Chowdhury <sadrul@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify

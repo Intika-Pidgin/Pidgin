@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_REQUEST_H__
-#define __NM_REQUEST_H__
+#ifndef PURPLE_NOVELL_NMREQUEST_H
+#define PURPLE_NOVELL_NMREQUEST_H
 
 typedef struct _NMRequest NMRequest;
 
@@ -147,4 +147,4 @@ nm_response_cb nm_request_get_callback(NMRequest * req);
  */
 NMERR_T nm_request_get_ret_code(NMRequest * req);
 
-#endif
+#endif /* PURPLE_NOVELL_NMREQUEST_H */

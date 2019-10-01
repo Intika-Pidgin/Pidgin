@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_CONTACT_H__
-#define __NM_CONTACT_H__
+#ifndef PURPLE_NOVELL_NMCONTACT_H
+#define PURPLE_NOVELL_NMCONTACT_H
 
 #include <glib.h>
 
@@ -422,4 +422,4 @@ nm_folder_find_contact_by_display_id(NMFolder * folder, const char *display_id);
  */
 NMField *nm_folder_to_fields(NMFolder * folder);
 
-#endif
+#endif /* PURPLE_NOVELL_NMCONTACT_H */

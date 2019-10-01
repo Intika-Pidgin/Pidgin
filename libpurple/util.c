@@ -932,16 +932,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 }
 
 
-/**************************************************************************/
-/* GLib Event Loop Functions                                              */
-/**************************************************************************/
-
-void purple_timeout_reset(GSource *source, gint64 seconds_from_now)
-{
-	g_source_set_ready_time(source, g_get_monotonic_time() + (seconds_from_now * G_USEC_PER_SEC));
-}
-
-
 /**************************************************************************
  * Markup Functions
  **************************************************************************/
@@ -3333,35 +3323,6 @@ const char *
 purple_strcasestr(const char *haystack, const char *needle)
 {
 	return purple_strcasestr_len(haystack, -1, needle, -1);
-}
-
-char *
-purple_str_size_to_units(goffset size)
-{
-	static const char * const size_str[] = { "bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
-	float size_mag;
-	gsize size_index = 0;
-
-	if (size == -1) {
-		return g_strdup(_("Calculating..."));
-	}
-	else if (size == 0) {
-		return g_strdup(_("Unknown."));
-	}
-	else {
-		size_mag = (float)size;
-
-		while ((size_index < G_N_ELEMENTS(size_str) - 1) && (size_mag > 1024)) {
-			size_mag /= 1024;
-			size_index++;
-		}
-
-		if (size_index == 0) {
-			return g_strdup_printf("%" G_GOFFSET_FORMAT " %s", size, _(size_str[size_index]));
-		} else {
-			return g_strdup_printf("%.2f %s", size_mag, _(size_str[size_index]));
-		}
-	}
 }
 
 char *

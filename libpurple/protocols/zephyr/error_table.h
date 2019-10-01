@@ -5,7 +5,9 @@
  * For copyright info, see mit-sipb-copyright.h.
  */
 
-#ifndef _ET_H
+#ifndef PURPLE_ZEPHYR_ERROR_TABLE_H
+#define PURPLE_ZEPHYR_ERROR_TABLE_H
+
 struct error_table {
     char const * const * msgs;
     long base;
@@ -21,5 +23,5 @@ extern struct et_list * _et_list;
 #define	BITS_PER_CHAR	6	/* # bits to shift per character in name */
 
 const char *error_table_name(void);
-#define _ET_H
-#endif
+
+#endif /* PURPLE_ZEPHYR_ERROR_TABLE_H */

@@ -63,10 +63,8 @@ static void irc_buddy_free(struct irc_buddy *ib);
 PurpleProtocol *_irc_protocol = NULL;
 
 static gint
-irc_uri_handler_match_server(gconstpointer a, gconstpointer b)
+irc_uri_handler_match_server(PurpleAccount *account, const gchar *match_server)
 {
-	PurpleAccount *account = PURPLE_ACCOUNT(a);
-	const gchar *match_server = b;
 	const gchar *protocol_id;
 	const gchar *username;
 	gchar *server;
@@ -132,8 +130,8 @@ irc_uri_handler(const gchar *scheme, const gchar *uri, GHashTable *params)
 
 	/* Find account with correct server */
 	accounts = purple_accounts_get_all();
-	account_node = g_list_find_custom(accounts, server,
-			irc_uri_handler_match_server);
+	account_node = g_list_find_custom(
+	        accounts, server, (GCompareFunc)irc_uri_handler_match_server);
 
 	if (account_node == NULL) {
 		purple_debug_warning("irc",

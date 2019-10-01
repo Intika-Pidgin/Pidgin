@@ -22,8 +22,8 @@
  * OFT and ODC Services
  */
 
-#ifndef _PEER_H_
-#define _PEER_H_
+#ifndef PURPLE_OSCAR_PEER_H
+#define PURPLE_OSCAR_PEER_H
 
 #include "xfer.h"
 #include "network.h"
@@ -292,4 +292,4 @@ struct _OscarXfer {
 void oscar_xfer_register(GTypeModule *module);
 PeerConnection *oscar_xfer_get_peer_connection(OscarXfer *xfer);
 
-#endif /* _PEER_H_ */
+#endif /* PURPLE_OSCAR_PEER_H */

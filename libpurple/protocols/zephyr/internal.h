@@ -1,5 +1,5 @@
-#ifndef __INTERNAL_H__
-#define __INTERNAL_H__
+#ifndef PURPLE_ZEPHYR_INTERNAL_H
+#define PURPLE_ZEPHYR_INTERNAL_H
 
 #include <sysdep.h>
 
@@ -96,27 +96,23 @@ extern int __subscriptions_next;
 extern int __Zephyr_port;		/* Port number */
 extern struct in_addr __My_addr;
 
-typedef Code_t (*Z_SendProc) __P((ZNotice_t *, char *, int, int));
+typedef Code_t (*Z_SendProc)(ZNotice_t *, char *, int, int);
 
-struct _Z_InputQ *Z_GetFirstComplete __P((void));
-struct _Z_InputQ *Z_GetNextComplete __P((struct _Z_InputQ *));
-Code_t Z_XmitFragment __P((ZNotice_t*, char *,int,int));
-void Z_RemQueue __P((struct _Z_InputQ *));
-Code_t Z_AddNoticeToEntry __P((struct _Z_InputQ*, ZNotice_t*, int));
-Code_t Z_FormatAuthHeader __P((ZNotice_t *, char *, int, int *, Z_AuthProc));
-Code_t Z_FormatHeader __P((ZNotice_t *, char *, int, int *, Z_AuthProc));
-Code_t Z_FormatRawHeader __P((ZNotice_t *, char*, gsize,
-			      int*, char **, char **));
-Code_t Z_ReadEnqueue __P((void));
-Code_t Z_ReadWait __P((void));
-Code_t Z_SendLocation __P((char*, char*, Z_AuthProc, char*));
-Code_t Z_SendFragmentedNotice __P((ZNotice_t *notice, int len,
-				   Z_AuthProc cert_func,
-				   Z_SendProc send_func));
-Code_t Z_WaitForComplete __P((void));
-Code_t Z_WaitForNotice __P((ZNotice_t *notice,
-			    int (*pred) __P((ZNotice_t *, void *)), void *arg,
-			    int timeout));
+struct _Z_InputQ *Z_GetFirstComplete(void);
+struct _Z_InputQ *Z_GetNextComplete(struct _Z_InputQ *);
+Code_t Z_XmitFragment(ZNotice_t *, char *, int, int);
+void Z_RemQueue(struct _Z_InputQ *);
+Code_t Z_AddNoticeToEntry(struct _Z_InputQ *, ZNotice_t *, int);
+Code_t Z_FormatAuthHeader(ZNotice_t *, char *, int, int *, Z_AuthProc);
+Code_t Z_FormatHeader(ZNotice_t *, char *, int, int *, Z_AuthProc);
+Code_t Z_FormatRawHeader(ZNotice_t *, char *, gsize, int *, char **, char **);
+Code_t Z_ReadEnqueue(void);
+Code_t Z_ReadWait(void);
+Code_t Z_SendLocation(char *, char *, Z_AuthProc, char *);
+Code_t Z_SendFragmentedNotice(ZNotice_t *notice, int len, Z_AuthProc cert_func,
+                              Z_SendProc send_func);
+Code_t Z_WaitForComplete(void);
+Code_t Z_WaitForNotice(ZNotice_t *notice, int (*pred)(ZNotice_t *, void *),
+                       void *arg, int timeout);
 
-#endif /* __INTERNAL_H__ */
-
+#endif /* PURPLE_ZEPHYR_INTERNAL_H */

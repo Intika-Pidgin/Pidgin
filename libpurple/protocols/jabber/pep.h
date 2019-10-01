@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef PURPLE_JABBER_PEP_H_
-#define PURPLE_JABBER_PEP_H_
+#ifndef PURPLE_JABBER_PEP_H
+#define PURPLE_JABBER_PEP_H
 
 #include "jabber.h"
 #include "message.h"
@@ -88,4 +88,4 @@ void jabber_pep_delete_node(JabberStream *js, const gchar *node);
  */
 void jabber_pep_publish(JabberStream *js, PurpleXmlNode *publish);
 
-#endif /* PURPLE_JABBER_PEP_H_ */
+#endif /* PURPLE_JABBER_PEP_H */

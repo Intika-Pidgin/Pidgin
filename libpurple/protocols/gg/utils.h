@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_UTILS_H
-#define _GGP_UTILS_H
+#ifndef PURPLE_GG_UTILS_H
+#define PURPLE_GG_UTILS_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -108,4 +108,4 @@ gint ggp_int64_compare(gconstpointer a, gconstpointer b);
 
 JsonParser * ggp_json_parse(const gchar *data);
 
-#endif /* _GGP_UTILS_H */
+#endif /* PURPLE_GG_UTILS_H */

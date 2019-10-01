@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _NOVELL_H_
-#define _NOVELL_H_
+
+#ifndef PURPLE_NOVELL_NOVELL_H
+#define PURPLE_NOVELL_NOVELL_H
 
 #include <gmodule.h>
 
@@ -48,4 +49,4 @@ typedef struct
  */
 G_MODULE_EXPORT GType novell_protocol_get_type(void);
 
-#endif /* _NOVELL_H_ */
+#endif /* PURPLE_NOVELL_NOVELL_H */

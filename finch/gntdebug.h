@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_DEBUG_H
-#define _GNT_DEBUG_H
+#ifndef FINCH_DEBUG_H
+#define FINCH_DEBUG_H
+
 /**
  * SECTION:gntdebug
  * @section_id: finch-gntdebug
@@ -55,4 +57,5 @@ void finch_debug_window_show(void);
 
 G_END_DECLS
 
-#endif
+#endif /* FINCH_DEBUG_H */
+

@@ -1594,19 +1594,18 @@ static gboolean
 update_typing_deleting_cb(PidginConversation *gtkconv)
 {
 	PurpleIMConversation *im = PURPLE_IM_CONVERSATION(gtkconv->active_conv);
-	GtkTextBuffer *buffer= NULL;
+	GtkTextBuffer *buffer = NULL;
 
 	buffer = talkatu_editor_get_buffer(TALKATU_EDITOR(gtkconv->editor));
 
-	if (!talkatu_buffer_get_is_empty(buffer)) {
+	if (!talkatu_buffer_get_is_empty(TALKATU_BUFFER(buffer))) {
 		/* We deleted all the text, so turn off typing. */
 		purple_im_conversation_stop_send_typed_timeout(im);
 
 		purple_serv_send_typing(purple_conversation_get_connection(gtkconv->active_conv),
 						 purple_conversation_get_name(gtkconv->active_conv),
 						 PURPLE_IM_NOT_TYPING);
-	}
-	else {
+	} else {
 		/* We're deleting, but not all of it, so it counts as typing. */
 		got_typing_keypress(gtkconv, FALSE);
 	}
@@ -1810,6 +1809,7 @@ entry_key_press_cb(GtkWidget *entry, GdkEventKey *event, gpointer data)
 static gboolean
 refocus_entry_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 {
+	GtkWidget *view = NULL;
 	PidginConversation *gtkconv = data;
 
 	/* If we have a valid key for the conversation display, then exit */
@@ -1841,8 +1841,9 @@ refocus_entry_cb(GtkWidget *widget, GdkEventKey *event, gpointer data)
 		return FALSE;
 	}
 
-	gtk_widget_grab_focus(gtkconv->entry);
-	gtk_widget_event(gtkconv->entry, (GdkEvent *)event);
+	view = talkatu_editor_get_view(TALKATU_EDITOR(gtkconv->editor));
+	gtk_widget_grab_focus(view);
+	gtk_widget_event(view, (GdkEvent *)event);
 
 	return TRUE;
 }
@@ -4032,18 +4033,18 @@ minimum_entry_lines_pref_cb(const char *name,
                             gconstpointer value,
                             gpointer data)
 {
+#if 0
 	GList *l = purple_conversations_get_all();
 	PurpleConversation *conv;
 	while (l != NULL)
 	{
-#if 0
 		conv = (PurpleConversation *)l->data;
 
 		if (PIDGIN_IS_PIDGIN_CONVERSATION(conv))
 			resize_webview_cb(PIDGIN_CONVERSATION(conv));
-#endif
 		l = l->next;
 	}
+#endif
 }
 
 static void
@@ -4344,6 +4345,7 @@ setup_common_pane(PidginConversation *gtkconv)
 	gtkconv->history_buffer = talkatu_history_buffer_new();
 	gtkconv->history = talkatu_history_new();
 	gtk_text_view_set_buffer(GTK_TEXT_VIEW(gtkconv->history), gtkconv->history_buffer);
+	gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(gtkconv->history), GTK_WRAP_WORD);
 	gtk_container_add(GTK_CONTAINER(sw), gtkconv->history);
 
 	if (chat) {
@@ -4470,7 +4472,6 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	GtkWidget *pane = NULL;
 	GtkWidget *tab_cont;
 	PurpleBlistNode *convnode;
-	GtkTargetList *targets;
 
 	if (PURPLE_IS_IM_CONVERSATION(conv) && (gtkconv = pidgin_conv_find_gtkconv(conv))) {
 		purple_conversation_set_ui_data(conv, gtkconv);
@@ -4541,7 +4542,7 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 
 	g_signal_connect_swapped(G_OBJECT(pane), "focus",
 	                         G_CALLBACK(gtk_widget_grab_focus),
-	                         gtkconv->entry);
+	                         gtkconv->editor);
 
 	if (hidden)
 		pidgin_conv_window_add_gtkconv(hidden_convwin, gtkconv);
@@ -6368,10 +6369,10 @@ update_chat_topic(PurpleChatConversation *chat, const char *old, const char *new
 
 /* Compare two PurpleMessages, according to time in ascending order. */
 static int
-message_compare(gconstpointer p1, gconstpointer p2)
+message_compare(PurpleMessage *m1, PurpleMessage *m2)
 {
-	const PurpleMessage *m1 = p1, *m2 = p2;
-	return (purple_message_get_time(m1) > purple_message_get_time(m2));
+	guint64 t1 = purple_message_get_time(m1), t2 = purple_message_get_time(m2);
+	return (t1 > t2) - (t1 < t2);
 }
 
 /* Adds some message history to the gtkconv. This happens in a idle-callback. */
@@ -6418,7 +6419,7 @@ add_message_history_to_gtkconv(gpointer data)
 					msgs = g_list_prepend(msgs, msg);
 			}
 		}
-		msgs = g_list_sort(msgs, message_compare);
+		msgs = g_list_sort(msgs, (GCompareFunc)message_compare);
 		for (; msgs; msgs = g_list_delete_link(msgs, msgs)) {
 			PurpleMessage *msg = msgs->data;
 			/* XXX: see above - should it be active_conv? */
@@ -6485,7 +6486,7 @@ gboolean pidgin_conv_attach_to_conversation(PurpleConversation *conv)
 					pidgin_conv_attach(convs->data);
 					list = g_list_concat(list, g_list_copy(purple_conversation_get_message_history(convs->data)));
 				}
-			list = g_list_sort(list, message_compare);
+			list = g_list_sort(list, (GCompareFunc)message_compare);
 			gtkconv->attach_current = list;
 			list = g_list_last(list);
 		} else if (PURPLE_IS_CHAT_CONVERSATION(conv)) {

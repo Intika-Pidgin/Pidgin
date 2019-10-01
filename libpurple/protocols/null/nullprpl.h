@@ -1,4 +1,5 @@
-/* purple
+/*
+ * purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,10 +20,11 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _NULL_H_
-#define _NULL_H_
 
-#include "protocol.h"
+#ifndef PURPLE_NULL_NULLPRPL_H
+#define PURPLE_NULL_NULLPRPL_H
+
+#include <purple.h>
 
 #define NULL_TYPE_PROTOCOL             (null_protocol_get_type())
 #define NULL_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), NULL_TYPE_PROTOCOL, NullProtocol))
@@ -46,4 +48,4 @@ typedef struct
  */
 G_MODULE_EXPORT GType null_protocol_get_type(void);
 
-#endif /* _NULL_H_ */
+#endif /* PURPLE_NULL_NULLPRPL_H */

@@ -14,8 +14,8 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
 
-#ifndef _BONJOUR_MDNS_COMMON
-#define _BONJOUR_MDNS_COMMON
+#ifndef PURPLE_BONJOUR_MDNS_COMMON_H
+#define PURPLE_BONJOUR_MDNS_COMMON_H
 
 #include "mdns_types.h"
 
@@ -59,4 +59,4 @@ void bonjour_dns_sd_stop(BonjourDnsSd *data);
 
 void bonjour_dns_sd_set_jid(PurpleAccount *account, const char *hostname);
 
-#endif
+#endif /* PURPLE_BONJOUR_MDNS_COMMON_H */

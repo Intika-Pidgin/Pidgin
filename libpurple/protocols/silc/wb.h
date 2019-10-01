@@ -17,8 +17,8 @@
 
 */
 
-#ifndef SILCPURPLE_WB_H
-#define SILCPURPLE_WB_H
+#ifndef PURPLE_SILC_WB_H
+#define PURPLE_SILC_WB_H
 
 #include "silcpurple.h"
 #include "whiteboard.h"
@@ -46,4 +46,4 @@ void silcpurple_wb_set_brush(PurpleWhiteboard *wb, int size, int color);
 void silcpurple_wb_send(PurpleWhiteboard *wb, GList *draw_list);
 void silcpurple_wb_clear(PurpleWhiteboard *wb);
 
-#endif /* SILCPURPLE_WB_H */
+#endif /* PURPLE_SILC_WB_H */

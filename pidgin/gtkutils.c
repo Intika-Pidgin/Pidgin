@@ -1084,7 +1084,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 	GStatBuf st;
 	GError *err = NULL;
 	PurpleConversation *conv;
-	PidginConversation *gtkconv;
 	PurpleBuddy *buddy;
 	PurpleContact *contact;
 	PurpleImage *img;
@@ -1116,7 +1115,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		break;
 	case DND_IM_IMAGE:
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(data->account, data->who));
-		gtkconv = PIDGIN_CONVERSATION(conv);
 
 		if (!g_file_get_contents(data->filename, &filedata, &size,
 					 &err)) {
@@ -1950,7 +1948,7 @@ icon_preview_change_cb(GtkFileChooser *widget, struct _icon_chooser *dialog)
 
 	gdk_pixbuf_get_file_info(filename, &width, &height);
 	basename = g_path_get_basename(filename);
-	size = purple_str_size_to_units(st.st_size);
+	size = g_format_size(st.st_size);
 	markup = g_strdup_printf(_("<b>File:</b> %s\n"
 							   "<b>File size:</b> %s\n"
 							   "<b>Image size:</b> %dx%d"),

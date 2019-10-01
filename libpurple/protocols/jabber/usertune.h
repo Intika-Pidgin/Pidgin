@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef PURPLE_JABBER_USERTUNE_H_
-#define PURPLE_JABBER_USERTUNE_H_
+#ifndef PURPLE_JABBER_USERTUNE_H
+#define PURPLE_JABBER_USERTUNE_H
 
 #include "jabber.h"
 
@@ -42,4 +42,4 @@ void jabber_tune_init(void);
 
 void jabber_tune_set(PurpleConnection *gc, const PurpleJabberTuneInfo *tuneinfo);
 
-#endif /* PURPLE_JABBER_USERTUNE_H_ */
+#endif /* PURPLE_JABBER_USERTUNE_H */

@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 #include "finch.h"
 
@@ -344,7 +346,7 @@ display_log_viewer(struct log_viewer_hash *ht, GList *logs, const char *title,
 	gnt_box_add_widget(GNT_BOX(vbox), hbox);
 	/* Log size ************/
 	if (log_size) {
-		char *sz_txt = purple_str_size_to_units(log_size);
+		char *sz_txt = g_format_size(log_size);
 		text = g_strdup_printf("%s %s", _("Total log size:"), sz_txt);
 		size_label = gnt_label_new(text);
 		gnt_box_add_widget(GNT_BOX(hbox), size_label);

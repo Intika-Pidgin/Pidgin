@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_STATUS_H
-#define _GGP_STATUS_H
+#ifndef PURPLE_GG_STATUS_H
+#define PURPLE_GG_STATUS_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -62,4 +62,4 @@ void ggp_status_broadcasting_dialog(PurpleConnection *gc);
 void ggp_status_got_others(PurpleConnection *gc, struct gg_event *ev);
 char * ggp_status_buddy_text(PurpleBuddy *buddy);
 
-#endif /* _GGP_STATUS_H */
+#endif /* PURPLE_GG_STATUS_H */

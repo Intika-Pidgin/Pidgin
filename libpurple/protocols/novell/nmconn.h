@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_CONN_H__
-#define __NM_CONN_H__
+#ifndef PURPLE_NOVELL_NMCONN_H
+#define PURPLE_NOVELL_NMCONN_H
 
 typedef struct _NMConn NMConn;
 typedef struct _NMSSLConn NMSSLConn;
@@ -243,4 +243,4 @@ const char *nm_conn_get_addr(NMConn * conn);
  */
 int nm_conn_get_port(NMConn * conn);
 
-#endif
+#endif /* PURPLE_NOVELL_NMCONN_H */

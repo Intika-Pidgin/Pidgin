@@ -25,8 +25,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_KEYMAPPER_H
-#define _GGP_KEYMAPPER_H
+
+#ifndef PURPLE_GG_KEYMAPPER_H
+#define PURPLE_GG_KEYMAPPER_H
 
 typedef struct _ggp_keymapper ggp_keymapper;
 
@@ -45,4 +46,4 @@ ggp_keymapper_to_key(ggp_keymapper *km, guint64 val);
 guint64
 ggp_keymapper_from_key(ggp_keymapper *km, gpointer key);
 
-#endif /* _GGP_KEYMAPPER_H */
+#endif /* PURPLE_GG_KEYMAPPER_H */

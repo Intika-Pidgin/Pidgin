@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_LIBGADUW_H
-#define _GGP_LIBGADUW_H
+#ifndef PURPLE_GG_LIBGADUW_H
+#define PURPLE_GG_LIBGADUW_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -59,4 +59,4 @@ ggp_libgaduw_http_req * ggp_libgaduw_http_watch(PurpleConnection *gc,
 	gboolean show_processing);
 void ggp_libgaduw_http_cancel(ggp_libgaduw_http_req *req);
 
-#endif /* _GGP_LIBGADUW_H */
+#endif /* PURPLE_GG_LIBGADUW_H */
