@@ -1381,10 +1381,13 @@ do_transfer(PurpleXfer *xfer)
 				/* Need to indicate the protocol is still ready... */
 				priv->ready |= PURPLE_XFER_READY_PROTOCOL;
 
+				g_free(buffer);
 				g_return_if_reached();
 			}
-			if (result < 0)
+			if (result < 0) {
+				g_free(buffer);
 				return;
+			}
 		}
 
 		if (priv->buffer) {
@@ -1433,12 +1436,12 @@ do_transfer(PurpleXfer *xfer)
 		if (klass && klass->ack)
 			klass->ack(xfer, buffer, r);
 
-		g_free(buffer);
-
 		if (ui_ops != NULL && ui_ops->update_progress != NULL)
 			ui_ops->update_progress(xfer,
 				purple_xfer_get_progress(xfer));
 	}
+
+	g_free(buffer);
 
 	if (purple_xfer_get_bytes_sent(xfer) >= purple_xfer_get_size(xfer) &&
 			!purple_xfer_is_completed(xfer)) {
