@@ -57,14 +57,12 @@ C_Block __Zephyr_session;
 char __Zephyr_realm[REALM_SZ];
 
 #ifdef Z_DEBUG
-void (*__Z_debug_print) __P((const char *fmt, va_list args, void *closure));
+void (*__Z_debug_print)(const char *fmt, va_list args, void *closure);
 void *__Z_debug_print_closure;
 #endif
 
-#define min(a,b) ((a)<(b)?(a):(b))
-
-static int Z_AddField __P((char **ptr, const char *field, char *end));
-static int find_or_insert_uid __P((ZUnique_Id_t *uid, ZNotice_Kind_t kind));
+static int Z_AddField(char **ptr, const char *field, char *end);
+static int find_or_insert_uid(ZUnique_Id_t *uid, ZNotice_Kind_t kind);
 
 /* Find or insert uid in the old uids buffer.  The buffer is a sorted
  * circular queue.  We make the assumption that most packets arrive in
@@ -890,7 +888,7 @@ Code_t Z_SendFragmentedNotice(notice, len, cert_func, send_func)
 	    (void) memcpy((char *)&partnotice.z_uid.zuid_addr, &__My_addr,
 			  sizeof(__My_addr));
 	}
-	message_len = min(notice->z_message_len-offset, fragsize);
+	message_len = MIN(notice->z_message_len - offset, fragsize);
 	partnotice.z_message = (char*)notice->z_message+offset;
 	partnotice.z_message_len = message_len;
 	if ((retval = Z_FormatAuthHeader(&partnotice, buffer, Z_MAXHEADERLEN,
@@ -964,7 +962,7 @@ Zconst char * ZGetRealm () { return __Zephyr_realm; }
 
 #undef ZSetDebug
 void ZSetDebug(proc, arg)
-    void (*proc) __P((const char *, va_list, void *));
+    void (*proc)(const char *, va_list, void *);
     char *arg;
 {
     __Z_debug_print = proc;

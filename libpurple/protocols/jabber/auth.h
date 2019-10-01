@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_AUTH_H_
-#define PURPLE_JABBER_AUTH_H_
+
+#ifndef PURPLE_JABBER_AUTH_H
+#define PURPLE_JABBER_AUTH_H
 
 typedef struct _JabberSaslMech JabberSaslMech;
 
@@ -65,4 +66,4 @@ void jabber_auth_remove_mech(JabberSaslMech *);
 void jabber_auth_init(void);
 void jabber_auth_uninit(void);
 
-#endif /* PURPLE_JABBER_AUTH_H_ */
+#endif /* PURPLE_JABBER_AUTH_H */

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_MQTT_H_
-#define _FACEBOOK_MQTT_H_
+#ifndef PURPLE_FACEBOOK_MQTT_H
+#define PURPLE_FACEBOOK_MQTT_H
 
 /**
  * SECTION:mqtt
@@ -541,4 +541,4 @@ fb_mqtt_message_write_u16(FbMqttMessage *msg, guint16 value);
 void
 fb_mqtt_message_write_str(FbMqttMessage *msg, const gchar *value);
 
-#endif /* _FACEBOOK_MQTT_H_ */
+#endif /* PURPLE_FACEBOOK_MQTT_H */

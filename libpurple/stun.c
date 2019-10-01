@@ -119,7 +119,7 @@ static gboolean timeoutfunc(gpointer data) {
 		/* set unknown */
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
 
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 
 		/* callbacks */
 		do_callbacks();
@@ -217,7 +217,7 @@ static void reply_cb(gpointer data, gint source, PurpleInputCondition cond) {
 		purple_debug_info("stun", "got public ip %s\n", nattype.publicip);
 		nattype.status = PURPLE_STUN_STATUS_DISCOVERED;
 		nattype.type = PURPLE_STUN_NAT_TYPE_UNKNOWN_NAT;
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 
 		/* is it a NAT? */
 
@@ -269,7 +269,7 @@ hbn_listen_cb(int fd, gpointer data) {
 
 	if(fd < 0) {
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 		do_callbacks();
 		g_resolver_free_addresses(ld->addresses);
 		g_free(ld);
@@ -306,7 +306,7 @@ hbn_listen_cb(int fd, gpointer data) {
 			(struct sockaddr *)&(sc->addr),
 			sizeof(struct sockaddr_in)) < (gssize)sizeof(struct stun_header)) {
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 		do_callbacks();
 		close_stun_conn(sc);
 		return;
@@ -328,7 +328,7 @@ hbn_cb(GObject *sender, GAsyncResult *res, gpointer data) {
 			res, &error);
 	if(error != NULL) {
 		nattype.status = PURPLE_STUN_STATUS_UNDISCOVERED;
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 
 		do_callbacks();
 
@@ -339,7 +339,7 @@ hbn_cb(GObject *sender, GAsyncResult *res, gpointer data) {
 	ld->port = GPOINTER_TO_INT(data);
 	if (!purple_network_listen_range(12108, 12208, AF_UNSPEC, SOCK_DGRAM, TRUE, hbn_listen_cb, ld)) {
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 
 		do_callbacks();
 
@@ -411,8 +411,9 @@ PurpleStunNatDiscovery *purple_stun_discover(PurpleStunCallback cb) {
 
 		/* If we don't have a successful status and it has been 5
 		   minutes since we last did a lookup, redo the lookup */
-		if (nattype.status != PURPLE_STUN_STATUS_DISCOVERED
-				&& (time(NULL) - nattype.lookup_time) > 300) {
+		if (nattype.status != PURPLE_STUN_STATUS_DISCOVERED &&
+		    (g_get_monotonic_time() - nattype.lookup_time) >
+		            300 * G_USEC_PER_SEC) {
 			use_cached_result = FALSE;
 		}
 
@@ -425,7 +426,7 @@ PurpleStunNatDiscovery *purple_stun_discover(PurpleStunCallback cb) {
 
 	if(!servername || (strlen(servername) < 2)) {
 		nattype.status = PURPLE_STUN_STATUS_UNKNOWN;
-		nattype.lookup_time = time(NULL);
+		nattype.lookup_time = g_get_monotonic_time();
 		if(cb)
 			g_timeout_add(10, call_callback, cb);
 		return &nattype;

@@ -601,8 +601,9 @@ const char *jabber_normalize(const PurpleAccount *account, const char *in)
 	static char buf[3072]; /* maximum legal length of a jabber jid */
 	JabberID *jid;
 
-	if (account)
-		gc = purple_account_get_connection(account);
+	if (account) {
+		gc = purple_account_get_connection((PurpleAccount *)account);
+	}
 	if (gc)
 		js = purple_connection_get_protocol_data(gc);
 

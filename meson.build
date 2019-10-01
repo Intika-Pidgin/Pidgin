@@ -536,7 +536,7 @@ endif
 
 
 DEFAULT_PRPLS = ['bonjour', 'facebook', 'gg', 'irc', 'jabber', 'novell',
-                 'oscar', 'sametime', 'silc', 'simple', 'zephyr']
+                 'null', 'oscar', 'sametime', 'silc', 'simple', 'zephyr']
 ALL_PRPLS = DEFAULT_PRPLS + ['null']
 
 dynamic_list = get_option('dynamic-prpls').split(',')
@@ -901,11 +901,11 @@ conf.set('LIBZEPHYR_EXT', EXTERNAL_LIBZEPHYR)
 
 #AC_MSG_CHECKING(for me pot o' gold)
 #AC_MSG_RESULT(no)
-foreach func : ['gethostid', 'timegm']
+foreach func : ['timegm']
 	conf.set('HAVE_' + func.to_upper(),
 	    compiler.has_function(func))
 endforeach
-foreach header : 'paths.h sgtty.h sys/cdefs.h sys/file.h sys/filio.h sys/ioctl.h sys/msgbuf.h sys/select.h sys/uio.h sys/utsname.h sys/wait.h termios.h'.split()
+foreach header : 'sgtty.h sys/cdefs.h sys/file.h sys/filio.h sys/ioctl.h sys/msgbuf.h sys/select.h sys/wait.h termios.h'.split()
 	conf.set('HAVE_' + header.to_upper().underscorify(),
 	    compiler.has_header(header))
 endforeach

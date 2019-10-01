@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef PURPLE_JABBER_IBB_H_
-#define PURPLE_JABBER_IBB_H_
+#ifndef PURPLE_JABBER_IBB_H
+#define PURPLE_JABBER_IBB_H
 
 #include "jabber.h"
 #include "iq.h"
@@ -127,4 +127,4 @@ void jabber_ibb_unregister_open_handler(JabberIBBOpenHandler *cb);
 void jabber_ibb_init(void);
 void jabber_ibb_uninit(void);
 
-#endif /* PURPLE_JABBER_IBB_H_ */
+#endif /* PURPLE_JABBER_IBB_H */

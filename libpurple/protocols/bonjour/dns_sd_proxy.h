@@ -18,8 +18,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
-#ifndef _DNS_SD_PROXY
-#define _DNS_SD_PROXY
+#ifndef PURPLE_BONJOUR_DNS_SD_PROXY_H
+#define PURPLE_BONJOUR_DNS_SD_PROXY_H
 
 #include <config.h>
 
@@ -196,4 +196,4 @@ DNSServiceErrorType _wpurple_TXTRecordSetValue(TXTRecordRef *txtRecord, const ch
 #define TXTRecordSetValue(txtRecord, key, valueSize, value) \
 	_wpurple_TXTRecordSetValue(txtRecord, key, valueSize, value)
 
-#endif
+#endif /* PURPLE_BONJOUR_DNS_SD_PROXY_H */

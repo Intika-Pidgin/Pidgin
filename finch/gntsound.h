@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_SOUND_H
-#define _GNT_SOUND_H
+#ifndef FINCH_SOUND_H
+#define FINCH_SOUND_H
+
 /**
  * SECTION:gntsound
  * @section_id: finch-gntsound
@@ -88,4 +90,5 @@ PurpleSoundUiOps *finch_sound_get_ui_ops(void);
  */
 void finch_sounds_show_all(void);
 
-#endif
+#endif /* FINCH_SOUND_H */
+

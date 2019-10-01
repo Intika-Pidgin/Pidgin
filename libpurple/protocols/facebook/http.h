@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_HTTP_H_
-#define _FACEBOOK_HTTP_H_
+#ifndef PURPLE_FACEBOOK_HTTP_H
+#define PURPLE_FACEBOOK_HTTP_H
 
 /**
  * SECTION:http
@@ -368,4 +368,4 @@ fb_http_params_set_strf(FbHttpParams *params, const gchar *name,
 gboolean
 fb_http_urlcmp(const gchar *url1, const gchar *url2, gboolean protocol);
 
-#endif /* _FACEBOOK_HTTP_H_ */
+#endif /* PURPLE_FACEBOOK_HTTP_H */

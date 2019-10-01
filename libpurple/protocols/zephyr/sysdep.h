@@ -8,8 +8,8 @@
  *	"mit-copyright.h".
  */
 
-#ifndef __SYSDEP_H__
-#define __SYSDEP_H__
+#ifndef PURPLE_ZEPHYR_SYSDEP_H
+#define PURPLE_ZEPHYR_SYSDEP_H
 
 #include <config.h>
 #include <stdio.h>
@@ -35,53 +35,15 @@
 #ifdef HAVE_SYS_WAIT_H
 # include <sys/wait.h>
 #endif
-#ifndef WEXITSTATUS
-# define WEXITSTATUS(stat_val) ((unsigned)(stat_val) >> 8)
-#endif
-#ifndef WIFEXITED
-# define WIFEXITED(stat_val) (((stat_val) & 255) == 0)
-#endif
 
 #ifdef HAVE_SYS_CDEFS_H
 #include <sys/cdefs.h>
 #endif
 
-/* Because we have public header files (and our prototypes need to agree with
- * those header files, use __STDC__ to guess whether the compiler can handle
- * stdarg, const, and prototypes. */
-#ifdef __STDC__
-# include <stdarg.h>
-# define VA_START(ap, last) va_start(ap, last)
-# ifndef __P
-#  define __P(x) x
-# endif
-#else
-# include <varargs.h>
-# define VA_START(ap, last) va_start(ap)
-# define const
-# ifndef __P
-#  define __P(x) ()
-# endif
-#endif
-
-/* openlog(). */
-#ifdef LOG_AUTH
-/* A decent syslog */
-#define OPENLOG(str, opts, facility)	openlog(str, opts, facility)
-#else
-/* Probably a 4.2-type syslog */
-#define OPENLOG(str, opts, facility)	openlog(str, opts)
-#endif
+#include <stdarg.h>
 
 #ifdef HAVE_FCNTL_H
 # include <fcntl.h>
-#endif
-
-#ifdef HAVE_PATHS_H
-# include <paths.h>
-# define TEMP_DIRECTORY _PATH_VARTMP
-#else
-# define TEMP_DIRECTORY FOUND_TMP
 #endif
 
 #ifdef HAVE_UNISTD_H
@@ -92,15 +54,6 @@
 # endif
 uid_t getuid(void);
 char *ttyname(void);
-#ifdef HAVE_GETHOSTID
-ZEPHYR_INT32 gethostid(void);
-#endif
-#endif
-
-#ifndef STDIN_FILENO
-#define STDIN_FILENO 0
-#define STDOUT_FILENO 1
-#define STDERR_FILENO 2
 #endif
 
 #ifdef HAVE_TERMIOS_H
@@ -121,29 +74,17 @@ ZEPHYR_INT32 gethostid(void);
 /* Kerberos compatibility. */
 #ifdef ZEPHYR_USES_KERBEROS
 # include <krb.h>
-#ifdef WIN32
-
-#else
-# include <krb_err.h>
-#endif /* WIN32 */
+# ifndef WIN32
+#  include <krb_err.h>
+#  ifndef HAVE_KRB_GET_ERR_TEXT
+#   define krb_get_err_text(n)	krb_err_txt[n]
+#  endif
+# endif /* WIN32 */
 # include <des.h>
-#ifndef WIN32
-# ifndef HAVE_KRB_GET_ERR_TEXT
-#  define krb_get_err_text(n)	krb_err_txt[n]
-# endif
-#endif /* WIN32 */
 # ifndef HAVE_KRB_LOG
 #  define krb_log		log
 # endif
 #endif /* ZEPHYR_USES_KERBEROS */
-
-#ifdef HAVE_SYS_UIO_H
-# include <sys/uio.h>
-#endif
-
-#ifdef HAVE_SYS_UTSNAME_H
-# include <sys/utsname.h>
-#endif
 
 #ifdef HAVE_SYS_SELECT_H
 # include <sys/select.h>
@@ -153,9 +94,4 @@ ZEPHYR_INT32 gethostid(void);
 #include <sys/msgbuf.h>
 #endif
 
-#ifndef MSG_BSIZE
-#define MSG_BSIZE BUFSIZ
-#endif
-
-#endif /* __SYSDEP_H__ */
-
+#endif /* PURPLE_ZEPHYR_SYSDEP_H */

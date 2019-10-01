@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 #include "finch.h"
 
@@ -303,8 +305,8 @@ finch_xfer_dialog_add_xfer(PurpleXfer *xfer)
 
 	type = purple_xfer_get_xfer_type(xfer);
 
-	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
-	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
+	size_str = g_format_size(purple_xfer_get_size(xfer));
+	remaining_str = g_format_size(purple_xfer_get_bytes_remaining(xfer));
 
 	lfilename = g_path_get_basename(purple_xfer_get_local_filename(xfer));
 	utf8 = g_filename_to_utf8(lfilename, -1, NULL, NULL, NULL);
@@ -394,16 +396,20 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
 	char prog_str[5];
 	double kb_sent;
 	double kbps = 0.0;
-	time_t elapsed, now;
+	gint64 now;
+	gint64 elapsed = 0;
 	char *kbsec;
 	gboolean send;
 
-	if ((now = purple_xfer_get_end_time(xfer)) == 0)
-		now = time(NULL);
+	if (purple_xfer_get_start_time(xfer) > 0) {
+		if ((now = purple_xfer_get_end_time(xfer)) == 0) {
+			now = g_get_monotonic_time();
+		}
+		elapsed = now - purple_xfer_get_start_time(xfer);
+	}
 
-	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1024.0;
-	elapsed = (purple_xfer_get_start_time(xfer) > 0 ? now - purple_xfer_get_start_time(xfer) : 0);
-	kbps    = (elapsed > 0 ? (kb_sent / elapsed) : 0);
+	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1000.0;
+	kbps = (elapsed > 0 ? (kb_sent * G_USEC_PER_SEC) / elapsed : 0);
 
 	g_return_if_fail(xfer_dialog != NULL);
 	g_return_if_fail(xfer != NULL);
@@ -423,9 +429,9 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
 	data->last_updated_time = current_time;
 
 	send = (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_SEND);
-	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
-	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
-	kbsec = g_strdup_printf(_("%.2f KiB/s"), kbps);
+	size_str = g_format_size(purple_xfer_get_size(xfer));
+	remaining_str = g_format_size(purple_xfer_get_bytes_remaining(xfer));
+	kbsec = g_strdup_printf(_("%.2f KB/s"), kbps);
 
 	gnt_tree_change_text(GNT_TREE(xfer_dialog->tree), xfer, COLUMN_PROGRESS,
 			g_ascii_dtostr(prog_str, sizeof(prog_str), purple_xfer_get_progress(xfer) * 100.));

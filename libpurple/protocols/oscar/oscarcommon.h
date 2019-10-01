@@ -24,6 +24,9 @@
  * and libicq.c
  */
 
+#ifndef PURPLE_OSCAR_OSCARCOMMON_H
+#define PURPLE_OSCAR_OSCARCOMMON_H
+
 #include "internal.h"
 
 #include "accountopt.h"
@@ -124,3 +127,5 @@ gssize oscar_get_max_message_size(PurpleConversation *conv);
 GList *oscar_get_actions(PurpleConnection *gc);
 const gchar *oscar_get_login_server(gboolean is_icq, gboolean use_ssl);
 gboolean oscar_uri_handler(const char *proto, const char *cmd, GHashTable *params);
+
+#endif /* PURPLE_OSCAR_OSCARCOMMON_H */

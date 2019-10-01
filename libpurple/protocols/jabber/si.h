@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_SI_H_
-#define PURPLE_JABBER_SI_H_
+
+#ifndef PURPLE_JABBER_SI_H
+#define PURPLE_JABBER_SI_H
 
 #include "xfer.h"
 
@@ -47,4 +48,4 @@ void jabber_si_uninit(void);
 
 G_END_DECLS
 
-#endif /* PURPLE_JABBER_SI_H_ */
+#endif /* PURPLE_JABBER_SI_H */

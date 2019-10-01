@@ -1,5 +1,5 @@
-#ifndef _SAMETIME_H_
-#define _SAMETIME_H_
+#ifndef PURPLE_SAMETIME_SAMETIME_H
+#define PURPLE_SAMETIME_SAMETIME_H
 
 #include <gmodule.h>
 
@@ -52,4 +52,4 @@ typedef struct
  */
 G_MODULE_EXPORT GType mw_protocol_get_type(void);
 
-#endif /* _SAMETIME_H_ */
+#endif /* PURPLE_SAMETIME_SAMETIME_H */

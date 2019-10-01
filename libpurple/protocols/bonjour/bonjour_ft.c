@@ -1082,7 +1082,7 @@ xep_xfer_finalize(GObject *obj) {
 	g_free(xf->buddy_ip);
 	g_free(xf->sid);
 
-	purple_xmlnode_free_tree(xf->streamhost);
+	g_clear_pointer(&xf->streamhost, purple_xmlnode_free_tree);
 
 	G_OBJECT_CLASS(xep_xfer_parent_class)->finalize(obj);
 }

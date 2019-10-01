@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef NMFIELD_H
-#define NMFIELD_H
+#ifndef PURPLE_NOVELL_NMFIELD_H
+#define PURPLE_NOVELL_NMFIELD_H
 
 #include <glib.h>
 
@@ -221,4 +221,4 @@ void nm_remove_field(NMField * field);
 /* Print a field array (for debugging purposes) */
 void nm_print_fields(NMField * fields);
 
-#endif
+#endif /* PURPLE_NOVELL_NMFIELD_H */

@@ -407,8 +407,9 @@ purple_keyring_set_inuse(PurpleKeyring *newkeyring, gboolean force,
 
 	if (oldkeyring == NULL) { /* No keyring was set before. */
 		if (purple_debug_is_verbose()) {
-			purple_debug_misc("keyring", "Setting keyring for the "
-				"first time: %s.\n", newkeyring->id);
+			purple_debug_misc("keyring",
+			                  "Setting keyring for the first time: %s.\n",
+			                  (newkeyring != NULL) ? newkeyring->id : "(null)");
 		}
 
 		purple_keyring_inuse = newkeyring;

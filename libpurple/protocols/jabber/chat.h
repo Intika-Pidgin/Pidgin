@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_CHAT_H_
-#define PURPLE_JABBER_CHAT_H_
+
+#ifndef PURPLE_JABBER_CHAT_H
+#define PURPLE_JABBER_CHAT_H
 
 #include "internal.h"
 #include "connection.h"
@@ -115,4 +116,4 @@ gboolean jabber_chat_all_participants_have_capability(const JabberChat *chat,
 	const gchar *cap);
 guint jabber_chat_get_num_participants(const JabberChat *chat);
 
-#endif /* PURPLE_JABBER_CHAT_H_ */
+#endif /* PURPLE_JABBER_CHAT_H */

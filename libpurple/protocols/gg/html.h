@@ -25,8 +25,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_HTML_H
-#define _GGP_HTML_H
+
+#ifndef PURPLE_GG_HTML_H
+#define PURPLE_GG_HTML_H
 
 #include <internal.h>
 
@@ -55,5 +56,4 @@ GHashTable * ggp_html_css_attribs(const gchar *attribs_str);
 int ggp_html_decode_color(const gchar *str);
 ggp_html_tag ggp_html_parse_tag(const gchar *tag_str);
 
-
-#endif /* _GGP_HTML_H */
+#endif /* PURPLE_GG_HTML_H */

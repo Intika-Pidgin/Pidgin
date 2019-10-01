@@ -43,6 +43,7 @@
 #define PURPLE_TYPE_IMAGE  purple_image_get_type()
 
 struct _PurpleImageClass {
+	/*< private >*/
 	GObjectClass parent_class;
 
 	void (*purple_reserved1)(void);

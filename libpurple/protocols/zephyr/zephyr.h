@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _ZEPHYR_H_
-#define _ZEPHYR_H_
+
+#ifndef PURPLE_ZEPHYR_ZEPHYR_H
+#define PURPLE_ZEPHYR_ZEPHYR_H
 
 #include <gmodule.h>
 
@@ -48,4 +49,4 @@ typedef struct
  */
 G_MODULE_EXPORT GType zephyr_protocol_get_type(void);
 
-#endif /* _ZEPHYR_H_ */
+#endif /* PURPLE_ZEPHYR_ZEPHYR_H */

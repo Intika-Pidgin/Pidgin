@@ -1576,7 +1576,6 @@ disco_ui_callback_helper_handle(void *handle)
 	GSList *cbs;
 	PurplePrefsUiOps *uiop = purple_prefs_get_ui_ops();
 
-	cbs = ui_callbacks;
 	for (cbs = ui_callbacks; cbs; cbs = cbs->next) {
 		PurplePrefCallbackData *cb = cbs->data;
 		if (cb->handle != handle) {

@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef _BONJOUR_JABBER_H_
-#define _BONJOUR_JABBER_H_
+#ifndef PURPLE_BONJOUR_JABBER_H
+#define PURPLE_BONJOUR_JABBER_H
 
 #include <libxml/parser.h>
 
@@ -112,4 +112,4 @@ GSList * bonjour_jabber_get_local_ips(int fd);
 
 void append_iface_if_linklocal(char *ip, guint32 interface_param);
 
-#endif /* _BONJOUR_JABBER_H_ */
+#endif /* PURPLE_BONJOUR_JABBER_H */

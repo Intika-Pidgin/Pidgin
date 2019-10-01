@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _PURPLE_BONJOUR_PARSER_H_
-#define _PURPLE_BONJOUR_PARSER_H_
+
+#ifndef PURPLE_BONJOUR_PARSER_H
+#define PURPLE_BONJOUR_PARSER_H
 
 #include "buddy.h"
 #include "jabber.h"
@@ -30,4 +31,4 @@
 void bonjour_parser_setup(BonjourJabberConversation *bconv);
 void bonjour_parser_process(BonjourJabberConversation *bconv, const char *buf, int len);
 
-#endif /* _PURPLE_BONJOUR_PARSER_H_ */
+#endif /* PURPLE_BONJOUR_PARSER_H */
