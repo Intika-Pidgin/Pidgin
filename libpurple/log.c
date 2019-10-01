@@ -1240,8 +1240,9 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 		data = log->logger_data;
 
 		/* if we can't write to the file, give up before we hurt ourselves */
-		if(!data->file)
+		if (!data || !data->file) {
 			return 0;
+		}
 
 		dt = g_date_time_to_local(log->time);
 		date = g_date_time_format(dt, "%c");
