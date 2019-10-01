@@ -522,8 +522,7 @@ purple_conversation_close_logs(PurpleConversation *conv)
 	g_return_if_fail(PURPLE_IS_CONVERSATION(conv));
 
 	priv = purple_conversation_get_instance_private(conv);
-	g_list_foreach(priv->logs, (GFunc)purple_log_free, NULL);
-	g_list_free(priv->logs);
+	g_list_free_full(priv->logs, (GDestroyNotify)purple_log_free);
 	priv->logs = NULL;
 }
 

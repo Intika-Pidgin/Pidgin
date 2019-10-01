@@ -1928,8 +1928,7 @@ populate_buddylist(void)
 static void
 destroy_status_list(GList *list)
 {
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static void

@@ -1780,8 +1780,7 @@ purple_blist_find_chat(PurpleAccount *account, const char *name)
 				pce = parts->data;
 				chat_name = g_hash_table_lookup(purple_chat_get_components(chat),
 												pce->identifier);
-				g_list_foreach(parts, (GFunc)g_free, NULL);
-				g_list_free(parts);
+				g_list_free_full(parts, g_free);
 
 				if (purple_chat_get_account(chat) == account && chat_name != NULL &&
 					purple_strequal(purple_normalize(account, chat_name), normname)) {
