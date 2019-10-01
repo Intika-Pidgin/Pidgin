@@ -213,8 +213,7 @@ static Prefs idle[] =
 static void
 free_strings(void)
 {
-	g_list_foreach(pref_request.freestrings, (GFunc)g_free, NULL);
-	g_list_free(pref_request.freestrings);
+	g_list_free_full(pref_request.freestrings, g_free);
 	pref_request.freestrings = NULL;
 	pref_request.showing = FALSE;
 }

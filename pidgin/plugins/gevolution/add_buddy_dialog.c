@@ -45,11 +45,7 @@ delete_win_cb(GtkWidget *w, GdkEvent *event, GevoAddBuddyDialog *dialog)
 {
 	gtk_widget_destroy(dialog->win);
 
-	if (dialog->contacts != NULL)
-	{
-		g_list_foreach(dialog->contacts, (GFunc)g_object_unref, NULL);
-		g_list_free(dialog->contacts);
-	}
+	g_list_free_full(dialog->contacts, g_object_unref);
 
 	if (dialog->book != NULL)
 		g_object_unref(dialog->book);
@@ -224,8 +220,7 @@ add_ims(GevoAddBuddyDialog *dialog, EContact *contact, const char *name,
 	if (pixbuf != NULL)
 		g_object_unref(G_OBJECT(pixbuf));
 
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static void
@@ -245,8 +240,7 @@ populate_treeview(GevoAddBuddyDialog *dialog, const gchar *uid)
 
 	if (dialog->contacts != NULL)
 	{
-		g_list_foreach(dialog->contacts, (GFunc)g_object_unref, NULL);
-		g_list_free(dialog->contacts);
+		g_list_free_full(dialog->contacts, g_object_unref);
 		dialog->contacts = NULL;
 	}
 

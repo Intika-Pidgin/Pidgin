@@ -89,8 +89,7 @@ const char *purple_chat_get_name_only(PurpleChat *chat)
 		GList *parts = purple_protocol_chat_iface_info(protocol, purple_account_get_connection(priv->account));
 		pce = parts->data;
 		ret = g_hash_table_lookup(priv->components, pce->identifier);
-		g_list_foreach(parts, (GFunc)g_free, NULL);
-		g_list_free(parts);
+		g_list_free_full(parts, g_free);
 	}
 
 	return ret;

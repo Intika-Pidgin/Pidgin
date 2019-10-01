@@ -908,8 +908,7 @@ gchar *jabber_caps_calculate_hash(JabberCapsClientInfo *info,
 					                                   field->values);
 				}
 			} else {
-				g_list_foreach(field->values, (GFunc) g_free, NULL);
-				g_list_free(field->values);
+				g_list_free_full(field->values, g_free);
 			}
 
 			g_free(field->var);

@@ -346,8 +346,7 @@ purple_roomlist_finalize(GObject *object)
 	}
 	g_list_free(priv->rooms);
 
-	g_list_foreach(priv->fields, (GFunc)purple_roomlist_field_free, NULL);
-	g_list_free(priv->fields);
+	g_list_free_full(priv->fields, (GDestroyNotify)purple_roomlist_field_free);
 
 	G_OBJECT_CLASS(purple_roomlist_parent_class)->finalize(object);
 }

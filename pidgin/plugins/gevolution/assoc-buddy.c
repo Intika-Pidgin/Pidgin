@@ -44,11 +44,7 @@ delete_win_cb(GtkWidget *w, GdkEvent *event, GevoAssociateBuddyDialog *dialog)
 {
 	gtk_widget_destroy(dialog->win);
 
-	if (dialog->contacts != NULL)
-	{
-		g_list_foreach(dialog->contacts, (GFunc)g_object_unref, NULL);
-		g_list_free(dialog->contacts);
-	}
+	g_list_free_full(dialog->contacts, g_object_unref);
 
 	g_object_unref(dialog->book);
 	gevo_addrbooks_model_unref(dialog->addrbooks);
@@ -147,8 +143,7 @@ populate_treeview(GevoAssociateBuddyDialog *dialog, const gchar *uid)
 
 	if (dialog->contacts != NULL)
 	{
-		g_list_foreach(dialog->contacts, (GFunc) g_object_unref, NULL);
-		g_list_free(dialog->contacts);
+		g_list_free_full(dialog->contacts, g_object_unref);
 		dialog->contacts = NULL;
 	}
 
@@ -304,8 +299,7 @@ assoc_buddy_cb(GtkWidget *w, GevoAssociateBuddyDialog *dialog)
 		purple_debug_error("evolution", "Error adding contact to book\n");
 
 	/* Free the list. */
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 
 	delete_win_cb(NULL, NULL, dialog);
 }
