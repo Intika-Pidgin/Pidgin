@@ -2096,34 +2096,9 @@ static int purple_parse_clientauto_ch4(OscarData *od, const char *who, guint16 r
 	PurpleConnection *gc = od->gc;
 
 	switch(reason) {
-		case 0x0003: { /* Reply from an ICQ status message request */
-			char *statusmsg, **splitmsg;
-			PurpleNotifyUserInfo *user_info;
-
-			statusmsg = oscar_icqstatus(state);
-
-			/* Split at (carriage return/newline)'s, then rejoin later with BRs between. */
-			/* TODO: Don't we need to escape each piece? */
-			splitmsg = g_strsplit(msg, "\r\n", 0);
-
-			user_info = purple_notify_user_info_new();
-
-			purple_notify_user_info_add_pair_plaintext(user_info, _("UIN"), who);
-			/* TODO: Check whether it's correct to call add_pair_html,
-			         or if we should be using add_pair_plaintext */
-			purple_notify_user_info_add_pair_html(user_info, _("Status"), statusmsg);
-			purple_notify_user_info_add_section_break(user_info);
-			purple_notify_user_info_add_pair_html(user_info, NULL, g_strjoinv("<BR>", splitmsg));
-
-			g_free(statusmsg);
-			g_strfreev(splitmsg);
-
-			purple_notify_userinfo(gc, who, user_info, NULL, NULL);
-			purple_notify_user_info_destroy(user_info);
-
-		} break;
-
-		case 0x0006: { /* Reply from an ICQ status message request */
+		/* Reply from an ICQ status message request */
+		case 0x0003:
+		case 0x0006: {
 			char *statusmsg, **splitmsg;
 			PurpleNotifyUserInfo *user_info;
 
@@ -2215,27 +2190,24 @@ static int purple_parse_mtn(OscarData *od, FlapConnection *conn, FlapFrame *fr, 
 	va_end(ap);
 
 	switch (event) {
-		case 0x0000: { /* Text has been cleared */
+		case 0x0000: /* Text has been cleared */
+		case 0x000f: /* Closed IM window */
 			purple_serv_got_typing_stopped(gc, bn);
-		} break;
+			break;
 
-		case 0x0001: { /* Paused typing */
+		case 0x0001: /* Paused typing */
 			purple_serv_got_typing(gc, bn, 0, PURPLE_IM_TYPED);
-		} break;
+			break;
 
-		case 0x0002: { /* Typing */
+		case 0x0002: /* Typing */
 			purple_serv_got_typing(gc, bn, 0, PURPLE_IM_TYPING);
-		} break;
+			break;
 
-		case 0x000f: { /* Closed IM window */
-			purple_serv_got_typing_stopped(gc, bn);
-		} break;
-
-		default: {
+		default:
 			purple_debug_info("oscar", "Received unknown typing "
 					"notification message from %s.  Channel is 0x%04x "
 					"and event is 0x%04hx.\n", bn, channel, event);
-		} break;
+			break;
 	}
 
 	return 1;
