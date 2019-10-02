@@ -298,7 +298,7 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	/* XXX: Use formatting and stuff */
 	gnt_text_view_clear(GNT_TEXT_VIEW(plugins.aboot));
 	text = g_strdup_printf(
-	        (g_strv_length((gchar **)authorlist) > 1
+	        (authorlist && g_strv_length((gchar **)authorlist) > 1
 	                 ? _("Name: %s\nVersion: %s\nDescription: %s\nAuthors: "
 	                     "%s\nWebsite: %s\nFilename: %s\n")
 	                 : _("Name: %s\nVersion: %s\nDescription: %s\nAuthor: "
