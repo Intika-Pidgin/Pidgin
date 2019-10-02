@@ -537,18 +537,15 @@ static void purple_im_conversation_class_init(PurpleIMConversationClass *klass)
 
 	conv_class->write_message = im_conversation_write_message;
 
-	im_properties[IM_PROP_TYPING_STATE] = g_param_spec_enum("typing-state",
-				"Typing state",
-				"Status of the user's typing of a message.",
-				PURPLE_TYPE_IM_TYPING_STATE, PURPLE_IM_NOT_TYPING,
-				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS |
-				G_PARAM_STATIC_STRINGS);
+	im_properties[IM_PROP_TYPING_STATE] =
+	        g_param_spec_enum("typing-state", "Typing state",
+	                          "Status of the user's typing of a message.",
+	                          PURPLE_TYPE_IM_TYPING_STATE, PURPLE_IM_NOT_TYPING,
+	                          G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-	im_properties[IM_PROP_ICON] = g_param_spec_pointer("icon",
-				"Buddy icon",
-				"The buddy icon for the IM.",
-				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS |
-				G_PARAM_STATIC_STRINGS);
+	im_properties[IM_PROP_ICON] = g_param_spec_pointer(
+	        "icon", "Buddy icon", "The buddy icon for the IM.",
+	        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, IM_PROP_LAST, im_properties);
 }
