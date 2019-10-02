@@ -234,10 +234,6 @@ static gboolean default_create_tooltip(gpointer selected_row, GString **body, ch
 	int lastseen = 0;
 	char *title;
 
-	if (!node || !(PURPLE_IS_BUDDY(node) || PURPLE_IS_CONTACT(node) ||
-	               PURPLE_IS_GROUP(node) || PURPLE_IS_CHAT(node)))
-		return FALSE;
-
 	str = g_string_new("");
 
 	if (PURPLE_IS_CONTACT(node)) {
@@ -958,8 +954,9 @@ append_proto_menu(GntMenu *menu, PurpleConnection *gc, PurpleBlistNode *node)
 	GList *list;
 	PurpleProtocol *protocol = purple_connection_get_protocol(gc);
 
-	if(!protocol || !PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, blist_node_menu))
+	if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, blist_node_menu)) {
 		return;
+	}
 
 	for(list = purple_protocol_client_iface_blist_node_menu(protocol, node); list;
 			list = g_list_delete_link(list, list))
@@ -1455,19 +1452,18 @@ finch_blist_place_tagged(PurpleBlistNode *target)
 	PurpleGroup *tg = NULL;
 	PurpleContact *tc = NULL;
 
-	if (target == NULL || !(PURPLE_IS_BUDDY(target) || PURPLE_IS_CONTACT(target) ||
-	                        PURPLE_IS_GROUP(target) || PURPLE_IS_CHAT(target)))
-		return;
-
 	if (PURPLE_IS_GROUP(target))
 		tg = (PurpleGroup*)target;
 	else if (PURPLE_IS_BUDDY(target)) {
 		tc = (PurpleContact*)purple_blist_node_get_parent(target);
 		tg = (PurpleGroup*)purple_blist_node_get_parent((PurpleBlistNode*)tc);
-	} else {
-		if (PURPLE_IS_CONTACT(target))
-			tc = (PurpleContact*)target;
+	} else if (PURPLE_IS_CONTACT(target)) {
+		tc = (PurpleContact *)target;
+		tg = (PurpleGroup *)purple_blist_node_get_parent(target);
+	} else if (PURPLE_IS_CHAT(target)) {
 		tg = (PurpleGroup*)purple_blist_node_get_parent(target);
+	} else {
+		return;
 	}
 
 	if (ggblist->tagged) {

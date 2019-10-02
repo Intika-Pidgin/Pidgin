@@ -295,8 +295,9 @@ static gboolean
 nested_group_create_tooltip(gpointer selected_row, GString **body, char **title)
 {
 	PurpleBlistNode *node = selected_row;
-	if (!node || !FINCH_IS_GROUPING_NODE(node))
+	if (!FINCH_IS_GROUPING_NODE(node)) {
 		return default_manager->create_tooltip(selected_row, body, title);
+	}
 	if (body)
 		*body = g_string_new(_("Nested Subgroup"));  /* Perhaps list the child groups/subgroups? */
 	return TRUE;
