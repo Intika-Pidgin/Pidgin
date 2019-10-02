@@ -256,7 +256,7 @@ irc_push_bytes_cb(GObject *source, GAsyncResult *res, gpointer data)
 	if (!result) {
 		purple_queued_output_stream_clear_queue(stream);
 
-		g_prefix_error(&error, _("Lost connection with server: "));
+		g_prefix_error(&error, "%s", _("Lost connection with server: "));
 		purple_connection_take_error(gc, error);
 		return;
 	}
@@ -570,7 +570,7 @@ irc_login_cb(GObject *source, GAsyncResult *res, gpointer user_data)
 			res, &error);
 
 	if (conn == NULL) {
-		g_prefix_error(&error, _("Unable to connect: "));
+		g_prefix_error(&error, "%s", _("Unable to connect: "));
 		purple_connection_take_error(gc, error);
 		return;
 	}
@@ -742,7 +742,7 @@ irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data)
 			G_DATA_INPUT_STREAM(source), res, &len, &error);
 
 	if (line == NULL && error != NULL) {
-		g_prefix_error(&error, _("Lost connection with server: "));
+		g_prefix_error(&error, "%s", _("Lost connection with server: "));
 		purple_connection_take_error(gc, error);
 		return;
 	} else if (line == NULL) {

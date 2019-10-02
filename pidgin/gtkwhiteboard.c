@@ -478,7 +478,7 @@ static void pidgin_whiteboard_button_clear_press(GtkWidget *widget, gpointer dat
 	/* Confirm whether the user really wants to clear */
 	GtkWidget *dialog = gtk_message_dialog_new(
 	        GTK_WINDOW(gtkwb), GTK_DIALOG_DESTROY_WITH_PARENT,
-	        GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO,
+	        GTK_MESSAGE_QUESTION, GTK_BUTTONS_YES_NO, "%s",
 	        _("Do you really want to clear?"));
 	gint response = gtk_dialog_run(GTK_DIALOG(dialog));
 	gtk_widget_destroy(dialog);

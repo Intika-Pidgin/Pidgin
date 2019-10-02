@@ -578,33 +578,33 @@ purple_protocols_add(GType protocol_type, GError **error)
 	PurpleProtocolClass *klass;
 
 	if (protocol_type == G_TYPE_INVALID) {
-		g_set_error(error, PURPLE_PROTOCOLS_DOMAIN, 0,
-		            _("Protocol type is not registered"));
+		g_set_error_literal(error, PURPLE_PROTOCOLS_DOMAIN, 0,
+		                    _("Protocol type is not registered"));
 		return NULL;
 	}
 
 	if (!g_type_is_a(protocol_type, PURPLE_TYPE_PROTOCOL)) {
-		g_set_error(error, PURPLE_PROTOCOLS_DOMAIN, 0,
-		            _("Protocol type does not inherit PurpleProtocol"));
+		g_set_error_literal(error, PURPLE_PROTOCOLS_DOMAIN, 0,
+		                    _("Protocol type does not inherit PurpleProtocol"));
 		return NULL;
 	}
 
 	if (G_TYPE_IS_ABSTRACT(protocol_type)) {
-		g_set_error(error, PURPLE_PROTOCOLS_DOMAIN, 0,
-		            _("Protocol type is abstract"));
+		g_set_error_literal(error, PURPLE_PROTOCOLS_DOMAIN, 0,
+		                    _("Protocol type is abstract"));
 		return NULL;
 	}
 
 	protocol = g_object_new(protocol_type, NULL);
 	if (!protocol) {
-		g_set_error(error, PURPLE_PROTOCOLS_DOMAIN, 0,
-		            _("Could not create protocol instance"));
+		g_set_error_literal(error, PURPLE_PROTOCOLS_DOMAIN, 0,
+		                    _("Could not create protocol instance"));
 		return NULL;
 	}
 
 	if (!purple_protocol_get_id(protocol)) {
-		g_set_error(error, PURPLE_PROTOCOLS_DOMAIN, 0,
-		            _("Protocol does not provide an ID"));
+		g_set_error_literal(error, PURPLE_PROTOCOLS_DOMAIN, 0,
+		                    _("Protocol does not provide an ID"));
 
 		g_object_unref(protocol);
 		return NULL;
