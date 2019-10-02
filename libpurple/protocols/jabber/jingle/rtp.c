@@ -317,21 +317,16 @@ jingle_rtp_init_media(JingleContent *content)
 			return FALSE;
 	}
 
-	name = jingle_content_get_name(content);
 	media_type = jingle_rtp_get_media_type(content);
-	remote_jid = jingle_session_get_remote_jid(session);
-	senders = jingle_content_get_senders(content);
-	transport = jingle_content_get_transport(content);
-
 	if (media_type == NULL) {
-		g_free(name);
-		g_free(remote_jid);
-		g_free(senders);
-		g_free(params);
-		g_object_unref(transport);
 		g_object_unref(session);
 		return FALSE;
 	}
+
+	name = jingle_content_get_name(content);
+	remote_jid = jingle_session_get_remote_jid(session);
+	senders = jingle_content_get_senders(content);
+	transport = jingle_content_get_transport(content);
 
 	if (JINGLE_IS_RAWUDP(transport))
 		transmitter = "rawudp";
