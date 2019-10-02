@@ -766,8 +766,9 @@ irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data)
 	while (start < len && line[start] == '\0')
 		++start;
 
-	if (len - start > 0)
+	if (start < len) {
 		irc_parse_msg(irc, line + start);
+	}
 
 	g_free(line);
 
