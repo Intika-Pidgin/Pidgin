@@ -311,7 +311,7 @@ process_urls(PurpleConversation *conv, GList *urls)
 	for (iter = urls, c = 1; iter; iter = iter->next, c++) {
 		int i;
 		CbInfo *cbdata;
-		gchar *url, *str;
+		gchar *url;
 		gchar *original_url;
 		const gchar *tiny_url;
 
@@ -340,9 +340,8 @@ process_urls(PurpleConversation *conv, GList *urls)
 			url = g_strdup_printf("%s%s", purple_prefs_get_string(PREF_URL), purple_url_encode(original_url));
 		}
 		purple_http_get(NULL, url_fetched, cbdata, url);
-		str = g_strdup_printf(_("\nFetching TinyURL..."));
-		gnt_text_view_append_text_with_tag((tv), str, GNT_TEXT_FLAG_DIM, cbdata->tag);
-		g_free(str);
+		gnt_text_view_append_text_with_tag((tv), _("\nFetching TinyURL..."),
+		                                   GNT_TEXT_FLAG_DIM, cbdata->tag);
 		if (i == 0)
 			gnt_text_view_scroll(tv, 0);
 		g_free(iter->data);
