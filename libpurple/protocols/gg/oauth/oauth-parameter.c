@@ -51,15 +51,15 @@ int gg_oauth_parameter_set(gg_oauth_parameter_t **list, const char *key, const c
 	new_value = g_strdup(value);
 
 	if (new_value == NULL) {
-		free(new_key);
+		g_free(new_key);
 		return -1;
 	}
 
-	new_p = malloc(sizeof(gg_oauth_parameter_t));
+	new_p = g_new0(gg_oauth_parameter_t, 1);
 
 	if (new_p == NULL) {
-		free(new_key);
-		free(new_value);
+		g_free(new_key);
+		g_free(new_value);
 		return -1;
 	}
 
@@ -150,9 +150,9 @@ void gg_oauth_parameter_free(gg_oauth_parameter_t *list)
 
 		next = list->next;
 
-		free(list->key);
-		free(list->value);
-		free(list);
+		g_free(list->key);
+		g_free(list->value);
+		g_free(list);
 
 		list = next;
 	}
