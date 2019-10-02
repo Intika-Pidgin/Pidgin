@@ -1291,9 +1291,7 @@ aim_locate_setprofile(OscarData *od,
 
 	/* Build the packet first to get real length */
 	if (profile) {
-		/* no + 1 here because of %s */
-		encoding = g_malloc(strlen(defencoding) + strlen(profile_encoding));
-		snprintf(encoding, strlen(defencoding) + strlen(profile_encoding), defencoding, profile_encoding);
+		encoding = g_strdup_printf(defencoding, profile_encoding);
 		aim_tlvlist_add_str(&tlvlist, 0x0001, encoding);
 		aim_tlvlist_add_raw(&tlvlist, 0x0002, profile_len, (const guchar *)profile);
 		g_free(encoding);
@@ -1309,8 +1307,7 @@ aim_locate_setprofile(OscarData *od,
 	 */
 	if (awaymsg) {
 		if (awaymsg_len) {
-			encoding = g_malloc(strlen(defencoding) + strlen(awaymsg_encoding));
-			snprintf(encoding, strlen(defencoding) + strlen(awaymsg_encoding), defencoding, awaymsg_encoding);
+			encoding = g_strdup_printf(defencoding, awaymsg_encoding);
 			aim_tlvlist_add_str(&tlvlist, 0x0003, encoding);
 			aim_tlvlist_add_raw(&tlvlist, 0x0004, awaymsg_len, (const guchar *)awaymsg);
 			g_free(encoding);
