@@ -354,6 +354,7 @@ static void null_login(PurpleAccount *acct)
 {
   PurpleConnection *gc = purple_account_get_connection(acct);
   GList *offline_messages;
+  GList *all_offline_messages;
 
   purple_debug_info("nullprpl", "logging in %s\n", purple_account_get_username(acct));
 
@@ -377,7 +378,8 @@ static void null_login(PurpleAccount *acct)
   /* fetch stored offline messages */
   purple_debug_info("nullprpl", "checking for offline messages for %s\n",
                     purple_account_get_username(acct));
-  offline_messages = g_hash_table_lookup(goffline_messages, purple_account_get_username(acct));
+  all_offline_messages = offline_messages = g_hash_table_lookup(
+	      goffline_messages, purple_account_get_username(acct));
   while (offline_messages) {
     GOfflineMessage *message = (GOfflineMessage *)offline_messages->data;
     purple_debug_info("nullprpl", "delivering offline message to %s: %s\n",
@@ -391,8 +393,8 @@ static void null_login(PurpleAccount *acct)
     g_free(message);
   }
 
-  g_list_free(offline_messages);
   g_hash_table_remove(goffline_messages, purple_account_get_username(acct));
+  g_list_free(all_offline_messages);
 }
 
 static void null_close(PurpleConnection *gc)

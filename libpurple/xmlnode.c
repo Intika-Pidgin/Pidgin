@@ -490,13 +490,15 @@ purple_xmlnode_to_str_foreach_append_ns(const char *key, const char *value,
 static char *
 purple_xmlnode_to_str_helper(const PurpleXmlNode *node, int *len, gboolean formatting, int depth)
 {
-	GString *text = g_string_new("");
+	GString *text;
 	const char *prefix;
 	const PurpleXmlNode *c;
 	char *node_name, *esc, *esc2, *tab = NULL;
 	gboolean need_end = FALSE, pretty = formatting;
 
 	g_return_val_if_fail(node != NULL, NULL);
+
+	text = g_string_new("");
 
 	if(pretty && depth) {
 		tab = g_strnfill(depth, '\t');

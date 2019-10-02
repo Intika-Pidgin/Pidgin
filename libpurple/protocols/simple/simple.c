@@ -2044,6 +2044,7 @@ static void simple_login(PurpleAccount *account)
 		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
 			_("SIP connect server not specified"));
+		g_strfreev(userserver);
 		return;
 	}
 
