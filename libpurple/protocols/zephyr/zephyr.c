@@ -692,6 +692,7 @@ static char *zephyr_to_html(const char *message)
 					new_f->closing = "";
 				}
 				frames = new_f;
+				g_free(buf);
 			} else {
 				/* Not a formatting tag, add the character as normal. */
 				g_string_append_c(frames->text, *message++);
@@ -2451,17 +2452,17 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 		return;
 
 	if (!g_ascii_strcasecmp(classname,"%host%"))
-		classname = g_strdup(zephyr->ourhost);
+		classname = zephyr->ourhost;
 	if (!g_ascii_strcasecmp(classname,"%canon%"))
-		classname = g_strdup(zephyr->ourhostcanon);
+		classname = zephyr->ourhostcanon;
 
 	if (!instname || *instname == '\0')
 		instname = "*";
 
 	if (!g_ascii_strcasecmp(instname,"%host%"))
-		instname = g_strdup(zephyr->ourhost);
+		instname = zephyr->ourhost;
 	if (!g_ascii_strcasecmp(instname,"%canon%"))
-		instname = g_strdup(zephyr->ourhostcanon);
+		instname = zephyr->ourhostcanon;
 
 	if (!recip || (*recip == '*'))
 		recip = "";
@@ -2524,7 +2525,7 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 				cnode;
 				cnode = purple_blist_node_get_sibling_next(cnode)) {
 			PurpleChat *chat = (PurpleChat*)cnode;
-			char *zclass, *inst, *recip;
+			const gchar *zclass, *inst, *recip;
 			char** triple;
 			GHashTable *components;
 			if(!PURPLE_IS_CHAT(cnode))
@@ -2535,14 +2536,18 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 			if(!(zclass = g_hash_table_lookup(components, "class")))
 				continue;
 			if(!(inst = g_hash_table_lookup(components, "instance")))
-				inst = g_strdup("");
+				inst = "";
 			if(!(recip = g_hash_table_lookup(components, "recipient")))
-				recip = g_strdup("");
+				recip = "";
 			/*			purple_debug_info("zephyr","in zephyr_find_blist_chat name: %s\n",name?name:""); */
 			triple = g_strsplit(name,",",3);
-			if (!g_ascii_strcasecmp(triple[0],zclass) && !g_ascii_strcasecmp(triple[1],inst) && !g_ascii_strcasecmp(triple[2],recip))
+			if (!g_ascii_strcasecmp(triple[0], zclass) &&
+			    !g_ascii_strcasecmp(triple[1], inst) &&
+			    !g_ascii_strcasecmp(triple[2], recip)) {
+				g_strfreev(triple);
 				return chat;
-
+			}
+			g_strfreev(triple);
 		}
 	}
 	return NULL;
@@ -2856,26 +2861,27 @@ static void zephyr_action_get_subs_from_server(PurpleProtocolAction *action)
 	int retval, nsubs, one,i;
 	ZSubscription_t subs;
 	if (use_zeph02(zephyr)) {
-		GString* subout = g_string_new("Subscription list<br>");
-
-		title = g_strdup_printf("Server subscriptions for %s", zephyr->username);
+		GString *subout;
 
 		if (zephyr->port == 0) {
-			g_free(title);
 			purple_debug_error("zephyr", "error while retrieving port\n");
 			return;
 		}
 		if ((retval = ZRetrieveSubscriptions(zephyr->port,&nsubs)) != ZERR_NONE) {
-			g_free(title);
 			/* XXX better error handling */
 			purple_debug_error("zephyr", "error while retrieving subscriptions from server\n");
 			return;
 		}
+
+		title = g_strdup_printf("Server subscriptions for %s",
+		                        zephyr->username);
+		subout = g_string_new("Subscription list<br>");
 		for(i=0;i<nsubs;i++) {
 			one = 1;
 			if ((retval = ZGetSubscriptions(&subs,&one)) != ZERR_NONE) {
 				/* XXX better error handling */
 				g_free(title);
+				g_string_free(subout, TRUE);
 				purple_debug_error("zephyr", "error while retrieving individual subscription\n");
 				return;
 			}

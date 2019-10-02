@@ -419,7 +419,7 @@ void purple_serv_chat_invite(PurpleConnection *gc, int id, const char *message, 
 {
 	PurpleProtocol *protocol = NULL;
 	PurpleChatConversation *chat;
-	char *buffy = message && *message ? g_strdup(message) : NULL;
+	char *buffy;
 
 	chat = purple_conversations_find_chat(gc, id);
 
@@ -429,6 +429,7 @@ void purple_serv_chat_invite(PurpleConnection *gc, int id, const char *message, 
 	if(gc)
 		protocol = purple_connection_get_protocol(gc);
 
+	buffy = message && *message ? g_strdup(message) : NULL;
 	purple_signal_emit(purple_conversations_get_handle(), "chat-inviting-user",
 					 chat, name, &buffy);
 

@@ -1223,9 +1223,6 @@ free_theme_info(struct theme_info *info)
 static void
 theme_install_theme(char *path, struct theme_info *info)
 {
-#ifndef _WIN32
-	gchar *command;
-#endif
 	gchar *destdir;
 	const char *tail;
 	gboolean is_smiley_theme, is_archive;
@@ -1258,6 +1255,7 @@ theme_install_theme(char *path, struct theme_info *info)
 #ifndef _WIN32
 		gchar *path_escaped = g_shell_quote(path);
 		gchar *destdir_escaped = g_shell_quote(destdir);
+		gchar *command;
 
 		if (!g_file_test(destdir, G_FILE_TEST_IS_DIR))
 			purple_build_dir(destdir, S_IRUSR | S_IWUSR | S_IXUSR);
@@ -1274,6 +1272,7 @@ theme_install_theme(char *path, struct theme_info *info)
 			free_theme_info(info);
 			return;
 		}
+		g_free(command);
 #else
 		if (!winpidgin_gz_untar(path, destdir)) {
 			purple_notify_error(NULL, NULL, _("Theme failed to unpack."), NULL, NULL);

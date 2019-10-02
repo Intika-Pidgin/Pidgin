@@ -2329,7 +2329,10 @@ fb_api_cb_contacts_parse_removed(FbApi *api, JsonNode *node, GSList *users)
 
 	split = g_strsplit_set(decoded, ":", 4);
 
-	g_return_val_if_fail(g_strv_length(split) == 4, users);
+	if (g_strv_length(split) != 4) {
+		g_strfreev(split);
+		g_return_val_if_reached(users);
+	}
 
 	users = g_slist_prepend(users, g_strdup(split[2]));
 

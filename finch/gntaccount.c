@@ -186,6 +186,7 @@ save_account_cb(AccountEditDialog *dialog)
 					purple_request_cpar_from_account(
 						account));
 				g_free(oldproto);
+				g_string_free(username, TRUE);
 				return;
 			}
 			g_free(oldproto);

@@ -72,8 +72,11 @@ purple_core_print_version(void)
 	ui_version = ui_info ? g_hash_table_lookup(ui_info, "version") : NULL;
 
 	if (ui_name) {
-		ui_full_name = g_strdup_printf("%s%s%s", ui_name,
-			ui_version ? " " : "", ui_version);
+		if (ui_version) {
+			ui_full_name = g_strdup_printf("%s %s", ui_name, ui_version);
+		} else {
+			ui_full_name = g_strdup(ui_name);
+		}
 	}
 
 	purple_debug_info("main", "Launching %s%slibpurple %s",
@@ -81,6 +84,7 @@ purple_core_print_version(void)
 		ui_full_name ? " with " : "",
 		purple_core_get_version());
 
+	g_free(ui_full_name);
 }
 
 gboolean

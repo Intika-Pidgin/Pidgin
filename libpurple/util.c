@@ -2311,6 +2311,7 @@ purple_markup_linkify(const char *text)
 					char *d;
 
 					url_buf = g_string_free(gurl_buf, FALSE);
+					gurl_buf = NULL;
 
 					/* strip off trailing periods */
 					if (*url_buf) {
@@ -2334,6 +2335,10 @@ purple_markup_linkify(const char *text)
 					g_string_append_unichar(gurl_buf, g);
 					t = g_utf8_find_next_char(t, NULL);
 				}
+			}
+
+			if (gurl_buf) {
+				g_string_free(gurl_buf, TRUE);
 			}
 		}
 

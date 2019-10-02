@@ -539,7 +539,12 @@ static void plugin_toggled(GtkCellRendererToggle *cell, gchar *pth, gpointer dat
 				PurplePlugin *dep_plugin = purple_plugins_find_plugin(dep_name);
 				GPluginPluginInfo *dep_info;
 
-				g_return_if_fail(dep_plugin != NULL);
+				if (dep_plugin == NULL) {
+					purple_debug_error("gtkplugin",
+					                   "The %s plugin could not be found.",
+					                   dep_name);
+					continue;
+				}
 
 				dep_info = GPLUGIN_PLUGIN_INFO(
 				        purple_plugin_get_info(dep_plugin));
