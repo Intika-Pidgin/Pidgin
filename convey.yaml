@@ -1,0 +1,49 @@
+environment:
+  - PACKAGECLOUD_REPO=experimental
+  - ARCH=amd64
+  - BUILD_NUMBER
+  - REGISTRY_HOST=docker.io
+  - REPOSITORY=pidgin/builders
+
+tasks:
+  import:
+    type: docker/import
+    files: .:.
+
+  build:
+    type: docker/run
+    image: ${REGISTRY_HOST}/${REPOSITORY}:${DISTRO}-${VERSION}-${ARCH}
+
+  export:
+    type: docker/export
+    files: ${DISTRO}-${VERSION}-${ARCH}
+
+  build-target:
+    type: docker/run
+    image: ${REGISTRY_HOST}/${REPOSITORY}:${TARGET}
+
+  export-target:
+    type: docker/export
+    files: ${TARGET}
+
+plans:
+  mingw-w64-x86_64:
+    environment: [DISTRO=mingw, VERSION=w64, ARCH=x86_64]
+    stages:
+      - tasks: [import, build]
+
+  pvs-studio:
+    environment:
+      - TARGET=pvs-studio
+      - PVS_STUDIO_USERNAME
+      - PVS_STUDIO_KEY
+    stages:
+      - tasks: [import, build-target]
+      - tasks: [export-target]
+        run: always
+
+  subproject-build:
+    environment: [TARGET=subproject-build]
+    stages:
+      - tasks: [import, build-target]
+
