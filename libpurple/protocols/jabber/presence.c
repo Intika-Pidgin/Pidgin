@@ -460,9 +460,10 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
 				data = g_base64_decode(text, &size);
 				g_free(text);
 
-				if (data)
-					g_compute_checksum_for_data(
-						G_CHECKSUM_SHA1, data, size);
+				if (data) {
+					hash = g_compute_checksum_for_data(G_CHECKSUM_SHA1, data,
+					                                   size);
+				}
 			}
 
 			purple_buddy_icons_set_for_user(purple_connection_get_account(js->gc), from, data, size, hash);
