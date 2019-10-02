@@ -211,24 +211,24 @@ finch_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		const char **urls)
 {
 	PurpleAccount *account = purple_connection_get_account(gc);
-	GString *message = g_string_new(NULL);
-	void *ret;
+	void *ret = NULL;
 	static int key = 0;
 
 	if (count == 0)
 		return NULL;
 
-	if (!detailed)
-	{
-		g_string_append_printf(message,
-				ngettext("%s (%s) has %d new message.",
-					     "%s (%s) has %d new messages.",
-						 (int)count),
-				tos ? *tos : purple_account_get_username(account),
-				purple_account_get_protocol_name(account), (int)count);
-	}
-	else
-	{
+	if (!detailed) {
+		gchar *message;
+		message = g_strdup_printf(
+		        ngettext("%s (%s) has %d new message.",
+		                 "%s (%s) has %d new messages.", (int)count),
+		        tos ? *tos : purple_account_get_username(account),
+		        purple_account_get_protocol_name(account), (int)count);
+		ret = finch_notify_common(PURPLE_NOTIFY_EMAIL, PURPLE_NOTIFY_MSG_INFO,
+		                          _("New Mail"), _("You have mail!"), message,
+		                          NULL);
+		g_free(message);
+	} else {
 		char *to;
 		gboolean newwin = (emaildialog.window == NULL);
 
@@ -247,12 +247,9 @@ finch_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 			gnt_widget_show(emaildialog.window);
 		else
 			gnt_window_present(emaildialog.window);
-		return NULL;
+		ret = NULL;
 	}
 
-	ret = finch_notify_common(PURPLE_NOTIFY_EMAIL, PURPLE_NOTIFY_MSG_INFO,
-		_("New Mail"), _("You have mail!"), message->str, NULL);
-	g_string_free(message, TRUE);
 	return ret;
 }
 
