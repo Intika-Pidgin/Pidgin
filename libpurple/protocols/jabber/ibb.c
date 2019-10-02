@@ -67,7 +67,6 @@ jabber_ibb_session_create_from_xmlnode(JabberStream *js, const char *from,
 	if (!sid || !block_size) {
 		purple_debug_error("jabber",
 			"IBB session open tag requires sid and block-size attributes\n");
-		g_free(sess);
 		return NULL;
 	}
 
