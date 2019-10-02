@@ -172,6 +172,7 @@ save_account_cb(AccountEditDialog *dialog)
 					"server."),
 					purple_request_cpar_from_account(
 						account));
+				g_string_free(username, TRUE);
 				return;
 			}
 
