@@ -87,6 +87,9 @@ struct _FbApiData
 	GDestroyNotify func;
 };
 
+static void fb_api_error_literal(FbApi *api, FbApiError error,
+                                 const gchar *msg);
+
 static void
 fb_api_attach(FbApi *api, FbId aid, const gchar *msgid, FbApiMessage *msg);
 
@@ -597,7 +600,7 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 	priv = api->priv;
 
 	if (G_UNLIKELY(size == 0)) {
-		fb_api_error(api, FB_API_ERROR_GENERAL, _("Empty JSON data"));
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL, _("Empty JSON data"));
 		return FALSE;
 	}
 
@@ -667,7 +670,7 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 	}
 
 	if (msg != NULL) {
-		fb_api_error(api, errc, "%s", msg);
+		fb_api_error_literal(api, errc, msg);
 		json_node_free(root);
 		g_free(msg);
 		return FALSE;
@@ -875,8 +878,8 @@ fb_api_cb_http_bool(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	hata = purple_http_response_get_data(res, NULL);
 
 	if (!purple_strequal(hata, "true")) {
-		fb_api_error(api, FB_API_ERROR,
-		             _("Failed generic API operation"));
+		fb_api_error_literal(api, FB_API_ERROR,
+		                     _("Failed generic API operation"));
 	}
 }
 
@@ -1086,8 +1089,8 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	priv->unread = fb_json_values_next_int(values, 0);
 
 	if (priv->sid == 0) {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-		             _("Failed to get sync_sequence_id"));
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+		                     _("Failed to get sync_sequence_id"));
 	} else {
 		fb_api_connect_queue(api);
 	}
@@ -1162,8 +1165,8 @@ fb_api_cb_publish_mark(FbApi *api, GByteArray *pload)
 	);
 
 	if (!fb_json_values_next_bool(values, TRUE)) {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-		             _("Failed to mark thread as read"));
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+		                     _("Failed to mark thread as read"));
 	}
 
 	g_object_unref(values);
@@ -1367,8 +1370,8 @@ fb_api_cb_publish_ms_r(FbApi *api, GByteArray *pload)
 			fb_api_message_send(api, msg);
 		}
 	} else {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-					 "Failed to send message");
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+		                     "Failed to send message");
 	}
 
 	g_object_unref(values);
@@ -2027,6 +2030,18 @@ fb_api_is_invisible(FbApi *api)
 	return priv->invisible;
 }
 
+static void
+fb_api_error_literal(FbApi *api, FbApiError error, const gchar *msg)
+{
+	GError *err;
+
+	g_return_if_fail(FB_IS_API(api));
+
+	err = g_error_new_literal(FB_API_ERROR, error, msg);
+
+	fb_api_error_emit(api, err);
+}
+
 void
 fb_api_error(FbApi *api, FbApiError error, const gchar *format, ...)
 {
@@ -2208,8 +2223,8 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	node = fb_json_node_get_nth(root, 0);
 
 	if (node == NULL) {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-		             _("Failed to obtain contact information"));
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+		                     _("Failed to obtain contact information"));
 		json_node_free(root);
 		return;
 	}
@@ -2696,8 +2711,8 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	node = fb_json_node_get_nth(root, 0);
 
 	if (node == NULL) {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-		             _("Failed to obtain unread messages"));
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+		                     _("Failed to obtain unread messages"));
 		json_node_free(root);
 		return;
 	}
@@ -3029,8 +3044,8 @@ fb_api_cb_thread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	node = fb_json_node_get_nth(root, 0);
 
 	if (node == NULL) {
-		fb_api_error(api, FB_API_ERROR_GENERAL,
-		             _("Failed to obtain thread information"));
+		fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+		                     _("Failed to obtain thread information"));
 		json_node_free(root);
 		return;
 	}
@@ -3042,8 +3057,8 @@ fb_api_cb_thread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 			if (thrd.tid) {
 				g_signal_emit_by_name(api, "thread-kicked", &thrd);
 			} else {
-				fb_api_error(api, FB_API_ERROR_GENERAL,
-				             _("Failed to parse thread information"));
+				fb_api_error_literal(api, FB_API_ERROR_GENERAL,
+				                     _("Failed to parse thread information"));
 			}
 		} else {
 			fb_api_error_emit(api, err);
