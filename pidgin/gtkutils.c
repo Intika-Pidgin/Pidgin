@@ -1279,7 +1279,7 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 
 
 	/* If any of this is null, do nothing. */
-	if (!name || !type || url) {
+	if (!name || !type || !url) {
 		g_free(type);
 		g_free(name);
 		g_free(url);
