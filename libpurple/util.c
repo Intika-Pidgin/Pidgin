@@ -645,16 +645,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 
 			/* Quarter */
 			case 'Q':
-				if (count <= 2) {
-					/* Numerical */
-				} else if (count == 3) {
-					/* Abbreviation */
-				} else if (count >= 4) {
-					/* Full */
-					count = 4;
-				}
-				break;
-
 			/* Stand-alone Quarter */
 			case 'q':
 				if (count <= 2) {
@@ -669,21 +659,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 
 			/* Month */
 			case 'M':
-				if (count <= 2) {
-					/* Numerical */
-					g_string_append(string, purple_utf8_strftime("%m", tm));
-				} else if (count == 3) {
-					/* Abbreviation */
-					g_string_append(string, purple_utf8_strftime("%b", tm));
-				} else if (count == 4) {
-					/* Full */
-					g_string_append(string, purple_utf8_strftime("%B", tm));
-				} else if (count >= 5) {
-					g_string_append_len(string, purple_utf8_strftime("%b", tm), 1);
-					count = 5;
-				}
-				break;
-
 			/* Stand-alone Month */
 			case 'L':
 				if (count <= 2) {
@@ -825,14 +800,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 
 			/* Hour (0-11) */
 			case 'K':
-				if (count == 1) {
-					/* No padding */
-				} else if (count >= 2) {
-					/* Zero-padded */
-					count = 2;
-				}
-				break;
-
 			/* Hour (1-24) */
 			case 'k':
 				if (count == 1) {
