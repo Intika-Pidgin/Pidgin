@@ -2183,7 +2183,7 @@ static char *amsn_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 
 	if (fseek(file, data->offset, SEEK_SET) != 0) {
 		fclose(file);
-		free(contents);
+		g_free(contents);
 		g_return_val_if_reached(g_strdup(""));
 	}
 	data->length = fread(contents, 1, data->length, file);
