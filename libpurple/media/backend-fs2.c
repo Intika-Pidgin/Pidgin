@@ -1967,10 +1967,8 @@ create_stream(PurpleMediaBackendFs2 *self,
 
 	if (fsstream == NULL) {
 		if (err) {
-			purple_debug_error("backend-fs2",
-					"Error creating stream: %s\n",
-					err && err->message ?
-					err->message : "NULL");
+			purple_debug_error("backend-fs2", "Error creating stream: %s\n",
+			                   err->message ? err->message : "NULL");
 			g_error_free(err);
 		} else
 			purple_debug_error("backend-fs2",

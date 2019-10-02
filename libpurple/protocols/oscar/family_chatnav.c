@@ -414,8 +414,7 @@ parseinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fra
 	else
 		purple_debug_misc("oscar", "chatnav_parse_info: unknown request subtype (%04x)\n", snac2->type);
 
-	if (snac2)
-		g_free(snac2->data);
+	g_free(snac2->data);
 	g_free(snac2);
 
 	return ret;

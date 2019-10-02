@@ -48,8 +48,7 @@ static int error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFra
 		ret = userfunc(od, conn, frame, snac2->data /* address */);
 
 	/* XXX freesnac()? */
-	if (snac2)
-		g_free(snac2->data);
+	g_free(snac2->data);
 	g_free(snac2);
 
 	return ret;

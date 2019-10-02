@@ -957,14 +957,13 @@ appsink_readable (gpointer user_data)
 		cb_data = info->user_data;
 		g_mutex_unlock (&manager->priv->appdata_mutex);
 
-		if (readable_cb)
-			readable_cb (manager, media, session_id, participant, cb_data);
+		readable_cb(manager, media, session_id, participant, cb_data);
 
 		g_mutex_lock (&manager->priv->appdata_mutex);
 		g_object_unref (media);
 		g_free (session_id);
 		g_free (participant);
-		if (cb_token == 0 || cb_token != *cb_token_ptr) {
+		if (cb_token != *cb_token_ptr) {
 			/* We got cancelled */
 			g_mutex_unlock (&manager->priv->appdata_mutex);
 			return FALSE;

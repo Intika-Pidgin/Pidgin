@@ -228,13 +228,8 @@ _pidgin_about_dialog_add_build_args(
 		}
 
 		gtk_tree_store_append(about->build_info_store, &value, &section);
-		gtk_tree_store_set(
-			about->build_info_store,
-			&value,
-			0, value_split[0] ? value_split[0] : "",
-			1, value_split[1] ? value_split[1] : "",
-			-1
-		);
+		gtk_tree_store_set(about->build_info_store, &value, 0, value_split[0],
+		                   1, value_split[1] ? value_split[1] : "", -1);
 
 		g_strfreev(value_split);
 	}

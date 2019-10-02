@@ -588,9 +588,7 @@ static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model, Gt
 		}
 
 		pidgin_clear_cursor(plugin_dialog);
-	}
-	else if (!unload && error)
-	{
+	} else if (error) {
 		purple_notify_warning(NULL, NULL, _("Could not load plugin"), error->message, NULL);
 	}
 

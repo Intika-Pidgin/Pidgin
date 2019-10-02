@@ -1007,18 +1007,11 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 		*y = CLAMP (*y, monitor.y,
 			   monitor.y + monitor.height - requisition.height);
-	}
-	else if (requisition.height > space_below &&
-	         requisition.height > space_above)
-	{
+	} else {
 		if (space_below >= space_above)
 			*y = monitor.y + monitor.height - requisition.height;
 		else
 			*y = monitor.y;
-	}
-	else
-	{
-		*y = monitor.y;
 	}
 }
 

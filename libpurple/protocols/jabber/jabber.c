@@ -480,7 +480,7 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 	g_return_if_fail(data != NULL);
 
 	/* because printing a tab to debug every minute gets old */
-	if (data && !purple_strequal(data, "\t")) {
+	if (!purple_strequal(data, "\t")) {
 		const char *username;
 		char *text = NULL, *last_part = NULL, *tag_start = NULL;
 

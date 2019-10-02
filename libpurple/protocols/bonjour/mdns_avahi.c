@@ -561,10 +561,8 @@ gboolean _mdns_set_buddy_icon_data(BonjourDnsSd *data, gconstpointer avatar_data
 		if (new_group && (ret = avahi_entry_group_commit(idata->buddy_icon_group)) < 0) {
 			purple_debug_error("bonjour",
 				"Failed to commit buddy icon group. Error: %s\n", avahi_strerror(ret));
-			if (new_group) {
-				avahi_entry_group_free(idata->buddy_icon_group);
-				idata->buddy_icon_group = NULL;
-			}
+			avahi_entry_group_free(idata->buddy_icon_group);
+			idata->buddy_icon_group = NULL;
 			return FALSE;
 		}
 	} else if (idata->buddy_icon_group != NULL) {

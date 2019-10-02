@@ -986,7 +986,8 @@ pidgin_pounce_editor_show(PurpleAccount *account, const char *name,
 													  "play-sound",
 													  "filename")) != NULL)
 		{
-			gtk_entry_set_text(GTK_ENTRY(dialog->play_sound_entry), (value && *value != '\0') ? value : _("(default)"));
+			gtk_entry_set_text(GTK_ENTRY(dialog->play_sound_entry),
+			                   (*value != '\0') ? value : _("(default)"));
 		}
 	}
 	else

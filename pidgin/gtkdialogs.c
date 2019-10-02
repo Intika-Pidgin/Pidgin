@@ -217,9 +217,11 @@ void pidgin_dialogs_plugins_info(void)
 			pextra = NULL;
 
 		g_string_append_printf(str, "<dt>%s</dt><dd>", pname);
-		if (pauthors)
+		if (pauthors) {
 			g_string_append_printf(str, "<b>%s:</b> %s<br/>",
-				(n_authors > 1 ? "Authors" : "Author"), pauthors ? pauthors : "");
+			                       (n_authors > 1 ? "Authors" : "Author"),
+			                       pauthors);
+		}
 		g_string_append_printf(str,
 				"<b>Version:</b> %s<br/>"
 				"<b>License:</b> %s<br/>"

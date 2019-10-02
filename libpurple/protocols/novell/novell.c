@@ -262,8 +262,7 @@ _get_details_resp_send_msg(NMUser * user, NMERR_T ret_code,
 			g_free(err);
 		}
 
-		if (msg)
-			nm_release_message(msg);
+		nm_release_message(msg);
 	}
 }
 
@@ -316,8 +315,7 @@ _get_details_resp_setup_buddy(NMUser * user, NMERR_T ret_code,
 
 	}
 
-	if (contact)
-		nm_release_contact(contact);
+	nm_release_contact(contact);
 }
 
 /* Add the new contact into the PurpleBuddy list */
@@ -353,8 +351,8 @@ _create_contact_resp_cb(NMUser * user, NMERR_T ret_code,
 			folder_name = NM_ROOT_FOLDER_NAME;
 
 		/* Re-add the buddy now that we got the okay from the server */
-		if (folder_name && (group = purple_blist_find_group(folder_name))) {
-
+		group = purple_blist_find_group(folder_name);
+		if (group) {
 			const char *alias = nm_contact_get_display_name(tmp_contact);
 			const char *display_id = nm_contact_get_display_id(new_contact);
 
@@ -394,7 +392,6 @@ _create_contact_resp_cb(NMUser * user, NMERR_T ret_code,
 			rc = nm_send_get_details(user, nm_contact_get_dn(new_contact),
 									 _get_details_resp_setup_buddy, new_contact);
 			_check_for_disconnect(user, rc);
-
 		}
 
 	} else {
@@ -556,8 +553,7 @@ _createconf_resp_send_msg(NMUser * user, NMERR_T ret_code,
 			g_free(err);
 		}
 
-		if (msg)
-			nm_release_message(msg);
+		nm_release_message(msg);
 	}
 }
 

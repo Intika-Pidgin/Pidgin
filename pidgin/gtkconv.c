@@ -1315,9 +1315,9 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 				PIDGIN_STOCK_TOOLBAR_SEND_FILE, G_CALLBACK(menu_chat_send_file_cb),
 				PIDGIN_CONVERSATION(conv));
 
-			if (gc == NULL || protocol == NULL)
+			if (gc == NULL) {
 				can_receive_file = FALSE;
-			else {
+			} else {
 				gchar *real_who = NULL;
 				real_who = purple_protocol_chat_iface_get_user_real_name(protocol, gc,
 					purple_chat_conversation_get_id(chat), who);
@@ -2452,9 +2452,8 @@ pidgin_conversations_get_unseen(GList *l,
 		if(gtkconv == NULL || gtkconv->active_conv != conv)
 			continue;
 
-		if (gtkconv->unseen_state >= min_state
-			&& (!hidden_only ||
-				(hidden_only && gtkconv->win == hidden_convwin))) {
+		if (gtkconv->unseen_state >= min_state &&
+		    (!hidden_only || gtkconv->win == hidden_convwin)) {
 
 			r = g_list_prepend(r, conv);
 			c++;
@@ -2789,7 +2788,7 @@ regenerate_media_items(PidginConvWindow *win)
 	 * Check if account support voice and/or calls, and
 	 * if the current buddy	supports it.
 	 */
-	if (account != NULL && PURPLE_IS_IM_CONVERSATION(conv)) {
+	if (PURPLE_IS_IM_CONVERSATION(conv)) {
 		PurpleMediaCaps caps =
 				purple_protocol_get_media_caps(account,
 				purple_conversation_get_name(conv));
@@ -5133,8 +5132,7 @@ pidgin_conv_chat_update_user(PurpleChatUser *chatuser)
 		purple_chat_user_set_ui_data(chatuser, NULL);
 	}
 
-	if (chatuser)
-		add_chat_user_common(chat, chatuser, NULL);
+	add_chat_user_common(chat, chatuser, NULL);
 }
 
 gboolean

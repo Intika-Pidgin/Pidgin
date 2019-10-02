@@ -2204,7 +2204,6 @@ static int zephyr_send_message(zephyr_account *zephyr,char* zclass, char* instan
 
 		notice.z_kind = ACKED;
 		notice.z_port = 0;
-		notice.z_opcode = "";
 		notice.z_class = zclass;
 		notice.z_class_inst = instance;
 		notice.z_recipient = recipient;
@@ -2942,7 +2941,8 @@ zephyr_protocol_init(ZephyrProtocol *self)
 	option = purple_account_option_string_new(_("Realm"), "realm", "");
 	protocol->account_options = g_list_append(protocol->account_options, option);
 
-	option = purple_account_option_string_new(_("Exposure"), "exposure_level", tmp?tmp: EXPOSE_REALMVIS);
+	option = purple_account_option_string_new(_("Exposure"), "exposure_level",
+	                                          tmp);
 	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_string_new(_("Encoding"), "encoding", ZEPHYR_FALLBACK_CHARSET);

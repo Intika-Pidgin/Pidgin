@@ -1680,9 +1680,7 @@ purple_request_field_list_set_selected(PurpleRequestField *field, GList *items)
 
 	purple_request_field_list_clear_selected(field);
 
-	if (!purple_request_field_list_get_multi_select(field) &&
-		items && items->next)
-	{
+	if (!purple_request_field_list_get_multi_select(field) && items->next) {
 		purple_debug_warning("request",
 						   "More than one item added to non-multi-select "
 						   "field %s\n",

@@ -3569,8 +3569,9 @@ set_mood_cb(GtkWidget *widget, PurpleAccount *account)
 	for ( ; mood->mood != NULL ; mood++) {
 		char *path;
 
-		if (mood->mood == NULL || mood->description == NULL)
+		if (mood->description == NULL) {
 			continue;
+		}
 
 		path = get_mood_icon_path(mood->mood);
 		purple_request_field_list_add_icon(f, _(mood->description),

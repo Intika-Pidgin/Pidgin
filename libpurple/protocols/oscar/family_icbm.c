@@ -172,13 +172,13 @@ error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 
 	if (!purple_conversation_present_error(bn, purple_connection_get_account(gc), buf)) {
 		g_free(buf);
-		if (errcode != 0 && errcode < errcodereasonlen)
+		if (errcode != 0 && errcode < errcodereasonlen) {
 			buf = g_strdup_printf(_("Unable to send message to %s: %s (%s)"),
-			                      bn ? bn : "(unknown)", reason_str,
-			                      _(errcodereason[errcode]));
-		else
-			buf = g_strdup_printf(_("Unable to send message to %s: %s"),
-			                      bn ? bn : "(unknown)", reason_str);
+			                      bn, reason_str, _(errcodereason[errcode]));
+		} else {
+			buf = g_strdup_printf(_("Unable to send message to %s: %s"), bn,
+			                      reason_str);
+		}
 		purple_notify_error(od->gc, NULL, buf, reason_str,
 			purple_request_cpar_from_connection(od->gc));
 	}

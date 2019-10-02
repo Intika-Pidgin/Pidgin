@@ -88,8 +88,7 @@ static void jabber_x_data_ok_cb(struct jabber_x_data_data *data, PurpleRequestFi
 					fieldnode = purple_xmlnode_new_child(result, "field");
 					purple_xmlnode_set_attrib(fieldnode, "var", id);
 					valuenode = purple_xmlnode_new_child(fieldnode, "value");
-					if(value)
-						purple_xmlnode_insert_data(valuenode, value, -1);
+					purple_xmlnode_insert_data(valuenode, value, -1);
 					break;
 					}
 				case JABBER_X_DATA_TEXT_MULTI:
