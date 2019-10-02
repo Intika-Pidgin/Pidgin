@@ -853,13 +853,13 @@ pidgin_plugins_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 	markup = g_strdup_printf(
 	        "<span size='x-large' weight='bold'>%s</span>\n<b>%s:</b> "
 	        "%s\n<b>%s:</b> %s",
-	        name = g_markup_escape_text(gplugin_plugin_info_get_name(info),
-	                                    -1),
+	        name = g_markup_escape_text(gplugin_plugin_info_get_name(info), -1),
 	        _("Description"),
 	        desc = g_markup_escape_text(
 	                gplugin_plugin_info_get_description(info), -1),
-	        (g_strv_length((gchar **)authorlist) > 1 ? _("Authors")
-	                                                 : _("Author")),
+	        (authorlist && g_strv_length((gchar **)authorlist) > 1
+	                 ? _("Authors")
+	                 : _("Author")),
 	        pauthors);
 
 	layout = gtk_widget_create_pango_layout(tipwindow, NULL);
