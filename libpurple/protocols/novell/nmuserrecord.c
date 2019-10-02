@@ -81,12 +81,8 @@ _get_attribute_value(NMField *field)
 		 * just pick the first value and return it
 		 */
 		NMField *tmp = (NMField *)field->ptr_value;
-		if ((tmp != NULL) &&
-			((tmp->type == NMFIELD_TYPE_UTF8) ||
-			(tmp->type == NMFIELD_TYPE_DN))) {
-
+		if (tmp->type == NMFIELD_TYPE_UTF8 || tmp->type == NMFIELD_TYPE_DN) {
 			value = (char *)tmp->ptr_value;
-
 		} else {
 			return NULL;
 		}
@@ -474,14 +470,12 @@ nm_user_record_get_property(NMUserRecord * user_record, int index)
 			int max = nm_count_fields(fields);
 
 			if (index < max) {
-				if (user_record) {
 					field = &fields[index];
 					if (field && field->tag && field->ptr_value) {
 						property = g_new0(NMProperty, 1);
 						property->tag = g_strdup(field->tag);
 						property->value = _get_attribute_value(field);
 					}
-				}
 			}
 		}
 	}

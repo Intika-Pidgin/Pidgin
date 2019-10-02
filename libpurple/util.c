@@ -303,8 +303,9 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		str++;
 
 	if (*str == '\0') {
-		if (rest != NULL && *str != '\0')
+		if (rest != NULL) {
 			*rest = str;
+		}
 
 		return 0;
 	}
@@ -1328,9 +1329,7 @@ purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo 
 		return FALSE;
 
 	if (q != NULL && (!no_value_token ||
-					  (no_value_token && strncmp(p, no_value_token,
-												 strlen(no_value_token)))))
-	{
+	                  strncmp(p, no_value_token, strlen(no_value_token)))) {
 		GString *dest = g_string_new("");
 
 		if (is_link)

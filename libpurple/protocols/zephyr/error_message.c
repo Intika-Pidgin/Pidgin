@@ -45,10 +45,8 @@ char	*buf;
     }
 
     strcpy (buf, "Unknown code ");
-    if (table_num) {
-	strcat (buf, error_table_name_r (table_num, namebuf));
-	strcat (buf, " ");
-    }
+    strcat (buf, error_table_name_r (table_num, namebuf));
+    strcat (buf, " ");
     for (cp = buf; *cp; cp++)
 	;
     if (offset >= 100) {

@@ -814,8 +814,6 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 							   *tos, (int)count);
 			data2 = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE, &new_data);
 			if (data2 && new_data) {
-				if (data)
-					data->purple_has_handle = FALSE;
 				data = data2;
 			}
 			g_free(notification);

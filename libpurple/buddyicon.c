@@ -635,6 +635,7 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 		const char *protocol_icon_file;
 		const char *dirname;
 		gboolean caching;
+		gchar *path;
 		guchar *data;
 		size_t len;
 
@@ -654,23 +655,20 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 		 * functions. */
 		purple_buddy_icons_set_caching(FALSE);
 
-		if (protocol_icon_file != NULL)
-		{
-			char *path = g_build_filename(dirname, protocol_icon_file, NULL);
-			if (read_icon_file(path, &data, &len))
-			{
-				const char *checksum;
+		path = g_build_filename(dirname, protocol_icon_file, NULL);
+		if (read_icon_file(path, &data, &len)) {
+			const char *checksum;
 
-				icon = purple_buddy_icon_create(account, username);
-				icon->img = NULL;
-				checksum = purple_blist_node_get_string((PurpleBlistNode*)b, "icon_checksum");
-				purple_buddy_icon_set_data(icon, data, len, checksum);
-			}
-			else
-				delete_buddy_icon_settings((PurpleBlistNode*)b, "buddy_icon");
-
-			g_free(path);
+			icon = purple_buddy_icon_create(account, username);
+			icon->img = NULL;
+			checksum = purple_blist_node_get_string((PurpleBlistNode *)b,
+			                                        "icon_checksum");
+			purple_buddy_icon_set_data(icon, data, len, checksum);
+		} else {
+			delete_buddy_icon_settings((PurpleBlistNode *)b, "buddy_icon");
 		}
+
+		g_free(path);
 
 		purple_buddy_icons_set_caching(caching);
 	}

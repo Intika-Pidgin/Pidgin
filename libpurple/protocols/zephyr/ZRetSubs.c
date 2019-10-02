@@ -119,7 +119,7 @@ static Code_t Z_RetSubs(notice, nsubs, auth_routine)
 		__subscriptions_list = (ZSubscription_t *)
 			malloc((unsigned)(__subscriptions_num*
 					  sizeof(ZSubscription_t)));
-		if (__subscriptions_num && !__subscriptions_list) {
+		if (!__subscriptions_list) {
 			ZFreeNotice(&retnotice);
 			return (ENOMEM);
 		}

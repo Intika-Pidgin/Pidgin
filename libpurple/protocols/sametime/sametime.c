@@ -185,12 +185,6 @@ enum blist_choice {
 #define DEBUG_WARN(...)   purple_debug_warning(G_LOG_DOMAIN, __VA_ARGS__)
 
 
-/** ensure non-null strings */
-#ifndef NSTR
-# define NSTR(str) ((str)? (str): "(null)")
-#endif
-
-
 /** calibrates distinct secure channel nomenclature */
 static const unsigned char no_secret[] = {
   0x2d, 0x2d, 0x20, 0x73, 0x69, 0x65, 0x67, 0x65,
@@ -509,7 +503,7 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
     guint32 idle_len;       /*< how long a client has been idle */
     guint32 ugly_idle_len;  /*< how long a broken client has been idle */
 
-    DEBUG_INFO("%s has idle value 0x%x\n", NSTR(id), idle);
+    DEBUG_INFO("%s has idle value 0x%x\n", id, idle);
 
     idle_len = time(NULL) - idle;
     ugly_idle_len = ((time(NULL) * 1000) - idle) / 1000;
@@ -540,7 +534,7 @@ static void mw_aware_list_on_aware(struct mwAwareList *list,
 
 #else
     if(idle < 0 || idle > time(NULL)) {
-      DEBUG_INFO("hiding a messy idle value 0x%x\n", NSTR(id), idle);
+      DEBUG_INFO("hiding a messy idle value 0x%x\n", id, idle);
       idle = -1;
     }
 #endif
@@ -928,13 +922,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
     return NULL;
   }
 
-  if (!name) {
-    DEBUG_WARN("Can't ensure a null group\n");
-    return NULL;
-  }
-
-  DEBUG_INFO("attempting to ensure group %s, called %s\n",
-	     NSTR(name), NSTR(alias));
+  DEBUG_INFO("attempting to ensure group %s, called %s\n", name, alias);
 
   /* first attempt at finding the group, by the name key */
   for (gn = purple_blist_get_default_root(); gn;
@@ -944,7 +932,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
     n = purple_blist_node_get_string(gn, GROUP_KEY_NAME);
     o = purple_blist_node_get_string(gn, GROUP_KEY_OWNER);
 
-    DEBUG_INFO("found group named %s, owned by %s\n", NSTR(n), NSTR(o));
+    DEBUG_INFO("found group named %s, owned by %s\n", n, o);
 
     if(n && purple_strequal(n, name)) {
       if(!o || purple_strequal(o, owner)) {
@@ -957,7 +945,7 @@ static PurpleGroup *group_ensure(PurpleConnection *gc,
 
   /* try again, by alias */
   if(! group) {
-    DEBUG_INFO("searching for group by alias %s\n", NSTR(alias));
+    DEBUG_INFO("searching for group by alias %s\n", alias);
     group = purple_blist_find_group(alias);
   }
 
@@ -1017,7 +1005,7 @@ static void group_clear(PurpleGroup *group, PurpleAccount *acct, gboolean del) {
 
   g_return_if_fail(group != NULL);
 
-  DEBUG_INFO("clearing members from pruned group %s\n", NSTR(purple_group_get_name(group)));
+  DEBUG_INFO("clearing members from pruned group %s\n", purple_group_get_name(group));
 
   gc = purple_account_get_connection(acct);
   g_return_if_fail(gc != NULL);
@@ -1037,7 +1025,7 @@ static void group_clear(PurpleGroup *group, PurpleAccount *acct, gboolean del) {
       if(! PURPLE_IS_BUDDY(bn)) continue;
 
       if(purple_buddy_get_account(gb) == acct) {
-	DEBUG_INFO("clearing %s from group\n", NSTR(purple_buddy_get_name(gb)));
+	DEBUG_INFO("clearing %s from group\n", purple_buddy_get_name(gb));
 	prune = g_list_prepend(prune, gb);
       }
     }
@@ -1074,7 +1062,7 @@ static void group_prune(PurpleConnection *gc, PurpleGroup *group,
 
   g_return_if_fail(group != NULL);
 
-  DEBUG_INFO("pruning membership of group %s\n", NSTR(purple_group_get_name(group)));
+  DEBUG_INFO("pruning membership of group %s\n", purple_group_get_name(group));
 
   acct = purple_connection_get_account(gc);
   g_return_if_fail(acct != NULL);
@@ -1087,7 +1075,7 @@ static void group_prune(PurpleConnection *gc, PurpleGroup *group,
   for(ul = utl; ul; ul = ul->next) {
     const char *id = mwSametimeUser_getUser(ul->data);
     g_hash_table_insert(stusers, (char *) id, ul->data);
-    DEBUG_INFO("server copy has %s\n", NSTR(id));
+    DEBUG_INFO("server copy has %s\n", id);
   }
   g_list_free(utl);
 
@@ -1108,7 +1096,7 @@ static void group_prune(PurpleConnection *gc, PurpleGroup *group,
       /* if the account is correct and they're not in our table, mark
 	 them for pruning */
       if(purple_buddy_get_account(gb) == acct && !g_hash_table_lookup(stusers, purple_buddy_get_name(gb))) {
-	DEBUG_INFO("marking %s for pruning\n", NSTR(purple_buddy_get_name(gb)));
+	DEBUG_INFO("marking %s for pruning\n", purple_buddy_get_name(gb));
 	prune = g_list_prepend(prune, gb);
       }
     }
@@ -1705,7 +1693,7 @@ static void mw_session_admin(struct mwSession *session,
 
   msg = _("A Sametime administrator has issued the following announcement"
 	   " on server %s");
-  prim = g_strdup_printf(msg, NSTR(host));
+  prim = g_strdup_printf(msg, host);
 
   purple_notify_message(gc, PURPLE_NOTIFY_MSG_INFO,
 		      _("Sametime Administrator Announcement"),
@@ -1925,8 +1913,8 @@ static void mw_conf_invited(struct mwConference *conf,
   g_hash_table_insert(ht, CHAT_KEY_INVITE, c_invitation);
 
   DEBUG_INFO("received invitation from '%s' to join ('%s','%s'): '%s'\n",
-	     NSTR(c_inviter), NSTR(c_name),
-	     NSTR(c_topic), NSTR(c_invitation));
+	     c_inviter, c_name,
+	     c_topic, c_invitation);
 
   if(! c_topic) c_topic = "(no title)";
   if(! c_invitation) c_invitation = "(no message)";
@@ -1980,8 +1968,7 @@ static void mw_conf_opened(struct mwConference *conf, GList *members) {
   const char *n = mwConference_getName(conf);
   const char *t = mwConference_getTitle(conf);
 
-  DEBUG_INFO("conf %s opened, %u initial members\n",
-	     NSTR(n), g_list_length(members));
+  DEBUG_INFO("conf %s opened, %u initial members\n", n, g_list_length(members));
 
   srvc = mwConference_getService(conf);
   session = mwService_getSession(MW_SERVICE(srvc));
@@ -2010,7 +1997,7 @@ static void mw_conf_closed(struct mwConference *conf, guint32 reason) {
   const char *n = mwConference_getName(conf);
   char *msg = mwError(reason);
 
-  DEBUG_INFO("conf %s closed, 0x%08x\n", NSTR(n), reason);
+  DEBUG_INFO("conf %s closed, 0x%08x\n", n, reason);
 
   srvc = mwConference_getService(conf);
   session = mwService_getSession(MW_SERVICE(srvc));
@@ -2032,7 +2019,7 @@ static void mw_conf_peer_joined(struct mwConference *conf,
 
   const char *n = mwConference_getName(conf);
 
-  DEBUG_INFO("%s joined conf %s\n", NSTR(peer->user_id), NSTR(n));
+  DEBUG_INFO("%s joined conf %s\n", peer->user_id, n);
 
   g_conf = mwConference_getClientData(conf);
   g_return_if_fail(g_conf != NULL);
@@ -2049,7 +2036,7 @@ static void mw_conf_peer_parted(struct mwConference *conf,
 
   const char *n = mwConference_getName(conf);
 
-  DEBUG_INFO("%s left conf %s\n", NSTR(peer->user_id), NSTR(n));
+  DEBUG_INFO("%s left conf %s\n", peer->user_id, n);
 
   g_conf = mwConference_getClientData(conf);
   g_return_if_fail(g_conf != NULL);
@@ -2089,10 +2076,10 @@ static void mw_conf_typing(struct mwConference *conf,
   const char *w = who->user_id;
 
   if(typing) {
-    DEBUG_INFO("%s in conf %s: <typing>\n", NSTR(w), NSTR(n));
+    DEBUG_INFO("%s in conf %s: <typing>\n", w, n);
 
   } else {
-    DEBUG_INFO("%s in conf %s: <stopped typing>\n", NSTR(w), NSTR(n));
+    DEBUG_INFO("%s in conf %s: <stopped typing>\n", w, n);
   }
 }
 
@@ -2254,10 +2241,10 @@ static void mw_ft_offered(struct mwFileTransfer *ft) {
   who = mwFileTransfer_getUser(ft)->user;
 
   DEBUG_INFO("file transfer %p offered\n", ft);
-  DEBUG_INFO(" from: %s\n", NSTR(who));
-  DEBUG_INFO(" file: %s\n", NSTR(mwFileTransfer_getFileName(ft)));
+  DEBUG_INFO(" from: %s\n", who);
+  DEBUG_INFO(" file: %s\n", mwFileTransfer_getFileName(ft));
   DEBUG_INFO(" size: %u\n", mwFileTransfer_getFileSize(ft));
-  DEBUG_INFO(" text: %s\n", NSTR(mwFileTransfer_getMessage(ft)));
+  DEBUG_INFO(" text: %s\n", mwFileTransfer_getMessage(ft));
 
   xfer = purple_xfer_new(acct, PURPLE_XFER_TYPE_RECEIVE, who);
   if (xfer)
@@ -2296,7 +2283,7 @@ static void ft_send(struct mwFileTransfer *ft) {
   } else {
     int err = errno;
     DEBUG_WARN("problem reading from file %s: %s\n",
-	       NSTR(mwFileTransfer_getFileName(ft)), g_strerror(err));
+	       mwFileTransfer_getFileName(ft), g_strerror(err));
 
     mwFileTransfer_cancel(ft);
   }
@@ -2948,7 +2935,7 @@ static void mw_place_opened(struct mwPlace *place) {
   members = mwPlace_getMembers(place);
 
   DEBUG_INFO("place %s opened, %u initial members\n",
-	     NSTR(n), g_list_length(members));
+	     n, g_list_length(members));
 
   if(! t) t = "(no title)";
   gconf = purple_serv_got_joined_chat(gc, PLACE_TO_ID(place), t);
@@ -2973,7 +2960,7 @@ static void mw_place_closed(struct mwPlace *place, guint32 code) {
   const char *n = mwPlace_getName(place);
   char *msg = mwError(code);
 
-  DEBUG_INFO("place %s closed, 0x%08x\n", NSTR(n), code);
+  DEBUG_INFO("place %s closed, 0x%08x\n", n, code);
 
   srvc = mwPlace_getService(place);
   session = mwService_getSession(MW_SERVICE(srvc));
@@ -2994,7 +2981,7 @@ static void mw_place_peerJoined(struct mwPlace *place,
 
   const char *n = mwPlace_getName(place);
 
-  DEBUG_INFO("%s joined place %s\n", NSTR(peer->user), NSTR(n));
+  DEBUG_INFO("%s joined place %s\n", peer->user, n);
 
   gconf = mwPlace_getClientData(place);
   g_return_if_fail(gconf != NULL);
@@ -3010,7 +2997,7 @@ static void mw_place_peerParted(struct mwPlace *place,
 
   const char *n = mwPlace_getName(place);
 
-  DEBUG_INFO("%s left place %s\n", NSTR(peer->user), NSTR(n));
+  DEBUG_INFO("%s left place %s\n", peer->user, n);
 
   gconf = mwPlace_getClientData(place);
   g_return_if_fail(gconf != NULL);
@@ -4080,7 +4067,7 @@ static void multi_resolved_query(struct mwResolveResult *result,
     GList *row = NULL;
 
     DEBUG_INFO("multi resolve: %s, %s\n",
-	       NSTR(match->id), NSTR(match->name));
+	       match->id, match->name);
 
     if(!match->id || !match->name)
       continue;
@@ -5103,7 +5090,7 @@ static void search_resolved(struct mwServiceResolve *srvc,
     msgA = _("No matches");
     msgB = _("The identifier '%s' did not match any users in your"
 	     " Sametime community.");
-    msg = g_strdup_printf(msgB, (res && res->name) ? NSTR(res->name) : "");
+    msg = g_strdup_printf(msgB, (res && res->name) ? res->name : "");
 
     purple_notify_error(gc, _("No Matches"), msgA, msg,
 	purple_request_cpar_from_connection(gc));

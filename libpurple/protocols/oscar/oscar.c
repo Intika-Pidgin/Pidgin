@@ -990,12 +990,12 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 		return 1;
 	}
 
-	purple_debug_misc("oscar", "Reg status: %hu\n"
-							   "Email: %s\n"
-							   "BOSIP: %s\n",
-							   info->regstatus,
-							   info->email ? info->email : "null",
-							   info->bosip ? info->bosip : "null");
+	purple_debug_misc("oscar",
+	                  "Reg status: %hu\n"
+	                  "Email: %s\n"
+	                  "BOSIP: %s\n",
+	                  info->regstatus, info->email ? info->email : "null",
+	                  info->bosip);
 	purple_debug_info("oscar", "Closing auth connection...\n");
 	flap_connection_schedule_destroy(conn, OSCAR_DISCONNECT_DONE, NULL);
 
@@ -1903,8 +1903,7 @@ incomingim_chan4(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo,
 			smsmsg = byte_stream_getstr(&qbs, smslen);
 
 			/* Check if this is an SMS being sent from server */
-			if ((smstype == 0) && (purple_strequal(tagstr, "ICQSMS")) && (smsmsg != NULL))
-			{
+			if (purple_strequal(tagstr, "ICQSMS") && smsmsg != NULL) {
 				xmlroot = purple_xmlnode_from_str(smsmsg, -1);
 				if (xmlroot != NULL)
 				{

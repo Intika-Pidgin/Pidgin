@@ -1614,7 +1614,7 @@ nm_call_handler(NMUser * user, NMRequest * request, NMField * fields)
 
 				field = (NMField *) locate->ptr_value;
 				while ((field = nm_locate_field(NM_A_SZ_DN, field))) {
-					if (field && field->ptr_value != 0) {
+					if (field->ptr_value != 0) {
 
 						if (nm_utf8_str_equal
 							(nm_user_record_get_dn(user->user_record),
@@ -2022,22 +2022,15 @@ _update_contact_list(NMUser * user, NMField * fields)
 						/* Not found,  so we need to add it */
 						if (g_ascii_strcasecmp(cursor->tag, NM_A_FA_CONTACT) == 0) {
 
-							const char *dn = NULL;
-
 							locate =
 								nm_locate_field(NM_A_SZ_DN,
 												(NMField *) cursor->ptr_value);
-							if (locate != NULL && locate->ptr_value != 0) {
-								dn = (const char *) locate->ptr_value;
-								if (dn != NULL) {
-									contact =
-										nm_create_contact_from_fields(cursor);
-									if (contact) {
-										nm_folder_add_contact_to_list(user->
-																	  root_folder,
-																	  contact);
-										nm_release_contact(contact);
-									}
+							if (locate != NULL && locate->ptr_value != NULL) {
+								contact = nm_create_contact_from_fields(cursor);
+								if (contact) {
+									nm_folder_add_contact_to_list(
+									        user->root_folder, contact);
+									nm_release_contact(contact);
 								}
 							}
 						} else if (g_ascii_strcasecmp(cursor->tag, NM_A_FA_FOLDER)

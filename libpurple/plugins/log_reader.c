@@ -1837,7 +1837,6 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 		    purple_str_has_prefix(line, QIP_LOG_OUT_MESSAGE_ESC)) {
 
 			char *tmp;
-			const char *buddy_name;
 
 			is_in_message = purple_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC);
 
@@ -1845,9 +1844,6 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 			c = strchr(c, '\n');
 			if (!c)
 				break;
-
-			/* XXX: Do we need buddy_name when we have buddy->alias? */
-			buddy_name = ++c;
 
 			/* Find the last '(' character. */
 			if ((tmp = strchr(c, '\n')) != NULL) {
@@ -1884,9 +1880,8 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 					if (is_in_message) {
 						const char *alias = NULL;
 
-						if (buddy_name != NULL && buddy != NULL &&
-						    (alias = purple_buddy_get_alias(buddy)))
-						{
+						if (buddy != NULL &&
+						    (alias = purple_buddy_get_alias(buddy))) {
 							g_string_append_printf(formatted,
 								"<span style=\"color: #A82F2F;\">"
 								"<b>%s</b></span>: ", alias);
