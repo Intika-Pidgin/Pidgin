@@ -172,6 +172,7 @@ save_account_cb(AccountEditDialog *dialog)
 					"server."),
 					purple_request_cpar_from_account(
 						account));
+				g_string_free(username, TRUE);
 				return;
 			}
 
@@ -512,10 +513,11 @@ update_user_options(AccountEditDialog *dialog)
 	if (dialog->account)
 		gnt_check_box_set_checked(GNT_CHECK_BOX(dialog->newmail),
 				purple_account_get_check_mail(dialog->account));
-	if (!protocol || !(purple_protocol_get_options(protocol) & OPT_PROTO_MAIL_CHECK))
+	if (!(purple_protocol_get_options(protocol) & OPT_PROTO_MAIL_CHECK)) {
 		gnt_widget_set_visible(dialog->newmail, FALSE);
-	else
+	} else {
 		gnt_widget_set_visible(dialog->newmail, TRUE);
+	}
 
 	if (dialog->remember == NULL)
 		dialog->remember = gnt_check_box_new(_("Remember password"));

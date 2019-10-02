@@ -99,7 +99,7 @@ clipboard_changed(GntWM *wm, gchar *string)
 	if (child) {
 		kill(child, SIGTERM);
 	}
-	if ((child = fork() == 0)) {
+	if ((child = fork()) == 0) {
 		set_clip(string);
 		_exit(0);
 	}
