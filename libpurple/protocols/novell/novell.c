@@ -803,8 +803,8 @@ _create_privacy_item_deny_resp_cb(NMUser *user, NMERR_T ret_code,
 
 		} else {
 			rc = nm_send_get_details(user, who,
-									 _get_details_resp_add_privacy_item,
-									 (gpointer)FALSE);
+			                         _get_details_resp_add_privacy_item,
+			                         GINT_TO_POINTER(FALSE));
 			_check_for_disconnect(user, rc);
 		}
 	} else {
@@ -857,8 +857,8 @@ _create_privacy_item_permit_resp_cb(NMUser *user, NMERR_T ret_code,
 
 		} else {
 			rc = nm_send_get_details(user, who,
-									 _get_details_resp_add_privacy_item,
-									 (gpointer)TRUE);
+			                         _get_details_resp_add_privacy_item,
+			                         GINT_TO_POINTER(TRUE));
 			_check_for_disconnect(user, rc);
 		}
 
@@ -3102,8 +3102,9 @@ novell_add_permit(PurpleConnection *gc, const char *who)
 	if (strchr(who, '.')) {
 		const char *dn = nm_lookup_dn(user, who);
 		if (dn == NULL) {
-			rc = nm_send_get_details(user, who, _get_details_send_privacy_create,
-									 (gpointer)TRUE);
+			rc = nm_send_get_details(user, who,
+			                         _get_details_send_privacy_create,
+			                         GINT_TO_POINTER(TRUE));
 			_check_for_disconnect(user, rc);
 			return;
 		} else {
@@ -3146,8 +3147,9 @@ novell_add_deny(PurpleConnection *gc, const char *who)
 	if (strchr(who, '.')) {
 		const char *dn = nm_lookup_dn(user, who);
 		if (dn == NULL) {
-			rc = nm_send_get_details(user, who, _get_details_send_privacy_create,
-									 (gpointer)FALSE);
+			rc = nm_send_get_details(user, who,
+			                         _get_details_send_privacy_create,
+			                         GINT_TO_POINTER(FALSE));
 			_check_for_disconnect(user, rc);
 			return;
 		} else {
