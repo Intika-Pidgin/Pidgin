@@ -1813,7 +1813,7 @@ nm_typed_to_dotted(const char *typed)
 	if (typed == NULL)
 		return NULL;
 
-	dotted = g_new0(char, strlen(typed));
+	dotted = g_new0(char, strlen(typed) + 1);
 
 	do {
 
