@@ -192,16 +192,21 @@ int main(int argc, char *argv[])
 	}
 	g_list_free(list);
 
-	printf("Select the protocol [0-%d]: ", i-1);
-	res = fgets(name, sizeof(name), stdin);
-	if (!res) {
-		fprintf(stderr, "Failed to gets protocol selection.");
-		abort();
+	num = -1;
+	while (num < 0 || num >= i) {
+		printf("Select the protocol [0-%d]: ", i - 1);
+		res = fgets(name, sizeof(name), stdin);
+		if (!res) {
+			fprintf(stderr, "Failed to get protocol selection.");
+			abort();
+		}
+		if (sscanf(name, "%d", &num) != 1) {
+			num = -1;
+		}
 	}
-	if (sscanf(name, "%d", &num) == 1)
-		protocol = g_list_nth_data(names, num);
+	protocol = g_list_nth_data(names, num);
 	if (!protocol) {
-		fprintf(stderr, "Failed to gets protocol.");
+		fprintf(stderr, "Failed to get protocol.");
 		abort();
 	}
 
