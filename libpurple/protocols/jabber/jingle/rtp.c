@@ -217,8 +217,15 @@ jingle_rtp_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 				session);
 
 		g_object_unref(session);
-	} else if (type == PURPLE_MEDIA_INFO_ACCEPT &&
+	/* The same signal is emited *four* times in case of acceptance
+	 * by purple_media_stream_info() (stream acceptance, session
+	 * acceptance, participant acceptance, and conference acceptance).
+	 * We only react to the first one, where sid and name are given
+	 * non-null values.
+	 */
+	} else if (type == PURPLE_MEDIA_INFO_ACCEPT && sid && name &&
 			jingle_session_is_initiator(session) == FALSE) {
+
 		jingle_rtp_ready(session);
 	}
 }
