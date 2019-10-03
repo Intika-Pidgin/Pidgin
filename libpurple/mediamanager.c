@@ -664,7 +664,6 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 	} else if (result == GST_ITERATOR_OK) {
 		remaining_pad = g_value_get_object(&tmp);
 		g_value_reset(&tmp);
-		gst_object_unref(remaining_pad);
 	}
 
 	gst_iterator_free(iter);
