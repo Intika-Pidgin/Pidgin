@@ -87,9 +87,12 @@ jingle_rtp_candidates_to_transport(JingleSession *session, const gchar *type, gu
 
 	for (; candidates; candidates = g_list_next(candidates)) {
 		PurpleMediaCandidate *candidate = candidates->data;
-		gchar *id = jabber_get_next_id(jingle_session_get_js(session));
-		jingle_transport_add_local_candidate(transport, id, generation, candidate);
-		g_free(id);
+		if (purple_media_candidate_get_protocol(candidate) ==
+				PURPLE_MEDIA_NETWORK_PROTOCOL_UDP) {
+			gchar *id = jabber_get_next_id(jingle_session_get_js(session));
+			jingle_transport_add_local_candidate(transport, id, generation, candidate);
+			g_free(id);
+		}
 	}
 
 	return transport;
