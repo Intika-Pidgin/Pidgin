@@ -1814,16 +1814,11 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 		if (codec->media_type == FS_MEDIA_TYPE_AUDIO) {
 			double output_volume = purple_prefs_get_int(
 					"/purple/media/audio/volume/output")/10.0;
-			/*
-			 * Should this instead be:
-			 *  audioconvert ! audioresample ! liveadder !
-			 *   audioresample ! audioconvert ! realsink
-			 */
 			stream->queue = gst_element_factory_make("queue", NULL);
 			stream->volume = gst_element_factory_make("volume", NULL);
 			g_object_set(stream->volume, "volume", output_volume, NULL);
 			stream->level = gst_element_factory_make("level", NULL);
-			stream->src = gst_element_factory_make("liveadder", NULL);
+			stream->src = gst_element_factory_make("audiomixer", NULL);
 			sink = purple_media_manager_get_element(
 					purple_media_get_manager(priv->media),
 					PURPLE_MEDIA_RECV_AUDIO, priv->media,
@@ -1866,6 +1861,39 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 		gst_element_set_state(stream->tee, GST_STATE_PLAYING);
 		gst_element_set_state(stream->src, GST_STATE_PLAYING);
 		gst_element_link_many(stream->src, stream->tee, sink, NULL);
+	} else {
+		if (codec->media_type == FS_MEDIA_TYPE_AUDIO) {
+			GstElement *convert, *resample, *capsfilter;
+			GstPad *mixer_srcpad;
+			GstCaps *caps;
+
+			/* The audiomixer element requires that all input
+			 * streams have the same rate, so resample if
+			 * needed
+			 */
+			mixer_srcpad = gst_element_get_static_pad(stream->src, "src");
+			caps = gst_pad_get_current_caps(mixer_srcpad);
+
+			if (caps) {
+				convert = gst_element_factory_make("audioconvert", NULL);
+				resample = gst_element_factory_make("audioresample", NULL);
+				capsfilter = gst_element_factory_make("capsfilter", NULL);
+
+				gst_bin_add_many(GST_BIN(priv->confbin), convert,
+						resample, capsfilter, NULL);
+				gst_element_link_many(gst_pad_get_parent_element(srcpad),
+						convert, resample, capsfilter, NULL);
+
+				g_object_set(capsfilter, "caps", caps, NULL);
+				gst_element_set_state(convert, GST_STATE_PLAYING);
+				gst_element_set_state(resample, GST_STATE_PLAYING);
+				gst_element_set_state(capsfilter, GST_STATE_PLAYING);
+
+				srcpad = gst_element_get_static_pad(capsfilter, "src");
+				gst_object_unref(caps);
+			}
+			gst_object_unref(mixer_srcpad);
+		}
 	}
 
 	sinkpad = gst_element_get_request_pad(stream->src, "sink_%u");
