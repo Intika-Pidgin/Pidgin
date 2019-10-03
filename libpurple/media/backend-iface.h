@@ -90,6 +90,9 @@ struct _PurpleMediaBackendInterface
 		const gchar *sess_id, const gchar *participant,
 		const gchar *cipher, const gchar *auth,
 		const gchar *key, gsize key_len);
+	gboolean (*set_require_encryption) (PurpleMediaBackend *self,
+		const gchar *sess_id, const gchar *participant,
+		gboolean require_encryption);
 	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	void (*set_params) (PurpleMediaBackend *self,
 		guint num_params, GParameter *params);
@@ -252,6 +255,19 @@ gboolean purple_media_backend_set_decryption_parameters(PurpleMediaBackend *self
 		const gchar *sess_id, const gchar *participant,
 		const gchar *cipher, const gchar *auth,
 		const gchar *key, gsize key_len);
+
+/**
+ * purple_media_backend_set_require_encryption:
+ * @self The media object to find the session in.
+ * @sess_id The id of the session to set parameters of.
+ * @participant The participant of the session to set parameters of.
+ * @require_encryption TRUE if the media requires encryption.
+ *
+ * Sets whether a session participant's media requires encryption.
+ */
+gboolean purple_media_backend_set_require_encryption(PurpleMediaBackend *self,
+		const gchar *sess_id, const gchar *participant,
+		gboolean require_encryption);
 
 /**
  * purple_media_backend_set_params:
