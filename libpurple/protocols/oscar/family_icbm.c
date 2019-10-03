@@ -424,7 +424,7 @@ int aim_im_sendch2_chatinvite(OscarData *od, const char *bn, const char *msg, gu
 	snacid = aim_cachesnac(od, SNAC_FAMILY_ICBM, 0x0006, 0x0000, bn, strlen(bn)+1);
 
 	/* XXX should be uncached by an unwritten 'invite accept' handler */
-	priv = g_malloc(sizeof(struct aim_invite_priv));
+	priv = g_new0(struct aim_invite_priv, 1);
 	priv->bn = g_strdup(bn);
 	priv->roomname = g_strdup(roomname);
 	priv->exchange = exchange;
