@@ -534,7 +534,7 @@ static void kill_editor (MMConversation *mmconv)
 static void init_conversation (PurpleConversation *conv)
 {
 	MMConversation *mmconv;
-	mmconv = g_malloc(sizeof(MMConversation));
+	mmconv = g_new0(MMConversation, 1);
 
 	mmconv->conv = conv;
 	mmconv->started = FALSE;

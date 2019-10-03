@@ -1163,7 +1163,7 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
 	PurpleProtocol *protocol = NULL;
-	_DndData *data = g_malloc(sizeof(_DndData));
+	_DndData *data = g_new0(_DndData, 1);
 	gboolean ft = FALSE, im = FALSE;
 
 	data->who = g_strdup(who);

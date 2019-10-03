@@ -1012,7 +1012,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	g_return_val_if_fail(gc != NULL, NULL);
 	g_return_val_if_fail(results != NULL, NULL);
 
-	data = g_malloc(sizeof(PidginNotifySearchResultsData));
+	data = g_new0(PidginNotifySearchResultsData, 1);
 	data->user_data = user_data;
 	data->results = results;
 

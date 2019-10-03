@@ -1372,7 +1372,7 @@ userinfo(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *fram
 	GSList *tlvlist;
 	aim_tlv_t *tlv = NULL;
 
-	userinfo = (aim_userinfo_t *)g_malloc(sizeof(aim_userinfo_t));
+	userinfo = g_new0(aim_userinfo_t, 1);
 	aim_info_extract(od, bs, userinfo);
 	tlvlist = aim_tlvlist_read(bs);
 
