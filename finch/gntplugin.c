@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 
 #include <gnt.h>
@@ -158,8 +160,7 @@ finch_plugin_info_new(const char *first_property, ...)
 static void
 free_stringlist(GList *list)
 {
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static gboolean
@@ -297,7 +298,7 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	/* XXX: Use formatting and stuff */
 	gnt_text_view_clear(GNT_TEXT_VIEW(plugins.aboot));
 	text = g_strdup_printf(
-	        (g_strv_length((gchar **)authorlist) > 1
+	        (authorlist && g_strv_length((gchar **)authorlist) > 1
 	                 ? _("Name: %s\nVersion: %s\nDescription: %s\nAuthors: "
 	                     "%s\nWebsite: %s\nFilename: %s\n")
 	                 : _("Name: %s\nVersion: %s\nDescription: %s\nAuthor: "
@@ -323,8 +324,7 @@ reset_plugin_window(GntWidget *window, gpointer null)
 {
 	GList *list = g_object_get_data(G_OBJECT(plugins.tree), "seen-list");
 	purple_prefs_set_path_list("/finch/plugins/seen", list);
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 
 	plugins.window = NULL;
 	plugins.tree = NULL;

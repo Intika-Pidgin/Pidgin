@@ -22,12 +22,11 @@
 void
 _gstroke_init (struct gstroke_metrics *metrics)
 {
-  if (metrics->pointList != NULL) {
-    /* FIXME: does this free the data too?*/
-    g_slist_free (metrics->pointList);
-    metrics->pointList = NULL;
-    metrics->point_count = 0;
-  }
+	if (metrics->pointList != NULL) {
+		g_slist_free_full(metrics->pointList, g_free);
+		metrics->pointList = NULL;
+		metrics->point_count = 0;
+	}
 }
 
 /* figure out which bin the point falls in */
@@ -197,8 +196,6 @@ _gstroke_record (gint x, gint y, struct gstroke_metrics *metrics)
 #endif
 
   if (metrics->point_count < GSTROKE_MAX_POINTS) {
-    new_point_p = g_malloc(sizeof (struct s_point));
-
     if (metrics->pointList == NULL) {
 
       /* first point in list - initialize metrics */
@@ -207,27 +204,28 @@ _gstroke_record (gint x, gint y, struct gstroke_metrics *metrics)
       metrics->max_x = -1;
       metrics->max_y = -1;
 
+      new_point_p = g_new0(struct s_point, 1);
       metrics->pointList = g_slist_prepend(metrics->pointList, new_point_p);
       metrics->point_count = 0;
 
     } else {
-
-#define LAST_POINT ((p_point)(g_slist_last (metrics->pointList)->data))
+      p_point last_point = (p_point)g_slist_last(metrics->pointList)->data;
 
       /* interpolate between last and current point */
-      delx = x - LAST_POINT->x;
-      dely = y - LAST_POINT->y;
+      delx = x - last_point->x;
+      dely = y - last_point->y;
 
       if (abs(delx) > abs(dely)) {  /* step by the greatest delta direction */
-	iy = LAST_POINT->y;
+	iy = last_point->y;
 
 	/* go from the last point to the current, whatever direction it may be */
-	for (ix = LAST_POINT->x; (delx > 0) ? (ix < x) : (ix > x); ix += (delx > 0) ? 1 : -1) {
+	for (ix = last_point->x; (delx > 0) ? (ix < x) : (ix > x); ix += (delx > 0) ? 1 : -1) {
 
 	  /* step the other axis by the correct increment */
 	  iy += fabs(((float) dely / (float) delx)) * (float) ((dely < 0) ? -1.0 : 1.0);
 
 	  /* add the interpolated point */
+	  new_point_p = g_new0(struct s_point, 1);
 	  new_point_p->x = ix;
 	  new_point_p->y = iy;
 	  metrics->pointList = g_slist_append (metrics->pointList, new_point_p);
@@ -239,19 +237,21 @@ _gstroke_record (gint x, gint y, struct gstroke_metrics *metrics)
 	  if (((gint) iy) > metrics->max_y) metrics->max_y = (gint) iy;
 	  metrics->point_count++;
 
-	  new_point_p = malloc(sizeof(struct s_point));
 	}
       } else {  /* same thing, but for dely larger than delx case... */
-	ix = LAST_POINT->x;
+        p_point last_point = (p_point)g_slist_last(metrics->pointList)->data;
+
+	ix = last_point->x;
 
 	/* go from the last point to the current, whatever direction it may be
 	 */
-	for (iy = LAST_POINT->y; (dely > 0) ? (iy < y) : (iy > y); iy += (dely > 0) ? 1 : -1) {
+	for (iy = last_point->y; (dely > 0) ? (iy < y) : (iy > y); iy += (dely > 0) ? 1 : -1) {
 
 	  /* step the other axis by the correct increment */
 	  ix += fabs(((float) delx / (float) dely)) * (float) ((delx < 0) ? -1.0 : 1.0);
 
 	  /* add the interpolated point */
+	  new_point_p = g_new0(struct s_point, 1);
 	  new_point_p->y = iy;
 	  new_point_p->x = ix;
 	  metrics->pointList = g_slist_append(metrics->pointList, new_point_p);
@@ -262,12 +262,11 @@ _gstroke_record (gint x, gint y, struct gstroke_metrics *metrics)
 	  if (((gint) iy) < metrics->min_y) metrics->min_y = (gint) iy;
 	  if (((gint) iy) > metrics->max_y) metrics->max_y = (gint) iy;
 	  metrics->point_count++;
-
-	  new_point_p = malloc(sizeof(struct s_point));
 	}
       }
 
       /* add the sampled point */
+      new_point_p = g_new0(struct s_point, 1);
       metrics->pointList = g_slist_append(metrics->pointList, new_point_p);
     }
 

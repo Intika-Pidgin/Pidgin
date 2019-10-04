@@ -54,17 +54,9 @@ typedef GPluginPlugin PurplePlugin;
 typedef GPluginPluginInterface PurplePluginInterface;
 
 #define PURPLE_TYPE_PLUGIN_INFO             (purple_plugin_info_get_type())
-#define PURPLE_PLUGIN_INFO(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfo))
-#define PURPLE_PLUGIN_INFO_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfoClass))
-#define PURPLE_IS_PLUGIN_INFO(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PLUGIN_INFO))
-#define PURPLE_IS_PLUGIN_INFO_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_PLUGIN_INFO))
-#define PURPLE_PLUGIN_INFO_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_PLUGIN_INFO, PurplePluginInfoClass))
-
 typedef struct _PurplePluginInfo PurplePluginInfo;
-typedef struct _PurplePluginInfoClass PurplePluginInfoClass;
 
 #define PURPLE_TYPE_PLUGIN_ACTION  (purple_plugin_action_get_type())
-
 typedef struct _PurplePluginAction PurplePluginAction;
 
 #include "pluginpref.h"
@@ -145,18 +137,12 @@ struct _PurplePluginInfo {
 	gpointer ui_data;
 };
 
-struct _PurplePluginInfoClass {
-	GPluginPluginInfoClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 /**
  * PurplePluginAction:
+ * @label: The label to display in the user interface.
+ * @callback: The function to call when the user wants to perform this action.
+ * @plugin: The plugin that this action belongs to.
+ * @user_data: User data to pass to @callback.
  *
  * Represents an action that the plugin can perform. This shows up in the Tools
  * menu, under a submenu with the name of the plugin.
@@ -221,113 +207,6 @@ struct _PurplePluginAction {
 	G_MODULE_EXPORT gboolean gplugin_unload(GPluginNativePlugin *p, GError **e) { \
 		return pluginunload(PURPLE_PLUGIN(p), e); \
 	}
-
-/**
- * PURPLE_DEFINE_TYPE:
- * @TN:   The name of the new type, in Camel case.
- * @t_n:  The name of the new type, in lowercase, words separated by '_'.
- * @T_P:  The #GType of the parent type.
- * 
- * A convenience macro for type implementations, which defines a *_get_type()
- * function; and a *_register_type() function for use in your plugin's load
- * function. You must define an instance initialization function *_init()
- * and a class initialization function *_class_init() for the type.
- */
-#define PURPLE_DEFINE_TYPE(TN, t_n, T_P) \
-	PURPLE_DEFINE_DYNAMIC_TYPE(TN, t_n, T_P)
-
-/**
- * PURPLE_DEFINE_TYPE_EXTENDED:
- * @TN:     The name of the new type, in Camel case.
- * @t_n:    The name of the new type, in lowercase, words separated by '_'.
- * @T_P:    The #GType of the parent type.
- * @flags:  #GTypeFlags to register the type with.
- * @CODE:   Custom code that gets inserted in *_get_type().
- *
- * A more general version of PURPLE_DEFINE_TYPE() which allows you to
- * specify #GTypeFlags and custom code.
- */
-#define PURPLE_DEFINE_TYPE_EXTENDED \
-	PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED
-
-/**
- * PURPLE_IMPLEMENT_INTERFACE_STATIC:
- * @TYPE_IFACE:  The #GType of the interface to add.
- * @iface_init:  The interface init function.
- *
- * A convenience macro to ease static interface addition in the CODE section
- * of PURPLE_DEFINE_TYPE_EXTENDED(). You should use this macro if the
- * interface is a part of the libpurple core.
- */
-#define PURPLE_IMPLEMENT_INTERFACE_STATIC(TYPE_IFACE, iface_init) { \
-	const GInterfaceInfo interface_info = { \
-		(GInterfaceInitFunc) iface_init, NULL, NULL \
-	}; \
-	g_type_add_interface_static(type_id, TYPE_IFACE, &interface_info); \
-}
-
-/**
- * PURPLE_IMPLEMENT_INTERFACE:
- * @TYPE_IFACE:  The #GType of the interface to add.
- * @iface_init:  The interface init function.
- *
- * A convenience macro to ease interface addition in the CODE section
- * of PURPLE_DEFINE_TYPE_EXTENDED(). You should use this macro if the
- * interface lives in the plugin.
- */
-#define PURPLE_IMPLEMENT_INTERFACE(TYPE_IFACE, iface_init) \
-	PURPLE_IMPLEMENT_INTERFACE_DYNAMIC(TYPE_IFACE, iface_init)
-
-/**
- * PURPLE_DEFINE_DYNAMIC_TYPE:
- *
- * A convenience macro for dynamic type implementations.
- */
-#define PURPLE_DEFINE_DYNAMIC_TYPE(TN, t_n, T_P) \
-	PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED (TN, t_n, T_P, 0, {})
-
-/**
- * PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED:
- *
- * A more general version of PURPLE_DEFINE_DYNAMIC_TYPE().
- */
-#define PURPLE_DEFINE_DYNAMIC_TYPE_EXTENDED(TypeName, type_name, TYPE_PARENT, flags, CODE) \
-static GType type_name##_type_id = 0; \
-G_MODULE_EXPORT GType type_name##_get_type(void) { \
-	return type_name##_type_id; \
-} \
-void type_name##_register_type(PurplePlugin *); \
-void type_name##_register_type(PurplePlugin *plugin) { \
-	GType type_id; \
-	const GTypeInfo type_info = { \
-		sizeof (TypeName##Class), \
-		(GBaseInitFunc) NULL, \
-		(GBaseFinalizeFunc) NULL, \
-		(GClassInitFunc) type_name##_class_init, \
-		(GClassFinalizeFunc) NULL, \
-		NULL, \
-		sizeof (TypeName), \
-		0, \
-		(GInstanceInitFunc) type_name##_init, \
-		NULL \
-	}; \
-	type_id = purple_plugin_register_type(plugin, TYPE_PARENT, #TypeName, \
-	                                      &type_info, (GTypeFlags) flags); \
-	type_name##_type_id = type_id; \
-	{ CODE ; } \
-}
-
-/**
- * PURPLE_IMPLEMENT_INTERFACE_DYNAMIC:
- *
- * A convenience macro to ease dynamic interface addition.
- */
-#define PURPLE_IMPLEMENT_INTERFACE_DYNAMIC(TYPE_IFACE, iface_init) { \
-	const GInterfaceInfo interface_info = { \
-		(GInterfaceInitFunc) iface_init, NULL, NULL \
-	}; \
-	purple_plugin_add_interface(plugin, type_id, TYPE_IFACE, &interface_info); \
-}
 
 G_BEGIN_DECLS
 
@@ -400,37 +279,6 @@ PurplePluginInfo *purple_plugin_get_info(PurplePlugin *plugin);
 void purple_plugin_disable(PurplePlugin *plugin);
 
 /**
- * purple_plugin_register_type:
- * @plugin:  The plugin that is registering the type.
- * @parent:  Type from which this type will be derived.
- * @name:    Name of the new type.
- * @info:    Information to initialize and destroy a type's classes and
- *           instances.
- * @flags:   Bitwise combination of values that determines the nature
- *           (e.g. abstract or not) of the type.
- *
- * Registers a new dynamic type.
- *
- * Returns: The new GType, or %G_TYPE_INVALID if registration failed.
- */
-GType purple_plugin_register_type(PurplePlugin *plugin, GType parent,
-                                  const gchar *name, const GTypeInfo *info,
-                                  GTypeFlags flags);
-
-/**
- * purple_plugin_add_interface:
- * @plugin:          The plugin that is adding the interface type.
- * @instance_type:   The GType of the instantiable type.
- * @interface_type:  The GType of the interface type.
- * @interface_info:  Information used to manage the interface type.
- *
- * Adds a dynamic interface type to an instantiable type.
- */
-void purple_plugin_add_interface(PurplePlugin *plugin, GType instance_type,
-                                 GType interface_type,
-                                 const GInterfaceInfo *interface_info);
-
-/**
  * purple_plugin_is_internal:
  * @plugin: The plugin.
  *
@@ -463,7 +311,8 @@ GSList *purple_plugin_get_dependent_plugins(PurplePlugin *plugin);
  *
  * Returns: The #GType for the #PurplePluginInfo object.
  */
-GType purple_plugin_info_get_type(void);
+G_DECLARE_FINAL_TYPE(PurplePluginInfo, purple_plugin_info, PURPLE, PLUGIN_INFO,
+                     GPluginPluginInfo)
 
 /**
  * purple_plugin_info_new:

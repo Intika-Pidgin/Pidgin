@@ -628,8 +628,7 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 										  0, val, type);
 		}
 
-	} while ((type != 0) && (count != 0));
-
+	} while (count != 0);
 
 	g_free(str);
 

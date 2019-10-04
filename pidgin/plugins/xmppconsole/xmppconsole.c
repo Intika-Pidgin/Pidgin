@@ -764,7 +764,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	}
 
 	if (!any_registered) {
-		g_set_error(error, PLUGIN_DOMAIN, 0, _("No XMPP protocol is loaded."));
+		g_set_error_literal(error, PLUGIN_DOMAIN, 0,
+		                    _("No XMPP protocol is loaded."));
 		return FALSE;
 	}
 

@@ -104,9 +104,7 @@ docklet_gtk_status_update_icon(PurpleStatusPrimitive status, PidginDockletFlag n
 	if (newflag & PIDGIN_DOCKLET_CONNECTING)
 		icon_name = PIDGIN_STOCK_TRAY_CONNECT;
 
-	if (icon_name) {
-		gtk_status_icon_set_from_icon_name(docklet, icon_name);
-	}
+	gtk_status_icon_set_from_icon_name(docklet, icon_name);
 }
 
 static GList *

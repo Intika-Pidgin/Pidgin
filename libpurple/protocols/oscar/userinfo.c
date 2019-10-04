@@ -32,11 +32,12 @@ oscar_caps_to_string(guint64 caps)
 	const gchar *tmp;
 	guint64 bit = 1;
 
-	str = g_string_new("");
-
 	if (!caps) {
 		return NULL;
-	} else while (bit <= OSCAR_CAPABILITY_LAST) {
+	}
+
+	str = g_string_new("");
+	while (bit <= OSCAR_CAPABILITY_LAST) {
 		if (bit & caps) {
 			switch (bit) {
 			case OSCAR_CAPABILITY_BUDDYICON:
@@ -300,6 +301,7 @@ oscar_user_info_append_status(PurpleConnection *gc, PurpleNotifyUserInfo *user_i
 
 	purple_notify_user_info_add_pair_html(user_info, _("Status"), message);
 	g_free(message);
+	g_free(itmsurl);
 }
 
 void

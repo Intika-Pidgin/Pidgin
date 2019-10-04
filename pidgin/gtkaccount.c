@@ -263,8 +263,8 @@ set_account_protocol_cb(GtkWidget *widget, const char *id,
 			dialog->register_button), FALSE);
 		gtk_widget_hide(dialog->register_button);
 	} else {
-		if (dialog->protocol != NULL &&
-		   (purple_protocol_get_options(dialog->protocol) & OPT_PROTO_REGISTER_NOSCREENNAME)) {
+		if (purple_protocol_get_options(dialog->protocol) &
+		    OPT_PROTO_REGISTER_NOSCREENNAME) {
 			gtk_widget_set_sensitive(dialog->register_button, TRUE);
 		} else {
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(

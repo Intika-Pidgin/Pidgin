@@ -2127,8 +2127,7 @@ add_buddies_from_vcard(const char *protocol_id, PurpleGroup *group, GList *list,
 		}
 	}
 
-	g_list_foreach(list, (GFunc)g_free, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_free);
 }
 
 static gboolean
@@ -3540,7 +3539,7 @@ set_mood_cb(GtkWidget *widget, PurpleAccount *account)
 	PurpleConnection *gc = NULL;
 	PurpleProtocol *protocol = NULL;
 	PurpleMood *mood;
-	PurpleMood *global_moods = get_global_moods();
+	PurpleMood *global_moods = NULL;
 
 	if (account) {
 		PurplePresence *presence = purple_account_get_presence(account);
@@ -3563,15 +3562,17 @@ set_mood_cb(GtkWidget *widget, PurpleAccount *account)
 
 	/* TODO: rlaager wants this sorted. */
 	/* TODO: darkrain wants it sorted post-translation */
-	if (account && PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, get_moods))
+	if (account && PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, get_moods)) {
 		mood = purple_protocol_client_iface_get_moods(protocol, account);
-	else
-		mood = global_moods;
+	} else {
+		mood = global_moods = get_global_moods();
+	}
 	for ( ; mood->mood != NULL ; mood++) {
 		char *path;
 
-		if (mood->mood == NULL || mood->description == NULL)
+		if (mood->description == NULL) {
 			continue;
+		}
 
 		path = get_mood_icon_path(mood->mood);
 		purple_request_field_list_add_icon(f, _(mood->description),

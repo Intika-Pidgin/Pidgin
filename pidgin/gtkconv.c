@@ -236,8 +236,7 @@ close_this_sucker(gpointer data)
 {
 	PidginConversation *gtkconv = data;
 	GList *list = g_list_copy(gtkconv->convs);
-	g_list_foreach(list, (GFunc)g_object_unref, NULL);
-	g_list_free(list);
+	g_list_free_full(list, g_object_unref);
 	return FALSE;
 }
 
@@ -1316,9 +1315,9 @@ create_chat_menu(PurpleChatConversation *chat, const char *who, PurpleConnection
 				PIDGIN_STOCK_TOOLBAR_SEND_FILE, G_CALLBACK(menu_chat_send_file_cb),
 				PIDGIN_CONVERSATION(conv));
 
-			if (gc == NULL || protocol == NULL)
+			if (gc == NULL) {
 				can_receive_file = FALSE;
-			else {
+			} else {
 				gchar *real_who = NULL;
 				real_who = purple_protocol_chat_iface_get_user_real_name(protocol, gc,
 					purple_chat_conversation_get_id(chat), who);
@@ -2453,9 +2452,8 @@ pidgin_conversations_get_unseen(GList *l,
 		if(gtkconv == NULL || gtkconv->active_conv != conv)
 			continue;
 
-		if (gtkconv->unseen_state >= min_state
-			&& (!hidden_only ||
-				(hidden_only && gtkconv->win == hidden_convwin))) {
+		if (gtkconv->unseen_state >= min_state &&
+		    (!hidden_only || gtkconv->win == hidden_convwin)) {
 
 			r = g_list_prepend(r, conv);
 			c++;
@@ -2790,7 +2788,7 @@ regenerate_media_items(PidginConvWindow *win)
 	 * Check if account support voice and/or calls, and
 	 * if the current buddy	supports it.
 	 */
-	if (account != NULL && PURPLE_IS_IM_CONVERSATION(conv)) {
+	if (PURPLE_IS_IM_CONVERSATION(conv)) {
 		PurpleMediaCaps caps =
 				purple_protocol_get_media_caps(account,
 				purple_conversation_get_name(conv));
@@ -4033,18 +4031,18 @@ minimum_entry_lines_pref_cb(const char *name,
                             gconstpointer value,
                             gpointer data)
 {
+#if 0
 	GList *l = purple_conversations_get_all();
 	PurpleConversation *conv;
 	while (l != NULL)
 	{
-#if 0
 		conv = (PurpleConversation *)l->data;
 
 		if (PIDGIN_IS_PIDGIN_CONVERSATION(conv))
 			resize_webview_cb(PIDGIN_CONVERSATION(conv));
-#endif
 		l = l->next;
 	}
+#endif
 }
 
 static void
@@ -4472,7 +4470,6 @@ private_gtkconv_new(PurpleConversation *conv, gboolean hidden)
 	GtkWidget *pane = NULL;
 	GtkWidget *tab_cont;
 	PurpleBlistNode *convnode;
-	GtkTargetList *targets;
 
 	if (PURPLE_IS_IM_CONVERSATION(conv) && (gtkconv = pidgin_conv_find_gtkconv(conv))) {
 		purple_conversation_set_ui_data(conv, gtkconv);
@@ -4662,8 +4659,7 @@ pidgin_conv_destroy(PurpleConversation *conv)
 	}
 
 	gtkconv->send_history = g_list_first(gtkconv->send_history);
-	g_list_foreach(gtkconv->send_history, (GFunc)g_free, NULL);
-	g_list_free(gtkconv->send_history);
+	g_list_free_full(gtkconv->send_history, g_free);
 
 	if (gtkconv->attach_timer) {
 		g_source_remove(gtkconv->attach_timer);
@@ -5136,8 +5132,7 @@ pidgin_conv_chat_update_user(PurpleChatUser *chatuser)
 		purple_chat_user_set_ui_data(chatuser, NULL);
 	}
 
-	if (chatuser)
-		add_chat_user_common(chat, chatuser, NULL);
+	add_chat_user_common(chat, chatuser, NULL);
 }
 
 gboolean
@@ -6802,9 +6797,9 @@ static void
 pidgin_conversations_set_tab_colors(void)
 {
 	/* Set default tab colors */
-	GString *str = g_string_new(NULL);
-	GtkSettings *settings = gtk_settings_get_default();
-	GtkStyle *parent = gtk_rc_get_style_by_paths(settings, "tab-container.tab-label*", NULL, G_TYPE_NONE), *now;
+	GString *str;
+	GtkSettings *settings;
+	GtkStyle *parent, *now;
 	struct {
 		const char *stylename;
 		const char *labelname;
@@ -6823,6 +6818,11 @@ pidgin_conversations_set_tab_colors(void)
 		tab_color_fuse = FALSE;
 		return;
 	}
+
+	str = g_string_new(NULL);
+	settings = gtk_settings_get_default();
+	parent = gtk_rc_get_style_by_paths(settings, "tab-container.tab-label*",
+	                                   NULL, G_TYPE_NONE);
 
 	for (iter = 0; styles[iter].stylename; iter++) {
 		now = gtk_rc_get_style_by_paths(settings, styles[iter].labelname, NULL, G_TYPE_NONE);

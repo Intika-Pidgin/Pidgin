@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 #include "finch.h"
 
@@ -163,8 +165,7 @@ destroy_cb(GntWidget *w, struct log_viewer_hash *ht)
 
 	purple_request_close_with_handle(lv);
 
-	g_list_foreach(lv->logs, (GFunc)purple_log_free, NULL);
-	g_list_free(lv->logs);
+	g_list_free_full(lv->logs, (GDestroyNotify)purple_log_free);
 
 	g_free(lv->search);
 	g_free(lv);
@@ -490,8 +491,9 @@ void finch_log_show_contact(PurpleContact *contact)
 	 * There is probably a better way to deal with this. */
 	if (name == NULL) {
 		child = purple_blist_node_get_first_child((PurpleBlistNode*)contact);
-		if (child != NULL && PURPLE_IS_BUDDY(child))
+		if (PURPLE_IS_BUDDY(child)) {
 			name = purple_buddy_get_contact_alias((PurpleBuddy *)child);
+		}
 		if (name == NULL)
 			name = "";
 	}

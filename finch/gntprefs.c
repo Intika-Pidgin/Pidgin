@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include "finch.h"
 #include <internal.h>
 
@@ -211,8 +213,7 @@ static Prefs idle[] =
 static void
 free_strings(void)
 {
-	g_list_foreach(pref_request.freestrings, (GFunc)g_free, NULL);
-	g_list_free(pref_request.freestrings);
+	g_list_free_full(pref_request.freestrings, g_free);
 	pref_request.freestrings = NULL;
 	pref_request.showing = FALSE;
 }

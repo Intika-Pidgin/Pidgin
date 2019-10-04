@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -802,7 +803,7 @@ gained_focus_cb(GntWindow *window, FinchConv *fc)
 }
 
 static void
-completion_cb(GntEntry *entry, const char *start, const char *end)
+completion_cb(GntEntry *entry, const char *start, G_GNUC_UNUSED const char *end)
 {
 	if (start == gnt_entry_get_text(entry) && *start != '/')
 		gnt_widget_key_pressed(GNT_WIDGET(entry), ": ");

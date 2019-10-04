@@ -262,8 +262,7 @@ _get_details_resp_send_msg(NMUser * user, NMERR_T ret_code,
 			g_free(err);
 		}
 
-		if (msg)
-			nm_release_message(msg);
+		nm_release_message(msg);
 	}
 }
 
@@ -316,8 +315,7 @@ _get_details_resp_setup_buddy(NMUser * user, NMERR_T ret_code,
 
 	}
 
-	if (contact)
-		nm_release_contact(contact);
+	nm_release_contact(contact);
 }
 
 /* Add the new contact into the PurpleBuddy list */
@@ -353,8 +351,8 @@ _create_contact_resp_cb(NMUser * user, NMERR_T ret_code,
 			folder_name = NM_ROOT_FOLDER_NAME;
 
 		/* Re-add the buddy now that we got the okay from the server */
-		if (folder_name && (group = purple_blist_find_group(folder_name))) {
-
+		group = purple_blist_find_group(folder_name);
+		if (group) {
 			const char *alias = nm_contact_get_display_name(tmp_contact);
 			const char *display_id = nm_contact_get_display_id(new_contact);
 
@@ -394,7 +392,6 @@ _create_contact_resp_cb(NMUser * user, NMERR_T ret_code,
 			rc = nm_send_get_details(user, nm_contact_get_dn(new_contact),
 									 _get_details_resp_setup_buddy, new_contact);
 			_check_for_disconnect(user, rc);
-
 		}
 
 	} else {
@@ -556,8 +553,7 @@ _createconf_resp_send_msg(NMUser * user, NMERR_T ret_code,
 			g_free(err);
 		}
 
-		if (msg)
-			nm_release_message(msg);
+		nm_release_message(msg);
 	}
 }
 
@@ -807,8 +803,8 @@ _create_privacy_item_deny_resp_cb(NMUser *user, NMERR_T ret_code,
 
 		} else {
 			rc = nm_send_get_details(user, who,
-									 _get_details_resp_add_privacy_item,
-									 (gpointer)FALSE);
+			                         _get_details_resp_add_privacy_item,
+			                         GINT_TO_POINTER(FALSE));
 			_check_for_disconnect(user, rc);
 		}
 	} else {
@@ -861,8 +857,8 @@ _create_privacy_item_permit_resp_cb(NMUser *user, NMERR_T ret_code,
 
 		} else {
 			rc = nm_send_get_details(user, who,
-									 _get_details_resp_add_privacy_item,
-									 (gpointer)TRUE);
+			                         _get_details_resp_add_privacy_item,
+			                         GINT_TO_POINTER(TRUE));
 			_check_for_disconnect(user, rc);
 		}
 
@@ -3106,8 +3102,9 @@ novell_add_permit(PurpleConnection *gc, const char *who)
 	if (strchr(who, '.')) {
 		const char *dn = nm_lookup_dn(user, who);
 		if (dn == NULL) {
-			rc = nm_send_get_details(user, who, _get_details_send_privacy_create,
-									 (gpointer)TRUE);
+			rc = nm_send_get_details(user, who,
+			                         _get_details_send_privacy_create,
+			                         GINT_TO_POINTER(TRUE));
 			_check_for_disconnect(user, rc);
 			return;
 		} else {
@@ -3150,8 +3147,9 @@ novell_add_deny(PurpleConnection *gc, const char *who)
 	if (strchr(who, '.')) {
 		const char *dn = nm_lookup_dn(user, who);
 		if (dn == NULL) {
-			rc = nm_send_get_details(user, who, _get_details_send_privacy_create,
-									 (gpointer)FALSE);
+			rc = nm_send_get_details(user, who,
+			                         _get_details_send_privacy_create,
+			                         GINT_TO_POINTER(FALSE));
 			_check_for_disconnect(user, rc);
 			return;
 		} else {
@@ -3486,8 +3484,9 @@ novell_get_max_message_size(PurpleConversation *conv)
 }
 
 static void
-novell_protocol_init(PurpleProtocol *protocol)
+novell_protocol_init(NovellProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 
 	protocol->id   = "prpl-novell";
@@ -3503,12 +3502,19 @@ novell_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-novell_protocol_class_init(PurpleProtocolClass *klass)
+novell_protocol_class_init(NovellProtocolClass *klass)
 {
-	klass->login        = novell_login;
-	klass->close        = novell_close;
-	klass->status_types = novell_status_types;
-	klass->list_icon    = novell_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = novell_login;
+	protocol_class->close = novell_close;
+	protocol_class->status_types = novell_status_types;
+	protocol_class->list_icon = novell_list_icon;
+}
+
+static void
+novell_protocol_class_finalize(G_GNUC_UNUSED NovellProtocolClass *klass)
+{
 }
 
 static void
@@ -3562,24 +3568,23 @@ novell_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface
 	privacy_iface->set_permit_deny = novell_set_permit_deny;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	NovellProtocol, novell_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        NovellProtocol, novell_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  novell_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      novell_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  novell_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      novell_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  novell_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      novell_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  novell_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      novell_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-	                                  novell_protocol_privacy_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      novell_protocol_privacy_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -3602,7 +3607,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	novell_protocol_register_type(plugin);
+	novell_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(NOVELL_TYPE_PROTOCOL, error);
 	if (!my_protocol)

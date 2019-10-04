@@ -45,7 +45,8 @@ typedef struct
 /**
  * Registers the AIMProtocol type in the type system.
  */
-void aim_protocol_register_type(PurplePlugin *plugin);
+G_GNUC_INTERNAL
+void aim_protocol_register(PurplePlugin *plugin);
 
 /**
  * Returns the GType for the AIMProtocol object.
