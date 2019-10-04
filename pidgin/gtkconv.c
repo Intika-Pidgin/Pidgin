@@ -2235,31 +2235,32 @@ static void
 custom_icon_sel_cb(const char *filename, gpointer data)
 {
 	if (filename) {
-		const gchar *name;
-		PurpleBuddy *buddy;
-		PurpleContact *contact;
-		PidginConversation *gtkconv = data;
-		PurpleConversation *conv = gtkconv->active_conv;
-		PurpleAccount *account = purple_conversation_get_account(conv);
-
-		name = purple_conversation_get_name(conv);
-		buddy = purple_blist_find_buddy(account, name);
-		if (!buddy) {
-			purple_debug_info("custom-icon", "You can only set custom icons for people on your buddylist.\n");
-			return;
-		}
-		contact = purple_buddy_get_contact(buddy);
+		PurpleContact *contact = data;
 
 		purple_buddy_icons_node_set_custom_icon_from_file((PurpleBlistNode*)contact, filename);
 	}
+	g_object_set_data(G_OBJECT(data), "buddy-icon-chooser", NULL);
 }
 
 static void
-set_custom_icon_cb(GtkWidget *widget, PidginConversation *gtkconv)
+set_custom_icon_cb(GtkWidget *widget, PurpleContact *contact)
 {
-	GtkWidget *win = pidgin_buddy_icon_chooser_new(GTK_WINDOW(gtkconv->win->window),
-						custom_icon_sel_cb, gtkconv);
-	gtk_widget_show_all(win);
+	GtkFileChooserNative *win = NULL;
+
+	/* Should not happen as menu item should be disabled. */
+	g_return_if_fail(contact != NULL);
+
+	win = g_object_get_data(G_OBJECT(contact), "buddy-icon-chooser");
+	if (win == NULL) {
+		GtkMenu *menu = GTK_MENU(gtk_widget_get_parent(widget));
+		GtkWidget *toplevel =
+		        gtk_widget_get_toplevel(gtk_menu_get_attach_widget(menu));
+		win = pidgin_buddy_icon_chooser_new(GTK_WINDOW(toplevel),
+		                                    custom_icon_sel_cb, contact);
+		g_object_set_data_full(G_OBJECT(contact), "buddy-icon-chooser", win,
+		                       (GDestroyNotify)g_object_unref);
+	}
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(win));
 }
 
 static void
@@ -2354,7 +2355,8 @@ toggle_icon_animate_cb(GtkWidget *w, PidginConversation *gtkconv)
 static gboolean
 icon_menu(GtkWidget *widget, GdkEventButton *e, PidginConversation *gtkconv)
 {
-	static GtkWidget *menu = NULL;
+	GtkWidget *menu = NULL;
+	GList *old_menus = NULL;
 	PurpleConversation *conv;
 	PurpleBuddy *buddy;
 
@@ -2371,10 +2373,14 @@ icon_menu(GtkWidget *widget, GdkEventButton *e, PidginConversation *gtkconv)
 	 * If a menu already exists, destroy it before creating a new one,
 	 * thus freeing-up the memory it occupied.
 	 */
-	if (menu != NULL)
+	while ((old_menus = gtk_menu_get_for_attach_widget(widget)) != NULL) {
+		menu = old_menus->data;
+		gtk_menu_detach(GTK_MENU(menu));
 		gtk_widget_destroy(menu);
+	}
 
 	menu = gtk_menu_new();
+	gtk_menu_attach_to_widget(GTK_MENU(menu), widget, NULL);
 
 	if (gtkconv->u.im->anim &&
 		!(gdk_pixbuf_animation_is_static_image(gtkconv->u.im->anim)))
@@ -2384,22 +2390,31 @@ icon_menu(GtkWidget *widget, GdkEventButton *e, PidginConversation *gtkconv)
 							gtkconv->u.im->icon_timer);
 	}
 
+	conv = gtkconv->active_conv;
+	buddy = purple_blist_find_buddy(purple_conversation_get_account(conv),
+	                                purple_conversation_get_name(conv));
+
 	pidgin_new_menu_item(menu, _("Hide Icon"), NULL,
                         G_CALLBACK(remove_icon), gtkconv);
 
 	pidgin_new_menu_item(menu, _("Save Icon As..."), GTK_STOCK_SAVE_AS,
                         G_CALLBACK(icon_menu_save_cb), gtkconv);
 
-	pidgin_new_menu_item(menu, _("Set Custom Icon..."), NULL,
-                        G_CALLBACK(set_custom_icon_cb), gtkconv);
+	if (buddy) {
+		PurpleContact *contact = purple_buddy_get_contact(buddy);
+		pidgin_new_menu_item(menu, _("Set Custom Icon..."), NULL,
+		                     G_CALLBACK(set_custom_icon_cb), contact);
+	} else {
+		GtkWidget *item =
+		        pidgin_new_menu_item(menu, _("Set Custom Icon..."), NULL,
+		                             G_CALLBACK(set_custom_icon_cb), NULL);
+		gtk_widget_set_sensitive(item, FALSE);
+	}
 
 	pidgin_new_menu_item(menu, _("Change Size"), NULL,
                         G_CALLBACK(change_size_cb), gtkconv);
 
 	/* Is there a custom icon for this person? */
-	conv = gtkconv->active_conv;
-	buddy = purple_blist_find_buddy(purple_conversation_get_account(conv),
-	                          purple_conversation_get_name(conv));
 	if (buddy)
 	{
 		PurpleContact *contact = purple_buddy_get_contact(buddy);

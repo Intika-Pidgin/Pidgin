@@ -301,7 +301,7 @@ enable_gestures = get_option('gestures')
 # Check Pidgin dependencies
 # #######################################################################
 if get_option('gtkui')
-	gtk = dependency('gtk+-3.0', version : '>= 3.18.0')
+	gtk = dependency('gtk+-3.0', version : '>= 3.20.0')
 
 	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
 	if talkatu_dep.found()

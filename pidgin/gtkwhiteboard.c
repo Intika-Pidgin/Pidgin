@@ -499,28 +499,23 @@ pidgin_whiteboard_button_save_press(GtkWidget *widget, gpointer _gtkwb)
 {
 	PidginWhiteboard *gtkwb = _gtkwb;
 	GdkPixbuf *pixbuf;
-	GtkWidget *dialog;
+	GtkFileChooserNative *chooser;
 	int result;
 
-	dialog = gtk_file_chooser_dialog_new(
-	        _("Save File"), GTK_WINDOW(gtkwb), GTK_FILE_CHOOSER_ACTION_SAVE,
-	        _("_Cancel"), GTK_RESPONSE_CANCEL, _("_Save"),
-	        GTK_RESPONSE_ACCEPT, NULL);
+	chooser = gtk_file_chooser_native_new(_("Save File"), GTK_WINDOW(gtkwb),
+	                                      GTK_FILE_CHOOSER_ACTION_SAVE,
+	                                      _("_Save"), _("_Cancel"));
 
-	gtk_file_chooser_set_do_overwrite_confirmation(
-		GTK_FILE_CHOOSER(dialog), TRUE);
+	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(chooser),
+	                                               TRUE);
+	gtk_file_chooser_set_current_name(GTK_FILE_CHOOSER(chooser),
+	                                  "whiteboard.png");
 
-	gtk_file_chooser_set_current_name(
-		GTK_FILE_CHOOSER(dialog), "whiteboard.png");
-
-	result = gtk_dialog_run(GTK_DIALOG(dialog));
-
+	result = gtk_native_dialog_run(GTK_NATIVE_DIALOG(chooser));
 	if (result == GTK_RESPONSE_ACCEPT) {
 		gboolean success;
 		gchar *filename =
-			gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(dialog));
-
-		gtk_widget_destroy(dialog);
+		        gtk_file_chooser_get_filename(GTK_FILE_CHOOSER(chooser));
 
 		pixbuf = gdk_pixbuf_get_from_surface(
 		        gtkwb->surface, 0, 0, gtkwb->width, gtkwb->height);
@@ -538,8 +533,9 @@ pidgin_whiteboard_button_save_press(GtkWidget *widget, gpointer _gtkwb)
 				"couldn't be saved to \"%s\"", filename);
 		}
 		g_free(filename);
-	} else if (result == GTK_RESPONSE_CANCEL)
-		gtk_widget_destroy(dialog);
+	}
+
+	g_object_unref(chooser);
 }
 
 static void

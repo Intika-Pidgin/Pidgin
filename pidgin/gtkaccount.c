@@ -125,7 +125,7 @@ typedef struct
 	GtkWidget *icon_hbox;
 	GtkWidget *icon_check;
 	GtkWidget *icon_entry;
-	GtkWidget *icon_filesel;
+	GtkFileChooserNative *icon_filesel;
 	GtkWidget *icon_preview;
 	GtkWidget *icon_text;
 	PurpleImage *icon_img;
@@ -340,14 +340,14 @@ icon_filesel_choose_cb(const char *filename, gpointer data)
 		set_dialog_icon(dialog, data, len, g_strdup(filename));
 	}
 
-	dialog->icon_filesel = NULL;
+	g_clear_object(&dialog->icon_filesel);
 }
 
 static void
 icon_select_cb(GtkWidget *button, AccountPrefsDialog *dialog)
 {
 	dialog->icon_filesel = pidgin_buddy_icon_chooser_new(GTK_WINDOW(dialog->window), icon_filesel_choose_cb, dialog);
-	gtk_widget_show_all(dialog->icon_filesel);
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(dialog->icon_filesel));
 }
 
 static void
@@ -1258,8 +1258,7 @@ account_win_destroy_cb(GtkWidget *w, GdkEvent *event,
 	if (dialog->icon_img)
 		g_object_unref(dialog->icon_img);
 
-	if (dialog->icon_filesel)
-		gtk_widget_destroy(dialog->icon_filesel);
+	g_clear_object(&dialog->icon_filesel);
 
 	purple_signals_disconnect_by_handle(dialog);
 
