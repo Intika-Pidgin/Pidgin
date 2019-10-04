@@ -7,5 +7,5 @@ NULLSOURCES = [
 if DYNAMIC_NULL
 	null_prpl = shared_library('null', NULLSOURCES,
 	    dependencies : [libpurple_dep, glib],
-	    install : true, install_dir : PURPLE_PLUGINDIR)
+	    install : false, install_dir : PURPLE_PLUGINDIR)
 endif

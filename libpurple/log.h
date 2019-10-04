@@ -67,7 +67,7 @@ typedef void (*PurpleLogSetCallback) (GHashTable *sets, PurpleLogSet *set);
  * @finalize:     Called when the log is destroyed
  * @list:         This function returns a sorted #GList of available PurpleLogs
  * @read:         Given one of the logs returned by the logger's list function,
- *                this returns the contents of the log in #GtkWebView markup
+ *                this returns the contents of the log
  * @size:         Given one of the logs returned by the logger's list function,
  *                this returns the size of the log in bytes
  * @total_size:   Returns the total size of all the logs. If this is undefined a

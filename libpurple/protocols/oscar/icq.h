@@ -45,7 +45,8 @@ typedef struct
 /**
  * Registers the ICQProtocol type in the type system.
  */
-void icq_protocol_register_type(PurplePlugin *plugin);
+G_GNUC_INTERNAL
+void icq_protocol_register(PurplePlugin *plugin);
 
 /**
  * Returns the GType for the ICQProtocol object.

@@ -28,8 +28,9 @@
 #include "xmpp.h"
 
 static void
-xmpp_protocol_init(PurpleProtocol *protocol)
+xmpp_protocol_init(XMPPProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 	GList *encryption_values = NULL;
@@ -98,8 +99,21 @@ xmpp_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-xmpp_protocol_class_init(PurpleProtocolClass *klass)
+xmpp_protocol_class_init(G_GNUC_UNUSED XMPPProtocolClass *klass)
 {
 }
 
-PURPLE_DEFINE_TYPE(XMPPProtocol, xmpp_protocol, JABBER_TYPE_PROTOCOL);
+static void
+xmpp_protocol_class_finalize(G_GNUC_UNUSED XMPPProtocolClass *klass)
+{
+}
+
+G_DEFINE_DYNAMIC_TYPE(XMPPProtocol, xmpp_protocol, JABBER_TYPE_PROTOCOL);
+
+/* This exists solely because the above macro makes xmpp_protocol_register_type
+ * static. */
+void
+xmpp_protocol_register(PurplePlugin *plugin)
+{
+	xmpp_protocol_register_type(G_TYPE_MODULE(plugin));
+}

@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_BLIST_H
-#define _GNT_BLIST_H
+#ifndef FINCH_BLIST_H
+#define FINCH_BLIST_H
+
 /**
  * SECTION:gntblist
  * @section_id: finch-gntblist
@@ -195,4 +197,5 @@ FinchBlistManager * finch_blist_manager_find(const char *id);
  */
 void finch_blist_manager_add_node(PurpleBlistNode *node);
 
-#endif
+#endif /* FINCH_BLIST_H */
+

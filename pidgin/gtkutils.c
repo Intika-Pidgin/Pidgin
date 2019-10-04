@@ -1007,18 +1007,11 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 		*y = CLAMP (*y, monitor.y,
 			   monitor.y + monitor.height - requisition.height);
-	}
-	else if (requisition.height > space_below &&
-	         requisition.height > space_above)
-	{
+	} else {
 		if (space_below >= space_above)
 			*y = monitor.y + monitor.height - requisition.height;
 		else
 			*y = monitor.y;
-	}
-	else
-	{
-		*y = monitor.y;
 	}
 }
 
@@ -1084,7 +1077,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 	GStatBuf st;
 	GError *err = NULL;
 	PurpleConversation *conv;
-	PidginConversation *gtkconv;
 	PurpleBuddy *buddy;
 	PurpleContact *contact;
 	PurpleImage *img;
@@ -1116,7 +1108,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		break;
 	case DND_IM_IMAGE:
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(data->account, data->who));
-		gtkconv = PIDGIN_CONVERSATION(conv);
 
 		if (!g_file_get_contents(data->filename, &filedata, &size,
 					 &err)) {
@@ -1172,7 +1163,7 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
 	PurpleProtocol *protocol = NULL;
-	_DndData *data = g_malloc(sizeof(_DndData));
+	_DndData *data = g_new0(_DndData, 1);
 	gboolean ft = FALSE, im = FALSE;
 
 	data->who = g_strdup(who);
@@ -1288,7 +1279,7 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 
 
 	/* If any of this is null, do nothing. */
-	if (!name || !type || url) {
+	if (!name || !type || !url) {
 		g_free(type);
 		g_free(name);
 		g_free(url);

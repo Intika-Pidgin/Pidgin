@@ -503,14 +503,14 @@ jabber_caps_client_iqcb(JabberStream *js, const char *from, JabberIqType type,
 		jabber_caps_client_info_destroy(info);
 		info = value;
 	} else {
-		JabberCapsTuple *n_key = (JabberCapsTuple *)&info->tuple;
+		JabberCapsTuple *n_key = NULL;
 
-		if (G_UNLIKELY(n_key == NULL)) {
+		if (G_UNLIKELY(info == NULL)) {
 			g_warn_if_reached();
-			jabber_caps_client_info_destroy(info);
 			return;
 		}
 
+		n_key = (JabberCapsTuple *)&info->tuple;
 		n_key->node = userdata->node;
 		n_key->ver  = userdata->ver;
 		n_key->hash = userdata->hash;
@@ -908,8 +908,7 @@ gchar *jabber_caps_calculate_hash(JabberCapsClientInfo *info,
 					                                   field->values);
 				}
 			} else {
-				g_list_foreach(field->values, (GFunc) g_free, NULL);
-				g_list_free(field->values);
+				g_list_free_full(field->values, g_free);
 			}
 
 			g_free(field->var);

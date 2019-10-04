@@ -1789,11 +1789,8 @@ purple_account_set_status_types(PurpleAccount *account, GList *status_types)
 	priv = purple_account_get_instance_private(account);
 
 	/* Out with the old... */
-	if (priv->status_types != NULL)
-	{
-		g_list_foreach(priv->status_types, (GFunc)purple_status_type_destroy, NULL);
-		g_list_free(priv->status_types);
-	}
+	g_list_free_full(priv->status_types,
+	                 (GDestroyNotify)purple_status_type_destroy);
 
 	/* In with the new... */
 	priv->status_types = status_types;

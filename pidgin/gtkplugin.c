@@ -539,7 +539,12 @@ static void plugin_toggled(GtkCellRendererToggle *cell, gchar *pth, gpointer dat
 				PurplePlugin *dep_plugin = purple_plugins_find_plugin(dep_name);
 				GPluginPluginInfo *dep_info;
 
-				g_return_if_fail(dep_plugin != NULL);
+				if (dep_plugin == NULL) {
+					purple_debug_error("gtkplugin",
+					                   "The %s plugin could not be found.",
+					                   dep_name);
+					continue;
+				}
 
 				dep_info = GPLUGIN_PLUGIN_INFO(
 				        purple_plugin_get_info(dep_plugin));
@@ -588,9 +593,7 @@ static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model, Gt
 		}
 
 		pidgin_clear_cursor(plugin_dialog);
-	}
-	else if (!unload && error)
-	{
+	} else if (error) {
 		purple_notify_warning(NULL, NULL, _("Could not load plugin"), error->message, NULL);
 	}
 
@@ -850,13 +853,13 @@ pidgin_plugins_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 	markup = g_strdup_printf(
 	        "<span size='x-large' weight='bold'>%s</span>\n<b>%s:</b> "
 	        "%s\n<b>%s:</b> %s",
-	        name = g_markup_escape_text(gplugin_plugin_info_get_name(info),
-	                                    -1),
+	        name = g_markup_escape_text(gplugin_plugin_info_get_name(info), -1),
 	        _("Description"),
 	        desc = g_markup_escape_text(
 	                gplugin_plugin_info_get_description(info), -1),
-	        (g_strv_length((gchar **)authorlist) > 1 ? _("Authors")
-	                                                 : _("Author")),
+	        (authorlist && g_strv_length((gchar **)authorlist) > 1
+	                 ? _("Authors")
+	                 : _("Author")),
 	        pauthors);
 
 	layout = gtk_widget_create_pango_layout(tipwindow, NULL);

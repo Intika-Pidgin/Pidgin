@@ -77,9 +77,7 @@ destroy_instance_data(PurpleInstanceData *instance_data)
 static void
 destroy_signal_data(PurpleSignalData *signal_data)
 {
-	g_list_foreach(signal_data->handlers, (GFunc)g_free, NULL);
-	g_list_free(signal_data->handlers);
-
+	g_list_free_full(signal_data->handlers, g_free);
 	g_free(signal_data->value_types);
 	g_free(signal_data);
 }

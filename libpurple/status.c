@@ -344,8 +344,8 @@ purple_status_type_destroy(PurpleStatusType *status_type)
 	g_free(status_type->id);
 	g_free(status_type->name);
 
-	g_list_foreach(status_type->attrs, (GFunc)purple_status_attribute_destroy, NULL);
-	g_list_free(status_type->attrs);
+	g_list_free_full(status_type->attrs,
+	                 (GDestroyNotify)purple_status_attribute_destroy);
 
 	g_free(status_type);
 }

@@ -692,6 +692,7 @@ static char *zephyr_to_html(const char *message)
 					new_f->closing = "";
 				}
 				frames = new_f;
+				g_free(buf);
 			} else {
 				/* Not a formatting tag, add the character as normal. */
 				g_string_append_c(frames->text, *message++);
@@ -2204,7 +2205,6 @@ static int zephyr_send_message(zephyr_account *zephyr,char* zclass, char* instan
 
 		notice.z_kind = ACKED;
 		notice.z_port = 0;
-		notice.z_opcode = "";
 		notice.z_class = zclass;
 		notice.z_class_inst = instance;
 		notice.z_recipient = recipient;
@@ -2452,17 +2452,17 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 		return;
 
 	if (!g_ascii_strcasecmp(classname,"%host%"))
-		classname = g_strdup(zephyr->ourhost);
+		classname = zephyr->ourhost;
 	if (!g_ascii_strcasecmp(classname,"%canon%"))
-		classname = g_strdup(zephyr->ourhostcanon);
+		classname = zephyr->ourhostcanon;
 
 	if (!instname || *instname == '\0')
 		instname = "*";
 
 	if (!g_ascii_strcasecmp(instname,"%host%"))
-		instname = g_strdup(zephyr->ourhost);
+		instname = zephyr->ourhost;
 	if (!g_ascii_strcasecmp(instname,"%canon%"))
-		instname = g_strdup(zephyr->ourhostcanon);
+		instname = zephyr->ourhostcanon;
 
 	if (!recip || (*recip == '*'))
 		recip = "";
@@ -2525,7 +2525,7 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 				cnode;
 				cnode = purple_blist_node_get_sibling_next(cnode)) {
 			PurpleChat *chat = (PurpleChat*)cnode;
-			char *zclass, *inst, *recip;
+			const gchar *zclass, *inst, *recip;
 			char** triple;
 			GHashTable *components;
 			if(!PURPLE_IS_CHAT(cnode))
@@ -2536,14 +2536,18 @@ static PurpleChat *zephyr_find_blist_chat(PurpleAccount *account, const char *na
 			if(!(zclass = g_hash_table_lookup(components, "class")))
 				continue;
 			if(!(inst = g_hash_table_lookup(components, "instance")))
-				inst = g_strdup("");
+				inst = "";
 			if(!(recip = g_hash_table_lookup(components, "recipient")))
-				recip = g_strdup("");
+				recip = "";
 			/*			purple_debug_info("zephyr","in zephyr_find_blist_chat name: %s\n",name?name:""); */
 			triple = g_strsplit(name,",",3);
-			if (!g_ascii_strcasecmp(triple[0],zclass) && !g_ascii_strcasecmp(triple[1],inst) && !g_ascii_strcasecmp(triple[2],recip))
+			if (!g_ascii_strcasecmp(triple[0], zclass) &&
+			    !g_ascii_strcasecmp(triple[1], inst) &&
+			    !g_ascii_strcasecmp(triple[2], recip)) {
+				g_strfreev(triple);
 				return chat;
-
+			}
+			g_strfreev(triple);
 		}
 	}
 	return NULL;
@@ -2857,26 +2861,27 @@ static void zephyr_action_get_subs_from_server(PurpleProtocolAction *action)
 	int retval, nsubs, one,i;
 	ZSubscription_t subs;
 	if (use_zeph02(zephyr)) {
-		GString* subout = g_string_new("Subscription list<br>");
-
-		title = g_strdup_printf("Server subscriptions for %s", zephyr->username);
+		GString *subout;
 
 		if (zephyr->port == 0) {
-			g_free(title);
 			purple_debug_error("zephyr", "error while retrieving port\n");
 			return;
 		}
 		if ((retval = ZRetrieveSubscriptions(zephyr->port,&nsubs)) != ZERR_NONE) {
-			g_free(title);
 			/* XXX better error handling */
 			purple_debug_error("zephyr", "error while retrieving subscriptions from server\n");
 			return;
 		}
+
+		title = g_strdup_printf("Server subscriptions for %s",
+		                        zephyr->username);
+		subout = g_string_new("Subscription list<br>");
 		for(i=0;i<nsubs;i++) {
 			one = 1;
 			if ((retval = ZGetSubscriptions(&subs,&one)) != ZERR_NONE) {
 				/* XXX better error handling */
 				g_free(title);
+				g_string_free(subout, TRUE);
 				purple_debug_error("zephyr", "error while retrieving individual subscription\n");
 				return;
 			}
@@ -2911,8 +2916,9 @@ static GList *zephyr_get_actions(PurpleConnection *gc)
 
 
 static void
-zephyr_protocol_init(PurpleProtocol *protocol)
+zephyr_protocol_init(ZephyrProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 	const gchar *tmp = get_exposure_level();
 
@@ -2941,7 +2947,8 @@ zephyr_protocol_init(PurpleProtocol *protocol)
 	option = purple_account_option_string_new(_("Realm"), "realm", "");
 	protocol->account_options = g_list_append(protocol->account_options, option);
 
-	option = purple_account_option_string_new(_("Exposure"), "exposure_level", tmp?tmp: EXPOSE_REALMVIS);
+	option = purple_account_option_string_new(_("Exposure"), "exposure_level",
+	                                          tmp);
 	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	option = purple_account_option_string_new(_("Encoding"), "encoding", ZEPHYR_FALLBACK_CHARSET);
@@ -2950,12 +2957,20 @@ zephyr_protocol_init(PurpleProtocol *protocol)
 
 
 static void
-zephyr_protocol_class_init(PurpleProtocolClass *klass)
+zephyr_protocol_class_init(ZephyrProtocolClass *klass)
 {
-	klass->login        = zephyr_login;
-	klass->close        = zephyr_close;
-	klass->status_types = zephyr_status_types;
-	klass->list_icon    = zephyr_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = zephyr_login;
+	protocol_class->close = zephyr_close;
+	protocol_class->status_types = zephyr_status_types;
+	protocol_class->list_icon = zephyr_list_icon;
+}
+
+
+static void
+zephyr_protocol_class_finalize(G_GNUC_UNUSED ZephyrProtocolClass *klass)
+{
 }
 
 
@@ -3001,22 +3016,20 @@ zephyr_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 }
 
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	ZephyrProtocol, zephyr_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        ZephyrProtocol, zephyr_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  zephyr_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      zephyr_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  zephyr_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      zephyr_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  zephyr_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      zephyr_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  zephyr_protocol_chat_iface_init)
-);
-
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      zephyr_protocol_chat_iface_init));
 
 static PurplePluginInfo *plugin_query(GError **error)
 {
@@ -3039,7 +3052,7 @@ static PurplePluginInfo *plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	zephyr_protocol_register_type(plugin);
+	zephyr_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(ZEPHYR_TYPE_PROTOCOL, error);
 	if (!my_protocol)

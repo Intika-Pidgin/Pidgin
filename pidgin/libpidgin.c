@@ -726,7 +726,7 @@ int pidgin_start(int argc, char *argv[])
 	pidgin_setup_error_handler();
 #endif
 
-	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
+	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin3",
 #if GLIB_CHECK_VERSION(2, 48, 0)
 				G_APPLICATION_CAN_OVERRIDE_APP_ID |
 #endif
@@ -759,8 +759,8 @@ int pidgin_start(int argc, char *argv[])
 
 	if (g_application_get_is_registered(app) &&
 			g_application_get_is_remote(app)) {
-		g_printerr(_("Exiting because another libpurple client is "
-				"already running.\n"));
+		g_printerr("%s\n", _("Exiting because another libpurple client is "
+		                     "already running."));
 	}
 
 	/* Now that we're sure purple_core_quit() has been called,

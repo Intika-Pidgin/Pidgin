@@ -21,6 +21,7 @@
 
 #ifndef PURPLE_BUDDY_LIST_H
 #define PURPLE_BUDDY_LIST_H
+
 /**
  * SECTION:buddylist
  * @section_id: libpurple-buddylist
@@ -104,8 +105,10 @@ typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
  * buddy list is created.
  */
 struct _PurpleBuddyListClass {
+	/*< private >*/
 	GObjectClass gparent_class;
 
+	/*< public >*/
 	void (*new_node)(PurpleBuddyList *list, PurpleBlistNode *node);
 	void (*show)(PurpleBuddyList *list);
 	void (*update)(PurpleBuddyList *list, PurpleBlistNode *node);

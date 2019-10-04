@@ -195,8 +195,6 @@ static void add_purple_buddy_to_groups(JabberStream *js, const char *jid,
 		g_free(groups->data);
 		groups = g_slist_delete_link(groups, groups);
 	}
-
-	g_slist_free(buddies);
 }
 
 void jabber_roster_parse(JabberStream *js, const char *from,

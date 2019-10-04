@@ -536,7 +536,7 @@ endif
 
 
 DEFAULT_PRPLS = ['bonjour', 'facebook', 'gg', 'irc', 'jabber', 'novell',
-                 'oscar', 'sametime', 'silc', 'simple', 'zephyr']
+                 'null', 'oscar', 'sametime', 'silc', 'simple', 'zephyr']
 ALL_PRPLS = DEFAULT_PRPLS + ['null']
 
 dynamic_list = get_option('dynamic-prpls').split(',')

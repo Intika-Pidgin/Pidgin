@@ -185,11 +185,8 @@ purple_account_option_destroy(PurpleAccountOption *option)
 	}
 	else if (option->type == PURPLE_PREF_STRING_LIST)
 	{
-		if (option->default_value.list != NULL)
-		{
-			g_list_foreach(option->default_value.list, purple_account_option_list_free, NULL);
-			g_list_free(option->default_value.list);
-		}
+		g_list_free_full(option->default_value.list,
+		                 (GDestroyNotify)purple_account_option_list_free);
 	}
 
 	g_free(option);
@@ -250,11 +247,8 @@ purple_account_option_set_list(PurpleAccountOption *option, GList *values)
 	g_return_if_fail(option != NULL);
 	g_return_if_fail(option->type == PURPLE_PREF_STRING_LIST);
 
-	if (option->default_value.list != NULL)
-	{
-		g_list_foreach(option->default_value.list, purple_account_option_list_free, NULL);
-		g_list_free(option->default_value.list);
-	}
+	g_list_free_full(option->default_value.list,
+	                 (GDestroyNotify)purple_account_option_list_free);
 
 	option->default_value.list = values;
 }

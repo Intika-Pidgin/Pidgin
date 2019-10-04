@@ -990,12 +990,12 @@ purple_parse_auth_resp(OscarData *od, FlapConnection *conn, FlapFrame *fr, ...)
 		return 1;
 	}
 
-	purple_debug_misc("oscar", "Reg status: %hu\n"
-							   "Email: %s\n"
-							   "BOSIP: %s\n",
-							   info->regstatus,
-							   info->email ? info->email : "null",
-							   info->bosip ? info->bosip : "null");
+	purple_debug_misc("oscar",
+	                  "Reg status: %hu\n"
+	                  "Email: %s\n"
+	                  "BOSIP: %s\n",
+	                  info->regstatus, info->email ? info->email : "null",
+	                  info->bosip);
 	purple_debug_info("oscar", "Closing auth connection...\n");
 	flap_connection_schedule_destroy(conn, OSCAR_DISCONNECT_DONE, NULL);
 
@@ -1903,8 +1903,7 @@ incomingim_chan4(OscarData *od, FlapConnection *conn, aim_userinfo_t *userinfo,
 			smsmsg = byte_stream_getstr(&qbs, smslen);
 
 			/* Check if this is an SMS being sent from server */
-			if ((smstype == 0) && (purple_strequal(tagstr, "ICQSMS")) && (smsmsg != NULL))
-			{
+			if (purple_strequal(tagstr, "ICQSMS") && smsmsg != NULL) {
 				xmlroot = purple_xmlnode_from_str(smsmsg, -1);
 				if (xmlroot != NULL)
 				{
@@ -2096,34 +2095,9 @@ static int purple_parse_clientauto_ch4(OscarData *od, const char *who, guint16 r
 	PurpleConnection *gc = od->gc;
 
 	switch(reason) {
-		case 0x0003: { /* Reply from an ICQ status message request */
-			char *statusmsg, **splitmsg;
-			PurpleNotifyUserInfo *user_info;
-
-			statusmsg = oscar_icqstatus(state);
-
-			/* Split at (carriage return/newline)'s, then rejoin later with BRs between. */
-			/* TODO: Don't we need to escape each piece? */
-			splitmsg = g_strsplit(msg, "\r\n", 0);
-
-			user_info = purple_notify_user_info_new();
-
-			purple_notify_user_info_add_pair_plaintext(user_info, _("UIN"), who);
-			/* TODO: Check whether it's correct to call add_pair_html,
-			         or if we should be using add_pair_plaintext */
-			purple_notify_user_info_add_pair_html(user_info, _("Status"), statusmsg);
-			purple_notify_user_info_add_section_break(user_info);
-			purple_notify_user_info_add_pair_html(user_info, NULL, g_strjoinv("<BR>", splitmsg));
-
-			g_free(statusmsg);
-			g_strfreev(splitmsg);
-
-			purple_notify_userinfo(gc, who, user_info, NULL, NULL);
-			purple_notify_user_info_destroy(user_info);
-
-		} break;
-
-		case 0x0006: { /* Reply from an ICQ status message request */
+		/* Reply from an ICQ status message request */
+		case 0x0003:
+		case 0x0006: {
 			char *statusmsg, **splitmsg;
 			PurpleNotifyUserInfo *user_info;
 
@@ -2215,27 +2189,24 @@ static int purple_parse_mtn(OscarData *od, FlapConnection *conn, FlapFrame *fr, 
 	va_end(ap);
 
 	switch (event) {
-		case 0x0000: { /* Text has been cleared */
+		case 0x0000: /* Text has been cleared */
+		case 0x000f: /* Closed IM window */
 			purple_serv_got_typing_stopped(gc, bn);
-		} break;
+			break;
 
-		case 0x0001: { /* Paused typing */
+		case 0x0001: /* Paused typing */
 			purple_serv_got_typing(gc, bn, 0, PURPLE_IM_TYPED);
-		} break;
+			break;
 
-		case 0x0002: { /* Typing */
+		case 0x0002: /* Typing */
 			purple_serv_got_typing(gc, bn, 0, PURPLE_IM_TYPING);
-		} break;
+			break;
 
-		case 0x000f: { /* Closed IM window */
-			purple_serv_got_typing_stopped(gc, bn);
-		} break;
-
-		default: {
+		default:
 			purple_debug_info("oscar", "Received unknown typing "
 					"notification message from %s.  Channel is 0x%04x "
 					"and event is 0x%04hx.\n", bn, channel, event);
-		} break;
+			break;
 	}
 
 	return 1;
@@ -5677,8 +5648,10 @@ void oscar_init_account_options(PurpleProtocol *protocol, gboolean is_icq)
 }
 
 static void
-oscar_protocol_init(PurpleProtocol *protocol)
+oscar_protocol_init(OscarProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+
 	protocol->options   = OPT_PROTO_MAIL_CHECK | OPT_PROTO_INVITE_MESSAGE |
 	                      OPT_PROTO_AUTHORIZATION_DENIED_MESSAGE;
 	protocol->icon_spec = purple_buddy_icon_spec_new("gif,jpeg,bmp,ico",
@@ -5688,11 +5661,18 @@ oscar_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-oscar_protocol_class_init(PurpleProtocolClass *klass)
+oscar_protocol_class_init(OscarProtocolClass *klass)
 {
-	klass->login        = oscar_login;
-	klass->close        = oscar_close;
-	klass->status_types = oscar_status_types;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = oscar_login;
+	protocol_class->close = oscar_close;
+	protocol_class->status_types = oscar_status_types;
+}
+
+static void
+oscar_protocol_class_finalize(G_GNUC_UNUSED OscarProtocolClass *klass)
+{
 }
 
 static void
@@ -5760,27 +5740,27 @@ oscar_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer    = oscar_new_xfer;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	OscarProtocol, oscar_protocol, PURPLE_TYPE_PROTOCOL, G_TYPE_FLAG_ABSTRACT,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        OscarProtocol, oscar_protocol, PURPLE_TYPE_PROTOCOL,
+        G_TYPE_FLAG_ABSTRACT,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT,
-	                                  oscar_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      oscar_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER,
-	                                  oscar_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      oscar_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM,
-	                                  oscar_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      oscar_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT,
-	                                  oscar_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      oscar_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
-	                                  oscar_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      oscar_protocol_privacy_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  oscar_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      oscar_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -5803,10 +5783,10 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	oscar_protocol_register_type(plugin);
+	oscar_protocol_register_type(G_TYPE_MODULE(plugin));
 
-	aim_protocol_register_type(plugin);
-	icq_protocol_register_type(plugin);
+	aim_protocol_register(plugin);
+	icq_protocol_register(plugin);
 
 	oscar_xfer_register(G_TYPE_MODULE(plugin));
 
