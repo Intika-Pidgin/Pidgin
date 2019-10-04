@@ -431,13 +431,7 @@ plugin_query(GError **error)
 		"authors",      authors,
 		"website",      PURPLE_WEBSITE,
 		"abi-version",  PURPLE_ABI_VERSION,
-
-		/* This should be PURPLE_PLUGIN_INFO_FLAGS_INTERNAL, but there's an
-		 * issue with purple_keyring_init which is causing issues for this.
-		 * See the comments in
-		 * https://bitbucket.org/pidgin/main/pull-requests/565.
-		 */
-		"flags",        0,
+		"flags",        PURPLE_PLUGIN_INFO_FLAGS_INTERNAL,
 
 		NULL
 	);
