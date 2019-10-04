@@ -538,7 +538,9 @@ void pidgin_clear_cursor(GtkWidget *widget);
  *
  * Returns: (transfer full): The file dialog
  */
-GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char*,gpointer), gpointer data);
+GtkFileChooserNative *pidgin_buddy_icon_chooser_new(
+        GtkWindow *parent, void (*callback)(const char *, gpointer),
+        gpointer data);
 
 /**
  * pidgin_convert_buddy_icon:
