@@ -89,7 +89,7 @@ static void blist_set_ontop(gboolean val) {
 		return;
 
 	gtk_window_set_keep_above(
-	        GTK_WINDOW(PIDGIN_BLIST(purple_blist_get_default())->window),
+	        GTK_WINDOW(PIDGIN_BUDDY_LIST(purple_blist_get_default())->window),
 	        val);
 }
 
@@ -161,7 +161,7 @@ static gboolean listen_for_blist_visible_cb(gpointer data) {
 static void blist_create_cb(PurpleBuddyList *purple_blist, void *data) {
 	purple_debug_info(WINPREFS_PLUGIN_ID, "buddy list created\n");
 
-	blist = PIDGIN_BLIST(purple_blist)->window;
+	blist = PIDGIN_BUDDY_LIST(purple_blist)->window;
 
 	if(purple_prefs_get_bool(PREF_DBLIST_DOCKABLE)) {
 		blist_set_dockable(TRUE);
@@ -333,8 +333,8 @@ static gboolean plugin_load(PurplePlugin *plugin, GError **error) {
 
 	/* blist docking init */
 	if (purple_blist_get_default() &&
-	    PIDGIN_BLIST(purple_blist_get_default()) &&
-	    PIDGIN_BLIST(purple_blist_get_default())->window) {
+	    PIDGIN_BUDDY_LIST(purple_blist_get_default()) &&
+	    PIDGIN_BUDDY_LIST(purple_blist_get_default())->window) {
 		blist_create_cb(purple_blist_get_default(), NULL);
 	}
 
