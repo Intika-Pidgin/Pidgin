@@ -4695,7 +4695,7 @@ purple_utf8_strip_unprintables(const gchar *str)
  * This function is copied from g_strerror() but changed to use
  * gai_strerror().
  */
-G_CONST_RETURN gchar *
+const gchar *
 purple_gai_strerror(gint errnum)
 {
 #if GLIB_CHECK_VERSION(2, 32, 0)
