@@ -161,8 +161,10 @@ void purple_media_stream_info(PurpleMedia *media, PurpleMediaInfoType type,
  *
  * @since 2.8.0
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void purple_media_set_params(PurpleMedia *media,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * Gets the list of optional parameters supported by the media backend.
@@ -208,10 +210,12 @@ gboolean purple_media_param_is_supported(PurpleMedia *media, const gchar *param)
  *
  * @since 2.6.0
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean purple_media_add_stream(PurpleMedia *media, const gchar *sess_id,
 		const gchar *who, PurpleMediaSessionType type,
 		gboolean initiator, const gchar *transmitter,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * Gets the session type from a session
