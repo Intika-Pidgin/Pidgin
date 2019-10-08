@@ -349,6 +349,11 @@ purple_media_dispose(GObject *media)
 		priv->manager = NULL;
 	}
 
+	if (priv->conference_type) {
+		g_free(priv->conference_type);
+		priv->conference_type = NULL;
+	}
+
 	G_OBJECT_CLASS(parent_class)->dispose(media);
 }
 
@@ -1312,6 +1317,19 @@ purple_media_set_decryption_parameters(PurpleMedia *media, const gchar *sess_id,
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
 	return purple_media_backend_set_decryption_parameters(media->priv->backend,
 			sess_id, participant, cipher, auth, key, key_len);
+#else
+	return FALSE;
+#endif
+}
+
+gboolean
+purple_media_set_require_encryption(PurpleMedia *media, const gchar *sess_id,
+		const gchar *participant, gboolean require_encryption)
+{
+#ifdef USE_VV
+	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
+	return purple_media_backend_set_require_encryption(media->priv->backend,
+			sess_id, participant, require_encryption);
 #else
 	return FALSE;
 #endif

@@ -755,7 +755,7 @@ choose_cb(GntWidget *button, gpointer null)
 			(event && event->file) ? (path = g_path_get_dirname(event->file))
 				: purple_home_dir());
 
-	g_signal_connect_swapped(G_OBJECT(sel->cancel), "activate", G_CALLBACK(gnt_widget_destroy), sel);
+	g_signal_connect(G_OBJECT(sel), "cancelled", G_CALLBACK(gnt_widget_destroy), NULL);
 	g_signal_connect(G_OBJECT(sel), "file_selected", G_CALLBACK(file_cb), event);
 	g_signal_connect_swapped(G_OBJECT(sel), "destroy", G_CALLBACK(g_nullify_pointer), &pref_dialog->selector);
 
@@ -974,7 +974,8 @@ finch_sounds_show_all(void)
 	gnt_box_set_pad(GNT_BOX(box), 0);
 
 	pref_dialog->method = cmbox = gnt_combo_box_new();
-	gnt_tree_set_hash_fns(GNT_TREE(GNT_COMBO_BOX(cmbox)->dropdown), g_str_hash, g_str_equal, NULL);
+	gnt_tree_set_hash_fns(GNT_TREE(gnt_combo_box_get_dropdown(GNT_COMBO_BOX(cmbox))),
+			g_str_hash, g_str_equal, NULL);
 	gnt_combo_box_add_data(GNT_COMBO_BOX(cmbox), "automatic", _("Automatic"));
 	gnt_combo_box_add_data(GNT_COMBO_BOX(cmbox), "alsa", "ALSA");
 	gnt_combo_box_add_data(GNT_COMBO_BOX(cmbox), "esd", "ESD");

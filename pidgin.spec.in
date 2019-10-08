@@ -291,7 +291,6 @@ rm -f $RPM_BUILD_ROOT%{_libdir}/purple-2/tcl.so
 %if 0%{?_without_text:1}
 rm -f $RPM_BUILD_ROOT%{_mandir}/man1/finch.*
 rm -rf $RPM_BUILD_ROOT%{_bindir}/finch
-rm -f $RPM_BUILD_ROOT%{_libdir}/libgnt.so.*
 %endif
 
 %find_lang %{name}
@@ -456,20 +455,12 @@ fi
 
 %doc %{_mandir}/man1/finch.*
 %{_bindir}/finch
-%{_libdir}/libgnt.so.*
-%{_libdir}/gnt/irssi.so
-%{_libdir}/gnt/s.so
 
 %files -n finch-devel
 %defattr(-, root, root)
 %dir %{_includedir}/finch
 %{_includedir}/finch/*.h
-# libgnt
-%dir %{_includedir}/gnt
-%{_includedir}/gnt/*.h
 %{_libdir}/pkgconfig/finch.pc
-%{_libdir}/pkgconfig/gnt.pc
-%{_libdir}/libgnt.so
 
 %endif
 

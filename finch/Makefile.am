@@ -7,7 +7,7 @@ EXTRA_DIST = \
 pkgconfigdir = $(libdir)/pkgconfig
 pkgconfig_DATA = finch.pc
 
-SUBDIRS = libgnt plugins
+SUBDIRS = plugins
 
 if ENABLE_GNT
 
@@ -74,18 +74,19 @@ finch_LDADD = \
 	$(GNT_LIBS) \
 	$(GSTREAMER_LIBS) \
 	$(GSTVIDEO_LIBS) \
-	./libgnt/libgnt.la \
+	$(LIBGNT_LIBS) \
 	$(top_builddir)/libpurple/libpurple.la
 
 AM_CPPFLAGS = \
 	-DSTANDALONE \
+	-DGNTSEAL_ENABLE \
 	-DDATADIR=\"$(datadir)\" \
 	-DLIBDIR=\"$(libdir)/finch/\" \
 	-DLOCALEDIR=\"$(datadir)/locale\" \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-I$(top_srcdir)/libpurple/ \
 	-I$(top_srcdir) \
-	-I$(srcdir)/libgnt/ \
+	$(LIBGNT_CFLAGS) \
 	$(DEBUG_CFLAGS) \
 	$(GLIB_CFLAGS) \
 	$(DBUS_CFLAGS) \

@@ -737,8 +737,9 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 #if GST_CHECK_VERSION(1,0,0)
 		remaining_pad = g_value_get_object(&tmp);
 		g_value_reset(&tmp);
-#endif
+#else
 		gst_object_unref(remaining_pad);
+#endif
 	}
 
 	gst_iterator_free(iter);
@@ -2190,8 +2191,9 @@ purple_media_manager_unregister_gst_device(PurpleMediaManager *manager,
 	name = gst_device_get_display_name(device);
 	device_class = gst_device_get_device_class(device);
 
-	for (i = manager->priv->elements; i && !done; i = i->next) {
+	for (i = manager->priv->elements; i && !done;) {
 		PurpleMediaElementInfo *info = i->data;
+		GList *next = i->next;
 		GstDevice *device2;
 
 		device2 = g_object_get_data(G_OBJECT(info), "gst-device");
@@ -2222,6 +2224,7 @@ purple_media_manager_unregister_gst_device(PurpleMediaManager *manager,
 			g_free(name2);
 			g_free(device_class2);
 		}
+		i = next;
 	}
 
 	g_free(name);

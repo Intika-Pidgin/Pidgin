@@ -134,8 +134,7 @@ static void finch_close_notify(PurpleNotifyType type, void *handle)
 	if (!widget)
 		return;
 
-	while (widget->parent)
-		widget = widget->parent;
+	widget = gnt_widget_get_toplevel(widget);
 
 	if (type == PURPLE_NOTIFY_SEARCHRESULTS)
 		purple_notify_searchresults_free(g_object_get_data(handle, "notify-results"));
@@ -341,10 +340,10 @@ finch_notify_userinfo(PurpleConnection *gc, const char *who, PurpleNotifyUserInf
 		GntTextView *msg = GNT_TEXT_VIEW(g_object_get_data(G_OBJECT(ui_handle), "info-widget"));
 		char *strip = purple_markup_strip_html(info);
 		int tvw, tvh, width, height, ntvw, ntvh;
+		GntWidget *window;
 
-		while (GNT_WIDGET(ui_handle)->parent)
-			ui_handle = GNT_WIDGET(ui_handle)->parent;
-		gnt_widget_get_size(GNT_WIDGET(ui_handle), &width, &height);
+		ui_handle = window = gnt_widget_get_toplevel(GNT_WIDGET(ui_handle));
+		gnt_widget_get_size(window, &width, &height);
 		gnt_widget_get_size(GNT_WIDGET(msg), &tvw, &tvh);
 
 		gnt_text_view_clear(msg);
@@ -355,7 +354,7 @@ finch_notify_userinfo(PurpleConnection *gc, const char *who, PurpleNotifyUserInf
 		ntvw += 3;
 		ntvh++;
 
-		gnt_screen_resize_widget(GNT_WIDGET(ui_handle), width + MAX(0, ntvw - tvw), height + MAX(0, ntvh - tvh));
+		gnt_screen_resize_widget(window, width + MAX(0, ntvw - tvw), height + MAX(0, ntvh - tvh));
 		g_free(strip);
 		g_free(key);
 	} else {
