@@ -1,14 +1,16 @@
+if PLUGINS
 #######################################################################
 # Check for stuff needed by the Evolution integration plugin.
 #######################################################################
 EVOLUTION_ADDRESSBOOK = [
-    dependency('libebook-1.2', required : force_deps),
-    dependency('libedata-book-1.2', required : force_deps),
-    dependency('evolution-data-server-1.2', version : '>= 3.6', required : force_deps),
+    dependency('libebook-1.2', required : get_option('gevolution')),
+    dependency('libedata-book-1.2', required : get_option('gevolution')),
+    dependency('evolution-data-server-1.2', version : '>= 3.6', required : get_option('gevolution')),
 ]
-enable_gevolution = true
 foreach dep : EVOLUTION_ADDRESSBOOK
-	enable_gevolution = enable_gevolution and dep.found()
+	if not dep.found()
+		EVOLUTION_ADDRESSBOOK += [disabler()]
+	endif
 endforeach
 
 gevolution_SOURCES = [
@@ -21,11 +23,10 @@ gevolution_SOURCES = [
 	'eds-utils.c'
 ]
 
-if PLUGINS and enable_gevolution
-	gmodule = dependency('gmodule-2.0')
+gmodule = dependency('gmodule-2.0', required : get_option('gevolution'))
 
-	gevolution = library('gevolution', gevolution_SOURCES,
-	    dependencies : EVOLUTION_ADDRESSBOOK + [libpurple_dep, libpidgin_dep, glib, gmodule],
-	    name_prefix : '',
-	    install : true, install_dir : PIDGIN_PLUGINDIR)
+gevolution = library('gevolution', gevolution_SOURCES,
+    dependencies : EVOLUTION_ADDRESSBOOK + [libpurple_dep, libpidgin_dep, glib, gmodule],
+    name_prefix : '',
+    install : true, install_dir : PIDGIN_PLUGINDIR)
 endif
