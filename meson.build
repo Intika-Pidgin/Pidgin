@@ -620,26 +620,6 @@ if get_option('buildtype') != 'plain' and compiler.get_id() == 'gcc'
 			add_project_arguments(newflag, language : 'c')
 		endif
 	endforeach
-
-	if get_option('fortify')
-#		AC_MSG_CHECKING(for FORTIFY_SOURCE support)
-#		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <features.h>]], [[
-#			#if !(__GNUC_PREREQ (4, 1) \
-#				|| (defined __GNUC_RH_RELEASE__ && __GNUC_PREREQ (4, 0)) \
-#				|| (defined __GNUC_RH_RELEASE__ && __GNUC_PREREQ (3, 4) \
-#					&& __GNUC_MINOR__ == 4 \
-#					&& (__GNUC_PATCHLEVEL__ > 2 \
-#						|| (__GNUC_PATCHLEVEL__ == 2 && __GNUC_RH_RELEASE__ >= 8))))
-#			#error No FORTIFY_SOURCE support
-#			#endif
-#				return 0;
-#		]])], [
-#			AC_MSG_RESULT(yes)
-#			DEBUG_CFLAGS='$DEBUG_CFLAGS -Wp,-D_FORTIFY_SOURCE=2'
-#		], [
-#			AC_MSG_RESULT(no)
-#		])
-	endif
 endif
 if get_option('buildtype') != 'plain' and SUNCC
 	add_project_arguments('-features=extensions', language : 'c')
