@@ -17,9 +17,6 @@ option('consoleui', type : 'boolean', value : true,
 option('doc', type : 'boolean', value : false,
        description : 'build documentation with gtk-doc')
 
-option('enchant', type : 'boolean', value : true,
-       description : 'compile with Enchant spell checking support')
-
 option('gevolution', type : 'boolean', value : false,
        description : 'compile with the Evolution plugin')
 
