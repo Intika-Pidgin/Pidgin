@@ -1687,8 +1687,11 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 					log->logger_data = data;
 					list = g_list_prepend(list, log);
 
-					if (index != NULL)
-						fprintf(index, "%d\t%d\t%lu\n", data->offset, data->length, (unsigned long)g_date_time_to_unix(log->time));
+					if (index != NULL) {
+						fprintf(index, "%d\t%d\t%" G_GINT64_FORMAT "\n",
+						        data->offset, data->length,
+						        g_date_time_to_unix(log->time));
+					}
 				}
 			}
 
@@ -1750,8 +1753,10 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			log->logger_data = data;
 			list = g_list_prepend(list, log);
 
-			if (index != NULL)
-				fprintf(index, "%d\t%d\t%lu\n", data->offset, data->length, (unsigned long)log->time);
+			if (index != NULL) {
+				fprintf(index, "%d\t%d\t%" G_GINT64_FORMAT "\n", data->offset,
+				        data->length, g_date_time_to_unix(log->time));
+			}
 		}
 	}
 
