@@ -738,11 +738,7 @@ if enable_introspection
 	endif
 endif
 
-if get_option('plugins')
-	PLUGINS = true
-else
-	PLUGINS = false
-endif
+PLUGINS = get_option('plugins')
 
 #######################################################################
 # Check for Nettle (Crypto Library)
