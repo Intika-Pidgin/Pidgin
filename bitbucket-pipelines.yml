@@ -13,5 +13,9 @@ pipelines:
       - step:
           image: pidgin/builders-2:debian-buster-amd64
           script:
+            - set -ex
+            - hg clone https://bitbucket.org/pidgin/libgnt -b release-2.x.y
+            - meson -Dprefix=/usr libgnt libgnt/build
+            - ninja -C libgnt/build install
+            - ldconfig
             - build.sh
-

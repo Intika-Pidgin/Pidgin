@@ -203,9 +203,7 @@ finch_media_connected_cb(PurpleMedia *media, FinchMedia *gntmedia)
 	gntmedia->priv->reject = NULL;
 	gntmedia->priv->calling = NULL;
 
-	parent = GNT_WIDGET(gntmedia);
-	while (parent->parent)
-		parent = parent->parent;
+	parent = gnt_widget_get_toplevel(GNT_WIDGET(gntmedia));
 	gnt_box_readjust(GNT_BOX(parent));
 	gnt_widget_draw(parent);
 }
@@ -223,9 +221,7 @@ finch_media_wait_cb(PurpleMedia *media, FinchMedia *gntmedia)
 	gnt_box_add_widget(GNT_BOX(gntmedia), gntmedia->priv->calling);
 	gnt_box_add_widget(GNT_BOX(gntmedia), gntmedia->priv->hangup);
 
-	parent = GNT_WIDGET(gntmedia);
-	while (parent->parent)
-		parent = parent->parent;
+	parent = gnt_widget_get_toplevel(GNT_WIDGET(gntmedia));
 	gnt_box_readjust(GNT_BOX(parent));
 	gnt_widget_draw(parent);
 }

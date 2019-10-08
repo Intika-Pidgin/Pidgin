@@ -801,7 +801,7 @@ void finch_accounts_show_all()
 	gnt_box_add_widget(GNT_BOX(accounts.window), gnt_line_new(FALSE));
 
 	accounts.tree = gnt_tree_new_with_columns(2);
-	GNT_WIDGET_SET_FLAGS(accounts.tree, GNT_WIDGET_NO_BORDER);
+	gnt_widget_set_has_border(accounts.tree, FALSE);
 
 	for (iter = purple_accounts_get_all(); iter; iter = iter->next)
 	{
@@ -1100,23 +1100,32 @@ finch_request_authorize(PurpleAccount *account,
 			aa, 2,
 			_("Authorize"), authorize_and_add_cb,
 			_("Deny"), deny_no_add_cb);
-		gnt_screen_release(widget);
+		/* Since GntWindow is a GntBox, hide it so it's unmapped, then
+		 * add it to the outer window, and make it visible again. */
+		gnt_widget_hide(widget);
 		gnt_box_set_toplevel(GNT_BOX(widget), FALSE);
 		gnt_box_add_widget(GNT_BOX(uihandle), widget);
+		gnt_widget_set_visible(widget, TRUE);
 
 		gnt_box_add_widget(GNT_BOX(uihandle), gnt_hline_new());
 
 		widget = finch_retrieve_user_info(purple_account_get_connection(account), remote_user);
-		for (iter = GNT_BOX(widget)->list; iter; iter = iter->next) {
+		for (iter = gnt_box_get_children(GNT_BOX(widget)); iter;
+		     iter = g_list_delete_link(iter, iter)) {
 			if (GNT_IS_BUTTON(iter->data)) {
 				gnt_widget_destroy(iter->data);
 				gnt_box_remove(GNT_BOX(widget), iter->data);
+				g_list_free(iter);
 				break;
 			}
 		}
+		/* Since GntWindow is a GntBox, hide it so it's unmapped, then
+		 * add it to the outer window, and make it visible again. */
+		gnt_widget_hide(widget);
 		gnt_box_set_toplevel(GNT_BOX(widget), FALSE);
-		gnt_screen_release(widget);
 		gnt_box_add_widget(GNT_BOX(uihandle), widget);
+		gnt_widget_set_visible(widget, TRUE);
+
 		gnt_widget_show(uihandle);
 
 		g_signal_connect_swapped(G_OBJECT(uihandle), "destroy", G_CALLBACK(free_auth_and_add), aa);

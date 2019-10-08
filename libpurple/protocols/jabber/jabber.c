@@ -1765,6 +1765,12 @@ void jabber_close(PurpleConnection *gc)
 		}
 	}
 
+	if (js->sessions) {
+		g_hash_table_remove_all(js->sessions);
+		g_hash_table_unref(js->sessions);
+		js->sessions = NULL;
+	}
+
 	g_free(js);
 
 	gc->proto_data = NULL;

@@ -161,8 +161,10 @@ void purple_media_stream_info(PurpleMedia *media, PurpleMediaInfoType type,
  *
  * @since 2.8.0
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void purple_media_set_params(PurpleMedia *media,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * Gets the list of optional parameters supported by the media backend.
@@ -208,10 +210,12 @@ gboolean purple_media_param_is_supported(PurpleMedia *media, const gchar *param)
  *
  * @since 2.6.0
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean purple_media_add_stream(PurpleMedia *media, const gchar *sess_id,
 		const gchar *who, PurpleMediaSessionType type,
 		gboolean initiator, const gchar *transmitter,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * Gets the session type from a session
@@ -384,6 +388,20 @@ gboolean purple_media_set_decryption_parameters(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant,
 		const gchar *cipher, const gchar *auth,
 		const gchar *key, gsize key_len);
+
+/**
+ * Sets whether a session participant's media requires encryption.
+ *
+ * @param media The media object to find the session in.
+ * @param sess_id The id of the session to set parameters of.
+ * @param participant The participant of the session to set parameters of.
+ * @param require_encryption TRUE if the media requires encryption.
+ *
+ * @since 2.14.0
+ */
+gboolean purple_media_set_require_encryption(PurpleMedia *media,
+		const gchar *sess_id, const gchar *participant,
+		gboolean require_encryption);
 
 /**
  * Gets whether a session's codecs are ready to be used.
