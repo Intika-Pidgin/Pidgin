@@ -22,7 +22,7 @@
 #
 project('pidgin', 'c',
     version : '3.0.0-devel',
-    meson_version : '>=0.37.0')
+    meson_version : '>=0.47.0')
 purple_soversion = 20
 
 parts = meson.project_version().split('-')
@@ -72,10 +72,8 @@ pkgconfig = import('pkgconfig')
 sedpath = find_program('sed')
 
 # Storing build arguments
-if meson.version().version_compare('>=0.42.0')
-	meson.add_postconf_script('mkmesonconf.py')
-	conf.set('HAVE_MESON_CONFIG', true)
-endif
+meson.add_postconf_script('mkmesonconf.py')
+conf.set('HAVE_MESON_CONFIG', true)
 
 # Checks for programs.
 compiler = meson.get_compiler('c')
@@ -877,14 +875,6 @@ INSTALL_PIXMAPS = get_option('pixmaps-install')
 
 # check for gtk-doc
 ENABLE_DOC = get_option('doc')
-if ENABLE_DOC
-	if meson.version().version_compare('<0.41.2')
-		if force_deps
-			error('Meson 0.41.2 or newer is required to build documentation.')
-		endif
-		ENABLE_DOC = false
-	endif
-endif
 
 enable_debug = get_option('console-logging')
 conf.set('DEBUG', enable_debug)
