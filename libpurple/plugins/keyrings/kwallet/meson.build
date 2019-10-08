@@ -1,5 +1,5 @@
 if PLUGINS
-	if enable_kwallet
+	if kwallet.found()
 		kwallet_moc = qt5.preprocess(
 			moc_headers: 'purplekwallet.h',
 			dependencies: qt5_dep,
