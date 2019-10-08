@@ -7,9 +7,6 @@ option('extraversion', type : 'string',
 option('doc', type : 'boolean', value : false,
        description : 'build documentation with gtk-doc')
 
-option('fortify', type : 'boolean', value : true,
-       description : 'compile with FORTIFY_SOURCE support')
-
 option('glib-errors-trace', type : 'boolean', value : false,
        description : 'print backtraces for glib errors')
 
