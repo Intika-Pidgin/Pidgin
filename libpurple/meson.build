@@ -161,7 +161,7 @@ purple_coreheaders = [
 purple_filebase = 'purple-@0@'.format(purple_major_version)
 purple_include_base = join_paths(purple_filebase, 'libpurple')
 
-if enable_gst
+if gstreamer.found()
 	purple_coresources += 'media/backend-fs2.c'
 endif
 if enable_vv
@@ -295,7 +295,7 @@ if enable_introspection
 	                         purple_mediaheaders)
 
 	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0', gplugin_gir]
-	if enable_gst
+	if gstreamer.found()
 		Purple_gir_includes += ['Gst-1.0']
 	endif
 

@@ -1,6 +1,4 @@
-if get_option('gevolution')
-	subdir('gevolution')
-endif
+subdir('gevolution')
 
 if false
 	subdir('musicmessaging')

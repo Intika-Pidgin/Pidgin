@@ -1,6 +1,4 @@
 /**
- * @file simple.c
- *
  * purple
  *
  * Copyright (C) 2005 Thomas Butter <butter@uni-mannheim.de>
@@ -25,19 +23,7 @@
  */
 
 #include "internal.h"
-
-#include "accountopt.h"
-#include "buddylist.h"
-#include "conversation.h"
-#include "core.h"
-#include "debug.h"
-#include "notify.h"
-#include "protocol.h"
-#include "plugins.h"
-#include "util.h"
-#include "version.h"
-#include "network.h"
-#include "xmlnode.h"
+#include <purple.h>
 
 #include "simple.h"
 #include "sipmsg.h"

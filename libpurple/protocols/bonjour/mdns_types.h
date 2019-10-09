@@ -18,7 +18,8 @@
 #define PURPLE_BONJOUR_MDNS_TYPES_H
 
 #include <glib.h>
-#include "account.h"
+
+#include <purple.h>
 
 #define LINK_LOCAL_RECORD_NAME "_presence._tcp."
 

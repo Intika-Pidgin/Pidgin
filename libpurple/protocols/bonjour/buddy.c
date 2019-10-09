@@ -18,12 +18,11 @@
 #include <stdlib.h>
 
 #include "internal.h"
+#include <purple.h>
+
 #include "buddy.h"
-#include "account.h"
-#include "buddylist.h"
 #include "bonjour.h"
 #include "mdns_interface.h"
-#include "debug.h"
 
 /**
  * Creates a new buddy.

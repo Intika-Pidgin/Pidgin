@@ -6,7 +6,7 @@ if get_option('consoleui')
 	else
 		libgnt_proj = subproject('libgnt',
 		    default_options : [
-		        'introspection=' + get_option('introspection').to_string(),
+		        'introspection=' + enable_introspection.to_string(),
 		    ]
 		)
 		libgnt_dep = libgnt_proj.get_variable('libgnt_dep')
