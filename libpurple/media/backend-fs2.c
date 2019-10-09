@@ -1887,34 +1887,6 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 			(GSourceFunc)src_pad_added_cb_cb, stream);
 }
 
-#ifdef HAVE_FARSIGHT
-static GValueArray *
-append_relay_info(GValueArray *relay_info, const gchar *ip, gint port,
-	const gchar *username, const gchar *password, const gchar *type)
-{
-	GValue value;
-	GstStructure *turn_setup = gst_structure_new("relay-info",
-				"ip", G_TYPE_STRING, ip,
-				"port", G_TYPE_UINT, port,
-				"username", G_TYPE_STRING, username,
-				"password", G_TYPE_STRING, password,
-				"relay-type", G_TYPE_STRING, type,
-				NULL);
-
-	if (turn_setup) {
-		memset(&value, 0, sizeof(GValue));
-		g_value_init(&value, GST_TYPE_STRUCTURE);
-		gst_value_set_structure(&value, turn_setup);
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-		relay_info = g_value_array_append(relay_info, &value);
-G_GNUC_END_IGNORE_DEPRECATIONS
-		gst_structure_free(turn_setup);
-	}
-
-	return relay_info;
-}
-#endif
-
 static gboolean
 create_stream(PurpleMediaBackendFs2 *self,
 		const gchar *sess_id, const gchar *who,
@@ -1940,10 +1912,8 @@ create_stream(PurpleMediaBackendFs2 *self,
 	  TURN modes, like Google f.ex. */
 	gboolean got_turn_from_protocol = FALSE;
 	guint i;
-#ifndef HAVE_FARSIGHT
 	GPtrArray *relay_info = g_ptr_array_new_full (1, (GDestroyNotify) gst_structure_free);
 	gboolean ret;
-#endif
 
 	session = get_session(self, sess_id);
 
@@ -2003,11 +1973,6 @@ create_stream(PurpleMediaBackendFs2 *self,
 	}
 
 	if (turn_ip && purple_strequal("nice", transmitter) && !got_turn_from_protocol) {
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#ifdef HAVE_FARSIGHT
-		GValueArray *relay_info = g_value_array_new(0);
-#endif
-G_GNUC_END_IGNORE_DEPRECATIONS
 		gint port;
 		const gchar *username =	purple_prefs_get_string(
 				"/purple/network/turn_username");
@@ -2017,10 +1982,6 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 		/* UDP */
 		port = purple_prefs_get_int("/purple/network/turn_port");
 		if (port > 0) {
-#ifdef HAVE_FARSIGHT
-			relay_info = append_relay_info(relay_info, turn_ip, port, username,
-				password, "udp");
-#else
 			g_ptr_array_add (relay_info,
 				gst_structure_new ("relay-info",
 				"ip", G_TYPE_STRING, turn_ip,
@@ -2029,16 +1990,11 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 				"password", G_TYPE_STRING, password,
 				"relay-type", G_TYPE_STRING, "udp",
 				NULL));
-#endif
 		}
 
 		/* TCP */
 		port = purple_prefs_get_int("/purple/network/turn_port_tcp");
 		if (port > 0) {
-#ifdef HAVE_FARSIGHT
-			relay_info = append_relay_info(relay_info, turn_ip, port, username,
-				password, "tcp");
-#else
 			g_ptr_array_add (relay_info,
 				gst_structure_new ("relay-info",
 				"ip", G_TYPE_STRING, turn_ip,
@@ -2047,7 +2003,6 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 				"password", G_TYPE_STRING, password,
 				"relay-type", G_TYPE_STRING, "tcp",
 				NULL));
-#endif
 		}
 
 		/* TURN over SSL is only supported by libnice for Google's "psuedo" SSL mode
@@ -2056,39 +2011,11 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 		purple_debug_info("backend-fs2",
 			"Setting relay-info on new stream\n");
 		_params[_num_params].name = "relay-info";
-G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#ifdef HAVE_FARSIGHT
-		g_value_init(&_params[_num_params].value, G_TYPE_VALUE_ARRAY);
-		g_value_set_boxed(&_params[_num_params].value, relay_info);
-		g_value_array_free(relay_info);
-#else
 		g_value_init(&_params[_num_params].value, G_TYPE_PTR_ARRAY);
 		g_value_set_boxed(&_params[_num_params].value, relay_info);
-#endif
-G_GNUC_END_IGNORE_DEPRECATIONS
 		_num_params++;
 	}
 
-#ifdef HAVE_FARSIGHT
-	fsstream = fs_session_new_stream(session->session, participant,
-			initiator == TRUE ? type_direction :
-			(type_direction & FS_DIRECTION_RECV), transmitter,
-			_num_params, _params, &err);
-	g_free(_params);
-
-	if (fsstream == NULL) {
-		if (err) {
-			purple_debug_error("backend-fs2",
-					"Error creating stream: %s\n",
-					err && err->message ?
-					err->message : "NULL");
-			g_error_free(err);
-		} else
-			purple_debug_error("backend-fs2",
-					"Error creating stream\n");
-		return FALSE;
-	}
-#else
 	ret = fs_stream_set_transmitter(fsstream, transmitter,
 			_params, _num_params, &err);
 	for (i = 0 ; i < _num_params ; i++)
@@ -2103,7 +2030,6 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 		g_clear_error(&err);
 		return FALSE;
 	}
-#endif
 
 	stream = g_new0(PurpleMediaBackendFs2Stream, 1);
 	stream->participant = g_strdup(who);

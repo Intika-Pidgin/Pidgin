@@ -167,7 +167,7 @@ pidgin_create_small_button(GtkWidget *image)
 	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
 
 	/* don't allow focus on the close button */
-	gtk_button_set_focus_on_click(GTK_BUTTON(button), FALSE);
+	gtk_widget_set_focus_on_click(button, FALSE);
 
 	gtk_widget_show(image);
 
@@ -608,8 +608,7 @@ pidgin_save_accels(gpointer data)
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
-	                            "accels", NULL);
+	filename = g_build_filename(purple_config_dir(), "accels", NULL);
 	purple_debug(PURPLE_DEBUG_MISC, "accels", "saving accels to %s\n", filename);
 	gtk_accel_map_save(filename);
 	g_free(filename);
@@ -623,8 +622,7 @@ pidgin_load_accels()
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
-	                            "accels", NULL);
+	filename = g_build_filename(purple_config_dir(), "accels", NULL);
 	gtk_accel_map_load(filename);
 	g_free(filename);
 }

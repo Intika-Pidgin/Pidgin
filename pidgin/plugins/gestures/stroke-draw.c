@@ -57,13 +57,13 @@ record_stroke_segment(GtkWidget *widget)
 {
 	gint x, y;
 	struct gstroke_metrics *metrics;
-	GdkDeviceManager *devmgr;
+	GdkSeat *seat;
 	GdkDevice *dev;
 
 	g_return_if_fail(widget != NULL);
 
-	devmgr = gdk_display_get_device_manager(gtk_widget_get_display(widget));
-	dev = gdk_device_manager_get_client_pointer(devmgr);
+	seat = gdk_display_get_default_seat(gtk_widget_get_display(widget));
+	dev = gdk_seat_get_pointer(seat);
 	gdk_window_get_device_position(gtk_widget_get_window(widget),
 		dev, &x, &y, NULL);
 
@@ -118,8 +118,9 @@ static void gstroke_cancel(GdkEvent *event)
 
 	timer_id = 0;
 
-	if( event != NULL )
-		gdk_device_ungrab(gdk_event_get_device(event), event->button.time);
+	if (event != NULL) {
+		gdk_seat_ungrab(gdk_event_get_seat(event));
+	}
 
 	if (gstroke_draw_strokes() && gstroke_disp != NULL) {
 	    /* get rid of the invisible stroke window */
@@ -159,10 +160,9 @@ process_event (GtkWidget *widget, GdkEvent *event, gpointer data G_GNUC_UNUSED)
 		  cursor = gdk_cursor_new_for_display(display, GDK_PENCIL);
 	  }
 
-      gdk_device_grab(gdk_event_get_device(event),
-                      gtk_widget_get_window(widget), GDK_OWNERSHIP_WINDOW,
-                      FALSE, GDK_BUTTON_RELEASE_MASK, cursor,
-                      event->button.time);
+      gdk_seat_grab(gdk_event_get_seat(event), gtk_widget_get_window(widget),
+                    GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, cursor, event,
+                    NULL, NULL);
       timer_id = g_timeout_add (GSTROKE_TIMEOUT_DURATION,
 				  gstroke_timeout, widget);
       return TRUE;
@@ -181,7 +181,7 @@ process_event (GtkWidget *widget, GdkEvent *event, gpointer data G_GNUC_UNUSED)
       last_mouse_position.invalid = TRUE;
       original_widget = NULL;
       g_source_remove (timer_id);
-      gdk_device_ungrab(gdk_event_get_device(event), event->button.time);
+	  gdk_seat_ungrab(gdk_event_get_seat(event));
       timer_id = 0;
 
       {

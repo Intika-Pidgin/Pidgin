@@ -1,6 +1,4 @@
 /**
- * @file irc.c
- *
  * purple
  *
  * Copyright (C) 2003, Robbert Haarman <purple@inglorion.net>
@@ -24,19 +22,7 @@
  */
 
 #include "internal.h"
-
-#include "accountopt.h"
-#include "action.h"
-#include "buddylist.h"
-#include "conversation.h"
-#include "core.h"
-#include "debug.h"
-#include "notify.h"
-#include "protocol.h"
-#include "plugins.h"
-#include "purple-gio.h"
-#include "util.h"
-#include "version.h"
+#include <purple.h>
 
 #include "irc.h"
 

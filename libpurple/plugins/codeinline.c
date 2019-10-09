@@ -21,10 +21,8 @@
  */
 
 #include "internal.h"
-#include "plugins.h"
-#include "notify.h"
-#include "util.h"
-#include "version.h"
+
+#include <purple.h>
 
 PurplePlugin *plugin_handle = NULL;
 
