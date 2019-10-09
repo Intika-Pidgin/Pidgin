@@ -100,7 +100,7 @@ purple_account_option_copy(PurpleAccountOption *option) {
 
 	if(opt->type == PURPLE_PREF_STRING) {
 		opt->default_value.string = g_strdup(option->default_value.string);
-		opt->params.string.hints = g_list_copy(option->params.string.hints);
+		opt->params.string.hints = g_slist_copy(option->params.string.hints);
 	}
 
 	return opt;
@@ -361,8 +361,8 @@ purple_account_option_string_get_masked(const PurpleAccountOption *option)
 const GSList *
 purple_account_option_string_get_hints(const PurpleAccountOption *option)
 {
-	g_return_val_if_fail(option != NULL, FALSE);
-	g_return_val_if_fail(option->type == PURPLE_PREF_STRING, FALSE);
+	g_return_val_if_fail(option != NULL, NULL);
+	g_return_val_if_fail(option->type == PURPLE_PREF_STRING, NULL);
 
 	return option->params.string.hints;
 }
