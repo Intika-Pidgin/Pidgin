@@ -1,14 +1,14 @@
 if PLUGINS
 	subdir('kwallet')
 
-	if enable_nettle
+	if nettle.found()
 		internalkeyring_plugin = library('internalkeyring', 'internalkeyring.c',
 		    dependencies : [nettle, libpurple_dep],
 		    name_prefix : '',
 		    install : true, install_dir : PURPLE_PLUGINDIR)
 	endif
 
-	if enable_secret_service
+	if secretservice.found()
 		secretsservice_plugin = library('secretservice', 'secretservice.c',
 		    dependencies : [secretservice, libpurple_dep],
 		    name_prefix : '',
