@@ -51,7 +51,7 @@ test_circular_buffer_new(void) {
 static void
 test_circular_buffer_reset(void) {
 	PurpleCircularBuffer *buffer = purple_circular_buffer_new(0);
-	const guchar *data;
+	const gchar *data;
 
 	purple_circular_buffer_append(buffer, "abc\0", 4);
 	g_assert_cmpuint(4, ==, purple_circular_buffer_get_used(buffer));
@@ -75,7 +75,7 @@ test_circular_buffer_reset(void) {
 static void
 test_circular_buffer_mark_read(void) {
 	PurpleCircularBuffer *buffer = purple_circular_buffer_new(0);
-	const guchar *data;
+	const gchar *data;
 
 	purple_circular_buffer_append(buffer, "abc\0", 4);
 	g_assert_cmpuint(4, ==, purple_circular_buffer_get_used(buffer));
@@ -98,7 +98,7 @@ test_circular_buffer_mark_read(void) {
 static void
 test_circular_buffer_single_default_grow(void) {
 	PurpleCircularBuffer *buffer = purple_circular_buffer_new(0);
-	const guchar *data;
+	const gchar *data;
 
 	purple_circular_buffer_append(buffer, "abc\0", 4);
 
