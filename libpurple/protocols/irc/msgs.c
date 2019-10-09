@@ -1,6 +1,4 @@
 /**
- * @file msgs.c
- *
  * purple
  *
  * Copyright (C) 2003, 2012 Ethan Blanton <elb@pidgin.im>
@@ -27,12 +25,8 @@
  */
 
 #include "internal.h"
+#include <purple.h>
 
-#include "conversation.h"
-#include "buddylist.h"
-#include "notify.h"
-#include "util.h"
-#include "debug.h"
 #include "irc.h"
 
 #include <stdio.h>

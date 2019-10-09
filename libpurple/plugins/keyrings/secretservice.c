@@ -33,11 +33,7 @@
  */
 
 #include "internal.h"
-#include "account.h"
-#include "debug.h"
-#include "keyring.h"
-#include "plugins.h"
-#include "version.h"
+#include <purple.h>
 
 #include <libsecret/secret.h>
 

@@ -29,7 +29,7 @@
 #include <gmodule.h>
 
 #include "internal.h"
-#include "protocol.h"
+#include <purple.h>
 
 #include "mdns_common.h"
 #include "jabber.h"
