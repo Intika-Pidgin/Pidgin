@@ -69,33 +69,6 @@ test_circular_buffer_reset(void) {
 	g_object_unref(buffer);
 }
 
-/* This test reads data from a circular buffer and then calls reset to verify
- * that all of the old data remains.
- */
-static void
-test_circular_buffer_reset_with_mark_read(void) {
-	PurpleCircularBuffer *buffer = purple_circular_buffer_new(0);
-	const guchar *data;
-
-	purple_circular_buffer_append(buffer, "abc\0", 4);
-	g_assert_cmpuint(4, ==, purple_circular_buffer_get_used(buffer));
-	g_assert_cmpuint(4, ==, purple_circular_buffer_get_max_read(buffer));
-
-	/* force a read to move the output */
-	purple_circular_buffer_get_output(buffer);
-	data = purple_circular_buffer_get_output(buffer);
-	g_assert_cmpstr("abc", ==, data);
-
-	purple_circular_buffer_mark_read(buffer, 4);
-
-	purple_circular_buffer_reset(buffer);
-
-	data = purple_circular_buffer_get_output(buffer);
-	g_assert_cmpstr("abc", ==, data);
-
-	g_object_unref(buffer);
-}
-
 /* This test verifies that purple_circular_buffer_mark_read works as described
  * in the documentation.
  */
@@ -167,7 +140,6 @@ main(gint argc, gchar **argv) {
 
 	g_test_add_func("/circular_buffer/new", test_circular_buffer_new);
 	g_test_add_func("/circular_buffer/reset", test_circular_buffer_reset);
-	g_test_add_func("/circular_buffer/reset_with_mark_read", test_circular_buffer_reset_with_mark_read);
 	g_test_add_func("/circular_buffer/mark_read", test_circular_buffer_mark_read);
 	g_test_add_func("/circular_buffer/single_default_grow", test_circular_buffer_single_default_grow);
 	g_test_add_func("/circular_buffer/multiple_grows", test_circular_buffer_multiple_grows);
