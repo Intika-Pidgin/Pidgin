@@ -203,9 +203,7 @@ finch_media_connected_cb(PurpleMedia *media, FinchMedia *gntmedia)
 	gntmedia->priv->reject = NULL;
 	gntmedia->priv->calling = NULL;
 
-	parent = GNT_WIDGET(gntmedia);
-	while (parent->parent)
-		parent = parent->parent;
+	parent = gnt_widget_get_toplevel(GNT_WIDGET(gntmedia));
 	gnt_box_readjust(GNT_BOX(parent));
 	gnt_widget_draw(parent);
 }
@@ -223,9 +221,7 @@ finch_media_wait_cb(PurpleMedia *media, FinchMedia *gntmedia)
 	gnt_box_add_widget(GNT_BOX(gntmedia), gntmedia->priv->calling);
 	gnt_box_add_widget(GNT_BOX(gntmedia), gntmedia->priv->hangup);
 
-	parent = GNT_WIDGET(gntmedia);
-	while (parent->parent)
-		parent = parent->parent;
+	parent = gnt_widget_get_toplevel(GNT_WIDGET(gntmedia));
 	gnt_box_readjust(GNT_BOX(parent));
 	gnt_widget_draw(parent);
 }
@@ -413,6 +409,8 @@ call_cmd_cb(PurpleConversation *conv, const char *cmd, char **args,
 	return PURPLE_CMD_RET_OK;
 }
 
+#if !defined(USE_GSTREAMER) || !GST_CHECK_VERSION(1,4,0)
+
 static GstElement *
 create_default_audio_src(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant)
@@ -451,14 +449,41 @@ create_default_audio_sink(PurpleMedia *media,
 	}
 	return sink;
 }
+#endif /* USE_GSTREAMER >= 1.4 */
 #endif  /* USE_VV */
 
 void finch_media_manager_init(void)
 {
 #ifdef USE_VV
 	PurpleMediaManager *manager = purple_media_manager_get();
-	PurpleMediaElementInfo *default_audio_src =
-			g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+	PurpleMediaElementInfo *audio_src;
+	PurpleMediaElementInfo *audio_sink;
+#if defined(USE_GSTREAMER) && GST_CHECK_VERSION(1,4,0)
+	const char *pref;
+
+	pref = purple_prefs_get_string(
+			FINCH_PREFS_ROOT "/vvconfig/audio/src/device");
+	audio_src = purple_media_manager_get_element_info(manager, pref);
+	if (!audio_src) {
+		pref = "autoaudiosrc";
+		purple_prefs_set_string(
+			FINCH_PREFS_ROOT "/vvconfig/audio/src/device", pref);
+		audio_src = purple_media_manager_get_element_info(manager,
+				pref);
+	}
+
+	pref = purple_prefs_get_string(
+			FINCH_PREFS_ROOT "/vvconfig/audio/sink/device");
+	audio_sink = purple_media_manager_get_element_info(manager, pref);
+	if (!audio_sink) {
+		pref = "autoaudiosink";
+		purple_prefs_set_string(
+			FINCH_PREFS_ROOT "/vvconfig/audio/sink/device", pref);
+		audio_sink = purple_media_manager_get_element_info(manager,
+				pref);
+	}
+#else
+	audio_src = g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
 			"id", "finchdefaultaudiosrc",
 			"name", "Finch Default Audio Source",
 			"type", PURPLE_MEDIA_ELEMENT_AUDIO
@@ -466,14 +491,14 @@ void finch_media_manager_init(void)
 					| PURPLE_MEDIA_ELEMENT_ONE_SRC
 					| PURPLE_MEDIA_ELEMENT_UNIQUE,
 			"create-cb", create_default_audio_src, NULL);
-	PurpleMediaElementInfo *default_audio_sink =
-			g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
+	audio_sink = g_object_new(PURPLE_TYPE_MEDIA_ELEMENT_INFO,
 			"id", "finchdefaultaudiosink",
 			"name", "Finch Default Audio Sink",
 			"type", PURPLE_MEDIA_ELEMENT_AUDIO
 					| PURPLE_MEDIA_ELEMENT_SINK
 					| PURPLE_MEDIA_ELEMENT_ONE_SINK,
 			"create-cb", create_default_audio_sink, NULL);
+#endif /* USE_GSTREAMER */
 
 	g_signal_connect(G_OBJECT(manager), "init-media", G_CALLBACK(finch_new_media), NULL);
 	purple_cmd_register("call", "", PURPLE_CMD_P_DEFAULT,
@@ -485,8 +510,8 @@ void finch_media_manager_init(void)
 			PURPLE_MEDIA_CAPS_AUDIO_SINGLE_DIRECTION);
 
 	purple_debug_info("gntmedia", "Registering media element types\n");
-	purple_media_manager_set_active_element(manager, default_audio_src);
-	purple_media_manager_set_active_element(manager, default_audio_sink);
+	purple_media_manager_set_active_element(manager, audio_src);
+	purple_media_manager_set_active_element(manager, audio_sink);
 #endif
 }
 

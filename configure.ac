@@ -21,45 +21,14 @@ AC_PREREQ([2.50])
 #   For code under development: [devel]
 #   For production releases:    []
 #
-#
-# If any code has changed in libgnt:
-#   gnt_micro_version += 1
-#
-# If any functions have been added to libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version += 1
-#   gnt_lt_current += 1
-#
-# If backwards compatibility has been broken in libgnt:
-#   gnt_micro_version = 0
-#   gnt_minor_version = 0
-#   gnt_major_version += 1;
-#   gnt_lt_current += 1
-#
-# gnt_version_suffix should be similar to one of the following:
-#   For beta releases:          [beta2]
-#   For code under development: [devel]
-#   For production releases:    []
-#
-# Make sure to update finch/libgnt/configure.ac with libgnt version changes.
-#
-m4_define([purple_lt_current], [13])
+m4_define([purple_lt_current], [14])
 m4_define([purple_major_version], [2])
-m4_define([purple_minor_version], [13])
+m4_define([purple_minor_version], [14])
 m4_define([purple_micro_version], [0])
 m4_define([purple_version_suffix], [devel])
 m4_define([purple_version],
           [purple_major_version.purple_minor_version.purple_micro_version])
 m4_define([purple_display_version], purple_version[]m4_ifdef([purple_version_suffix],[purple_version_suffix]))
-
-m4_define([gnt_lt_current], [8])
-m4_define([gnt_major_version], [2])
-m4_define([gnt_minor_version], [8])
-m4_define([gnt_micro_version], [10])
-m4_define([gnt_version_suffix], [devel])
-m4_define([gnt_version],
-          [gnt_major_version.gnt_minor_version.gnt_micro_version])
-m4_define([gnt_display_version], gnt_version[]m4_ifdef([gnt_version_suffix],[gnt_version_suffix]))
 
 
 AC_INIT([pidgin], [purple_display_version], [devel@pidgin.im])
@@ -89,18 +58,6 @@ AC_SUBST(PURPLE_VERSION)
 
 PURPLE_LT_VERSION_INFO="purple_lt_current:purple_micro_version:purple_minor_version"
 AC_SUBST(PURPLE_LT_VERSION_INFO)
-
-GNT_MAJOR_VERSION=gnt_major_version
-GNT_MINOR_VERSION=gnt_minor_version
-GNT_MICRO_VERSION=gnt_micro_version
-GNT_VERSION=[gnt_display_version]
-AC_SUBST(GNT_MAJOR_VERSION)
-AC_SUBST(GNT_MINOR_VERSION)
-AC_SUBST(GNT_MICRO_VERSION)
-AC_SUBST(GNT_VERSION)
-
-GNT_LT_VERSION_INFO="gnt_lt_current:gnt_micro_version:gnt_minor_version"
-AC_SUBST(GNT_LT_VERSION_INFO)
 
 AC_PATH_PROG(sedpath, sed)
 
@@ -629,6 +586,19 @@ AM_CONDITIONAL(ENABLE_GESTURES, test "x$enable_gestures" = "xyes")
 dnl #######################################################################
 dnl # Check for ncurses and other things used by the console UI
 dnl #######################################################################
+if test "x$enable_consoleui" = "xyes"; then
+PKG_CHECK_MODULES(LIBGNT, [gnt >= 2.14.0], , [
+	if test "x$force_finch" = "xyes"; then
+		AC_MSG_ERROR([
+
+Finch will not be built. You must have libgnt >= 2.14.0 development headers installed to build.
+
+])
+	fi
+	enable_consoleui=no
+])
+fi
+
 GNT_LIBS=""
 GNT_CFLAGS=""
 AC_ARG_WITH(ncurses-headers, [AC_HELP_STRING([--with-ncurses-headers=DIR],
@@ -712,8 +682,6 @@ fi
 AC_SUBST(GNT_LIBS)
 AC_SUBST(GNT_CFLAGS)
 AM_CONDITIONAL(ENABLE_GNT, test "x$enable_consoleui" = "xyes")
-
-#AC_CHECK_FUNC(wcwidth, [AC_DEFINE([HAVE_WCWIDTH], [1], [Define to 1 if you have wcwidth function.])])
 
 dnl #######################################################################
 dnl # Check for LibXML2 (required)
@@ -1428,18 +1396,24 @@ fi
 dnl Check for NetworkManager.h; if we don't have it, oh well
 if test "x$enable_dbus" = "xyes" ; then
 	if test "x$enable_nm" = "xyes" ; then
-		PKG_CHECK_MODULES(NETWORKMANAGER, [NetworkManager >= 0.5.0], [
+		PKG_CHECK_MODULES(NETWORKMANAGER, [libnm], [
 			AC_SUBST(NETWORKMANAGER_CFLAGS)
 			AC_SUBST(NETWORKMANAGER_LIBS)
 			AC_DEFINE(HAVE_NETWORKMANAGER, 1, [Define if we have NetworkManager.])
 		], [
-			enable_nm=no
-			if test "x$force_deps" = "xyes" ; then
-				AC_MSG_ERROR([
+			PKG_CHECK_MODULES(NETWORKMANAGER, [NetworkManager >= 0.5.0], [
+				AC_SUBST(NETWORKMANAGER_CFLAGS)
+				AC_SUBST(NETWORKMANAGER_LIBS)
+				AC_DEFINE(HAVE_NETWORKMANAGER, 1, [Define if we have NetworkManager.])
+			], [
+				enable_nm=no
+				if test "x$force_deps" = "xyes" ; then
+					AC_MSG_ERROR([
 NetworkManager development headers not found.
 Use --disable-nm if you do not need NetworkManager support.
 ])
-			fi])
+				fi])
+		])
 	fi
 else
 	enable_nm=no
@@ -1486,7 +1460,7 @@ AC_ARG_WITH([python],
 						   [which python interpreter to use for dbus code generation]),
 			PYTHON=$withval)
 
-if test "x$enable_dbus" = "xyes" || test "x$enable_consoleui" = "xyes" ; then
+if test "x$enable_dbus" = "xyes" ; then
 	if test -z "$PYTHON" -o "x$PYTHON" = "xyes"; then
 		AC_PATH_PROG([PYTHON], [python], [no])
 	fi
@@ -1563,24 +1537,6 @@ else
 fi
 
 AM_CONDITIONAL(ENABLE_DBUS, test "x$enable_dbus" = "xyes")
-
-dnl Check for Python headers (currently useful only for libgnt)
-dnl (Thanks to XChat)
-if test "x$enable_consoleui" = "xyes" -a ! -z "$PYTHON" -a x"$PYTHON" != x"no" ; then
-	AC_MSG_CHECKING(for Python compile flags)
-	if test -f ${PYTHON}-config; then
-		PY_CFLAGS=`${PYTHON}-config --includes`
-		PY_LIBS=`${PYTHON}-config --libs`
-		AC_DEFINE(USE_PYTHON, [1], [Define if python headers are available.])
-		AC_MSG_RESULT(ok)
-	else
-		AC_MSG_RESULT([Cannot find ${PYTHON}-config])
-		PY_CFLAGS=""
-		PY_LIBS=""
-	fi
-fi
-AC_SUBST(PY_CFLAGS)
-AC_SUBST(PY_LIBS)
 
 dnl #######################################################################
 dnl # Check for Mono support
@@ -2220,6 +2176,8 @@ if test "$enable_tcl" = yes; then
 	TCLCONFIG=no
 	TCLCONFIGDIRS="/usr/lib \
 			/usr/lib64 \
+			/usr/lib/tcl8.7 \
+			/usr/lib/tcl8.6 \
 			/usr/lib/tcl8.5 \
 			/usr/lib/tcl8.4 \
 			/usr/lib/tcl8.3 \
@@ -2295,6 +2253,8 @@ if test "$enable_tcl" = yes -a "$enable_tk" = yes; then
 	TKCONFIG=no
 	TKCONFIGDIRS="/usr/lib \
 			/usr/lib64 \
+			/usr/lib/tk8.7 \
+			/usr/lib/tk8.6 \
 			/usr/lib/tk8.5 \
 			/usr/lib/tk8.4 \
 			/usr/lib/tk8.3 \
@@ -2659,9 +2619,6 @@ AC_CONFIG_FILES([Makefile
 		   share/ca-certs/Makefile
 		   finch/finch.pc
 		   finch/Makefile
-		   finch/libgnt/Makefile
-		   finch/libgnt/gnt.pc
-		   finch/libgnt/wms/Makefile
 		   finch/plugins/Makefile
 		   po/Makefile.in
 		   pidgin.spec

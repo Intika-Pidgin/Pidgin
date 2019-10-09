@@ -8,8 +8,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:52-0600\n"
-"PO-Revision-Date: 2016-10-16 11:46+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 19:10+0000\n"
 "Last-Translator: David Vachulka <david@konstrukce-cad.com>\n"
 "Language-Team: Czech (http://www.transifex.com/pidgin/pidgin/language/cs/)\n"
 "Language: cs\n"
@@ -12690,6 +12690,58 @@ msgstr ""
 "Tento zásuvný modul umožňuje uživateli upravit formáty časových značek zpráv "
 "v konverzacích a záznamech."
 
+msgid "Opacity:"
+msgstr "Krytí:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Okna IM konverzace"
+
+msgid "_IM window transparency"
+msgstr "Průhlednost okna _IM"
+
+msgid "_Show slider bar in IM window"
+msgstr "_Zobrazovat posuvný pruh v okně IM"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Odstranit průhlednost okna IM při aktivaci"
+
+msgid "Always on top"
+msgstr "Vždy nahoře"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Okno seznamu kamarádů"
+
+msgid "_Buddy List window transparency"
+msgstr "Průhlednost okna _seznamu kamarádů"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Odstranit průhlednost okna seznamu kamarádů při aktivaci"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Průhlednost"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Proměnlivá průhlednost pro seznam kamarádů a konverzace."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+"Tento zásuvný modul umožňuje proměnlivou alfa průhlednost oken konverzace a "
+"seznamu kamarádů."
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Upozornění chatu"
@@ -12800,58 +12852,6 @@ msgstr "Konfigurovat mikrofon a webovou kameru."
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Konfigurovat nastavení mikrofon a webovou kameru pro hlasové/video volání."
-
-msgid "Opacity:"
-msgstr "Krytí:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Okna IM konverzace"
-
-msgid "_IM window transparency"
-msgstr "Průhlednost okna _IM"
-
-msgid "_Show slider bar in IM window"
-msgstr "_Zobrazovat posuvný pruh v okně IM"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Odstranit průhlednost okna IM při aktivaci"
-
-msgid "Always on top"
-msgstr "Vždy nahoře"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Okno seznamu kamarádů"
-
-msgid "_Buddy List window transparency"
-msgstr "Průhlednost okna _seznamu kamarádů"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Odstranit průhlednost okna seznamu kamarádů při aktivaci"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Průhlednost"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Proměnlivá průhlednost pro seznam kamarádů a konverzace."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
-"Tento zásuvný modul umožňuje proměnlivou alfa průhlednost oken konverzace a "
-"seznamu kamarádů."
 
 #. Autostart
 msgid "Startup"

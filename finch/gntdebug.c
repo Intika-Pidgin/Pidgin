@@ -278,14 +278,8 @@ file_save(GntFileSel *fs, const char *path, const char *file, GntTextView *tv)
 	}
 
 	fprintf(fp, "Finch Debug Log : %s\n", purple_date_format_full(NULL));
-	fprintf(fp, "%s", tv->string->str);
+	fprintf(fp, "%s", gnt_text_view_get_text(tv));
 	fclose(fp);
-	gnt_widget_destroy(GNT_WIDGET(fs));
-}
-
-static void
-file_cancel(GntWidget *w, GntFileSel *fs)
-{
 	gnt_widget_destroy(GNT_WIDGET(fs));
 }
 
@@ -297,7 +291,7 @@ save_debug_win(GntWidget *w, GntTextView *tv)
 	gnt_file_sel_set_current_location(sel, purple_home_dir());
 	gnt_file_sel_set_suggested_filename(sel, "debug.txt");
 	g_signal_connect(G_OBJECT(sel), "file_selected", G_CALLBACK(file_save), tv);
-	g_signal_connect(G_OBJECT(sel->cancel), "activate", G_CALLBACK(file_cancel), sel);
+	g_signal_connect(G_OBJECT(sel), "cancelled", G_CALLBACK(gnt_widget_destroy), NULL);
 	gnt_widget_show(window);
 }
 
@@ -336,28 +330,28 @@ void finch_debug_window_show()
 	 */
 	wid = gnt_button_new(_("Clear"));
 	g_signal_connect(G_OBJECT(wid), "activate", G_CALLBACK(clear_debug_win), debug.tview);
-	GNT_WIDGET_SET_FLAGS(wid, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(wid, TRUE);
 	gnt_box_add_widget(GNT_BOX(box), wid);
 
 	wid = gnt_button_new(_("Save"));
 	g_signal_connect(G_OBJECT(wid), "activate", G_CALLBACK(save_debug_win), debug.tview);
-	GNT_WIDGET_SET_FLAGS(wid, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(wid, TRUE);
 	gnt_box_add_widget(GNT_BOX(box), wid);
 
 	debug.search = gnt_entry_new(purple_prefs_get_string(PREF_ROOT "/filter"));
 	label = gnt_label_new(_("Filter:"));
-	GNT_WIDGET_UNSET_FLAGS(label, GNT_WIDGET_GROW_X);
+	gnt_widget_set_grow_x(label, FALSE);
 	gnt_box_add_widget(GNT_BOX(box), label);
 	gnt_box_add_widget(GNT_BOX(box), debug.search);
 	g_signal_connect(G_OBJECT(debug.search), "text_changed", G_CALLBACK(update_filter_string), NULL);
 
 	wid = gnt_check_box_new(_("Pause"));
 	g_signal_connect(G_OBJECT(wid), "toggled", G_CALLBACK(toggle_pause), NULL);
-	GNT_WIDGET_SET_FLAGS(wid, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(wid, TRUE);
 	gnt_box_add_widget(GNT_BOX(box), wid);
 
 	gnt_box_add_widget(GNT_BOX(debug.window), box);
-	GNT_WIDGET_SET_FLAGS(box, GNT_WIDGET_GROW_Y);
+	gnt_widget_set_grow_y(box, TRUE);
 
 	gnt_widget_set_name(debug.window, "debug-window");
 

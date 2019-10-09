@@ -47,7 +47,8 @@ typedef enum
 	PURPLE_REQUEST_ACTION,     /**< Action request.            */
 	PURPLE_REQUEST_FIELDS,     /**< Multiple fields request.   */
 	PURPLE_REQUEST_FILE,       /**< File open or save request. */
-	PURPLE_REQUEST_FOLDER      /**< Folder selection request.  */
+	PURPLE_REQUEST_FOLDER,     /**< Folder selection request.  */
+	PURPLE_REQUEST_SCREENSHARE /**< Screenshare media request. */
 
 } PurpleRequestType;
 
@@ -246,9 +247,12 @@ typedef struct
 	                        void *user_data,
 	                        size_t action_count, va_list actions);
 
+	void *(*request_screenshare_media)(const char *title, const char *primary,
+				const char *secondary, PurpleAccount *account,
+				GCallback cb, void *user_data);
+
 	void (*_purple_reserved1)(void);
 	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
 } PurpleRequestUiOps;
 
 typedef void (*PurpleRequestInputCb)(void *, const char *);
@@ -261,6 +265,7 @@ typedef void (*PurpleRequestActionCb)(void *, int);
 typedef void (*PurpleRequestChoiceCb)(void *, int);
 typedef void (*PurpleRequestFieldsCb)(void *, PurpleRequestFields *fields);
 typedef void (*PurpleRequestFileCb)(void *, const char *filename);
+typedef void (*PurpleRequestScreenshareCb)(void *, GObject *info);
 
 #ifdef __cplusplus
 extern "C" {
@@ -1575,6 +1580,30 @@ void *purple_request_folder(void *handle, const char *title, const char *dirname
 	GCallback ok_cb, GCallback cancel_cb,
 	PurpleAccount *account, const char *who, PurpleConversation *conv,
 	void *user_data);
+
+
+/**
+ * Displays a dialog allowing the user to select a window/monitor etc. for
+ * screen sharing. Returns a #PurpleMediaElementInfo to the callback or @c
+ * NULL if the request is cancelled.
+ *
+ * @param handle      The plugin or connection handle.  For some things this
+ *                    is <em>extremely</em> important.  See the comments on
+ *                    purple_request_input().
+ * @param title       The title of the message, or @c NULL if it should have
+ *                    no title.
+ * @param primary     The main point of the message, or @c NULL if you're
+ *                    feeling enigmatic.
+ * @param secondary   Secondary information, or @c NULL if there is none.
+ * @param cb          The callback for the @c OK button.
+ * @param user_data   The data to pass to the callback.
+ *
+ * @return A UI-specific handle.
+ */
+void *purple_request_screenshare_media(void *handle, const char *title,
+				       const char *primary, const char *secondary,
+				       PurpleAccount *account, GCallback cb,
+				       void *user_data);
 
 /*@}*/
 

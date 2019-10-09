@@ -42,16 +42,21 @@ window_kpress_cb(GntWidget *wid, const char *key, GntTextView *view)
 {
 	if (key[0] == 27)
 	{
-		if (purple_strequal(key, GNT_KEY_DOWN))
+		if (purple_strequal(key, GNT_KEY_DOWN)) {
 			gnt_text_view_scroll(view, 1);
-		else if (purple_strequal(key, GNT_KEY_UP))
+		} else if (purple_strequal(key, GNT_KEY_UP)) {
 			gnt_text_view_scroll(view, -1);
-		else if (purple_strequal(key, GNT_KEY_PGDOWN))
-			gnt_text_view_scroll(view, wid->priv.height - 2);
-		else if (purple_strequal(key, GNT_KEY_PGUP))
-			gnt_text_view_scroll(view, -(wid->priv.height - 2));
-		else
+		} else if (purple_strequal(key, GNT_KEY_PGDOWN)) {
+			int height = 0;
+			gnt_widget_get_size(wid, NULL, &height);
+			gnt_text_view_scroll(view, height - 2);
+		} else if (purple_strequal(key, GNT_KEY_PGUP)) {
+			int height = 0;
+			gnt_widget_get_size(wid, NULL, &height);
+			gnt_text_view_scroll(view, -(height - 2));
+		} else {
 			return FALSE;
+		}
 		return TRUE;
 	}
 	return FALSE;
@@ -61,7 +66,8 @@ static PurpleCmdRet
 lastlog_cb(PurpleConversation *conv, const char *cmd, char **args, char **error, gpointer null)
 {
 	FinchConv *ggconv = conv->ui_data;
-	char **strings = g_strsplit(GNT_TEXT_VIEW(ggconv->tv)->string->str, "\n", 0);
+	char **strings = g_strsplit(gnt_text_view_get_text(GNT_TEXT_VIEW(ggconv->tv)),
+	                            "\n", 0);
 	GntWidget *win, *tv;
 	int i, j;
 

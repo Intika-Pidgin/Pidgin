@@ -26,6 +26,7 @@
 
 #define NS_XMPP_BIND "urn:ietf:params:xml:ns:xmpp-bind"
 #define NS_XMPP_CLIENT "jabber:client"
+#define NS_XMPP_SERVER "jabber:server"
 #define NS_XMPP_SASL "urn:ietf:params:xml:ns:xmpp-sasl"
 #define NS_XMPP_SESSION "urn:ietf:params:xml:ns:xmpp-session"
 #define NS_XMPP_STANZAS "urn:ietf:params:xml:ns:xmpp-stanzas"
@@ -69,6 +70,9 @@
 
 /* XEP-0191 Simple Communications Blocking */
 #define NS_SIMPLE_BLOCKING "urn:xmpp:blocking"
+
+/* XEP-0198 Stream Management */
+#define NS_STREAM_MANAGEMENT "urn:xmpp:sm:3"
 
 /* XEP-0199 Ping */
 #define NS_PING "urn:xmpp:ping"
