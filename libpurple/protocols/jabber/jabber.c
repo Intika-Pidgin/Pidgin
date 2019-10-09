@@ -954,16 +954,28 @@ static JabberStream *
 jabber_stream_new(PurpleAccount *account)
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
+	GProxyResolver *resolver;
+	GError *error;
 	JabberStream *js;
 	PurplePresence *presence;
 	gchar *user;
 	gchar *slash;
 
+	resolver = purple_proxy_get_proxy_resolver(account, &error);
+	if (resolver == NULL) {
+		purple_debug_error("jabber", "Unable to get account proxy resolver: %s",
+		                   error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
 	js = g_new0(JabberStream, 1);
 	purple_connection_set_protocol_data(gc, js);
 	js->gc = gc;
 	js->fd = -1;
-	js->http_conns = purple_http_connection_set_new();
+	js->http_conns = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
+	                                               resolver, NULL);
+	g_object_unref(resolver);
 
 	/* we might want to expose this at some point */
 	js->cancellable = g_cancellable_new();
@@ -1681,7 +1693,10 @@ void jabber_close(PurpleConnection *gc)
 		js->bs_proxies = g_list_delete_link(js->bs_proxies, js->bs_proxies);
 	}
 
-	purple_http_connection_set_destroy(js->http_conns);
+	if (js->http_conns) {
+		soup_session_abort(js->http_conns);
+		g_object_unref(js->http_conns);
+	}
 
 	g_free(js->stream_id);
 	if(js->user)
