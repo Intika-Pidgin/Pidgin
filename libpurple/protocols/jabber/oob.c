@@ -34,7 +34,7 @@ struct _JabberOOBXfer {
 	JabberStream *js;
 	gchar *iq_id;
 	gchar *url;
-	PurpleHttpConnection *hc;
+	SoupMessage *msg;
 };
 
 G_DEFINE_DYNAMIC_TYPE(JabberOOBXfer, jabber_oob_xfer, PURPLE_TYPE_XFER);
@@ -57,21 +57,20 @@ static void jabber_oob_xfer_end(PurpleXfer *xfer)
 }
 
 static void
-jabber_oob_xfer_got(PurpleHttpConnection *hc, PurpleHttpResponse *response,
-	gpointer _xfer)
+jabber_oob_xfer_got(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                    gpointer user_data)
 {
-	PurpleXfer *xfer = _xfer;
+	PurpleXfer *xfer = user_data;
 	JabberOOBXfer *jox;
 
 	if (purple_xfer_is_cancelled(xfer))
 		return;
 
 	jox = JABBER_OOB_XFER(xfer);
-	jox->hc = NULL;
+	jox->msg = NULL;
 
-	if (!purple_http_response_is_successful(response) ||
-		purple_xfer_get_bytes_remaining(xfer) > 0)
-	{
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code) ||
+	    purple_xfer_get_bytes_remaining(xfer) > 0) {
 		purple_xfer_set_status(xfer, PURPLE_XFER_STATUS_CANCEL_REMOTE);
 		purple_xfer_end(xfer);
 	} else {
@@ -81,43 +80,44 @@ jabber_oob_xfer_got(PurpleHttpConnection *hc, PurpleHttpResponse *response,
 }
 
 static void
-jabber_oob_xfer_progress_watcher(PurpleHttpConnection *hc,
-	gboolean reading_state, int processed, int total, gpointer _xfer)
+jabber_oob_xfer_got_content_length(SoupMessage *msg, gpointer user_data)
 {
-	PurpleXfer *xfer = _xfer;
+	PurpleXfer *xfer = user_data;
+	goffset total;
 
-	if (!reading_state)
-		return;
+	total = soup_message_headers_get_content_length(msg->response_headers);
 
 	purple_xfer_set_size(xfer, total);
 	purple_xfer_update_progress(xfer);
 }
 
-static gboolean
-jabber_oob_xfer_writer(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, const gchar *buffer, size_t offset,
-	size_t length, gpointer _xfer)
+static void
+jabber_oob_xfer_writer(SoupMessage *msg, SoupBuffer *chunk, gpointer user_data)
 {
-	PurpleXfer *xfer = _xfer;
+	PurpleXfer *xfer = user_data;
 
-	return purple_xfer_write_file(xfer, (const guchar*)buffer, length);
+	if (!purple_xfer_write_file(xfer, (const guchar *)chunk->data,
+	                            chunk->length)) {
+		JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
+		soup_session_cancel_message(jox->js->http_conns, msg,
+		                            SOUP_STATUS_IO_ERROR);
+	}
 }
 
 static void jabber_oob_xfer_start(PurpleXfer *xfer)
 {
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 	JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
 
-	req = purple_http_request_new(jox->url);
-	purple_http_request_set_timeout(req, -1);
-	purple_http_request_set_max_len(req, -1);
-	purple_http_request_set_response_writer(req, jabber_oob_xfer_writer,
-		xfer);
-	jox->hc = purple_http_request(jox->js->gc, req, jabber_oob_xfer_got,
-		xfer);
-
-	purple_http_conn_set_progress_watcher(jox->hc,
-		jabber_oob_xfer_progress_watcher, xfer, -1);
+	msg = soup_message_new("GET", jox->url);
+	soup_message_add_header_handler(
+	        msg, "got-headers", "Content-Length",
+	        G_CALLBACK(jabber_oob_xfer_got_content_length), xfer);
+	soup_message_body_set_accumulate(msg->response_body, FALSE);
+	g_signal_connect(msg, "got-chunk", G_CALLBACK(jabber_oob_xfer_writer),
+	                 xfer);
+	soup_session_queue_message(jox->js->http_conns, msg, jabber_oob_xfer_got,
+	                           xfer);
 }
 
 static void jabber_oob_xfer_recv_error(PurpleXfer *xfer, const char *code) {
@@ -149,7 +149,8 @@ static void jabber_oob_xfer_recv_denied(PurpleXfer *xfer) {
 static void jabber_oob_xfer_recv_cancelled(PurpleXfer *xfer) {
 	JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
 
-	purple_http_conn_cancel(jox->hc);
+	soup_session_cancel_message(jox->js->http_conns, jox->msg,
+	                            SOUP_STATUS_CANCELLED);
 	jabber_oob_xfer_recv_error(xfer, "404");
 }
 
