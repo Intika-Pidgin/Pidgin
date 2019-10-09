@@ -35,6 +35,7 @@
 #include "util.h"
 
 #include <gio/gio.h>
+#include <libsoup/soup.h>
 
 struct _PurpleProxyInfo
 {
@@ -653,21 +654,23 @@ purple_proxy_get_setup(PurpleAccount *account)
 			(tmp = g_getenv("http_proxy")) != NULL ||
 			(tmp = g_getenv("HTTPPROXY")) != NULL)
 		{
-			PurpleHttpURL *url;
+			SoupURI *url;
 
 			/* http_proxy-format:
 			 * export http_proxy="http://user:passwd@your.proxy.server:port/"
 			 */
-			url = purple_http_url_parse(tmp);
-			if (!url) {
-				purple_debug_warning("proxy", "Couldn't parse URL\n");
+			url = soup_uri_new(tmp);
+			if (!SOUP_URI_VALID_FOR_HTTP(url)) {
+				purple_debug_warning("proxy", "Couldn't parse URL: %s", tmp);
 				return gpi;
 			}
 
-			purple_proxy_info_set_host(gpi, purple_http_url_get_host(url));
-			purple_proxy_info_set_username(gpi, purple_http_url_get_username(url));
-			purple_proxy_info_set_password(gpi, purple_http_url_get_password(url));
-			purple_proxy_info_set_port(gpi, purple_http_url_get_port(url));
+			purple_proxy_info_set_host(gpi, url->host);
+			purple_proxy_info_set_username(gpi, url->user);
+			purple_proxy_info_set_password(gpi, url->password);
+			purple_proxy_info_set_port(gpi, url->port);
+
+			soup_uri_free(url);
 
 			/* XXX: Do we want to skip this step if user/password/port were part of url? */
 			if ((tmp = g_getenv("HTTP_PROXY_USER")) != NULL ||
