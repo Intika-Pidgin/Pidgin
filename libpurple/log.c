@@ -1395,7 +1395,7 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 
 		date = purple_date_format_full(localtime(&log->time));
 
-		written += fprintf(data->file, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\">\n<html>\n<head>\n");
+		written += fprintf(data->file, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><html><head>");
 		written += fprintf(data->file, "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">");
 		written += fprintf(data->file, "<title>");
 		if (log->type == PURPLE_LOG_SYSTEM)
@@ -1406,8 +1406,8 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 					log->name, date, purple_account_get_username(log->account), prpl);
 
 		written += fprintf(data->file, "%s", header);
-		written += fprintf(data->file, "</title>\n</head>\n<body>\n");
-		written += fprintf(data->file, "<h1>%s</h1>\n<p>\n", header);
+		written += fprintf(data->file, "</title></head><body>");
+		written += fprintf(data->file, "<h1>%s</h1><p>\n", header);
 		g_free(header);
 	}
 
