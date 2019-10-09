@@ -617,7 +617,7 @@ pidgin_startup_cb(GApplication *app, gpointer user_data)
 	}
 
 	if (!g_getenv("PURPLE_PLUGINS_SKIP")) {
-		search_path = g_build_filename(purple_user_dir(),
+		search_path = g_build_filename(purple_data_dir(),
 				"plugins", NULL);
 		if (!g_stat(search_path, &st))
 			g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);

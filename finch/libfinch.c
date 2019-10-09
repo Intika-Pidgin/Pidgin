@@ -231,7 +231,7 @@ init_libpurple(int argc, char **argv)
 		abort();
 	}
 
-	path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	path = g_build_filename(purple_data_dir(), "plugins", NULL);
 	if (g_mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR) != 0 && errno != EEXIST)
 		fprintf(stderr, "Couldn't create plugins dir\n");
 	purple_plugins_add_search_path(path);
