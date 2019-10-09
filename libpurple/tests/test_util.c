@@ -154,31 +154,6 @@ test_util_email_is_invalid(void) {
 }
 
 /******************************************************************************
- * ipv6 tests
- *****************************************************************************/
-static void
-test_util_ipv6_is_valid(void) {
-	g_assert_true(purple_ipv6_address_is_valid("2001:0db8:85a3:0000:0000:8a2e:0370:7334"));
-	g_assert_true(purple_ipv6_address_is_valid("2001:db8:85a3:0:0:8a2e:370:7334"));
-	g_assert_true(purple_ipv6_address_is_valid("2001:db8:85a3::8a2e:370:7334"));
-	g_assert_true(purple_ipv6_address_is_valid("2001:0db8:0:0::1428:57ab"));
-	g_assert_true(purple_ipv6_address_is_valid("::1"));
-	g_assert_true(purple_ipv6_address_is_valid("1::"));
-	g_assert_true(purple_ipv6_address_is_valid("1::1"));
-	g_assert_true(purple_ipv6_address_is_valid("::"));
-}
-
-static void
-test_util_ipv6_is_invalid(void) {
-	g_assert_false(purple_ipv6_address_is_valid(""));
-	g_assert_false(purple_ipv6_address_is_valid(":"));
-	g_assert_false(purple_ipv6_address_is_valid("1.2.3.4"));
-	g_assert_false(purple_ipv6_address_is_valid("2001::FFD3::57ab"));
-	g_assert_false(purple_ipv6_address_is_valid("200000000::1"));
-	g_assert_false(purple_ipv6_address_is_valid("QWERTY::1"));
-}
-
-/******************************************************************************
  * str_to_time tests
  *****************************************************************************/
 static void
@@ -556,11 +531,6 @@ main(gint argc, gchar **argv) {
 	                test_util_email_is_valid);
 	g_test_add_func("/util/email/is invalid",
 	                test_util_email_is_invalid);
-
-	g_test_add_func("/util/ipv6/is valid",
-	                test_util_ipv6_is_valid);
-	g_test_add_func("/util/ipv6/is invalid",
-	                test_util_ipv6_is_invalid);
 
 	g_test_add_func("/util/str to time",
 	                test_util_str_to_time);

@@ -1847,7 +1847,7 @@ network_ip_changed(GtkEntry *entry, gpointer data)
 	GtkStyleContext *context = gtk_widget_get_style_context(GTK_WIDGET(entry));
 
 	if (text && *text) {
-		if (purple_ip_address_is_valid(text)) {
+		if (g_hostname_is_ip_address(text)) {
 			purple_network_set_public_ip(text);
 			gtk_style_context_add_class(context, "good-ip");
 			gtk_style_context_remove_class(context, "bad-ip");
