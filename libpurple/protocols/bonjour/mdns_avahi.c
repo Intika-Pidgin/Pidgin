@@ -15,9 +15,9 @@
  */
 
 #include "internal.h"
+#include <purple.h>
 
 #include "mdns_interface.h"
-#include "debug.h"
 #include "buddy.h"
 #include "bonjour.h"
 

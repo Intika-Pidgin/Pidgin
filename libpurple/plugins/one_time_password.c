@@ -19,11 +19,7 @@
  * 02111-1301, USA.
  */
 #include "internal.h"
-#include "debug.h"
-#include "plugins.h"
-#include "version.h"
-#include "account.h"
-#include "accountopt.h"
+#include <purple.h>
 
 #define PLUGIN_ID "core-one_time_password"
 #define PREF_NAME PLUGIN_ID "_enabled"

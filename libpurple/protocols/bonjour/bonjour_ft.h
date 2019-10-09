@@ -22,8 +22,7 @@
 #ifndef PURPLE_BONJOUR_BONJOUR_FT_H
 #define PURPLE_BONJOUR_BONJOUR_FT_H
 
-#include "network.h"
-#include "proxy.h"
+#include <purple.h>
 
 G_BEGIN_DECLS
 

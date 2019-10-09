@@ -20,12 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301,  USA
  */
 #include "internal.h"
-#include "util.h"
-#include "debug.h"
-#include "notify.h"
-#include "proxy.h"
-#include "xfer.h"
-#include "buddy.h"
+#include <purple.h>
+
 #include "bonjour.h"
 #include "bonjour_ft.h"
 

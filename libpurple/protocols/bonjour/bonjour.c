@@ -31,13 +31,7 @@
 #endif
 
 #include "internal.h"
-
-#include "account.h"
-#include "accountopt.h"
-#include "debug.h"
-#include "plugins.h"
-#include "util.h"
-#include "version.h"
+#include <purple.h>
 
 #include "bonjour.h"
 #include "mdns_common.h"

@@ -22,9 +22,7 @@
 #include <glib.h>
 
 #include "internal.h"
-#include "notify.h"
-#include "plugins.h"
-#include "version.h"
+#include <purple.h>
 
 #define PREF_ROOT "/plugins"
 #define PREF_TEST "/plugins/tests"
