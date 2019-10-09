@@ -11,8 +11,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:55-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-23 18:36+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Lithuanian (http://www.transifex.com/pidgin/pidgin/language/"
 "lt/)\n"
@@ -12799,6 +12799,56 @@ msgstr ""
 "Šis papildinys leidžia naudotojui pasirinkti pokalbių ir žurnalų žinučių "
 "laiko žymių formatus."
 
+msgid "Opacity:"
+msgstr "Nepermatomumas:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "Pokalbių langai"
+
+msgid "_IM window transparency"
+msgstr "Pokalb_ių langų permatotumas"
+
+msgid "_Show slider bar in IM window"
+msgstr "Rodyti šliaužiklio juo_stą pokalbių lange"
+
+msgid "Remove IM window transparency on focus"
+msgstr "Aktyvavus pokalbių langą pašalinti jo permatomumą"
+
+msgid "Always on top"
+msgstr "Visada viršuje"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "Bičiulių sąrašo langas"
+
+msgid "_Buddy List window transparency"
+msgstr "_Bičiulių sąrašo lango permatomumas"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "Aktyvavus bičiulių sąrašo langą pašalinti jo permatomumą"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "Permatomumas"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "Kintamas permatomumas bičiulių sąrašo ir pokalbių langams."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr "Pokalbių kambarių įspėjimai"
@@ -12909,56 +12959,6 @@ msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr ""
 "Nustatyti mikrofono ir internetinės kameros nuostatas vaizdo ir garso "
 "skambučiams."
-
-msgid "Opacity:"
-msgstr "Nepermatomumas:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "Pokalbių langai"
-
-msgid "_IM window transparency"
-msgstr "Pokalb_ių langų permatotumas"
-
-msgid "_Show slider bar in IM window"
-msgstr "Rodyti šliaužiklio juo_stą pokalbių lange"
-
-msgid "Remove IM window transparency on focus"
-msgstr "Aktyvavus pokalbių langą pašalinti jo permatomumą"
-
-msgid "Always on top"
-msgstr "Visada viršuje"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "Bičiulių sąrašo langas"
-
-msgid "_Buddy List window transparency"
-msgstr "_Bičiulių sąrašo lango permatomumas"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "Aktyvavus bičiulių sąrašo langą pašalinti jo permatomumą"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "Permatomumas"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "Kintamas permatomumas bičiulių sąrašo ir pokalbių langams."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

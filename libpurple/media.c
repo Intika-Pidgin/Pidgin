@@ -142,6 +142,7 @@ enum {
 	STATE_CHANGED,
 	STREAM_INFO,
 	CANDIDATE_PAIR_ESTABLISHED,
+	VIDEO_CAPS,
 	LAST_SIGNAL
 };
 static guint purple_media_signals[LAST_SIGNAL] = {0};
@@ -280,6 +281,11 @@ purple_media_class_init (PurpleMediaClass *klass)
 					 purple_smarshal_VOID__POINTER_POINTER_OBJECT_OBJECT,
 					 G_TYPE_NONE, 4, G_TYPE_POINTER, G_TYPE_POINTER,
 					 PURPLE_TYPE_MEDIA_CANDIDATE, PURPLE_TYPE_MEDIA_CANDIDATE);
+	purple_media_signals[VIDEO_CAPS] = g_signal_new("video-caps", G_TYPE_FROM_CLASS(klass),
+					 G_SIGNAL_RUN_LAST, 0, NULL, NULL,
+					 purple_smarshal_VOID__STRING_STRING_POINTER,
+					 G_TYPE_NONE, 3, G_TYPE_STRING,
+					 G_TYPE_STRING, GST_TYPE_CAPS);
 	g_type_class_add_private(klass, sizeof(PurpleMediaPrivate));
 }
 
@@ -341,6 +347,11 @@ purple_media_dispose(GObject *media)
 	if (priv->manager) {
 		g_object_unref(priv->manager);
 		priv->manager = NULL;
+	}
+
+	if (priv->conference_type) {
+		g_free(priv->conference_type);
+		priv->conference_type = NULL;
 	}
 
 	G_OBJECT_CLASS(parent_class)->dispose(media);
@@ -1306,6 +1317,19 @@ purple_media_set_decryption_parameters(PurpleMedia *media, const gchar *sess_id,
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
 	return purple_media_backend_set_decryption_parameters(media->priv->backend,
 			sess_id, participant, cipher, auth, key, key_len);
+#else
+	return FALSE;
+#endif
+}
+
+gboolean
+purple_media_set_require_encryption(PurpleMedia *media, const gchar *sess_id,
+		const gchar *participant, gboolean require_encryption)
+{
+#ifdef USE_VV
+	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
+	return purple_media_backend_set_require_encryption(media->priv->backend,
+			sess_id, participant, require_encryption);
 #else
 	return FALSE;
 #endif

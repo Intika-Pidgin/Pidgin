@@ -9,8 +9,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:52-0600\n"
-"PO-Revision-Date: 2016-10-14 20:42+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 12:43+0000\n"
 "Last-Translator: Richard Laager <rlaager@wiktel.com>\n"
 "Language-Team: Burmese (Myanmar) (http://www.transifex.com/pidgin/pidgin/"
 "language/my_MM/)\n"
@@ -12466,6 +12466,56 @@ msgstr ""
 "ဤပလပ်အင်ကို သုံးပြီး သုံးစွဲသူသည် စကားပြောဆိုချက်များကို စိတ်ကြိုက် ဖန်တီးနိုင်သည်၊ ပေးစာ အချိန် သတ်မှတ်ချက် "
 "ပုံစံများကို မှတ်သားပေးသည်။"
 
+msgid "Opacity:"
+msgstr "အလင်းပိတ်မှု -"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "IM စကားပြောဆိုမှု ဝင်းဒိုးများ"
+
+msgid "_IM window transparency"
+msgstr "_I IM ဝင်းဒိုး ဖောက်ထွင်းမြင်နိုင်မှု"
+
+msgid "_Show slider bar in IM window"
+msgstr "_S IM ဝင်းဒိုးတွင် ဆလိုက်ဘား ပြရန်"
+
+msgid "Remove IM window transparency on focus"
+msgstr "IM ဝင်းဒိုး၏ ဖောက်ထွင်းမြင်နိုင်မှုကို အာရုံစိုက်ပြီး ဖယ်ထုတ်ရန်"
+
+msgid "Always on top"
+msgstr "အမြဲတမ်း ထိပ်ဆုံးမှာ"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "မိတ်ဆွေ စာရင်း ၀င်းဒိုး"
+
+msgid "_Buddy List window transparency"
+msgstr "_B မိတ်ဆွေ စာရင်း ၀င်းဒိုး"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "IM ဝင်းဒိုး၏ ဖောက်ထွင်းမြင်နိုင်မှုကို အာရုံစိုက်ပြီး ဖယ်ထုတ်ရန်"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "ပွင့်လင်း မြင်သာမှု"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "မိတ်ဆွေ စာရင်းနှင့် စကားပြောဆိုမှုများအတွက် ပြောင်းလဲနိုင်သော ပွင့်လင်းမြင်သာမှု။"
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12574,56 +12624,6 @@ msgstr "သင့် မိုက်ခရိုဖုန်းနှင့် w
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
 msgstr "အသံ/ရုပ်သံ ခေါ်ဆိုမှုများ အတွက် သင့် မိုက်ခရိုဖုန်းနှင့် webcam ကို ပြင်ဆင်ပါ။"
-
-msgid "Opacity:"
-msgstr "အလင်းပိတ်မှု -"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "IM စကားပြောဆိုမှု ဝင်းဒိုးများ"
-
-msgid "_IM window transparency"
-msgstr "_I IM ဝင်းဒိုး ဖောက်ထွင်းမြင်နိုင်မှု"
-
-msgid "_Show slider bar in IM window"
-msgstr "_S IM ဝင်းဒိုးတွင် ဆလိုက်ဘား ပြရန်"
-
-msgid "Remove IM window transparency on focus"
-msgstr "IM ဝင်းဒိုး၏ ဖောက်ထွင်းမြင်နိုင်မှုကို အာရုံစိုက်ပြီး ဖယ်ထုတ်ရန်"
-
-msgid "Always on top"
-msgstr "အမြဲတမ်း ထိပ်ဆုံးမှာ"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "မိတ်ဆွေ စာရင်း ၀င်းဒိုး"
-
-msgid "_Buddy List window transparency"
-msgstr "_B မိတ်ဆွေ စာရင်း ၀င်းဒိုး"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "IM ဝင်းဒိုး၏ ဖောက်ထွင်းမြင်နိုင်မှုကို အာရုံစိုက်ပြီး ဖယ်ထုတ်ရန်"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "ပွင့်လင်း မြင်သာမှု"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "မိတ်ဆွေ စာရင်းနှင့် စကားပြောဆိုမှုများအတွက် ပြောင်းလဲနိုင်သော ပွင့်လင်းမြင်သာမှု။"
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
-msgstr ""
 
 #. Autostart
 msgid "Startup"

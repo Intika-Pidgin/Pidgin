@@ -939,8 +939,13 @@ nm_update_state(NMState state)
 #if NM_CHECK_VERSION(0,8,992)
 		case NM_STATE_DISCONNECTING:
 #endif
+#if NM_CHECK_VERSION(1,0,0)
+			if (prev != NM_STATE_CONNECTED_GLOBAL && prev != NM_STATE_UNKNOWN)
+				break;
+#else
 			if (prev != NM_STATE_CONNECTED && prev != NM_STATE_UNKNOWN)
 				break;
+#endif
 			if (ui_ops != NULL && ui_ops->network_disconnected != NULL)
 				ui_ops->network_disconnected();
 			break;

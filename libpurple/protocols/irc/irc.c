@@ -165,6 +165,13 @@ int irc_send_len(struct irc_conn *irc, const char *buf, int buflen)
 		buflen = strlen(tosend);
 	}
 
+	if (purple_debug_is_verbose()) {
+		char *clean = purple_utf8_salvage(tosend);
+		clean = g_strstrip(clean);
+		purple_debug_misc("irc", "<< %s\n", clean);
+		g_free(clean);
+	}
+
 	/* If we're not buffering writes, try to send immediately */
 	if (!irc->writeh)
 		ret = do_send(irc, tosend, buflen);
@@ -1001,7 +1008,8 @@ static PurplePluginProtocolInfo prpl_info =
 	NULL,					 /* set_public_alias */
 	NULL,					 /* get_public_alias */
 	NULL,					 /* add_buddy_with_invite */
-	NULL					 /* add_buddies_with_invite */
+	NULL,					 /* add_buddies_with_invite */
+	NULL,					 /* get_cb_alias */
 };
 
 static gboolean load_plugin (PurplePlugin *plugin) {

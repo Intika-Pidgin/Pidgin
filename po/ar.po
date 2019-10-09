@@ -17,8 +17,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Pidgin\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2017-03-09 18:51-0600\n"
-"PO-Revision-Date: 2017-03-01 15:56+0000\n"
+"POT-Creation-Date: 2018-03-07 20:59-0600\n"
+"PO-Revision-Date: 2017-09-19 12:43+0000\n"
 "Last-Translator: محيي الدين <tx99h4@hotmail.com>\n"
 "Language-Team: Arabic (http://www.transifex.com/pidgin/pidgin/language/ar/)\n"
 "Language: ar\n"
@@ -12598,6 +12598,56 @@ msgstr ""
 "يسمح هذا الملحق للمستخدم بتخصيص تنسيق أختام الرسائل الزمنية في المحادثات "
 "والسجل."
 
+msgid "Opacity:"
+msgstr "الإعتام:"
+
+#. IM Convo trans options
+msgid "IM Conversation Windows"
+msgstr "نوافذ المحادثة الفورية"
+
+msgid "_IM window transparency"
+msgstr "_شفافية نافذة التراسل الفوري"
+
+msgid "_Show slider bar in IM window"
+msgstr "ا_عرض شريط المزلاج في نافذة التراسل الفوري"
+
+msgid "Remove IM window transparency on focus"
+msgstr "أزل شفافية نافذة التراسل الفوري عند التركيز"
+
+msgid "Always on top"
+msgstr "دائما في الأعلى"
+
+#. Buddy List trans options
+msgid "Buddy List Window"
+msgstr "نافذة قائمة الأصدقاء"
+
+msgid "_Buddy List window transparency"
+msgstr "_شفافية نافذة قائمة الأصدقاء"
+
+msgid "Remove Buddy List window transparency on focus"
+msgstr "أزل شفافية نافذة قائمة الأصدقاء عند التركيز"
+
+#. *< type
+#. *< ui_requirement
+#. *< flags
+#. *< dependencies
+#. *< priority
+#. *< id
+msgid "Transparency"
+msgstr "شفافية"
+
+#. *< name
+#. *< version
+#. *  summary
+msgid "Variable Transparency for the buddy list and conversations."
+msgstr "شفافية متغيرة لقائمة الأصدقاء والمحادثات."
+
+#. *  description
+msgid ""
+"This plugin enables variable alpha transparency on conversation windows and "
+"the buddy list."
+msgstr ""
+
 #. Alerts
 msgid "Chatroom alerts"
 msgstr ""
@@ -12705,56 +12755,6 @@ msgstr ""
 
 #. *< summary
 msgid "Configure microphone and webcam settings for voice/video calls."
-msgstr ""
-
-msgid "Opacity:"
-msgstr "الإعتام:"
-
-#. IM Convo trans options
-msgid "IM Conversation Windows"
-msgstr "نوافذ المحادثة الفورية"
-
-msgid "_IM window transparency"
-msgstr "_شفافية نافذة التراسل الفوري"
-
-msgid "_Show slider bar in IM window"
-msgstr "ا_عرض شريط المزلاج في نافذة التراسل الفوري"
-
-msgid "Remove IM window transparency on focus"
-msgstr "أزل شفافية نافذة التراسل الفوري عند التركيز"
-
-msgid "Always on top"
-msgstr "دائما في الأعلى"
-
-#. Buddy List trans options
-msgid "Buddy List Window"
-msgstr "نافذة قائمة الأصدقاء"
-
-msgid "_Buddy List window transparency"
-msgstr "_شفافية نافذة قائمة الأصدقاء"
-
-msgid "Remove Buddy List window transparency on focus"
-msgstr "أزل شفافية نافذة قائمة الأصدقاء عند التركيز"
-
-#. *< type
-#. *< ui_requirement
-#. *< flags
-#. *< dependencies
-#. *< priority
-#. *< id
-msgid "Transparency"
-msgstr "شفافية"
-
-#. *< name
-#. *< version
-#. *  summary
-msgid "Variable Transparency for the buddy list and conversations."
-msgstr "شفافية متغيرة لقائمة الأصدقاء والمحادثات."
-
-#. *  description
-msgid ""
-"This plugin enables variable alpha transparency on conversation windows and "
-"the buddy list."
 msgstr ""
 
 #. Autostart

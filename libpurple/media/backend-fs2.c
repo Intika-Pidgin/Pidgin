@@ -97,6 +97,9 @@ static gboolean purple_media_backend_fs2_set_decryption_parameters(
 		PurpleMediaBackend *self, const gchar *sess_id,
 		const gchar *participant, const gchar *cipher,
 		const gchar *auth, const gchar *key, gsize key_len);
+static gboolean purple_media_backend_fs2_set_require_encryption(
+		PurpleMediaBackend *self, const gchar *sess_id,
+		const gchar *participant, gboolean require_encryption);
 #endif
 static gboolean purple_media_backend_fs2_set_remote_codecs(
 		PurpleMediaBackend *self,
@@ -115,6 +118,8 @@ static gboolean purple_media_backend_fs2_set_send_rtcp_mux(
 		PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *participant,
 		gboolean send_rtcp_mux);
+
+static void remove_element(GstElement *element);
 
 static void free_stream(PurpleMediaBackendFs2Stream *stream);
 static void free_session(PurpleMediaBackendFs2Session *session);
@@ -578,6 +583,8 @@ purple_media_backend_iface_init(PurpleMediaBackendIface *iface)
 			purple_media_backend_fs2_set_encryption_parameters;
 	iface->set_decryption_parameters =
 			purple_media_backend_fs2_set_decryption_parameters;
+	iface->set_require_encryption =
+			purple_media_backend_fs2_set_require_encryption;
 #endif
 	iface->set_params = purple_media_backend_fs2_set_params;
 	iface->get_available_params = purple_media_backend_fs2_get_available_params;
@@ -1359,6 +1366,82 @@ gst_handle_message_element(GstBus *bus, GstMessage *msg,
 	}
 }
 
+static gboolean
+downgrade_video_source(PurpleMediaBackendFs2 *self, GstBin *srcbin)
+{
+	PurpleMediaBackendFs2Private *priv;
+	GstElement *src;
+	GstPad *srcpad = NULL;
+	GstPad *p;
+
+	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(self);
+
+	src = gst_bin_get_by_name(srcbin, "purplevideodowngrade");
+	if (src) {
+		/* The failing source has already been downgraded. Stop here in
+		 * order not to cause an infinite loop. */
+		gst_object_unref(src);
+		return FALSE;
+	}
+
+	src = gst_bin_get_by_name(srcbin, "tee");
+	if (!src) {
+		return FALSE;
+	}
+
+	while((p = gst_element_get_static_pad(src, "sink"))) {
+		if (srcpad) {
+			gst_object_unref(srcpad);
+		}
+		srcpad = gst_pad_get_peer(p);
+		gst_object_unref(src);
+		src = gst_pad_get_parent_element(srcpad);
+		gst_object_unref(p);
+	};
+
+	if (srcpad) {
+		PurpleMediaManager *manager;
+		GstElement *pipeline;
+		GstElement *dest;
+		GstElement *newsrc;
+
+		manager = purple_media_get_manager(priv->media);
+		pipeline = purple_media_manager_get_pipeline(manager);
+
+		dest = gst_pad_get_parent_element(GST_PAD_PEER(srcpad));
+
+		remove_element(src);
+
+		newsrc = gst_element_factory_make("videotestsrc",
+				"purplevideodowngrade");
+		g_object_set(newsrc, "is-live", TRUE, NULL);
+		gst_bin_add_many(srcbin, newsrc, NULL);
+		gst_element_link(newsrc, dest);
+		gst_element_set_state(newsrc, GST_STATE_PLAYING);
+
+		/* Pipeline with an error might not be any longer PLAYING. */
+		gst_element_set_state(pipeline, GST_STATE_PLAYING);
+
+		gst_object_unref(srcpad);
+
+		/* Flush the video pipeline. */
+		srcpad = gst_element_get_static_pad(newsrc, "src");
+		gst_pad_push_event(srcpad, gst_event_new_flush_start());
+#if GST_CHECK_VERSION(1,0,0)
+		gst_pad_push_event(srcpad, gst_event_new_flush_stop(FALSE));
+#else
+		gst_pad_push_event(srcpad, gst_event_new_flush_stop());
+#endif
+		gst_object_unref(srcpad);
+
+		gst_object_unref(dest);
+	}
+
+	gst_object_unref(src);
+
+	return TRUE;
+}
+
 static void
 gst_handle_message_error(GstBus *bus, GstMessage *msg,
 		PurpleMediaBackendFs2 *self)
@@ -1368,6 +1451,7 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 	GstElement *element = GST_ELEMENT(GST_MESSAGE_SRC(msg));
 	GstElement *lastElement = NULL;
 	GList *sessions;
+	gboolean fatal = TRUE;
 
 	GError *error = NULL;
 	gchar *debug_msg = NULL;
@@ -1393,26 +1477,37 @@ gst_handle_message_error(GstBus *bus, GstMessage *msg,
 	sessions = purple_media_get_session_ids(priv->media);
 
 	for (; sessions; sessions = g_list_delete_link(sessions, sessions)) {
+		PurpleMediaSessionType session_type;
+
 		if (purple_media_get_src(priv->media, sessions->data)
 				!= lastElement)
 			continue;
 
-		if (purple_media_get_session_type(priv->media, sessions->data)
-				& PURPLE_MEDIA_AUDIO)
+		session_type = purple_media_get_session_type(priv->media,
+				sessions->data);
+
+		if (session_type & PURPLE_MEDIA_AUDIO) {
 			purple_media_error(priv->media,
 					_("Error with your microphone"));
-		else if (purple_media_get_session_type(priv->media,
-                        sessions->data) & PURPLE_MEDIA_VIDEO)
-			purple_media_error(priv->media,
-					_("Error with your webcam"));
+		} else if (session_type & PURPLE_MEDIA_VIDEO) {
+			fatal = !downgrade_video_source(self,
+					GST_BIN(lastElement));
+
+			if (fatal) {
+				purple_media_error(priv->media,
+						_("Error with your webcam"));
+			}
+		}
 
 		break;
 	}
 
 	g_list_free(sessions);
 
-	purple_media_error(priv->media, _("Conference error"));
-	purple_media_end(priv->media, NULL, NULL);
+	if (fatal) {
+		purple_media_error(priv->media, _("Conference error"));
+		purple_media_end(priv->media, NULL, NULL);
+	}
 }
 
 static gboolean
@@ -1475,10 +1570,16 @@ state_changed_cb(PurpleMedia *media, PurpleMediaState state,
 			gst_object_unref(session->session);
 			g_hash_table_remove(priv->sessions, session->id);
 
-			pad = gst_pad_get_peer(session->srcpad);
-			gst_element_remove_pad(GST_ELEMENT_PARENT(pad), pad);
-			gst_object_unref(pad);
-			gst_object_unref(session->srcpad);
+			if (session->srcpad) {
+				pad = gst_pad_get_peer(session->srcpad);
+				if (pad) {
+					gst_element_remove_pad(
+							GST_PAD_PARENT(pad),
+							pad);
+					gst_object_unref(pad);
+				}
+				gst_object_unref(session->srcpad);
+			}
 
 			remove_element(session->srcvalve);
 			remove_element(session->tee);
@@ -1795,6 +1896,7 @@ create_src(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 	gst_element_set_locked_state(session->src, FALSE);
 	gst_object_unref(session->src);
 	gst_object_unref(sinkpad);
+	gst_object_unref(srcpad);
 
 	purple_media_manager_create_output_window(purple_media_get_manager(
 			priv->media), priv->media, sess_id, NULL);
@@ -1991,6 +2093,18 @@ src_pad_added_cb_cb(PurpleMediaBackendFs2Stream *stream)
 	priv = PURPLE_MEDIA_BACKEND_FS2_GET_PRIVATE(stream->session->backend);
 	stream->connected_cb_id = 0;
 
+	if (stream->src == NULL) {
+		GstElement *pipeline = purple_media_manager_get_pipeline(
+			purple_media_get_manager(priv->media));
+		GST_DEBUG_BIN_TO_DOT_FILE(GST_BIN(pipeline),
+					  GST_DEBUG_GRAPH_SHOW_ALL, "media-fail");
+
+		purple_media_error(priv->media,
+				   _("Could not create media pipeline"));
+		purple_media_end(priv->media, NULL, NULL);
+		return FALSE;
+	}
+
 	purple_media_manager_create_output_window(
 			purple_media_get_manager(priv->media), priv->media,
 			stream->session->id, stream->participant);
@@ -2019,16 +2133,12 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 		if (codec->media_type == FS_MEDIA_TYPE_AUDIO) {
 			double output_volume = purple_prefs_get_int(
 					"/purple/media/audio/volume/output")/10.0;
-			/*
-			 * Should this instead be:
-			 *  audioconvert ! audioresample ! liveadder !
-			 *   audioresample ! audioconvert ! realsink
-			 */
 			stream->queue = gst_element_factory_make("queue", NULL);
 			stream->volume = gst_element_factory_make("volume", NULL);
 			g_object_set(stream->volume, "volume", output_volume, NULL);
 			stream->level = gst_element_factory_make("level", NULL);
-			stream->src = gst_element_factory_make("liveadder", NULL);
+			stream->src = gst_element_factory_make("audiomixer", NULL);
+			g_object_set(stream->src, "start-time-selection", 1, NULL);
 			sink = purple_media_manager_get_element(
 					purple_media_get_manager(priv->media),
 					PURPLE_MEDIA_RECV_AUDIO, priv->media,
@@ -2079,6 +2189,39 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 		gst_element_set_state(stream->tee, GST_STATE_PLAYING);
 		gst_element_set_state(stream->src, GST_STATE_PLAYING);
 		gst_element_link_many(stream->src, stream->tee, sink, NULL);
+	} else {
+		if (codec->media_type == FS_MEDIA_TYPE_AUDIO) {
+			GstElement *convert, *resample, *capsfilter;
+			GstPad *mixer_srcpad;
+			GstCaps *caps;
+
+			/* The audiomixer element requires that all input
+			 * streams have the same rate, so resample if
+			 * needed
+			 */
+			mixer_srcpad = gst_element_get_static_pad(stream->src, "src");
+			caps = gst_pad_get_current_caps(mixer_srcpad);
+
+			if (caps) {
+				convert = gst_element_factory_make("audioconvert", NULL);
+				resample = gst_element_factory_make("audioresample", NULL);
+				capsfilter = gst_element_factory_make("capsfilter", NULL);
+
+				gst_bin_add_many(GST_BIN(priv->confbin), convert,
+						resample, capsfilter, NULL);
+				gst_element_link_many(gst_pad_get_parent_element(srcpad),
+						convert, resample, capsfilter, NULL);
+
+				g_object_set(capsfilter, "caps", caps, NULL);
+				gst_element_set_state(convert, GST_STATE_PLAYING);
+				gst_element_set_state(resample, GST_STATE_PLAYING);
+				gst_element_set_state(capsfilter, GST_STATE_PLAYING);
+
+				srcpad = gst_element_get_static_pad(capsfilter, "src");
+				gst_object_unref(caps);
+			}
+			gst_object_unref(mixer_srcpad);
+		}
 	}
 
 #if GST_CHECK_VERSION(1,0,0)
@@ -2093,6 +2236,7 @@ src_pad_added_cb(FsStream *fsstream, GstPad *srcpad,
 			(GSourceFunc)src_pad_added_cb_cb, stream);
 }
 
+#ifdef HAVE_FARSIGHT
 static GValueArray *
 append_relay_info(GValueArray *relay_info, const gchar *ip, gint port,
 	const gchar *username, const gchar *password, const gchar *type)
@@ -2118,6 +2262,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 
 	return relay_info;
 }
+#endif
 
 static gboolean
 create_stream(PurpleMediaBackendFs2 *self,
@@ -2144,6 +2289,10 @@ create_stream(PurpleMediaBackendFs2 *self,
 	  TURN modes, like Google f.ex. */
 	gboolean got_turn_from_prpl = FALSE;
 	guint i;
+#ifndef HAVE_FARSIGHT
+	GPtrArray *relay_info = g_ptr_array_new_full (1, (GDestroyNotify) gst_structure_free);
+	gboolean ret;
+#endif
 
 	session = get_session(self, sess_id);
 
@@ -2208,7 +2357,9 @@ create_stream(PurpleMediaBackendFs2 *self,
 
 	if (turn_ip && purple_strequal("nice", transmitter) && !got_turn_from_prpl) {
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+#ifdef HAVE_FARSIGHT
 		GValueArray *relay_info = g_value_array_new(0);
+#endif
 G_GNUC_END_IGNORE_DEPRECATIONS
 		gint port;
 		const gchar *username =	purple_prefs_get_string(
@@ -2219,15 +2370,37 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 		/* UDP */
 		port = purple_prefs_get_int("/purple/network/turn_port");
 		if (port > 0) {
+#ifdef HAVE_FARSIGHT
 			relay_info = append_relay_info(relay_info, turn_ip, port, username,
 				password, "udp");
+#else
+			g_ptr_array_add (relay_info,
+				gst_structure_new ("relay-info",
+				"ip", G_TYPE_STRING, turn_ip,
+				"port", G_TYPE_UINT, port,
+				"username", G_TYPE_STRING, username,
+				"password", G_TYPE_STRING, password,
+				"relay-type", G_TYPE_STRING, "udp",
+				NULL));
+#endif
 		}
 
 		/* TCP */
 		port = purple_prefs_get_int("/purple/network/turn_port_tcp");
 		if (port > 0) {
+#ifdef HAVE_FARSIGHT
 			relay_info = append_relay_info(relay_info, turn_ip, port, username,
 				password, "tcp");
+#else
+			g_ptr_array_add (relay_info,
+				gst_structure_new ("relay-info",
+				"ip", G_TYPE_STRING, turn_ip,
+				"port", G_TYPE_UINT, port,
+				"username", G_TYPE_STRING, username,
+				"password", G_TYPE_STRING, password,
+				"relay-type", G_TYPE_STRING, "tcp",
+				NULL));
+#endif
 		}
 
 		/* TURN over SSL is only supported by libnice for Google's "psuedo" SSL mode
@@ -2237,9 +2410,14 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 			"Setting relay-info on new stream\n");
 		_params[_num_params].name = "relay-info";
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
+#ifdef HAVE_FARSIGHT
 		g_value_init(&_params[_num_params].value, G_TYPE_VALUE_ARRAY);
 		g_value_set_boxed(&_params[_num_params].value, relay_info);
 		g_value_array_free(relay_info);
+#else
+		g_value_init(&_params[_num_params].value, G_TYPE_PTR_ARRAY);
+		g_value_set_boxed(&_params[_num_params].value, relay_info);
+#endif
 G_GNUC_END_IGNORE_DEPRECATIONS
 		_num_params++;
 	}
@@ -2264,16 +2442,20 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 		return FALSE;
 	}
 #else
-	if (!fs_stream_set_transmitter(fsstream, transmitter,
-			_params, _num_params, &err)) {
+	ret = fs_stream_set_transmitter(fsstream, transmitter,
+			_params, _num_params, &err);
+	for (i = 0 ; i < _num_params ; i++)
+		g_value_unset (&_params[i].value);
+	g_free(_params);
+        if (relay_info)
+		g_ptr_array_unref (relay_info);
+	if (ret == FALSE) {
 		purple_debug_error("backend-fs2",
 			"Could not set transmitter %s: %s.\n",
 			transmitter, err ? err->message : NULL);
 		g_clear_error(&err);
-		g_free(_params);
 		return FALSE;
 	}
-	g_free(_params);
 #endif
 
 	stream = g_new0(PurpleMediaBackendFs2Stream, 1);
@@ -2654,6 +2836,26 @@ purple_media_backend_fs2_set_decryption_parameters (PurpleMediaBackend *self,
 	gst_structure_free(srtp);
 	return result;
 }
+
+static gboolean
+purple_media_backend_fs2_set_require_encryption(PurpleMediaBackend *self,
+		const gchar *sess_id, const gchar *participant,
+		gboolean require_encryption)
+{
+	PurpleMediaBackendFs2Stream *stream;
+	gboolean result;
+
+	stream = get_stream(PURPLE_MEDIA_BACKEND_FS2(self), sess_id,
+			participant);
+	if (!stream) {
+		return FALSE;
+	}
+
+	g_object_set(stream->stream, "require-encryption",
+			require_encryption, NULL);
+	return TRUE;
+}
+
 #endif /* GST 1.0+ */
 
 static gboolean
