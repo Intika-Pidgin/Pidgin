@@ -1245,9 +1245,9 @@ theme_install_theme(char *path, struct theme_info *info)
 	g_strchomp(path);
 
 	if ((is_smiley_theme = purple_strequal(info->type, "smiley")))
-		destdir = g_build_filename(purple_user_dir(), "smileys", NULL);
+		destdir = g_build_filename(purple_data_dir(), "smileys", NULL);
 	else
-		destdir = g_build_filename(purple_user_dir(), "themes", "temp", NULL);
+		destdir = g_build_filename(purple_data_dir(), "themes", "temp", NULL);
 
 	/* We'll check this just to make sure. This also lets us do something different on
 	 * other platforms, if need be */
@@ -1292,17 +1292,17 @@ theme_install_theme(char *path, struct theme_info *info)
 
 		if (PURPLE_IS_THEME(theme)) {
 			/* create the location for the theme */
-			gchar *theme_dest = g_build_filename(purple_user_dir(), "themes",
-						 purple_theme_get_name(theme),
-						 "purple", info->type, NULL);
+			gchar *theme_dest = g_build_filename(purple_data_dir(), "themes",
+			                                     purple_theme_get_name(theme),
+			                                     "purple", info->type, NULL);
 
 			if (!g_file_test(theme_dest, G_FILE_TEST_IS_DIR))
 				purple_build_dir(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
 
 			g_free(theme_dest);
-			theme_dest = g_build_filename(purple_user_dir(), "themes",
-						 purple_theme_get_name(theme),
-						 "purple", info->type, NULL);
+			theme_dest = g_build_filename(purple_data_dir(), "themes",
+			                              purple_theme_get_name(theme),
+			                              "purple", info->type, NULL);
 
 			/* move the entire directory to new location */
 			if (g_rename(purple_theme_get_dir(theme), theme_dest)) {
@@ -1329,7 +1329,8 @@ theme_install_theme(char *path, struct theme_info *info)
 	} else { /* just a single file so copy it to a new temp directory and attempt to load it*/
 		gchar *temp_path, *temp_file;
 
-		temp_path = g_build_filename(purple_user_dir(), "themes", "temp", "sub_folder", NULL);
+		temp_path = g_build_filename(purple_data_dir(), "themes", "temp",
+		                             "sub_folder", NULL);
 
 		if (info->original_name != NULL) {
 			/* name was changed from the original (probably a dnd) change it back before loading */
@@ -1349,9 +1350,10 @@ theme_install_theme(char *path, struct theme_info *info)
 			theme = prefs_theme_find_theme(temp_path, info->type);
 
 			if (PURPLE_IS_THEME(theme)) {
-				gchar *theme_dest = g_build_filename(purple_user_dir(), "themes",
-							 purple_theme_get_name(theme),
-							 "purple", info->type, NULL);
+				gchar *theme_dest =
+				        g_build_filename(purple_data_dir(), "themes",
+				                         purple_theme_get_name(theme), "purple",
+				                         info->type, NULL);
 
 				if(!g_file_test(theme_dest, G_FILE_TEST_IS_DIR))
 					purple_build_dir(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
