@@ -29,8 +29,10 @@
 #include "oscarcommon.h"
 
 static void
-aim_protocol_init(PurpleProtocol *protocol)
+aim_protocol_init(AIMProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+
 	protocol->id   = "prpl-aim";
 	protocol->name = "AIM";
 
@@ -38,31 +40,45 @@ aim_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-aim_protocol_class_init(PurpleProtocolClass *klass)
+aim_protocol_class_init(AIMProtocolClass *klass)
 {
-	klass->list_icon = oscar_list_icon_aim;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->list_icon = oscar_list_icon_aim;
 }
 
 static void
-aim_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+aim_protocol_class_finalize(G_GNUC_UNUSED AIMProtocolClass *klass)
+{
+}
+
+static void
+aim_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_max_message_size = oscar_get_max_message_size;
 }
 
 static void
-aim_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+aim_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_permit      = oscar_add_permit;
 	privacy_iface->rem_permit      = oscar_rem_permit;
 	privacy_iface->set_permit_deny = oscar_set_aim_permdeny;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	AIMProtocol, aim_protocol, OSCAR_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        AIMProtocol, aim_protocol, OSCAR_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  aim_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      aim_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
-	                                  aim_protocol_privacy_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      aim_protocol_privacy_iface_init));
+
+/* This exists solely because the above macro makes aim_protocol_register_type
+ * static. */
+void
+aim_protocol_register(PurplePlugin *plugin)
+{
+	aim_protocol_register_type(G_TYPE_MODULE(plugin));
+}

@@ -125,7 +125,7 @@ typedef struct
 	GtkWidget *icon_hbox;
 	GtkWidget *icon_check;
 	GtkWidget *icon_entry;
-	GtkWidget *icon_filesel;
+	GtkFileChooserNative *icon_filesel;
 	GtkWidget *icon_preview;
 	GtkWidget *icon_text;
 	PurpleImage *icon_img;
@@ -258,13 +258,13 @@ set_account_protocol_cb(GtkWidget *widget, const char *id,
 
 	gtk_widget_grab_focus(dialog->protocol_menu);
 
-	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, SERVER_IFACE, register_user)) {
+	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, SERVER, register_user)) {
 		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
 			dialog->register_button), FALSE);
 		gtk_widget_hide(dialog->register_button);
 	} else {
-		if (dialog->protocol != NULL &&
-		   (purple_protocol_get_options(dialog->protocol) & OPT_PROTO_REGISTER_NOSCREENNAME)) {
+		if (purple_protocol_get_options(dialog->protocol) &
+		    OPT_PROTO_REGISTER_NOSCREENNAME) {
 			gtk_widget_set_sensitive(dialog->register_button, TRUE);
 		} else {
 			gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
@@ -340,14 +340,14 @@ icon_filesel_choose_cb(const char *filename, gpointer data)
 		set_dialog_icon(dialog, data, len, g_strdup(filename));
 	}
 
-	dialog->icon_filesel = NULL;
+	g_clear_object(&dialog->icon_filesel);
 }
 
 static void
 icon_select_cb(GtkWidget *button, AccountPrefsDialog *dialog)
 {
 	dialog->icon_filesel = pidgin_buddy_icon_chooser_new(GTK_WINDOW(dialog->window), icon_filesel_choose_cb, dialog);
-	gtk_widget_show_all(dialog->icon_filesel);
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(dialog->icon_filesel));
 }
 
 static void
@@ -506,7 +506,7 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 		username = g_strdup(purple_account_get_username(dialog->account));
 
 	if (!username && dialog->protocol
-			&& PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, CLIENT_IFACE, get_account_text_table)) {
+			&& PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, CLIENT, get_account_text_table)) {
 		GHashTable *table;
 		const char *label;
 		table = purple_protocol_client_iface_get_account_text_table(dialog->protocol, NULL);
@@ -1204,7 +1204,7 @@ static void
 add_voice_options(AccountPrefsDialog *dialog)
 {
 #ifdef USE_VV
-	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, MEDIA_IFACE, initiate_session)) {
+	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, MEDIA, initiate_session)) {
 		if (dialog->voice_frame) {
 			gtk_widget_destroy(dialog->voice_frame);
 			dialog->voice_frame = NULL;
@@ -1258,8 +1258,7 @@ account_win_destroy_cb(GtkWidget *w, GdkEvent *event,
 	if (dialog->icon_img)
 		g_object_unref(dialog->icon_img);
 
-	if (dialog->icon_filesel)
-		gtk_widget_destroy(dialog->icon_filesel);
+	g_clear_object(&dialog->icon_filesel);
 
 	purple_signals_disconnect_by_handle(dialog);
 
@@ -1672,7 +1671,7 @@ pidgin_account_dialog_show_continue(PurpleAccount *account,
 	if (dialog->account == NULL)
 		gtk_widget_set_sensitive(button, FALSE);
 
-	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, SERVER_IFACE, register_user))
+	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, SERVER, register_user))
 		gtk_widget_hide(button);
 
 	/* Setup the page with 'Advanced' (protocol options). */

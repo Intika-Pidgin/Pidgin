@@ -83,7 +83,7 @@ static GHashTable *log_viewers = NULL;
 static void populate_log_tree(PidginLogViewer *lv);
 static PidginLogViewer *syslog_viewer = NULL;
 
-struct log_viewer_hash_t {
+struct log_viewer_hash {
 	PurpleLogType type;
 	char *buddyname;
 	PurpleAccount *account;
@@ -92,7 +92,7 @@ struct log_viewer_hash_t {
 
 static guint log_viewer_hash(gconstpointer data)
 {
-	const struct log_viewer_hash_t *viewer = data;
+	const struct log_viewer_hash *viewer = data;
 
 	if (viewer->contact != NULL)
 		return g_direct_hash(viewer->contact);
@@ -103,7 +103,7 @@ static guint log_viewer_hash(gconstpointer data)
 
 static gboolean log_viewer_equal(gconstpointer y, gconstpointer z)
 {
-	const struct log_viewer_hash_t *a, *b;
+	const struct log_viewer_hash *a, *b;
 	int ret;
 	char *normal;
 
@@ -217,7 +217,9 @@ entry_search_changed_cb(GtkWidget *button, PidginLogViewer *lv)
 	pidgin_clear_cursor(GTK_WIDGET(lv));
 }
 
-static void destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash_t *ht) {
+static void
+destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash *ht)
+{
 	PidginLogViewer *lv = syslog_viewer;
 
 #ifdef _WIN32
@@ -265,8 +267,7 @@ static void destroy_cb(GtkWidget *w, gint resp, struct log_viewer_hash_t *ht) {
 
 	purple_request_close_with_handle(lv);
 
-	g_list_foreach(lv->logs, (GFunc)purple_log_free, NULL);
-	g_list_free(lv->logs);
+	g_list_free_full(lv->logs, (GDestroyNotify)purple_log_free);
 
 	g_free(lv->search);
 
@@ -582,8 +583,9 @@ static void populate_log_tree(PidginLogViewer *lv)
 	}
 }
 
-static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *logs,
-						const char *title, GtkWidget *icon, int log_size)
+static PidginLogViewer *
+display_log_viewer(struct log_viewer_hash *ht, GList *logs, const char *title,
+                   GtkWidget *icon, int log_size)
 {
 	PidginLogViewer *lv;
 
@@ -643,7 +645,7 @@ static PidginLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *
 
 	/* Log size ************/
 	if(log_size) {
-		char *sz_txt = purple_str_size_to_units(log_size);
+		char *sz_txt = g_format_size(log_size);
 		char *text = g_strdup_printf("<span weight='bold'>%s</span> %s",
 		                             _("Total log size:"), sz_txt);
 		gtk_label_set_markup(GTK_LABEL(lv->size_label), text);
@@ -718,7 +720,7 @@ pidgin_log_viewer_init(PidginLogViewer *self)
  ****************************************************************************/
 
 void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *account) {
-	struct log_viewer_hash_t *ht;
+	struct log_viewer_hash *ht;
 	PidginLogViewer *lv = NULL;
 	const char *name = buddyname;
 	char *title;
@@ -727,7 +729,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 	g_return_if_fail(account != NULL);
 	g_return_if_fail(buddyname != NULL);
 
-	ht = g_new0(struct log_viewer_hash_t, 1);
+	ht = g_new0(struct log_viewer_hash, 1);
 
 	ht->type = type;
 	ht->buddyname = g_strdup(buddyname);
@@ -772,7 +774,7 @@ void pidgin_log_show(PurpleLogType type, const char *buddyname, PurpleAccount *a
 }
 
 void pidgin_log_show_contact(PurpleContact *contact) {
-	struct log_viewer_hash_t *ht;
+	struct log_viewer_hash *ht;
 	PurpleBlistNode *child;
 	PidginLogViewer *lv = NULL;
 	GList *logs = NULL;
@@ -784,7 +786,7 @@ void pidgin_log_show_contact(PurpleContact *contact) {
 
 	g_return_if_fail(contact != NULL);
 
-	ht = g_new0(struct log_viewer_hash_t, 1);
+	ht = g_new0(struct log_viewer_hash, 1);
 	ht->type = PURPLE_LOG_IM;
 	ht->contact = contact;
 

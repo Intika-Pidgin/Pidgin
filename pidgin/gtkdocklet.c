@@ -104,9 +104,7 @@ docklet_gtk_status_update_icon(PurpleStatusPrimitive status, PidginDockletFlag n
 	if (newflag & PIDGIN_DOCKLET_CONNECTING)
 		icon_name = PIDGIN_STOCK_TRAY_CONNECT;
 
-	if (icon_name) {
-		gtk_status_icon_set_from_icon_name(docklet, icon_name);
-	}
+	gtk_status_icon_set_from_icon_name(docklet, icon_name);
 }
 
 static GList *
@@ -243,7 +241,7 @@ online_account_supports_chat(void)
 	while(c != NULL) {
 		PurpleConnection *gc = c->data;
 		PurpleProtocol *protocol = purple_connection_get_protocol(gc);
-		if (protocol != NULL && PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT_IFACE, info))
+		if (protocol != NULL && PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT, info))
 			return TRUE;
 		c = c->next;
 	}
@@ -279,7 +277,7 @@ static void
 docklet_signed_on_cb(PurpleConnection *gc)
 {
 	if (!enable_join_chat) {
-		if (PURPLE_PROTOCOL_IMPLEMENTS(purple_connection_get_protocol(gc), CHAT_IFACE, info))
+		if (PURPLE_PROTOCOL_IMPLEMENTS(purple_connection_get_protocol(gc), CHAT, info))
 			enable_join_chat = TRUE;
 	}
 	docklet_update_status();
@@ -289,7 +287,7 @@ static void
 docklet_signed_off_cb(PurpleConnection *gc)
 {
 	if (enable_join_chat) {
-		if (PURPLE_PROTOCOL_IMPLEMENTS(purple_connection_get_protocol(gc), CHAT_IFACE, info))
+		if (PURPLE_PROTOCOL_IMPLEMENTS(purple_connection_get_protocol(gc), CHAT, info))
 			enable_join_chat = online_account_supports_chat();
 	}
 	docklet_update_status();
@@ -661,8 +659,9 @@ docklet_plugin_actions(GtkWidget *menu)
 		if (!purple_plugin_info_get_actions_cb(info))
 			continue;
 
-		menuitem =
-			gtk_image_menu_item_new_with_label(_(purple_plugin_info_get_name(info)));
+		menuitem = gtk_image_menu_item_new_with_label(
+		        _(gplugin_plugin_info_get_name(
+		                GPLUGIN_PLUGIN_INFO(info))));
 		gtk_menu_shell_append(GTK_MENU_SHELL(menu), menuitem);
 
 		submenu = gtk_menu_new();

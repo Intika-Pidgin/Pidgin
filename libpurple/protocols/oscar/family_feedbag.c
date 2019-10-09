@@ -567,7 +567,7 @@ static int aim_ssi_sync(OscarData *od)
 	struct aim_ssi_item *cur1, *cur2;
 	struct aim_ssi_tmp *cur, *new;
 	int n = 0;
-	GString *debugstr = g_string_new("");
+	GString *debugstr;
 
 	/*
 	 * The variable "n" is used to limit the number of addmoddel's that
@@ -590,6 +590,7 @@ static int aim_ssi_sync(OscarData *od)
 	 * list should be in ascending numerical order for the group ID#s and the
 	 * buddy ID#s, which makes things more efficient.  I think.
 	 */
+	debugstr = g_string_new("");
 
 	/* Deletions */
 	if (!od->ssi.pending) {

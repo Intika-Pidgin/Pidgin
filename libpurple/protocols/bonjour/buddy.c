@@ -18,12 +18,11 @@
 #include <stdlib.h>
 
 #include "internal.h"
+#include <purple.h>
+
 #include "buddy.h"
-#include "account.h"
-#include "buddylist.h"
 #include "bonjour.h"
 #include "mdns_interface.h"
-#include "debug.h"
 
 /**
  * Creates a new buddy.
@@ -41,24 +40,22 @@ bonjour_buddy_new(const gchar *name, PurpleAccount* account)
 	return buddy;
 }
 
-#define _B_CLR(x) g_free(x); x = NULL;
-
-void clear_bonjour_buddy_values(BonjourBuddy *buddy) {
-
-	_B_CLR(buddy->first)
-	_B_CLR(buddy->email);
-	_B_CLR(buddy->ext);
-	_B_CLR(buddy->jid);
-	_B_CLR(buddy->last);
-	_B_CLR(buddy->msg);
-	_B_CLR(buddy->nick);
-	_B_CLR(buddy->node);
-	_B_CLR(buddy->phsh);
-	_B_CLR(buddy->status);
-	_B_CLR(buddy->vc);
-	_B_CLR(buddy->ver);
-	_B_CLR(buddy->AIM);
-
+void
+clear_bonjour_buddy_values(BonjourBuddy *buddy)
+{
+	g_clear_pointer(&buddy->first, g_free);
+	g_clear_pointer(&buddy->email, g_free);
+	g_clear_pointer(&buddy->ext, g_free);
+	g_clear_pointer(&buddy->jid, g_free);
+	g_clear_pointer(&buddy->last, g_free);
+	g_clear_pointer(&buddy->msg, g_free);
+	g_clear_pointer(&buddy->nick, g_free);
+	g_clear_pointer(&buddy->node, g_free);
+	g_clear_pointer(&buddy->phsh, g_free);
+	g_clear_pointer(&buddy->status, g_free);
+	g_clear_pointer(&buddy->vc, g_free);
+	g_clear_pointer(&buddy->ver, g_free);
+	g_clear_pointer(&buddy->AIM, g_free);
 }
 
 void

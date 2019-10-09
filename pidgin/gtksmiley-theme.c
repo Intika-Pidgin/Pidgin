@@ -385,32 +385,32 @@ pidgin_smiley_theme_probe(void)
 const gchar *
 pidgin_smiley_theme_get_name(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
 
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 	return priv->name;
 }
 
 const gchar *
 pidgin_smiley_theme_get_description(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
 
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 	return priv->desc;
 }
 
 GdkPixbuf *
 pidgin_smiley_theme_get_icon(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 
 	if (priv->icon == NULL)
 		return NULL;
@@ -428,11 +428,11 @@ pidgin_smiley_theme_get_icon(PidginSmileyTheme *theme)
 const gchar *
 pidgin_smiley_theme_get_author(PidginSmileyTheme *theme)
 {
-	PidginSmileyThemePrivate *priv =
-			pidgin_smiley_theme_get_instance_private(theme);
+	PidginSmileyThemePrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PIDGIN_IS_SMILEY_THEME(theme), NULL);
 
+	priv = pidgin_smiley_theme_get_instance_private(theme);
 	return priv->author;
 }
 
@@ -464,8 +464,6 @@ pidgin_smiley_theme_activate_impl(PurpleSmileyTheme *theme)
 	PidginSmileyThemeIndex *index;
 	GHashTable *smap;
 	GList *it, *it2, *it3;
-
-	g_return_if_fail(priv != NULL);
 
 	if (priv->smiley_lists_map)
 		return;
@@ -557,8 +555,8 @@ _pidgin_smiley_theme_init(void)
 	probe_dirs = g_new0(gchar*, 3);
 	probe_dirs[0] = g_build_filename(
 		PURPLE_DATADIR, "pixmaps", "pidgin", "emotes", NULL);
-	user_smileys_dir = probe_dirs[1] = g_build_filename(
-		purple_user_dir(), "smileys", NULL);
+	user_smileys_dir = probe_dirs[1] =
+	        g_build_filename(purple_data_dir(), "smileys", NULL);
 
 	if (!g_file_test(user_smileys_dir, G_FILE_TEST_IS_DIR)) {
 		if (g_mkdir(user_smileys_dir, S_IRUSR | S_IWUSR | S_IXUSR) == 0) {

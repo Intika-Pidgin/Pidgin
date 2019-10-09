@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_VALIDATOR_H
-#define _GGP_VALIDATOR_H
+#ifndef PURPLE_GG_VALIDATOR_H
+#define PURPLE_GG_VALIDATOR_H
 
 #include <internal.h>
 #include <request.h>
@@ -39,4 +39,4 @@ gboolean ggp_validator_password(PurpleRequestField *field, gchar **errmsg,
 gboolean ggp_validator_password_equal(PurpleRequestField *field, gchar **errmsg,
 	void *field2);
 
-#endif /* _GGP_VALIDATOR_H */
+#endif /* PURPLE_GG_VALIDATOR_H */

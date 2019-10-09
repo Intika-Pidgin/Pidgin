@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_ROSTER_H_
-#define PURPLE_JABBER_ROSTER_H_
+
+#ifndef PURPLE_JABBER_ROSTER_H
+#define PURPLE_JABBER_ROSTER_H
 
 /* it must *not* be localized */
 #define JABBER_ROSTER_DEFAULT_GROUP "Buddies"
@@ -48,4 +49,4 @@ void jabber_roster_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 const gchar *
 jabber_roster_group_get_global_name(PurpleGroup *group);
 
-#endif /* PURPLE_JABBER_ROSTER_H_ */
+#endif /* PURPLE_JABBER_ROSTER_H */

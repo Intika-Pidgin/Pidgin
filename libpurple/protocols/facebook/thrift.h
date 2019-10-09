@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_THRIFT_H_
-#define _FACEBOOK_THRIFT_H_
+#ifndef PURPLE_FACEBOOK_THRIFT_H
+#define PURPLE_FACEBOOK_THRIFT_H
 
 /**
  * SECTION:thrift
@@ -568,4 +568,4 @@ fb_thrift_t2ct(FbThriftType type);
 FbThriftType
 fb_thrift_ct2t(guint8 type);
 
-#endif /* _FACEBOOK_THRIFT_H_ */
+#endif /* PURPLE_FACEBOOK_THRIFT_H */

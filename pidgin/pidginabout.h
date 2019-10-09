@@ -12,7 +12,7 @@
 
 G_BEGIN_DECLS
 
-#define PIDGIN_TYPE_ABOUT_DIALOG  pidgin_about_dialog_get_type()
+#define PIDGIN_TYPE_ABOUT_DIALOG (pidgin_about_dialog_get_type())
 G_DECLARE_FINAL_TYPE(PidginAboutDialog, pidgin_about_dialog, PIDGIN,
 		ABOUT_DIALOG, GtkDialog)
 

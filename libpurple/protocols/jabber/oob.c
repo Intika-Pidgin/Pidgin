@@ -30,34 +30,23 @@
 #include "iq.h"
 #include "oob.h"
 
-typedef struct {
+struct _JabberOOBXfer {
 	JabberStream *js;
 	gchar *iq_id;
 	gchar *url;
 	PurpleHttpConnection *hc;
-} JabberOOBXfer;
+};
 
-static void jabber_oob_xfer_init(PurpleXfer *xfer)
+G_DEFINE_DYNAMIC_TYPE(JabberOOBXfer, jabber_oob_xfer, PURPLE_TYPE_XFER);
+
+static void jabber_oob_xfer_xfer_init(PurpleXfer *xfer)
 {
 	purple_xfer_start(xfer, -1, NULL, 0);
 }
 
-static void jabber_oob_xfer_free(PurpleXfer *xfer)
-{
-	JabberOOBXfer *jox = purple_xfer_get_protocol_data(xfer);
-
-	purple_xfer_set_protocol_data(xfer, NULL);
-	jox->js->oob_file_transfers = g_list_remove(jox->js->oob_file_transfers,
-			xfer);
-
-	g_free(jox->iq_id);
-	g_free(jox->url);
-	g_free(jox);
-}
-
 static void jabber_oob_xfer_end(PurpleXfer *xfer)
 {
-	JabberOOBXfer *jox = purple_xfer_get_protocol_data(xfer);
+	JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
 	JabberIq *iq;
 
 	iq = jabber_iq_new(jox->js, JABBER_IQ_RESULT);
@@ -65,8 +54,6 @@ static void jabber_oob_xfer_end(PurpleXfer *xfer)
 	jabber_iq_set_id(iq, jox->iq_id);
 
 	jabber_iq_send(iq);
-
-	jabber_oob_xfer_free(xfer);
 }
 
 static void
@@ -79,7 +66,7 @@ jabber_oob_xfer_got(PurpleHttpConnection *hc, PurpleHttpResponse *response,
 	if (purple_xfer_is_cancelled(xfer))
 		return;
 
-	jox = purple_xfer_get_protocol_data(xfer);
+	jox = JABBER_OOB_XFER(xfer);
 	jox->hc = NULL;
 
 	if (!purple_http_response_is_successful(response) ||
@@ -119,7 +106,7 @@ jabber_oob_xfer_writer(PurpleHttpConnection *http_conn,
 static void jabber_oob_xfer_start(PurpleXfer *xfer)
 {
 	PurpleHttpRequest *req;
-	JabberOOBXfer *jox = purple_xfer_get_protocol_data(xfer);
+	JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
 
 	req = purple_http_request_new(jox->url);
 	purple_http_request_set_timeout(req, -1);
@@ -134,7 +121,7 @@ static void jabber_oob_xfer_start(PurpleXfer *xfer)
 }
 
 static void jabber_oob_xfer_recv_error(PurpleXfer *xfer, const char *code) {
-	JabberOOBXfer *jox = purple_xfer_get_protocol_data(xfer);
+	JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
 	JabberIq *iq;
 	PurpleXmlNode *y, *z;
 
@@ -153,8 +140,6 @@ static void jabber_oob_xfer_recv_error(PurpleXfer *xfer, const char *code) {
 		purple_xmlnode_set_namespace(z, NS_XMPP_STANZAS);
 	}
 	jabber_iq_send(iq);
-
-	jabber_oob_xfer_free(xfer);
 }
 
 static void jabber_oob_xfer_recv_denied(PurpleXfer *xfer) {
@@ -162,7 +147,7 @@ static void jabber_oob_xfer_recv_denied(PurpleXfer *xfer) {
 }
 
 static void jabber_oob_xfer_recv_cancelled(PurpleXfer *xfer) {
-	JabberOOBXfer *jox = purple_xfer_get_protocol_data(xfer);
+	JabberOOBXfer *jox = JABBER_OOB_XFER(xfer);
 
 	purple_http_conn_cancel(jox->hc);
 	jabber_oob_xfer_recv_error(xfer, "404");
@@ -171,7 +156,6 @@ static void jabber_oob_xfer_recv_cancelled(PurpleXfer *xfer) {
 void jabber_oob_parse(JabberStream *js, const char *from, JabberIqType type,
 	const char *id, PurpleXmlNode *querynode) {
 	JabberOOBXfer *jox;
-	PurpleXfer *xfer;
 	const gchar *filename, *slash;
 	gchar *url;
 	PurpleXmlNode *urlnode;
@@ -189,33 +173,70 @@ void jabber_oob_parse(JabberStream *js, const char *from, JabberIqType type,
 	if (!url)
 		return;
 
-	xfer = purple_xfer_new(purple_connection_get_account(js->gc),
-		PURPLE_XFER_TYPE_RECEIVE, from);
-	if (!xfer) {
-		g_free(url);
-		return;
-	}
+	jox = g_object_new(
+		JABBER_TYPE_OOB_XFER,
+		"account", purple_connection_get_account(js->gc),
+		"type", PURPLE_XFER_TYPE_RECEIVE,
+		"remote-user", from,
+		NULL
+	);
 
-	jox = g_new0(JabberOOBXfer, 1);
 	jox->iq_id = g_strdup(id);
 	jox->js = js;
 	jox->url = url;
-	purple_xfer_set_protocol_data(xfer, jox);
 
 	slash = strrchr(url, '/');
-	if (slash == NULL)
+	if (slash == NULL) {
 		filename = url;
-	else
+	} else {
 		filename = slash + 1;
-	purple_xfer_set_filename(xfer, filename);
+	}
 
-	purple_xfer_set_init_fnc(xfer, jabber_oob_xfer_init);
-	purple_xfer_set_end_fnc(xfer, jabber_oob_xfer_end);
-	purple_xfer_set_request_denied_fnc(xfer, jabber_oob_xfer_recv_denied);
-	purple_xfer_set_cancel_recv_fnc(xfer, jabber_oob_xfer_recv_cancelled);
-	purple_xfer_set_start_fnc(xfer, jabber_oob_xfer_start);
+	purple_xfer_set_filename(PURPLE_XFER(jox), filename);
 
-	js->oob_file_transfers = g_list_append(js->oob_file_transfers, xfer);
+	js->oob_file_transfers = g_list_append(js->oob_file_transfers, jox);
 
-	purple_xfer_request(xfer);
+	purple_xfer_request(PURPLE_XFER(jox));
+}
+
+static void
+jabber_oob_xfer_init(JabberOOBXfer *xfer) {
+
+}
+
+static void
+jabber_oob_xfer_finalize(GObject *obj) {
+	JabberOOBXfer *jox = JABBER_OOB_XFER(obj);
+
+	jox->js->oob_file_transfers = g_list_remove(jox->js->oob_file_transfers,
+			jox);
+
+	g_free(jox->iq_id);
+	g_free(jox->url);
+
+	G_OBJECT_CLASS(jabber_oob_xfer_parent_class)->finalize(obj);
+}
+
+static void
+jabber_oob_xfer_class_finalize(JabberOOBXferClass *klass) {
+
+}
+
+static void
+jabber_oob_xfer_class_init(JabberOOBXferClass *klass) {
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
+	PurpleXferClass *xfer_class = PURPLE_XFER_CLASS(klass);
+
+	obj_class->finalize = jabber_oob_xfer_finalize;
+
+	xfer_class->init = jabber_oob_xfer_xfer_init;
+	xfer_class->end = jabber_oob_xfer_end;
+	xfer_class->request_denied = jabber_oob_xfer_recv_denied;
+	xfer_class->cancel_recv = jabber_oob_xfer_recv_cancelled;
+	xfer_class->start = jabber_oob_xfer_start;
+}
+
+void
+jabber_oob_xfer_register(GTypeModule *module) {
+	jabber_oob_xfer_register_type(module);
 }

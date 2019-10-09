@@ -371,16 +371,11 @@ scrncap_draw_window(PidginWebView *webview, GdkPixbuf *screen)
 	g_signal_connect(G_OBJECT(drawing_area), "leave-notify-event",
 		G_CALLBACK(scrncap_drawing_area_leave), draw_cursor);
 
-#if GTK_CHECK_VERSION(3,14,0)
 	box = drawing_area;
 	g_object_set(drawing_area,
 		"halign", GTK_ALIGN_CENTER,
 		"valign", GTK_ALIGN_CENTER,
 		NULL);
-#else
-	box = gtk_alignment_new(0.5, 0.5, 0, 0);
-	gtk_container_add(GTK_CONTAINER(box), drawing_area);
-#endif
 	scroll_area = pidgin_make_scrollable(box,
 		GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC,
 		GTK_SHADOW_NONE, -1, -1);
@@ -622,13 +617,8 @@ scrncap_do_screenshot_cb(gpointer _webview)
 		"or press Escape button to cancel"));
 	gtk_label_set_markup(GTK_LABEL(hint), hint_msg);
 	g_free(hint_msg);
-#if GTK_CHECK_VERSION(3,12,0)
 	gtk_widget_set_margin_start(hint, 10);
 	gtk_widget_set_margin_end(hint, 10);
-#else
-	gtk_widget_set_margin_left(hint, 10);
-	gtk_widget_set_margin_right(hint, 10);
-#endif
 	gtk_widget_set_margin_top(hint, 7);
 	gtk_widget_set_margin_bottom(hint, 7);
 	hint_box = gtk_event_box_new();

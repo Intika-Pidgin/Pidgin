@@ -17,8 +17,8 @@
 
 */
 
-#ifndef SILCPURPLE_H
-#define SILCPURPLE_H
+#ifndef PURPLE_SILC_SILCPURPLE_H
+#define PURPLE_SILC_SILCPURPLE_H
 
 #include <gmodule.h>
 
@@ -193,4 +193,4 @@ int getuid(void);
 int geteuid(void);
 #endif
 
-#endif /* SILCPURPLE_H */
+#endif /* PURPLE_SILC_SILCPURPLE_H */

@@ -345,8 +345,7 @@ pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 		gtk_tree_model_get(GTK_TREE_MODEL(pounce_dialog->treemodel), &iter,
 				PIDGIN_POUNCE_DATA, &pounce_data,
 				-1);
-		g_list_foreach(list, (GFunc)gtk_tree_path_free, NULL);
-		g_list_free(list);
+		g_list_free_full(list, (GDestroyNotify)gtk_tree_path_free);
 
 		pounces = purple_pounces_get_all();
 		for (; pounces != NULL; pounces = pounces->next) {
@@ -499,8 +498,7 @@ searchresults_callback_wrapper_cb(GtkWidget *widget, PidginNotifySearchResultsBu
 
 	button = bd->button;
 	button->callback(purple_account_get_connection(data->account), row, data->user_data);
-	g_list_foreach(row, (GFunc)g_free, NULL);
-	g_list_free(row);
+	g_list_free_full(row, g_free);
 }
 
 /* copy-paste from gtkrequest.c */
@@ -816,8 +814,6 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 							   *tos, (int)count);
 			data2 = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE, &new_data);
 			if (data2 && new_data) {
-				if (data)
-					data->purple_has_handle = FALSE;
 				data = data2;
 			}
 			g_free(notification);
@@ -1016,7 +1012,7 @@ pidgin_notify_searchresults(PurpleConnection *gc, const char *title,
 	g_return_val_if_fail(gc != NULL, NULL);
 	g_return_val_if_fail(results != NULL, NULL);
 
-	data = g_malloc(sizeof(PidginNotifySearchResultsData));
+	data = g_new0(PidginNotifySearchResultsData, 1);
 	data->user_data = user_data;
 	data->results = results;
 

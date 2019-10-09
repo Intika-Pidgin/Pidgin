@@ -1,17 +1,25 @@
+/*
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License as
+ * published by the Free Software Foundation; either version 2 of the
+ * License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
+ * 02111-1301, USA.
+ */
+
 #include "internal.h"
 
 #include <stdio.h>
 
-#include "debug.h"
-#include "glibcompat.h"
-#include "log.h"
-#include "plugins.h"
-#include "pluginpref.h"
-#include "prefs.h"
-#include "stringref.h"
-#include "util.h"
-#include "version.h"
-#include "xmlnode.h"
+#include <purple.h>
 
 /* Where is the Windows partition mounted? */
 #ifndef PURPLE_LOG_READER_WINDOWS_MOUNT_POINT
@@ -1837,7 +1845,6 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 		    purple_str_has_prefix(line, QIP_LOG_OUT_MESSAGE_ESC)) {
 
 			char *tmp;
-			const char *buddy_name;
 
 			is_in_message = purple_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC);
 
@@ -1845,9 +1852,6 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 			c = strchr(c, '\n');
 			if (!c)
 				break;
-
-			/* XXX: Do we need buddy_name when we have buddy->alias? */
-			buddy_name = ++c;
 
 			/* Find the last '(' character. */
 			if ((tmp = strchr(c, '\n')) != NULL) {
@@ -1884,9 +1888,8 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 					if (is_in_message) {
 						const char *alias = NULL;
 
-						if (buddy_name != NULL && buddy != NULL &&
-						    (alias = purple_buddy_get_alias(buddy)))
-						{
+						if (buddy != NULL &&
+						    (alias = purple_buddy_get_alias(buddy))) {
 							g_string_append_printf(formatted,
 								"<span style=\"color: #A82F2F;\">"
 								"<b>%s</b></span>: ", alias);
@@ -2188,7 +2191,7 @@ static char *amsn_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 
 	if (fseek(file, data->offset, SEEK_SET) != 0) {
 		fclose(file);
-		free(contents);
+		g_free(contents);
 		g_return_val_if_reached(g_strdup(""));
 	}
 	data->length = fread(contents, 1, data->length, file);

@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_PRESENCE_H_
-#define _PURPLE_PRESENCE_H_
+#ifndef PURPLE_PRESENCE_H
+#define PURPLE_PRESENCE_H
 /**
  * SECTION:presence
  * @section_id: libpurple-presence
@@ -157,7 +157,7 @@ GList *purple_presence_get_statuses(PurplePresence *presence);
  *
  * Returns the status with the specified ID from a presence.
  *
- * Returns: The status if found, or NULL.
+ * Returns: (transfer none): The status if found, or %NULL.
  */
 PurpleStatus *purple_presence_get_status(PurplePresence *presence,
 									 const char *status_id);
@@ -168,7 +168,7 @@ PurpleStatus *purple_presence_get_status(PurplePresence *presence,
  *
  * Returns the active exclusive status from a presence.
  *
- * Returns: The active exclusive status.
+ * Returns: (transfer none): The active exclusive status.
  */
 PurpleStatus *purple_presence_get_active_status(PurplePresence *presence);
 
@@ -285,7 +285,7 @@ PurpleAccountPresence *purple_account_presence_new(PurpleAccount *account);
  *
  * Returns an account presence's account.
  *
- * Returns: The presence's account.
+ * Returns: (transfer none): The presence's account.
  */
 PurpleAccount *purple_account_presence_get_account(PurpleAccountPresence *presence);
 
@@ -319,7 +319,7 @@ PurpleBuddyPresence *purple_buddy_presence_new(PurpleBuddy *buddy);
  *
  * Returns the buddy presence's buddy.
  *
- * Returns: The presence's buddy.
+ * Returns: (transfer none): The presence's buddy.
  */
 PurpleBuddy *purple_buddy_presence_get_buddy(PurpleBuddyPresence *presence);
 
@@ -339,4 +339,4 @@ gint purple_buddy_presence_compare(PurpleBuddyPresence *buddy_presence1,
 
 G_END_DECLS
 
-#endif /* _PURPLE_PRESENCE_H_ */
+#endif /* PURPLE_PRESENCE_H */

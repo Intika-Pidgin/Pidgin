@@ -18,13 +18,12 @@
  *
  */
 
-#ifndef NMFIELD_H
-#define NMFIELD_H
+#ifndef PURPLE_NOVELL_NMFIELD_H
+#define PURPLE_NOVELL_NMFIELD_H
 
 #include <glib.h>
 
-typedef struct NMField_t
-{
+typedef struct {
 	char *tag;				/* Field tag */
 	guint8 method;			/* Method of the field */
 	guint8 flags;			/* Flags */
@@ -222,4 +221,4 @@ void nm_remove_field(NMField * field);
 /* Print a field array (for debugging purposes) */
 void nm_print_fields(NMField * fields);
 
-#endif
+#endif /* PURPLE_NOVELL_NMFIELD_H */

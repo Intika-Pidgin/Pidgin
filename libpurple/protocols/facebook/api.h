@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_API_H_
-#define _FACEBOOK_API_H_
+#ifndef PURPLE_FACEBOOK_API_H
+#define PURPLE_FACEBOOK_API_H
 
 /**
  * SECTION:api
@@ -971,4 +971,4 @@ fb_api_user_reset(FbApiUser *user, gboolean deep);
 void
 fb_api_user_free(FbApiUser *user);
 
-#endif /* _FACEBOOK_API_H_ */
+#endif /* PURPLE_FACEBOOK_API_H */

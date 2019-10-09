@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 
 #include <gnt.h>
@@ -432,7 +434,7 @@ create_string_field(PurpleRequestField *field, GntWidget **username)
 	gnt_entry_set_masked(GNT_ENTRY(entry),
 			purple_request_field_string_is_masked(field));
 	if (hint && purple_str_has_prefix(hint, "screenname")) {
-		PurpleBlistNode *node = purple_blist_get_root();
+		PurpleBlistNode *node = purple_blist_get_default_root();
 		gboolean offline = purple_str_has_suffix(hint, "all");
 		for (; node; node = purple_blist_node_next(node, offline)) {
 			if (!PURPLE_IS_BUDDY(node))
@@ -444,8 +446,8 @@ create_string_field(PurpleRequestField *field, GntWidget **username)
 			*username = entry;
 	} else if (purple_strequal(hint, "group")) {
 		PurpleBlistNode *node;
-		for (node = purple_blist_get_root(); node;
-				node = purple_blist_node_get_sibling_next(node)) {
+		for (node = purple_blist_get_default_root(); node;
+		     node = purple_blist_node_get_sibling_next(node)) {
 			if (PURPLE_IS_GROUP(node))
 				gnt_entry_add_suggest(GNT_ENTRY(entry), purple_group_get_name((PurpleGroup *)node));
 		}
@@ -858,7 +860,7 @@ void finch_request_uninit()
 {
 }
 
-void finch_request_save_in_prefs(gpointer null, PurpleRequestFields *allfields)
+void finch_request_save_in_prefs(gpointer data, PurpleRequestFields *allfields)
 {
 	GList *list;
 	for (list = purple_request_fields_get_groups(allfields); list; list = list->next) {

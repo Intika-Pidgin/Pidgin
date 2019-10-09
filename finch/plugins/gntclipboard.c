@@ -1,6 +1,4 @@
 /**
- * @file gntclipboard.c
- *
  * Copyright (C) 2007 Richard Nelson <wabz@whatsbeef.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-
 
 #include "internal.h"
 #include <glib.h>
@@ -102,7 +99,7 @@ clipboard_changed(GntWM *wm, gchar *string)
 	if (child) {
 		kill(child, SIGTERM);
 	}
-	if ((child = fork() == 0)) {
+	if ((child = fork()) == 0) {
 		set_clip(string);
 		_exit(0);
 	}

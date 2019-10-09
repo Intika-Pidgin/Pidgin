@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_NETWORK_H_
-#define _PURPLE_NETWORK_H_
+#ifndef PURPLE_NETWORK_H
+#define PURPLE_NETWORK_H
 /**
  * SECTION:network
  * @section_id: libpurple-network
@@ -87,7 +87,7 @@ const char *purple_network_get_local_system_ip(int fd);
  * Note: The caller must free this list.  If libpurple was built with
  *       support for it, this function also enumerates IPv6 addresses.
  *
- * Returns: (element-type utf8): A list of local IP addresses.
+ * Returns: (element-type utf8) (transfer full): A list of local IP addresses.
  */
 GList *purple_network_get_all_local_system_ips(void);
 
@@ -316,4 +316,4 @@ void purple_network_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_NETWORK_H_ */
+#endif /* PURPLE_NETWORK_H */

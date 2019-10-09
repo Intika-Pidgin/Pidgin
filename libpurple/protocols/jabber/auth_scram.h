@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_AUTH_SCRAM_H_
-#define PURPLE_JABBER_AUTH_SCRAM_H_
+
+#ifndef PURPLE_JABBER_AUTH_SCRAM_H
+#define PURPLE_JABBER_AUTH_SCRAM_H
 
 /*
  * Every function in this file is ONLY exposed for tests.
@@ -91,4 +92,4 @@ gboolean jabber_scram_feed_parser(JabberScramData *data, gchar *in, gchar **out)
  */
 void jabber_scram_data_destroy(JabberScramData *data);
 
-#endif /* PURPLE_JABBER_AUTH_SCRAM_H_ */
+#endif /* PURPLE_JABBER_AUTH_SCRAM_H */

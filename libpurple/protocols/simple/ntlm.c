@@ -1,4 +1,5 @@
-/* purple
+/*
+ * purple
  *
  * Copyright (C) 2005 Thomas Butter <butter@uni-mannheim.de>
  *
@@ -21,10 +22,9 @@
  */
 
 #include "internal.h"
+#include <purple.h>
 
-#include "util.h"
 #include "ntlm.h"
-#include "debug.h"
 
 #ifdef HAVE_NETTLE
 #include <nettle/des.h>

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef _PURPLE_SMILEY_CUSTOM_H_
-#define _PURPLE_SMILEY_CUSTOM_H_
+#ifndef PURPLE_SMILEY_CUSTOM_H
+#define PURPLE_SMILEY_CUSTOM_H
 /**
  * SECTION:smiley-custom
  * @include:smiley-custom.h
@@ -46,7 +46,7 @@
  * Adds a new smiley to the store. The @shortcut should be unique, but the
  * @image contents don't have to.
  *
- * Returns: a new #PurpleSmiley, or %NULL if error occured.
+ * Returns: (transfer none): A new #PurpleSmiley, or %NULL if error occurred.
  */
 PurpleSmiley *
 purple_smiley_custom_add(PurpleImage *image, const gchar *shortcut);
@@ -66,7 +66,7 @@ purple_smiley_custom_remove(PurpleSmiley *smiley);
  *
  * Returns the whole list of user-configured custom smileys.
  *
- * Returns: a #PurpleSmileyList of custom smileys.
+ * Returns: (transfer none): A #PurpleSmileyList of custom smileys.
  */
 PurpleSmileyList *
 purple_smiley_custom_get_list(void);
@@ -88,4 +88,4 @@ _purple_smiley_custom_init(void);
 void
 _purple_smiley_custom_uninit(void);
 
-#endif /* _PURPLE_SMILEY_CUSTOM_H_ */
+#endif /* PURPLE_SMILEY_CUSTOM_H */

@@ -645,9 +645,12 @@ plugin_load(PurplePlugin *plugin, GError **error)
 
 	xmpp_protocol = purple_protocols_find(XMPP_PROTOCOL_ID);
 	if (NULL == xmpp_protocol) {
-		g_set_error(error, PLUGIN_DOMAIN, 0, _("XMPP protocol is not loaded."));
+		g_set_error_literal(error, PLUGIN_DOMAIN, 0,
+		                    _("XMPP protocol is not loaded."));
 		return FALSE;
 	}
+
+	pidgin_disco_dialog_register(plugin);
 
 	purple_signal_connect(purple_connections_get_handle(), "signing-off",
 	                      plugin, PURPLE_CALLBACK(signed_off_cb), NULL);

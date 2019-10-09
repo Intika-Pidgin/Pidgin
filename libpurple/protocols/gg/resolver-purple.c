@@ -142,7 +142,7 @@ int ggp_resolver_purple_start(int *fd, void **private_data,
 	purple_debug_misc("gg", "ggp_resolver_purple_start(%p, %p, \"%s\")\n",
 		fd, private_data, hostname);
 
-	data = malloc(sizeof(ggp_resolver_purple_data));
+	data = g_new0(ggp_resolver_purple_data, 1);
 	*private_data = (void*)data;
 	data->cancellable = NULL;
 	data->pipes[0] = 0;
@@ -201,5 +201,5 @@ void ggp_resolver_purple_cleanup(void **private_data, int force)
 	if (data->pipes[1])
 		close(data->pipes[1]);
 
-	free(data);
+	g_free(data);
 }

@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_ROOMLIST_H_
-#define _PURPLE_ROOMLIST_H_
+#ifndef PURPLE_ROOMLIST_H
+#define PURPLE_ROOMLIST_H
 /**
  * SECTION:roomlist
  * @section_id: libpurple-roomlist
@@ -28,15 +28,8 @@
  * @title: Room List API
  */
 
-#define PURPLE_TYPE_ROOMLIST             (purple_roomlist_get_type())
-#define PURPLE_ROOMLIST(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlist))
-#define PURPLE_ROOMLIST_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), PURPLE_TYPE_ROOMLIST, PurpleRoomlistClass))
-#define PURPLE_IS_ROOMLIST(obj)          (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_ROOMLIST))
-#define PURPLE_IS_ROOMLIST_CLASS(klass)  (G_TYPE_CHECK_CLASS_TYPE((klass), PURPLE_TYPE_ROOMLIST))
-#define PURPLE_ROOMLIST_GET_CLASS(obj)   (G_TYPE_INSTANCE_GET_CLASS((obj), PURPLE_TYPE_ROOMLIST, PurpleRoomlistClass))
-
+#define PURPLE_TYPE_ROOMLIST (purple_roomlist_get_type())
 typedef struct _PurpleRoomlist PurpleRoomlist;
-typedef struct _PurpleRoomlistClass PurpleRoomlistClass;
 
 #define PURPLE_TYPE_ROOMLIST_ROOM        (purple_roomlist_room_get_type())
 
@@ -131,21 +124,6 @@ struct _PurpleRoomlist {
 	gpointer ui_data;
 };
 
-/**
- * PurpleRoomlistClass:
- *
- * Base class for all #PurpleRoomlist's
- */
-struct _PurpleRoomlistClass {
-	GObjectClass parent_class;
-
-	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
-};
-
 G_BEGIN_DECLS
 
 /**************************************************************************/
@@ -157,7 +135,7 @@ G_BEGIN_DECLS
  *
  * Returns: The #GType for the Room List object.
  */
-GType purple_roomlist_get_type(void);
+G_DECLARE_FINAL_TYPE(PurpleRoomlist, purple_roomlist, PURPLE, ROOMLIST, GObject)
 
 /**
  * purple_roomlist_show_with_account:
@@ -188,7 +166,7 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account);
  * Retrieve the PurpleAccount that was given when the room list was
  * created.
  *
- * Returns: The PurpleAccount tied to this room list.
+ * Returns: (transfer none): The PurpleAccount tied to this room list.
  */
 PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list);
 
@@ -246,8 +224,8 @@ void purple_roomlist_room_add(PurpleRoomlist *list, PurpleRoomlistRoom *room);
  * Returns a PurpleRoomlist structure from the protocol, and
  * instructs the protocol to start fetching the list.
  *
- * Returns: A PurpleRoomlist* or %NULL if the protocol
- *         doesn't support that.
+ * Returns: (transfer full): A PurpleRoomlist* or %NULL if the protocol doesn't
+ *          support that.
  */
 PurpleRoomlist *purple_roomlist_get_list(PurpleConnection *gc);
 
@@ -327,6 +305,106 @@ gpointer purple_roomlist_get_ui_data(PurpleRoomlist *list);
  * Set the UI data associated with this room list.
  */
 void purple_roomlist_set_ui_data(PurpleRoomlist *list, gpointer ui_data);
+
+/**************************************************************************/
+/* Protocol Roomlist Interface API                                        */
+/**************************************************************************/
+
+#define PURPLE_TYPE_PROTOCOL_ROOMLIST \
+	(purple_protocol_roomlist_iface_get_type())
+
+typedef struct _PurpleProtocolRoomlistInterface PurpleProtocolRoomlistInterface;
+
+/**
+ * PurpleProtocolRoomlistInterface:
+ *
+ * The protocol roomlist interface.
+ *
+ * This interface provides callbacks for room listing.
+ */
+struct _PurpleProtocolRoomlistInterface
+{
+	/*< private >*/
+	GTypeInterface parent_iface;
+
+	/*< public >*/
+	PurpleRoomlist *(*get_list)(PurpleConnection *gc);
+
+	void (*cancel)(PurpleRoomlist *list);
+
+	void (*expand_category)(PurpleRoomlist *list,
+						 PurpleRoomlistRoom *category);
+
+	/* room list serialize */
+	char *(*room_serialize)(PurpleRoomlistRoom *room);
+};
+
+#define PURPLE_IS_PROTOCOL_ROOMLIST(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST))
+#define PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST, \
+                                                 PurpleProtocolRoomlistInterface))
+
+/**
+ * purple_protocol_roomlist_iface_get_type:
+ *
+ * Returns: The #GType for the protocol roomlist interface.
+ *
+ * Since: 3.0.0
+ */
+GType purple_protocol_roomlist_iface_get_type(void);
+
+/**
+ * purple_protocol_roomlist_iface_get_list:
+ * @protocol: The #PurpleProtocol instance.
+ * @gc: The #PurpleAccount to get the roomlist for.
+ *
+ * Gets the list of rooms for @gc.
+ *
+ * Returns: (transfer full): The roomlist for @gc.
+ *
+ * Since: 3.0.0
+ */
+PurpleRoomlist *purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
+		PurpleConnection *gc);
+
+/**
+ * purple_protocol_roomlist_iface_cancel:
+ * @protocol: The #PurpleProtocol instance.
+ * @list: The #PurpleRoomlist instance.
+ *
+ * Requesting a roomlist can take a long time.  This function cancels a request
+ * that's already in progress.
+ *
+ * Since: 3.0.0
+ */
+void purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
+		PurpleRoomlist *list);
+
+/**
+ * purple_protocol_roomlist_iface_expand_category:
+ * @protocol: The #PurpleProtocol instance.
+ * @list: The #PurpleRoomlist instance.
+ * @category: The category to expand.
+ *
+ * Expands the given @category for @list.
+ *
+ * Since: 3.0.0
+ */
+void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
+		PurpleRoomlist *list, PurpleRoomlistRoom *category);
+
+/**
+ * purple_protocol_roomlist_iface_room_serialize:
+ * @protocol: The #PurpleProtocol instance.
+ * @room: The #PurpleRoomlistRoom instance.
+ *
+ * Serializes @room into a string that will be displayed in a user interface.
+ *
+ * Returns: (transfer full): The serialized form of @room.
+ *
+ * Since: 3.0.0
+ */
+char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
+		PurpleRoomlistRoom *room);
 
 /**************************************************************************/
 /* Room API                                                               */
@@ -518,4 +596,4 @@ PurpleRoomlistUiOps *purple_roomlist_get_ui_ops(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_ROOMLIST_H_ */
+#endif /* PURPLE_ROOMLIST_H */

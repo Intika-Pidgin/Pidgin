@@ -33,11 +33,7 @@
  */
 
 #include "internal.h"
-#include "account.h"
-#include "debug.h"
-#include "keyring.h"
-#include "plugins.h"
-#include "version.h"
+#include <purple.h>
 
 #include <libsecret/secret.h>
 
@@ -87,9 +83,9 @@ ss_g_error_to_keyring_error(GError **error, PurpleAccount *account)
 	old_error = *error;
 
 	if (g_error_matches(old_error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-		new_error = g_error_new(PURPLE_KEYRING_ERROR,
-			PURPLE_KEYRING_ERROR_CANCELLED,
-			_("Operation cancelled."));
+		new_error = g_error_new_literal(PURPLE_KEYRING_ERROR,
+		                                PURPLE_KEYRING_ERROR_CANCELLED,
+		                                _("Operation cancelled."));
 	} else if (g_error_matches(old_error, G_DBUS_ERROR,
 				G_DBUS_ERROR_SPAWN_SERVICE_NOT_FOUND) ||
 			g_error_matches(old_error, G_DBUS_ERROR,

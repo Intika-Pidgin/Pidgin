@@ -225,7 +225,7 @@ pidgin_ui_init(void)
 	/* Set the UI operation structures. */
 	purple_accounts_set_ui_ops(pidgin_accounts_get_ui_ops());
 	purple_xfers_set_ui_ops(pidgin_xfers_get_ui_ops());
-	purple_blist_set_ui_ops(pidgin_blist_get_ui_ops());
+	purple_blist_set_ui(PIDGIN_TYPE_BUDDY_LIST);
 	purple_notify_set_ui_ops(pidgin_notify_get_ui_ops());
 	purple_request_set_ui_ops(pidgin_request_get_ui_ops());
 	purple_sound_set_ui_ops(pidgin_sound_get_ui_ops());
@@ -246,7 +246,6 @@ pidgin_ui_init(void)
 	pidgin_log_init();
 	pidgin_docklet_init();
 	_pidgin_smiley_theme_init();
-	pidgin_utils_init();
 	pidgin_medias_init();
 	pidgin_notify_init();
 }
@@ -259,7 +258,6 @@ pidgin_quit(void)
 	/* Uninit */
 	PurpleDebugUi *ui;
 
-	pidgin_utils_uninit();
 	pidgin_notify_uninit();
 	_pidgin_smiley_theme_uninit();
 	pidgin_conversations_uninit();
@@ -584,7 +582,7 @@ pidgin_startup_cb(GApplication *app, gpointer user_data)
 		}
 	}
 
-	search_path = g_build_filename(purple_user_dir(), "gtk-3.0.css", NULL);
+	search_path = g_build_filename(purple_config_dir(), "gtk-3.0.css", NULL);
 
 	provider = gtk_css_provider_new();
 	gui_check = gtk_css_provider_load_from_path(provider, search_path, &error);
@@ -619,7 +617,7 @@ pidgin_startup_cb(GApplication *app, gpointer user_data)
 	}
 
 	if (!g_getenv("PURPLE_PLUGINS_SKIP")) {
-		search_path = g_build_filename(purple_user_dir(),
+		search_path = g_build_filename(purple_data_dir(),
 				"plugins", NULL);
 		if (!g_stat(search_path, &st))
 			g_mkdir(search_path, S_IRUSR | S_IWUSR | S_IXUSR);
@@ -728,7 +726,7 @@ int pidgin_start(int argc, char *argv[])
 	pidgin_setup_error_handler();
 #endif
 
-	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin",
+	app = G_APPLICATION(gtk_application_new("im.pidgin.Pidgin3",
 #if GLIB_CHECK_VERSION(2, 48, 0)
 				G_APPLICATION_CAN_OVERRIDE_APP_ID |
 #endif
@@ -761,8 +759,8 @@ int pidgin_start(int argc, char *argv[])
 
 	if (g_application_get_is_registered(app) &&
 			g_application_get_is_remote(app)) {
-		g_printerr(_("Exiting because another libpurple client is "
-				"already running.\n"));
+		g_printerr("%s\n", _("Exiting because another libpurple client is "
+		                     "already running."));
 	}
 
 	/* Now that we're sure purple_core_quit() has been called,

@@ -43,21 +43,17 @@ gtk_menu_popup_at_pointer(GtkMenu *menu, const GdkEvent *trigger_event)
 	               event ? event->button : 0, gdk_event_get_time(event));
 }
 
-#if !GTK_CHECK_VERSION(3,16,0)
-
 static inline void
-gtk_label_set_xalign(GtkLabel *label, gfloat xalign)
+gtk_popover_popup(GtkPopover *popover)
 {
-	g_object_set(label, "xalign", xalign, NULL);
+	gtk_widget_show(GTK_WIDGET(popover));
 }
 
 static inline void
-gtk_label_set_yalign(GtkLabel *label, gfloat yalign)
+gtk_popover_popdown(GtkPopover *popover)
 {
-	g_object_set(label, "yalign", yalign, NULL);
+	gtk_widget_hide(GTK_WIDGET(popover));
 }
-
-#endif /* 3.16.0 */
 
 #endif /* 3.22.0 */
 

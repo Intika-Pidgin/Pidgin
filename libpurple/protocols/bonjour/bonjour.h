@@ -23,13 +23,13 @@
  *
  */
 
-#ifndef _BONJOUR_H_
-#define _BONJOUR_H_
+#ifndef PURPLE_BONJOUR_BONJOUR_H
+#define PURPLE_BONJOUR_BONJOUR_H
 
 #include <gmodule.h>
 
 #include "internal.h"
-#include "protocol.h"
+#include <purple.h>
 
 #include "mdns_common.h"
 #include "jabber.h"
@@ -79,4 +79,4 @@ G_MODULE_EXPORT GType bonjour_protocol_get_type(void);
  */
 const char *bonjour_get_jid(PurpleAccount *account);
 
-#endif /* _BONJOUR_H_ */
+#endif /* PURPLE_BONJOUR_BONJOUR_H */

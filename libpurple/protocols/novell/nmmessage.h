@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_MESSAGE_H__
-#define __NM_MESSAGE_H__
+#ifndef PURPLE_NOVELL_NMMESSAGE_H
+#define PURPLE_NOVELL_NMMESSAGE_H
 
 typedef struct _NMMessage NMMessage;
 
@@ -80,4 +80,4 @@ void nm_message_set_conference(NMMessage * msg, NMConference * conf);
  */
 NMConference *nm_message_get_conference(NMMessage * msg);
 
-#endif
+#endif /* PURPLE_NOVELL_NMMESSAGE_H */

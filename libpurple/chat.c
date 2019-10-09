@@ -60,9 +60,11 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleChat, purple_chat, PURPLE_TYPE_BLIST_NODE);
 
 const char *purple_chat_get_name(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
+	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
+
+	priv = purple_chat_get_instance_private(chat);
 
 	if ((priv->alias != NULL) && (*priv->alias != '\0'))
 		return priv->alias;
@@ -72,21 +74,22 @@ const char *purple_chat_get_name(PurpleChat *chat)
 
 const char *purple_chat_get_name_only(PurpleChat *chat)
 {
+	PurpleChatPrivate *priv = NULL;
 	char *ret = NULL;
 	PurpleProtocol *protocol = NULL;
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
+
+	priv = purple_chat_get_instance_private(chat);
 
 	protocol = purple_protocols_find(purple_account_get_protocol_id(priv->account));
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT_IFACE, info)) {
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT, info)) {
 		PurpleProtocolChatEntry *pce;
 		GList *parts = purple_protocol_chat_iface_info(protocol, purple_account_get_connection(priv->account));
 		pce = parts->data;
 		ret = g_hash_table_lookup(priv->components, pce->identifier);
-		g_list_foreach(parts, (GFunc)g_free, NULL);
-		g_list_free(parts);
+		g_list_free_full(parts, g_free);
 	}
 
 	return ret;
@@ -95,12 +98,13 @@ const char *purple_chat_get_name_only(PurpleChat *chat)
 void
 purple_chat_set_alias(PurpleChat *chat, const char *alias)
 {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleChatPrivate *priv = NULL;
 	char *old_alias;
 	char *new_alias = NULL;
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_CHAT(chat));
+
+	priv = purple_chat_get_instance_private(chat);
 
 	if ((alias != NULL) && (*alias != '\0'))
 		new_alias = purple_utf8_strip_unprintables(alias);
@@ -121,12 +125,10 @@ purple_chat_set_alias(PurpleChat *chat, const char *alias)
 
 	g_object_notify_by_pspec(G_OBJECT(chat), properties[PROP_ALIAS]);
 
-	if (ops) {
-		if (ops->save_node)
-			ops->save_node(PURPLE_BLIST_NODE(chat));
-		if (ops->update)
-			ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(chat));
-	}
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(chat));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(chat));
 
 	purple_signal_emit(purple_blist_get_handle(), "blist-node-aliased",
 					 chat, old_alias);
@@ -144,20 +146,22 @@ purple_chat_get_group(PurpleChat *chat)
 PurpleAccount *
 purple_chat_get_account(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
+	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
 
+	priv = purple_chat_get_instance_private(chat);
 	return priv->account;
 }
 
 GHashTable *
 purple_chat_get_components(PurpleChat *chat)
 {
-	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
+	PurpleChatPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_CHAT(chat), NULL);
 
+	priv = purple_chat_get_instance_private(chat);
 	return priv->components;
 }
 
@@ -226,12 +230,11 @@ purple_chat_constructed(GObject *object)
 {
 	PurpleChat *chat = PURPLE_CHAT(object);
 	PurpleChatPrivate *priv = purple_chat_get_instance_private(chat);
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	G_OBJECT_CLASS(purple_chat_parent_class)->constructed(object);
 
-	if (ops != NULL && ops->new_node != NULL)
-		ops->new_node(PURPLE_BLIST_NODE(chat));
+	purple_blist_new_node(purple_blist_get_default(),
+	                      PURPLE_BLIST_NODE(chat));
 
 	priv->is_constructed = TRUE;
 }

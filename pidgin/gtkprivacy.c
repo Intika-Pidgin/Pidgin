@@ -30,6 +30,7 @@
 #include "gtkblist.h"
 #include "gtkprivacy.h"
 #include "gtkutils.h"
+#include "pidginaccountchooser.h"
 
 #include "gtk3compat.h"
 
@@ -200,9 +201,9 @@ destroy_cb(GtkWidget *w, GdkEvent *event, PidginPrivacyDialog *dialog)
 }
 
 static void
-select_account_cb(GtkWidget *dropdown, PurpleAccount *account,
-				  PidginPrivacyDialog *dialog)
+select_account_cb(GtkWidget *chooser, PidginPrivacyDialog *dialog)
 {
+	PurpleAccount *account = pidgin_account_chooser_get_selected(chooser);
 	gsize i;
 
 	dialog->account = account;
@@ -250,7 +251,7 @@ type_changed_cb(GtkComboBox *combo, PidginPrivacyDialog *dialog)
 	gtk_widget_show(dialog->button_box);
 
 	purple_blist_schedule_save();
-	pidgin_blist_refresh(purple_blist_get_buddy_list());
+	pidgin_blist_refresh(purple_blist_get_default());
 }
 
 static void
@@ -355,10 +356,11 @@ privacy_dialog_new(void)
 	gtk_widget_show(label);
 
 	/* Accounts drop-down */
-	dropdown = pidgin_account_option_menu_new(NULL, FALSE,
-												G_CALLBACK(select_account_cb), NULL, dialog);
+	dropdown = pidgin_account_chooser_new(NULL, FALSE);
 	pidgin_add_widget_to_vbox(GTK_BOX(vbox), _("Set privacy for:"), NULL, dropdown, TRUE, NULL);
-	dialog->account = pidgin_account_option_menu_get_selected(dropdown);
+	g_signal_connect(dropdown, "changed", G_CALLBACK(select_account_cb),
+	                 dialog);
+	dialog->account = pidgin_account_chooser_get_selected(dropdown);
 
 	/* Add the drop-down list with the allow/block types. */
 	dialog->type_menu = gtk_combo_box_text_new();

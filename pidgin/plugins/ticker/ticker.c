@@ -231,10 +231,8 @@ static void buddy_ticker_show(void)
 	PurpleBlistNode *gnode, *cnode, *bnode;
 	PurpleBuddy *b;
 
-	for(gnode = purple_blist_get_root();
-	    gnode;
-	    gnode = purple_blist_node_get_sibling_next(gnode))
-	{
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = purple_blist_node_get_sibling_next(gnode)) {
 		if(!PURPLE_IS_GROUP(gnode))
 			continue;
 		for(cnode = purple_blist_node_get_first_child(gnode);
@@ -343,7 +341,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	void *blist_handle = purple_blist_get_handle();
 
-	gtk_ticker_register_type(plugin);
+	gtk_ticker_register(plugin);
 
 	purple_signal_connect(purple_connections_get_handle(), "signed-off",
 						plugin, PURPLE_CALLBACK(signoff_cb), NULL);

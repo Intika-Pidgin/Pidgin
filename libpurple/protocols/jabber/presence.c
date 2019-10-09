@@ -460,9 +460,10 @@ jabber_vcard_parse_avatar(JabberStream *js, const char *from,
 				data = g_base64_decode(text, &size);
 				g_free(text);
 
-				if (data)
-					g_compute_checksum_for_data(
-						G_CHECKSUM_SHA1, data, size);
+				if (data) {
+					hash = g_compute_checksum_for_data(G_CHECKSUM_SHA1, data,
+					                                   size);
+				}
 			}
 
 			purple_buddy_icons_set_for_user(purple_connection_get_account(js->gc), from, data, size, hash);
@@ -492,18 +493,12 @@ jabber_presence_set_capabilities(JabberCapsClientInfo *info, GList *exts,
 	if (!jbr) {
 		g_free(userdata->from);
 		g_free(userdata);
-		if (exts) {
-			g_list_foreach(exts, (GFunc)g_free, NULL);
-			g_list_free(exts);
-		}
+		g_list_free_full(exts, g_free);
 		return;
 	}
 
 	/* Any old jbr->caps.info is owned by the caps code */
-	if (jbr->caps.exts) {
-		g_list_foreach(jbr->caps.exts, (GFunc)g_free, NULL);
-		g_list_free(jbr->caps.exts);
-	}
+	g_list_free_full(jbr->caps.exts, g_free);
 
 	jbr->caps.info = info;
 	jbr->caps.exts = exts;

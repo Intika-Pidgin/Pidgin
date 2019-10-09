@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_BLIST_H
-#define _GNT_BLIST_H
+#ifndef FINCH_BLIST_H
+#define FINCH_BLIST_H
+
 /**
  * SECTION:gntblist
  * @section_id: finch-gntblist
@@ -32,6 +34,7 @@
 #include "gnt.h"
 #include "gnttree.h"
 
+#define FINCH_TYPE_BUDDY_LIST (finch_buddy_list_get_type())
 #define FINCH_TYPE_BLIST_MANAGER (finch_blist_manager_get_type())
 
 /**********************************************************************
@@ -74,14 +77,8 @@ struct _FinchBlistManager
  */
 GType finch_blist_manager_get_type(void);
 
-/**
- * finch_blist_get_ui_ops:
- *
- * Get the ui-functions.
- *
- * Returns: The PurpleBlistUiOps structure populated with the appropriate functions.
- */
-PurpleBlistUiOps * finch_blist_get_ui_ops(void);
+G_DECLARE_FINAL_TYPE(FinchBuddyList, finch_buddy_list, FINCH, BUDDY_LIST,
+                     PurpleBuddyList)
 
 /**
  * finch_blist_init:
@@ -200,4 +197,5 @@ FinchBlistManager * finch_blist_manager_find(const char *id);
  */
 void finch_blist_manager_add_node(PurpleBlistNode *node);
 
-#endif
+#endif /* FINCH_BLIST_H */
+

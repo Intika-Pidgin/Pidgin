@@ -594,9 +594,9 @@ void ggp_async_login_handler(gpointer _gc, gint fd, PurpleInputCondition cond)
 }
 
 static gint
-gg_uri_handler_find_account(gconstpointer a, gconstpointer b)
+gg_uri_handler_find_account(PurpleAccount *account,
+                            G_GNUC_UNUSED gconstpointer data)
 {
-	PurpleAccount *account = PURPLE_ACCOUNT(a);
 	const gchar *protocol_id;
 
 	protocol_id = purple_account_get_protocol_id(account);
@@ -630,8 +630,8 @@ gg_uri_handler(const gchar *scheme, const gchar *screenname,
 
 	/* Find online Gadu-Gadu account */
 	accounts = purple_accounts_get_all();
-	account_node = g_list_find_custom(accounts, NULL,
-			gg_uri_handler_find_account);
+	account_node = g_list_find_custom(
+	        accounts, NULL, (GCompareFunc)gg_uri_handler_find_account);
 
 	if (account_node == NULL) {
 		return FALSE;
@@ -1000,8 +1000,9 @@ ggp_get_max_message_size(PurpleConversation *conv)
 }
 
 static void
-ggp_protocol_init(PurpleProtocol *protocol)
+ggp_protocol_init(GGPProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 	GList *encryption_options = NULL;
 	GList *protocol_version = NULL;
@@ -1052,16 +1053,23 @@ ggp_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-ggp_protocol_class_init(PurpleProtocolClass *klass)
+ggp_protocol_class_init(GGPProtocolClass *klass)
 {
-	klass->login        = ggp_login;
-	klass->close        = ggp_close;
-	klass->status_types = ggp_status_types;
-	klass->list_icon    = ggp_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = ggp_login;
+	protocol_class->close = ggp_close;
+	protocol_class->status_types = ggp_status_types;
+	protocol_class->list_icon = ggp_list_icon;
 }
 
 static void
-ggp_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+ggp_protocol_class_finalize(G_GNUC_UNUSED GGPProtocolClass *klass)
+{
+}
+
+static void
+ggp_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions            = ggp_get_actions;
 	client_iface->list_emblem            = ggp_list_emblem;
@@ -1075,7 +1083,7 @@ ggp_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-ggp_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+ggp_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->get_info       = ggp_pubdir_get_info_protocol;
 	server_iface->set_status     = ggp_status_set_purplestatus;
@@ -1089,14 +1097,14 @@ ggp_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-ggp_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+ggp_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = ggp_message_send_im;
 	im_iface->send_typing = ggp_send_typing;
 }
 
 static void
-ggp_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+ggp_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info          = ggp_chat_info;
 	chat_iface->info_defaults = ggp_chat_info_defaults;
@@ -1110,13 +1118,13 @@ ggp_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-ggp_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+ggp_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list = ggp_chat_roomlist_get_list;
 }
 
 static void
-ggp_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+ggp_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_deny = ggp_add_deny;
 	privacy_iface->rem_deny = ggp_rem_deny;
@@ -1130,30 +1138,29 @@ ggp_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer    = ggp_edisc_xfer_send_new;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	GGPProtocol, ggp_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        GGPProtocol, ggp_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  ggp_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      ggp_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  ggp_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      ggp_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  ggp_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      ggp_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  ggp_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      ggp_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  ggp_protocol_roomlist_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      ggp_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
-	                                  ggp_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      ggp_protocol_privacy_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  ggp_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      ggp_protocol_xfer_iface_init));
 
 static gchar *
 plugin_extra(PurplePlugin *plugin)
@@ -1189,7 +1196,9 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	ggp_protocol_register_type(plugin);
+	ggp_protocol_register_type(G_TYPE_MODULE(plugin));
+
+	ggp_xfer_register(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(GGP_TYPE_PROTOCOL, error);
 	if (!my_protocol)

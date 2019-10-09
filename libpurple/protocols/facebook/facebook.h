@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FACEBOOK_H_
-#define _FACEBOOK_H_
+#ifndef PURPLE_FACEBOOK_FACEBOOK_H
+#define PURPLE_FACEBOOK_FACEBOOK_H
 
 /**
  * SECTION:facebook
@@ -81,4 +81,4 @@ struct _FacebookProtocolClass
 G_MODULE_EXPORT GType
 facebook_protocol_get_type(void);
 
-#endif /* _FACEBOOK_H_ */
+#endif /* PURPLE_FACEBOOK_FACEBOOK_H */

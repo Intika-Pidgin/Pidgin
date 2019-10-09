@@ -18,7 +18,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#define _PURPLE_REQUEST_C_
 
 #include "internal.h"
 
@@ -493,8 +492,8 @@ purple_request_fields_destroy(PurpleRequestFields *fields)
 	g_return_if_fail(fields != NULL);
 
 	g_strfreev(fields->tab_names);
-	g_list_foreach(fields->groups, (GFunc)purple_request_field_group_destroy, NULL);
-	g_list_free(fields->groups);
+	g_list_free_full(fields->groups,
+	                 (GDestroyNotify)purple_request_field_group_destroy);
 	g_list_free(fields->required_fields);
 	g_list_free(fields->validated_fields);
 	g_list_free(fields->autosensitive_fields);
@@ -843,8 +842,8 @@ purple_request_field_group_destroy(PurpleRequestFieldGroup *group)
 
 	g_free(group->title);
 
-	g_list_foreach(group->fields, (GFunc)purple_request_field_destroy, NULL);
-	g_list_free(group->fields);
+	g_list_free_full(group->fields,
+	                 (GDestroyNotify)purple_request_field_destroy);
 
 	g_free(group);
 }
@@ -967,18 +966,8 @@ purple_request_field_destroy(PurpleRequestField *field)
 	}
 	else if (field->type == PURPLE_REQUEST_FIELD_LIST)
 	{
-		if (field->u.list.items != NULL)
-		{
-			g_list_foreach(field->u.list.items, (GFunc)g_free, NULL);
-			g_list_free(field->u.list.items);
-		}
-
-		if (field->u.list.selected != NULL)
-		{
-			g_list_foreach(field->u.list.selected, (GFunc)g_free, NULL);
-			g_list_free(field->u.list.selected);
-		}
-
+		g_list_free_full(field->u.list.items, g_free);
+		g_list_free_full(field->u.list.selected, g_free);
 		g_hash_table_destroy(field->u.list.item_data);
 		g_hash_table_destroy(field->u.list.selected_table);
 	}
@@ -1670,8 +1659,7 @@ purple_request_field_list_clear_selected(PurpleRequestField *field)
 
 	if (field->u.list.selected != NULL)
 	{
-		g_list_foreach(field->u.list.selected, (GFunc)g_free, NULL);
-		g_list_free(field->u.list.selected);
+		g_list_free_full(field->u.list.selected, g_free);
 		field->u.list.selected = NULL;
 	}
 
@@ -1692,9 +1680,7 @@ purple_request_field_list_set_selected(PurpleRequestField *field, GList *items)
 
 	purple_request_field_list_clear_selected(field);
 
-	if (!purple_request_field_list_get_multi_select(field) &&
-		items && items->next)
-	{
+	if (!purple_request_field_list_get_multi_select(field) && items->next) {
 		purple_debug_warning("request",
 						   "More than one item added to non-multi-select "
 						   "field %s\n",

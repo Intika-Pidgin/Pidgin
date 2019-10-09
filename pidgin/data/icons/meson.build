@@ -1,5 +1,5 @@
 ICONS = [
-	'pidgin'
+	'im.pidgin.Pidgin3'
 ]
 
 foreach icon : ICONS
@@ -14,10 +14,10 @@ foreach icon : ICONS
 endforeach
 
 EXCLUDE_FILES = [
-	'16x16/apps/pidgin.png',
-	'22x22/apps/pidgin.png',
-	'48x48/apps/pidgin.png',
-	'scalable/apps/pidgin.svg',
+	'16x16/apps/im.pidgin.Pidgin3.png',
+	'22x22/apps/im.pidgin.Pidgin3.png',
+	'48x48/apps/im.pidgin.Pidgin3.png',
+	'scalable/apps/im.pidgin.Pidgin3.svg',
 ]
 
 EXCLUDE_DIRS = [

@@ -22,8 +22,8 @@
  *      namespace.
  */
 
-#ifndef _PURPLE_UTIL_H_
-#define _PURPLE_UTIL_H_
+#ifndef PURPLE_UTIL_H
+#define PURPLE_UTIL_H
 /**
  * SECTION:util
  * @section_id: libpurple-util
@@ -322,43 +322,6 @@ char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
 
 
 /**************************************************************************/
-/* GLib Event Loop Functions                                              */
-/**************************************************************************/
-
-/**
- * purple_timeout_reset:
- * @source:           A #GTimeoutSource.
- * @seconds_from_now: Seconds to add to current monotonic time.
- *
- * Resets a #GTimeoutSource to be dispatched after @seconds_from_now seconds,
- * after which it'll continue dispatching at its specified interval.
- *
- * The #GSource API exposes a function g_source_set_ready_time(), which is
- * meant to be used for implementing custom source types. It sets a #GSource
- * to be dispatched when the given monotonic time is reached, and it's also
- * the function that's used by the #GTimeoutSource implementation to keep
- * dispatching at a specified interval.
- *
- * The #GTimeoutSource API doesn't expose a function to reset when a
- * #GTimeoutSource will dispatch the next time, but because it works to
- * directly call g_source_set_ready_time() on a #GTimeoutSource, and since
- * it seems unlikely that the implementation will change, we just do that
- * for now as a workaround for this API shortcoming.
- *
- * For the moment, these would be correct ways to achieve a similar effect,
- * both of which are ugly:
- *
- * - Remove the old #GTimeoutSource by calling g_source_remove(), and add a
- *   new #GTimeoutSource by calling g_timeout_add_seconds(). Destroying and
- *   creating #GSource objects is unnecessarily expensive.
- * - Implement a custom #GResettableTimeoutSource. This means duplicating
- *   #GTimeoutSource and adding one function g_resettable_timeout_reset()
- *   which simply calls g_source_set_ready_time().
- */
-void purple_timeout_reset(GSource *source, gint64 seconds_from_now);
-
-
-/**************************************************************************/
 /* Markup Functions                                                       */
 /**************************************************************************/
 
@@ -413,7 +376,7 @@ gboolean purple_markup_find_tag(const char *needle, const char *haystack,
  * @display_name:   The short descriptive name to display for this token.
  * @is_link:        TRUE if this should be a link, or FALSE otherwise.
  * @link_prefix:    The prefix for the link.
- * @format_cb:      A callback to format the value before adding it.
+ * @format_cb: (scope call): A callback to format the value before adding it.
  *
  * Extracts a field of data from HTML.
  *
@@ -1183,17 +1146,6 @@ gchar *purple_strcasereplace(const char *string, const char *delimiter,
 const char *purple_strcasestr(const char *haystack, const char *needle);
 
 /**
- * purple_str_size_to_units:
- * @size: The size
- *
- * Returns a string representing a filesize in the appropriate
- * units (MB, KB, GB, etc.)
- *
- * Returns: The string in units form. This must be freed.
- */
-char *purple_str_size_to_units(goffset size);
-
-/**
  * purple_str_seconds_to_string:
  * @sec: The seconds.
  *
@@ -1332,8 +1284,8 @@ gboolean purple_ipv6_address_is_valid(const char *ip);
  * This function extracts a list of URIs from the a "text/uri-list"
  * string.  It was "borrowed" from gnome_uri_list_extract_uris
  *
- * Returns: (element-type utf8): A GList containing strings allocated with
- *          g_malloc that have been split from uri-list.
+ * Returns: (element-type utf8) (transfer full): A list of strings that have
+ *          been split from uri-list.
  */
 GList *purple_uri_list_extract_uris(const gchar *uri_list);
 
@@ -1345,10 +1297,10 @@ GList *purple_uri_list_extract_uris(const gchar *uri_list);
  * "text/uri-list" string.  It was "borrowed" from
  * gnome_uri_list_extract_filenames
  *
- * Returns: (element-type utf8): A GList containing strings allocated with
- *          g_malloc that contain the filenames in the uri-list. Note that
- *          unlike the purple_uri_list_extract_uris() function, this will
- *          discard any non-file uri from the result value.
+ * Returns: (element-type utf8) (transfer full): A list of strings that contain
+ *          the filenames in the uri-list. Note that unlike the
+ *          purple_uri_list_extract_uris() function, this will discard any
+ *          non-file uri from the result value.
  */
 GList *purple_uri_list_extract_filenames(const gchar *uri_list);
 
@@ -1615,4 +1567,4 @@ gchar *purple_http_digest_calculate_response(
 
 G_END_DECLS
 
-#endif /* _PURPLE_UTIL_H_ */
+#endif /* PURPLE_UTIL_H */

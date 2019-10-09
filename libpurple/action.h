@@ -25,9 +25,7 @@
 #include <glib.h>
 #include <glib-object.h>
 
-
-#define PURPLE_TYPE_PROTOCOL_ACTION  (purple_protocol_action_get_type())
-
+#define PURPLE_TYPE_PROTOCOL_ACTION (purple_protocol_action_get_type())
 typedef struct _PurpleProtocolAction PurpleProtocolAction;
 
 typedef void (*PurpleProtocolActionCallback)(PurpleProtocolAction *action);
@@ -45,6 +43,10 @@ typedef struct _PurpleActionMenu PurpleActionMenu;
 
 /**
  * PurpleProtocolAction:
+ * @label: A translated string to be shown in a user interface.
+ * @callback: The function to call when the user wants to perform this action.
+ * @connection: The connection that this action should be performed against.
+ * @user_data: User data to pass to @callback.
  *
  * Represents an action that the protocol can perform. This shows up in the
  * Accounts menu, under a submenu with the name of the account.
@@ -160,16 +162,6 @@ void purple_action_menu_set_data(PurpleActionMenu *act, gpointer data);
  * Set the children of the PurpleActionMenu.
  */
 void purple_action_menu_set_children(PurpleActionMenu *act, GList *children);
-
-/**
- * purple_action_menu_get_stock_icon:
- * @act: The menu action.
- *
- * Gets the stock icon of the PurpleActionMenu.
- *
- * Returns: The stock icon identifier.
- */
-const gchar *purple_action_menu_get_stock_icon(PurpleActionMenu *act);
 
 /******************************************************************************
  * Protocol Action API

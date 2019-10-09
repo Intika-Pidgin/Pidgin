@@ -1,6 +1,4 @@
 /**
- * @file simple.h
- *
  * purple
  *
  * Copyright (C) 2005, Thomas Butter <butter@uni-mannheim.de>
@@ -20,18 +18,15 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_SIMPLE_H
-#define _PURPLE_SIMPLE_H
+#ifndef PURPLE_SIMPLE_SIMPLE_H
+#define PURPLE_SIMPLE_SIMPLE_H
 
 #include <glib.h>
 #include <gmodule.h>
 #include <gio/gio.h>
 #include <time.h>
 
-#include "circularbuffer.h"
-#include "network.h"
-#include "proxy.h"
-#include "protocol.h"
+#include <purple.h>
 
 #include "sipmsg.h"
 
@@ -154,4 +149,4 @@ struct transaction {
 
 G_MODULE_EXPORT GType simple_protocol_get_type(void);
 
-#endif /* _PURPLE_SIMPLE_H */
+#endif /* PURPLE_SIMPLE_SIMPLE_H */

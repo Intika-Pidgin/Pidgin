@@ -7,8 +7,6 @@ libpidgin_SOURCES = [
 	'gtkcellrendererexpander.c',
 	'gtkconn.c',
 	'gtkconv.c',
-	'gtkconv-theme.c',
-	'gtkconv-theme-loader.c',
 	'gtkdialogs.c',
 	'gtkdnd-hints.c',
 	'gtkdocklet.c',
@@ -34,19 +32,19 @@ libpidgin_SOURCES = [
 	'gtkstatusbox.c',
 	'gtkstyle.c',
 	'gtkutils.c',
-	'gtkwebview.c',
-	'gtkwebviewtoolbar.c',
 	'gtkwhiteboard.c',
 	'gtkxfer.c',
 	'libpidgin.c',
 	'minidialog.c',
 	'pidginabout.c',
+	'pidginaccountchooser.c',
 	'pidgincontactcompletion.c',
 	'pidgindebug.c',
 	'pidgindebugplugininfo.c',
 	'pidgingdkpixbuf.c',
 	'pidgininvitedialog.c',
 	'pidginlog.c',
+	'pidginmessage.c',
 	'pidgintalkatu.c',
 	'pidgintooltip.c',
 ]
@@ -60,8 +58,6 @@ libpidgin_headers = [
 	'gtkconn.h',
 	'gtkconv.h',
 	'gtkconvwin.h',
-	'gtkconv-theme.h',
-	'gtkconv-theme-loader.h',
 	'gtkdialogs.h',
 	'gtkdnd-hints.h',
 	'gtkdocklet.h',
@@ -89,12 +85,11 @@ libpidgin_headers = [
 	'gtkstyle.h',
 	'pidginstock.h',
 	'gtkutils.h',
-	'gtkwebview.h',
-	'gtkwebviewtoolbar.h',
 	'gtkwhiteboard.h',
 	'gtkxfer.h',
 	'minidialog.h',
 	'pidginabout.h',
+	'pidginaccountchooser.h',
 	'pidgincontactcompletion.h',
 	'pidgindebug.h',
 	'pidgindebugplugininfo.h',
@@ -102,6 +97,7 @@ libpidgin_headers = [
 	'pidginicon.h',
 	'pidgininvitedialog.h',
 	'pidginlog.h',
+	'pidginmessage.h',
 	'pidgintalkatu.h',
 	'pidgintooltip.h',
 	'pidgin.h',
@@ -167,7 +163,6 @@ if ENABLE_GTK
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
 	    dependencies : [
-	    	enchant,
 	    	glib,
 	    	gstreamer_video,
 	    	gtk,
@@ -175,7 +170,6 @@ if ENABLE_GTK
 	    	json,
 	    	math,
 	        talkatu_dep,
-	    	webkit,
 	    	x11,
 	    	libpurple_dep,
 	    ],
@@ -183,7 +177,7 @@ if ENABLE_GTK
 	libpidgin_dep = declare_dependency(
 	    include_directories : [toplevel_inc, libpidgin_inc],
 	    link_with : libpidgin,
-	    dependencies : [webkit, gtk, glib, math])
+	    dependencies : [gtk, glib, math])
 
 	pidgin = executable('pidgin3',
 	    pidgin_SOURCES,
@@ -204,7 +198,7 @@ if ENABLE_GTK
 	    filebase : 'pidgin-3',
 	    subdirs : 'pidgin-3',
 	    libraries : [libpidgin],
-	    requires : ['gtk+-3.0', 'webkitgtk-3.0', 'purple-3'],
+	    requires : ['gtk+-3.0', 'purple-3', 'talkatu'],
 	    variables : ['plugindir=${libdir}/pidgin-@0@'.format(purple_major_version)])
 
 	if INSTALL_I18N
@@ -234,7 +228,7 @@ if ENABLE_GTK
 
 		gnome.generate_gir(libpidgin,
 		    sources : introspection_sources,
-		    includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], 'WebKit-3.0', talkatu_gir],
+		    includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], talkatu_gir, gplugin_gir],
 		    namespace : 'Pidgin',
 		    symbol_prefix : 'pidgin',
 		    identifier_prefix : 'Pidgin',
@@ -250,7 +244,7 @@ if ENABLE_GTK
 	endif
 
 	subdir('data')
+	subdir('glade')
 	subdir('pixmaps')
 	subdir('plugins')
-	subdir('themes')
 endif  # ENABLE_GTK

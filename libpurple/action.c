@@ -24,7 +24,6 @@ struct _PurpleActionMenu {
 	GCallback callback;
 	gpointer data;
 	GList *children;
-	gchar *stock_icon;
 };
 
 /******************************************************************************
@@ -40,7 +39,6 @@ purple_action_menu_new(const gchar *label, GCallback callback, gpointer data,
 	act->callback = callback;
 	act->data = data;
 	act->children = children;
-	act->stock_icon = NULL;
 
 	return act;
 }
@@ -51,7 +49,6 @@ purple_action_menu_free(PurpleActionMenu *act) {
 
 	purple_action_menu_set_children(act, NULL);
 
-	g_free(act->stock_icon);
 	g_free(act->label);
 	g_free(act);
 }
@@ -114,11 +111,6 @@ purple_action_menu_set_children(PurpleActionMenu *act, GList *children) {
 	g_list_free_full(act->children, (GDestroyNotify)purple_action_menu_free);
 
 	act->children = children;
-}
-
-const gchar *
-purple_action_menu_get_stock_icon(PurpleActionMenu *act) {
-	return act->stock_icon;
 }
 
 /******************************************************************************

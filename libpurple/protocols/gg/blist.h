@@ -20,9 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-
-#ifndef _PURPLE_GG_BLIST_H
-#define _PURPLE_GG_BLIST_H
+#ifndef PURPLE_GG_BLIST_H
+#define PURPLE_GG_BLIST_H
 
 #include "connection.h"
 
@@ -60,7 +59,6 @@ ggp_buddylist_dump(PurpleAccount *account);
  */
 const char * ggp_buddylist_get_buddy_name(PurpleConnection *gc, const uin_t uin);
 
-#endif /* _PURPLE_GG_BLIST_H */
-
+#endif /* PURPLE_GG_BLIST_H */
 
 /* vim: set ts=8 sts=0 sw=8 noet: */

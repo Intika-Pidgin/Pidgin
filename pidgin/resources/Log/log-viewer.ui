@@ -2,7 +2,7 @@
 <!-- Generated with glade 3.22.1 -->
 <interface>
   <requires lib="Talkatu" version="0.0"/>
-  <requires lib="gtk+" version="3.10"/>
+  <requires lib="gtk+" version="3.20"/>
   <object class="TalkatuHtmlBuffer" id="log_buffer"/>
   <object class="GtkTreeStore" id="treestore">
     <columns>

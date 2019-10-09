@@ -1,6 +1,4 @@
 /**
- * @file irc.c
- *
  * purple
  *
  * Copyright (C) 2003, Robbert Haarman <purple@inglorion.net>
@@ -24,19 +22,7 @@
  */
 
 #include "internal.h"
-
-#include "accountopt.h"
-#include "action.h"
-#include "buddylist.h"
-#include "conversation.h"
-#include "core.h"
-#include "debug.h"
-#include "notify.h"
-#include "protocol.h"
-#include "plugins.h"
-#include "purple-gio.h"
-#include "util.h"
-#include "version.h"
+#include <purple.h>
 
 #include "irc.h"
 
@@ -54,7 +40,7 @@ static void irc_close(PurpleConnection *gc);
 static int irc_im_send(PurpleConnection *gc, PurpleMessage *msg);
 static int irc_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg);
 static void irc_chat_join (PurpleConnection *gc, GHashTable *data);
-static void irc_read_input(struct irc_conn *irc);
+static void irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data);
 
 static guint irc_nick_hash(const char *nick);
 static gboolean irc_nick_equal(const char *nick1, const char *nick2);
@@ -63,10 +49,8 @@ static void irc_buddy_free(struct irc_buddy *ib);
 PurpleProtocol *_irc_protocol = NULL;
 
 static gint
-irc_uri_handler_match_server(gconstpointer a, gconstpointer b)
+irc_uri_handler_match_server(PurpleAccount *account, const gchar *match_server)
 {
-	PurpleAccount *account = PURPLE_ACCOUNT(a);
-	const gchar *match_server = b;
 	const gchar *protocol_id;
 	const gchar *username;
 	gchar *server;
@@ -132,8 +116,8 @@ irc_uri_handler(const gchar *scheme, const gchar *uri, GHashTable *params)
 
 	/* Find account with correct server */
 	accounts = purple_accounts_get_all();
-	account_node = g_list_find_custom(accounts, server,
-			irc_uri_handler_match_server);
+	account_node = g_list_find_custom(
+	        accounts, server, (GCompareFunc)irc_uri_handler_match_server);
 
 	if (account_node == NULL) {
 		purple_debug_warning("irc",
@@ -258,7 +242,7 @@ irc_push_bytes_cb(GObject *source, GAsyncResult *res, gpointer data)
 	if (!result) {
 		purple_queued_output_stream_clear_queue(stream);
 
-		g_prefix_error(&error, _("Lost connection with server: "));
+		g_prefix_error(&error, "%s", _("Lost connection with server: "));
 		purple_connection_take_error(gc, error);
 		return;
 	}
@@ -572,7 +556,7 @@ irc_login_cb(GObject *source, GAsyncResult *res, gpointer user_data)
 			res, &error);
 
 	if (conn == NULL) {
-		g_prefix_error(&error, _("Unable to connect: "));
+		g_prefix_error(&error, "%s", _("Unable to connect: "));
 		purple_connection_take_error(gc, error);
 		return;
 	}
@@ -586,7 +570,9 @@ irc_login_cb(GObject *source, GAsyncResult *res, gpointer user_data)
 		irc->input = g_data_input_stream_new(
 				g_io_stream_get_input_stream(
 						G_IO_STREAM(irc->conn)));
-		irc_read_input(irc);
+		g_data_input_stream_read_line_async(irc->input,
+				G_PRIORITY_DEFAULT, irc->cancellable,
+				irc_read_input_cb, gc);
 	}
 }
 
@@ -742,7 +728,7 @@ irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data)
 			G_DATA_INPUT_STREAM(source), res, &len, &error);
 
 	if (line == NULL && error != NULL) {
-		g_prefix_error(&error, _("Lost connection with server: "));
+		g_prefix_error(&error, "%s", _("Lost connection with server: "));
 		purple_connection_take_error(gc, error);
 		return;
 	} else if (line == NULL) {
@@ -766,18 +752,11 @@ irc_read_input_cb(GObject *source, GAsyncResult *res, gpointer data)
 	while (start < len && line[start] == '\0')
 		++start;
 
-	if (len - start > 0)
+	if (start < len) {
 		irc_parse_msg(irc, line + start);
+	}
 
 	g_free(line);
-
-	irc_read_input(irc);
-}
-
-static void
-irc_read_input(struct irc_conn *irc)
-{
-	PurpleConnection *gc = purple_account_get_connection(irc->account);
 
 	g_data_input_stream_read_line_async(irc->input,
 			G_PRIORITY_DEFAULT, irc->cancellable,
@@ -962,8 +941,9 @@ irc_get_max_message_size(PurpleConversation *conv)
 }
 
 static void
-irc_protocol_init(PurpleProtocol *protocol)
+irc_protocol_init(IRCProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 
@@ -1010,16 +990,23 @@ irc_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-irc_protocol_class_init(PurpleProtocolClass *klass)
+irc_protocol_class_init(IRCProtocolClass *klass)
 {
-	klass->login        = irc_login;
-	klass->close        = irc_close;
-	klass->status_types = irc_status_types;
-	klass->list_icon    = irc_blist_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = irc_login;
+	protocol_class->close = irc_close;
+	protocol_class->status_types = irc_status_types;
+	protocol_class->list_icon = irc_blist_icon;
 }
 
 static void
-irc_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+irc_protocol_class_finalize(G_GNUC_UNUSED IRCProtocolClass *klass)
+{
+}
+
+static void
+irc_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions          = irc_get_actions;
 	client_iface->normalize            = purple_normalize_nocase;
@@ -1027,7 +1014,7 @@ irc_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-irc_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+irc_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->set_status   = irc_set_status;
 	server_iface->get_info     = irc_get_info;
@@ -1038,13 +1025,13 @@ irc_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-irc_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+irc_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send = irc_im_send;
 }
 
 static void
-irc_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+irc_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info          = irc_chat_join_info;
 	chat_iface->info_defaults = irc_chat_info_defaults;
@@ -1057,7 +1044,7 @@ irc_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+irc_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list = irc_roomlist_get_list;
 	roomlist_iface->cancel   = irc_roomlist_cancel;
@@ -1070,27 +1057,26 @@ irc_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer  = irc_dccsend_new_xfer;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	IRCProtocol, irc_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        IRCProtocol, irc_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  irc_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      irc_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  irc_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      irc_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  irc_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      irc_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  irc_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      irc_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  irc_protocol_roomlist_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      irc_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  irc_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      irc_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -1113,7 +1099,9 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	irc_protocol_register_type(plugin);
+	irc_protocol_register_type(G_TYPE_MODULE(plugin));
+
+	irc_xfer_register(G_TYPE_MODULE(plugin));
 
 	_irc_protocol = purple_protocols_add(IRC_TYPE_PROTOCOL, error);
 	if (!_irc_protocol)

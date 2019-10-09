@@ -65,9 +65,11 @@ purple_debug_vargs(PurpleDebugLevel level, const char *category,
 	if (!iface)
 		return;
 
-	if (!debug_enabled && ((iface == NULL) || (iface->print == NULL) ||
-			(iface->is_enabled && !iface->is_enabled(ops, level, category))))
+	if (!debug_enabled &&
+	    ((iface->print == NULL) ||
+	     (iface->is_enabled && !iface->is_enabled(ops, level, category)))) {
 		return;
+	}
 
 	arg_s = g_strdup_vprintf(format, args);
 	g_strchomp(arg_s); /* strip trailing linefeeds */
@@ -108,8 +110,9 @@ purple_debug_vargs(PurpleDebugLevel level, const char *category,
 		g_free(ts_s);
 	}
 
-	if (iface != NULL && iface->print != NULL)
+	if (iface->print != NULL) {
 		iface->print(ops, level, category, arg_s);
+	}
 
 	g_free(arg_s);
 }

@@ -55,7 +55,7 @@ GHashTable* jabber_auth_digest_md5_parse(const char *challenge)
 		gboolean in_quotes = FALSE;
 		char *name, *value = NULL;
 		token_start = cur;
-		while(*cur != '\0' && (in_quotes || (!in_quotes && *cur != ','))) {
+		while (*cur != '\0' && (in_quotes || *cur != ',')) {
 			if (*cur == '"')
 				in_quotes = !in_quotes;
 			cur++;

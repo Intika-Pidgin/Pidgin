@@ -20,8 +20,8 @@
  *
  */
 
-#ifndef _PURPLE_PLUGINPREF_H_
-#define _PURPLE_PLUGINPREF_H_
+#ifndef PURPLE_PLUGINPREF_H
+#define PURPLE_PLUGINPREF_H
 /**
  * SECTION:pluginpref
  * @section_id: libpurple-pluginpref
@@ -309,4 +309,4 @@ PurpleStringFormatType purple_plugin_pref_get_format_type(PurplePluginPref *pref
 
 G_END_DECLS
 
-#endif /* _PURPLE_PLUGINPREF_H_ */
+#endif /* PURPLE_PLUGINPREF_H */

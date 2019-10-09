@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_ACCOUNTS_H_
-#define _PURPLE_ACCOUNTS_H_
+#ifndef PURPLE_ACCOUNTS_H
+#define PURPLE_ACCOUNTS_H
 /**
  * SECTION:accounts
  * @section_id: libpurple-accounts
@@ -167,7 +167,7 @@ GList *purple_accounts_get_all_active(void);
  *
  * Finds an account with the specified name and protocol id.
  *
- * Returns: The account, if found, or %FALSE otherwise.
+ * Returns: (transfer none): The account, if found, or %NULL otherwise.
  */
 PurpleAccount *purple_accounts_find(const char *name, const char *protocol);
 
@@ -250,4 +250,4 @@ void purple_accounts_schedule_save(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_ACCOUNTS_H_ */
+#endif /* PURPLE_ACCOUNTS_H */

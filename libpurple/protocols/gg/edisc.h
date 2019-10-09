@@ -25,12 +25,20 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_EDISC_H
-#define _GGP_EDISC_H
+
+#ifndef PURPLE_GG_EDISC_H
+#define PURPLE_GG_EDISC_H
 
 #include <internal.h>
 
 typedef struct _ggp_edisc_session_data ggp_edisc_session_data;
+
+G_BEGIN_DECLS
+
+#define GGP_TYPE_XFER (ggp_xfer_get_type())
+G_DECLARE_FINAL_TYPE(GGPXfer, ggp_xfer, GGP, XFER, PurpleXfer);
+
+void ggp_xfer_register(GTypeModule *module);
 
 /* Setting up. */
 void ggp_edisc_setup(PurpleConnection *gc);
@@ -46,4 +54,6 @@ void ggp_edisc_xfer_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc
 	const char *filename);
 PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 
-#endif /* _GGP_EDISC_H */
+G_END_DECLS
+
+#endif /* PURPLE_GG_EDISC_H */

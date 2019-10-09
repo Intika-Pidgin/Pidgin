@@ -18,8 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
 */
 
-#ifndef _ENCODING_H_
-#define _ENCODING_H_
+#ifndef PURPLE_OSCAR_ENCODING_H
+#define PURPLE_OSCAR_ENCODING_H
 
 #include "oscar.h"
 #include "oscarcommon.h"
@@ -43,4 +43,4 @@ gchar * oscar_decode_im(PurpleAccount *account, const char *sourcebn, guint16 ch
  */
 gchar * oscar_encode_im(const gchar *msg, gsize *result_len, guint16 *charset, gchar **charsetstr);
 
-#endif
+#endif /* PURPLE_OSCAR_ENCODING_H */

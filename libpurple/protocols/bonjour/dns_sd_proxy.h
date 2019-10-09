@@ -1,5 +1,4 @@
 /*
- *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -18,10 +17,8 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301, USA.
  */
-#ifndef _DNS_SD_PROXY
-#define _DNS_SD_PROXY
-
-#include <config.h>
+#ifndef PURPLE_BONJOUR_DNS_SD_PROXY_H
+#define PURPLE_BONJOUR_DNS_SD_PROXY_H
 
 #ifndef _MSC_VER
 #include <stdint.h>
@@ -196,4 +193,4 @@ DNSServiceErrorType _wpurple_TXTRecordSetValue(TXTRecordRef *txtRecord, const ch
 #define TXTRecordSetValue(txtRecord, key, valueSize, value) \
 	_wpurple_TXTRecordSetValue(txtRecord, key, valueSize, value)
 
-#endif
+#endif /* PURPLE_BONJOUR_DNS_SD_PROXY_H */

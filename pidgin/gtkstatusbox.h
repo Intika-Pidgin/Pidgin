@@ -98,7 +98,7 @@ struct _PidginStatusBox
 	PurpleImage *buddy_icon_img;
 	GdkPixbuf *buddy_icon;
 	GdkPixbuf *buddy_icon_hover;
-	GtkWidget *buddy_icon_sel;
+	GtkFileChooserNative *buddy_icon_sel;
 	GtkWidget *icon;
 	GtkWidget *icon_box;
 	GtkWidget *icon_box_menu;

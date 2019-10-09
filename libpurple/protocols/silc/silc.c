@@ -2113,10 +2113,10 @@ static PurpleWhiteboardOps silcpurple_wb_ops =
 	NULL
 };
 
-
 static void
-silcpurple_protocol_init(PurpleProtocol *protocol)
+silcpurple_protocol_init(SilcProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 	PurpleAccountUserSplit *split;
 	char tmp[256];
@@ -2195,16 +2195,23 @@ silcpurple_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-silcpurple_protocol_class_init(PurpleProtocolClass *klass)
+silcpurple_protocol_class_init(SilcProtocolClass *klass)
 {
-	klass->login        = silcpurple_login;
-	klass->close        = silcpurple_close;
-	klass->status_types = silcpurple_away_states;
-	klass->list_icon    = silcpurple_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = silcpurple_login;
+	protocol_class->close = silcpurple_close;
+	protocol_class->status_types = silcpurple_away_states;
+	protocol_class->list_icon = silcpurple_list_icon;
 }
 
 static void
-silcpurple_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+silcpurple_protocol_class_finalize(G_GNUC_UNUSED SilcProtocolClass *klass)
+{
+}
+
+static void
+silcpurple_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions     = silcpurple_get_actions;
 	client_iface->status_text     = silcpurple_status_text;
@@ -2213,7 +2220,7 @@ silcpurple_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-silcpurple_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+silcpurple_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->set_info       = silcpurple_set_info;
 	server_iface->get_info       = silcpurple_get_info;
@@ -2227,13 +2234,13 @@ silcpurple_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-silcpurple_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+silcpurple_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send = silcpurple_send_im;
 }
 
 static void
-silcpurple_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+silcpurple_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info          = silcpurple_chat_info;
 	chat_iface->info_defaults = silcpurple_chat_info_defaults;
@@ -2246,7 +2253,7 @@ silcpurple_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-silcpurple_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+silcpurple_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list = silcpurple_roomlist_get_list;
 	roomlist_iface->cancel   = silcpurple_roomlist_cancel;
@@ -2259,27 +2266,26 @@ silcpurple_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer  = silcpurple_ftp_new_xfer;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	SilcProtocol, silcpurple_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        SilcProtocol, silcpurple_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  silcpurple_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      silcpurple_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  silcpurple_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      silcpurple_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  silcpurple_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      silcpurple_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  silcpurple_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      silcpurple_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  silcpurple_protocol_roomlist_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      silcpurple_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER_IFACE,
-	                                  silcpurple_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      silcpurple_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -2308,7 +2314,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	silcpurple_protocol_register_type(plugin);
+	silcpurple_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(SILCPURPLE_TYPE_PROTOCOL, error);
 	if (!my_protocol)

@@ -76,7 +76,6 @@ enum {
 #include "pidgin.h"
 #include "conversation.h"
 #include "gtkconvwin.h"
-#include "gtkconv-theme.h"
 
 /**************************************************************************
  * Structures
@@ -104,18 +103,13 @@ struct _PidginConversation
 	GtkWidget *tabby;
 	GtkWidget *menu_tabby;
 
-	PidginConvTheme *theme;
 	GArray *nick_colors;
 	PurpleMessageFlags last_flags;
-	GtkWidget *webview;
+	GtkTextBuffer *history_buffer;
+	GtkWidget *history;
+
+	GtkWidget *editor;
 	GtkWidget *entry;
-	gboolean auto_resize;   /* this is set to TRUE if the conversation
-				 * is being resized by a non-user-initiated
-				 * event, such as the buddy icon appearing
-				 */
-	gboolean entry_growing; /* True if the size of the entry was set
-				 * automatically by typing too much to fit
-				 * in one line */
 
 	GtkWidget *close; /* "x" on the tab */
 	GtkWidget *icon;
@@ -174,15 +168,6 @@ GType pidgin_conversation_get_type(void);
  * Returns: The GTK+ conversation operations structure.
  */
 PurpleConversationUiOps *pidgin_conversations_get_conv_ui_ops(void);
-
-/**
- * pidgin_conversations_get_default_theme:
- *
- * Returns the default theme for GTK+ conversations.
- *
- * Returns: (transfer none): The default GTK+ conversation theme.
- */
-PurpleTheme *pidgin_conversations_get_default_theme(void);
 
 /**
  * pidgin_conv_update_buddy_icon:

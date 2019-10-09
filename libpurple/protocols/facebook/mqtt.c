@@ -284,6 +284,19 @@ fb_mqtt_take_error(FbMqtt *mqtt, GError *err, const gchar *prefix)
 	g_error_free(err);
 }
 
+static void
+fb_mqtt_error_literal(FbMqtt *mqtt, FbMqttError error, const gchar *msg)
+{
+	GError *err;
+
+	g_return_if_fail(FB_IS_MQTT(mqtt));
+
+	err = g_error_new_literal(FB_MQTT_ERROR, error, msg);
+
+	g_signal_emit_by_name(mqtt, "error", err);
+	g_error_free(err);
+}
+
 void
 fb_mqtt_error(FbMqtt *mqtt, FbMqttError error, const gchar *format, ...)
 {
@@ -307,7 +320,8 @@ fb_mqtt_cb_timeout(gpointer data)
 	FbMqttPrivate *priv = mqtt->priv;
 
 	priv->tev = 0;
-	fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL, _("Connection timed out"));
+	fb_mqtt_error_literal(mqtt, FB_MQTT_ERROR_GENERAL,
+	                      _("Connection timed out"));
 	return FALSE;
 }
 
@@ -419,8 +433,8 @@ fb_mqtt_cb_read_packet(GObject *source, GAsyncResult *res, gpointer data)
 	msg = fb_mqtt_message_new_bytes(priv->rbuf);
 
 	if (G_UNLIKELY(msg == NULL)) {
-		fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
-		              _("Failed to parse message"));
+		fb_mqtt_error_literal(mqtt, FB_MQTT_ERROR_GENERAL,
+		                      _("Failed to parse message"));
 		return;
 	}
 
@@ -581,8 +595,8 @@ fb_mqtt_read(FbMqtt *mqtt, FbMqttMessage *msg)
 	}
 
 	/* Since no case returned, there was a parse error. */
-	fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
-	              _("Failed to parse message"));
+	fb_mqtt_error_literal(mqtt, FB_MQTT_ERROR_GENERAL,
+	                      _("Failed to parse message"));
 }
 
 static void
@@ -617,8 +631,8 @@ fb_mqtt_write(FbMqtt *mqtt, FbMqttMessage *msg)
 	bytes = fb_mqtt_message_bytes(msg);
 
 	if (G_UNLIKELY(bytes == NULL)) {
-		fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
-		              _("Failed to format data"));
+		fb_mqtt_error_literal(mqtt, FB_MQTT_ERROR_GENERAL,
+		                      _("Failed to format data"));
 		return;
 	}
 
@@ -730,8 +744,7 @@ fb_mqtt_connected(FbMqtt *mqtt, gboolean error)
 	connected = (priv->conn != NULL) && priv->connected;
 
 	if (!connected && error) {
-		fb_mqtt_error(mqtt, FB_MQTT_ERROR_GENERAL,
-		              _("Not connected"));
+		fb_mqtt_error_literal(mqtt, FB_MQTT_ERROR_GENERAL, _("Not connected"));
 	}
 
 	return connected;

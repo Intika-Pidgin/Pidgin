@@ -480,7 +480,7 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 	g_return_if_fail(data != NULL);
 
 	/* because printing a tab to debug every minute gets old */
-	if (data && !purple_strequal(data, "\t")) {
+	if (!purple_strequal(data, "\t")) {
 		const char *username;
 		char *text = NULL, *last_part = NULL, *tag_start = NULL;
 
@@ -2622,8 +2622,8 @@ PurpleChat *jabber_find_blist_chat(PurpleAccount *account, const char *name)
 	if(!(jid = jabber_id_new(name)))
 		return NULL;
 
-	for(gnode = purple_blist_get_root(); gnode;
-			gnode = purple_blist_node_get_sibling_next(gnode)) {
+	for (gnode = purple_blist_get_default_root(); gnode;
+	     gnode = purple_blist_node_get_sibling_next(gnode)) {
 		for(cnode = purple_blist_node_get_first_child(gnode);
 				cnode;
 				cnode = purple_blist_node_get_sibling_next(cnode)) {
@@ -4091,8 +4091,10 @@ static void jabber_uninit_protocol(PurpleProtocol *protocol)
 }
 
 static void
-jabber_protocol_init(PurpleProtocol *protocol)
+jabber_protocol_init(JabberProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+
 	protocol->id        = "prpl-jabber";
 	protocol->name      = "XMPP";
 	protocol->options   = OPT_PROTO_CHAT_TOPIC | OPT_PROTO_UNIQUE_CHATNAME |
@@ -4109,16 +4111,23 @@ jabber_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-jabber_protocol_class_init(PurpleProtocolClass *klass)
+jabber_protocol_class_init(JabberProtocolClass *klass)
 {
-	klass->login        = jabber_login;
-	klass->close        = jabber_close;
-	klass->status_types = jabber_status_types;
-	klass->list_icon    = jabber_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = jabber_login;
+	protocol_class->close = jabber_close;
+	protocol_class->status_types = jabber_status_types;
+	protocol_class->list_icon = jabber_list_icon;
 }
 
 static void
-jabber_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+jabber_protocol_class_finalize(G_GNUC_UNUSED JabberProtocolClass *klass)
+{
+}
+
+static void
+jabber_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->get_actions     = jabber_get_actions;
 	client_iface->list_emblem     = jabber_list_emblem;
@@ -4133,7 +4142,7 @@ jabber_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-jabber_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+jabber_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->register_user          = jabber_register_account;
 	server_iface->unregister_user        = jabber_unregister_account;
@@ -4153,14 +4162,14 @@ jabber_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-jabber_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+jabber_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = jabber_message_send_im;
 	im_iface->send_typing = jabber_send_typing;
 }
 
 static void
-jabber_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+jabber_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
 	chat_iface->info               = jabber_chat_info;
 	chat_iface->info_defaults      = jabber_chat_info_defaults;
@@ -4174,14 +4183,14 @@ jabber_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-jabber_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+jabber_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
 	privacy_iface->add_deny = jabber_add_deny;
 	privacy_iface->rem_deny = jabber_rem_deny;
 }
 
 static void
-jabber_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+jabber_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
 	roomlist_iface->get_list       = jabber_roomlist_get_list;
 	roomlist_iface->cancel         = jabber_roomlist_cancel;
@@ -4196,7 +4205,7 @@ jabber_protocol_attention_iface_init(PurpleProtocolAttentionInterface *iface)
 }
 
 static void
-jabber_protocol_media_iface_init(PurpleProtocolMediaIface *media_iface)
+jabber_protocol_media_iface_init(PurpleProtocolMediaInterface *media_iface)
 {
 	media_iface->initiate_session = jabber_initiate_media;
 	media_iface->get_caps         = jabber_get_media_caps;
@@ -4210,36 +4219,36 @@ jabber_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer    = jabber_si_new_xfer;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	JabberProtocol, jabber_protocol, PURPLE_TYPE_PROTOCOL, G_TYPE_FLAG_ABSTRACT,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        JabberProtocol, jabber_protocol, PURPLE_TYPE_PROTOCOL,
+        G_TYPE_FLAG_ABSTRACT,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  jabber_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      jabber_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  jabber_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      jabber_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  jabber_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      jabber_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  jabber_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      jabber_protocol_chat_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
-	                                  jabber_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      jabber_protocol_privacy_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  jabber_protocol_roomlist_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      jabber_protocol_roomlist_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ATTENTION,
-	                                  jabber_protocol_attention_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ATTENTION,
+                                      jabber_protocol_attention_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_MEDIA_IFACE,
-	                                  jabber_protocol_media_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_MEDIA,
+                                      jabber_protocol_media_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  jabber_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      jabber_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -4274,10 +4283,12 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	jingle_rtp_register(plugin);
 #endif
 
-	jabber_protocol_register_type(plugin);
+	jabber_protocol_register_type(G_TYPE_MODULE(plugin));
 
-	gtalk_protocol_register_type(plugin);
-	xmpp_protocol_register_type(plugin);
+	gtalk_protocol_register(plugin);
+	xmpp_protocol_register(plugin);
+
+	jabber_si_xfer_register(G_TYPE_MODULE(plugin));
 
 	xmpp_protocol = purple_protocols_add(XMPP_TYPE_PROTOCOL, error);
 	if (!xmpp_protocol)

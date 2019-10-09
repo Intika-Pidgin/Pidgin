@@ -18,7 +18,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#define _PIDGIN_GTKUTILS_C_
 
 #include "internal.h"
 #include "glibcompat.h"
@@ -30,6 +29,8 @@
 #endif /*_WIN32*/
 
 #include <gdk/gdkkeysyms.h>
+
+#include <talkatu.h>
 
 #include "conversation.h"
 #include "debug.h"
@@ -49,8 +50,6 @@
 #include "pidginstock.h"
 #include "gtkrequest.h"
 #include "gtkutils.h"
-#include "gtkwebview.h"
-#include "gtkwebviewtoolbar.h"
 #include "pidgin/minidialog.h"
 
 #include "gtk3compat.h"
@@ -109,7 +108,7 @@ typedef struct
 } PidginCompletionData;
 
 struct _icon_chooser {
-	GtkWidget *icon_filesel;
+	GtkFileChooserNative *icon_filesel;
 	GtkWidget *icon_preview;
 	GtkWidget *icon_text;
 
@@ -128,50 +127,11 @@ struct _old_button_clicked_cb_data
  *****************************************************************************/
 
 static guint accels_save_timer = 0;
-static GSList *registered_url_handlers = NULL;
 static GSList *minidialogs = NULL;
 
 /******************************************************************************
  * Code
  *****************************************************************************/
-
-static gboolean
-url_clicked_idle_cb(gpointer data)
-{
-	purple_notify_uri(NULL, data);
-	g_free(data);
-	return FALSE;
-}
-
-static gboolean
-url_clicked_cb(PidginWebView *unused, const char *uri)
-{
-	g_idle_add(url_clicked_idle_cb, g_strdup(uri));
-	return TRUE;
-}
-
-void
-pidgin_setup_webview(GtkWidget *webview)
-{
-	g_return_if_fail(webview != NULL);
-	g_return_if_fail(PIDGIN_IS_WEBVIEW(webview));
-
-#ifdef _WIN32
-	if (!purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/use_theme_font")) {
-		WebKitWebSettings *settings = webkit_web_settings_new();
-		g_object_set(G_OBJECT(settings), "default-font-size",
-		             purple_prefs_get_int(PIDGIN_PREFS_ROOT "/conversations/font_size"),
-		             NULL);
-		g_object_set(G_OBJECT(settings), "default-font-family",
-		             purple_prefs_get_string(PIDGIN_PREFS_ROOT "/conversations/custom_font"),
-		             NULL);
-
-		webkit_web_view_set_settings(WEBKIT_WEB_VIEW(webview), settings);
-		g_object_unref(settings);
-	}
-#endif
-}
-
 static
 void pidgin_window_init(GtkWindow *wnd, const char *title, guint border_width, const char *role, gboolean resizable)
 {
@@ -207,7 +167,7 @@ pidgin_create_small_button(GtkWidget *image)
 	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
 
 	/* don't allow focus on the close button */
-	gtk_button_set_focus_on_click(GTK_BUTTON(button), FALSE);
+	gtk_widget_set_focus_on_click(button, FALSE);
 
 	gtk_widget_show(image);
 
@@ -290,61 +250,6 @@ GtkWidget *pidgin_dialog_add_button(GtkDialog *dialog, const char *label,
 		g_signal_connect(G_OBJECT(button), "clicked", callback, callbackdata);
 	gtk_widget_show(button);
 	return button;
-}
-
-GtkWidget *
-pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **sw_ret)
-{
-	GtkWidget *frame;
-	GtkWidget *webview;
-	GtkWidget *sep;
-	GtkWidget *sw;
-	GtkWidget *toolbar = NULL;
-	GtkWidget *vbox;
-
-	frame = gtk_frame_new(NULL);
-	gtk_frame_set_shadow_type(GTK_FRAME(frame), GTK_SHADOW_IN);
-
-	vbox = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
-	gtk_container_add(GTK_CONTAINER(frame), vbox);
-	gtk_widget_show(vbox);
-
-	if (editable) {
-		toolbar = pidgin_webviewtoolbar_new();
-		gtk_box_pack_start(GTK_BOX(vbox), toolbar, FALSE, FALSE, 0);
-		gtk_widget_show(toolbar);
-
-		sep = gtk_separator_new(GTK_ORIENTATION_HORIZONTAL);
-		gtk_box_pack_start(GTK_BOX(vbox), sep, FALSE, FALSE, 0);
-		g_signal_connect_swapped(G_OBJECT(toolbar), "show", G_CALLBACK(gtk_widget_show), sep);
-		g_signal_connect_swapped(G_OBJECT(toolbar), "hide", G_CALLBACK(gtk_widget_hide), sep);
-		gtk_widget_show(sep);
-	}
-
-	webview = pidgin_webview_new(editable);
-	if (editable && purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/conversations/spellcheck"))
-		pidgin_webview_set_spellcheck(PIDGIN_WEBVIEW(webview), TRUE);
-	gtk_widget_show(webview);
-
-	if (editable) {
-		pidgin_webviewtoolbar_attach(PIDGIN_WEBVIEWTOOLBAR(toolbar), webview);
-		pidgin_webview_set_toolbar(PIDGIN_WEBVIEW(webview), toolbar);
-	}
-	pidgin_setup_webview(webview);
-
-	sw = pidgin_make_scrollable(webview, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_NONE, -1, -1);
-	gtk_box_pack_start(GTK_BOX(vbox), sw, TRUE, TRUE, 0);
-
-	pidgin_webview_set_vadjustment(PIDGIN_WEBVIEW(webview),
-			gtk_scrolled_window_get_vadjustment(GTK_SCROLLED_WINDOW(sw)));
-
-	if (webview_ret != NULL)
-		*webview_ret = webview;
-
-	if (sw_ret != NULL)
-		*sw_ret = sw;
-
-	return frame;
 }
 
 void
@@ -685,164 +590,6 @@ pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu)
 	return (const char *)aop_option_menu_get_selected(optmenu);
 }
 
-PurpleAccount *
-pidgin_account_option_menu_get_selected(GtkWidget *optmenu)
-{
-	return (PurpleAccount *)aop_option_menu_get_selected(optmenu);
-}
-
-static AopMenu *
-create_account_menu(PurpleAccount *default_account,
-					PurpleFilterAccountFunc filter_func, gboolean show_all)
-{
-	AopMenu *aop_menu = NULL;
-	PurpleAccount *account;
-	GdkPixbuf *pixbuf = NULL;
-	GList *list;
-	GList *p;
-	GtkListStore *ls;
-	GtkTreeIter iter;
-	int i;
-	char buf[256];
-
-	if (show_all)
-		list = purple_accounts_get_all();
-	else
-		list = purple_connections_get_all();
-
-	ls = gtk_list_store_new(AOP_COLUMN_COUNT, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
-
-	aop_menu = g_malloc0(sizeof(AopMenu));
-	aop_menu->default_item = 0;
-	aop_menu->model = GTK_TREE_MODEL(ls);
-
-	for (p = list, i = 0; p != NULL; p = p->next, i++) {
-		if (show_all)
-			account = (PurpleAccount *)p->data;
-		else {
-			PurpleConnection *gc = (PurpleConnection *)p->data;
-
-			account = purple_connection_get_account(gc);
-		}
-
-		if (filter_func && !filter_func(account)) {
-			i--;
-			continue;
-		}
-
-		pixbuf = pidgin_create_protocol_icon(account, PIDGIN_PROTOCOL_ICON_SMALL);
-
-		if (pixbuf) {
-			if (purple_account_is_disconnected(account) && show_all &&
-					purple_connections_get_all())
-				gdk_pixbuf_saturate_and_pixelate(pixbuf, pixbuf, 0.0, FALSE);
-		}
-
-		if (purple_account_get_private_alias(account)) {
-			g_snprintf(buf, sizeof(buf), "%s (%s) (%s)",
-					   purple_account_get_username(account),
-					   purple_account_get_private_alias(account),
-					   purple_account_get_protocol_name(account));
-		} else {
-			g_snprintf(buf, sizeof(buf), "%s (%s)",
-					   purple_account_get_username(account),
-					   purple_account_get_protocol_name(account));
-		}
-
-		gtk_list_store_append(ls, &iter);
-		gtk_list_store_set(ls, &iter, 
-		                   AOP_ICON_COLUMN, pixbuf,
-		                   AOP_NAME_COLUMN, buf,
-		                   AOP_DATA_COLUMN, account,
-		                   -1);
-
-		if (pixbuf)
-			g_object_unref(pixbuf);
-
-		if (default_account && account == default_account)
-			aop_menu->default_item = i;
-	}
-
-	return aop_menu;
-}
-
-static void
-regenerate_account_menu(GtkWidget *optmenu)
-{
-	gboolean show_all;
-	PurpleAccount *account;
-	PurpleFilterAccountFunc filter_func;
-
-	account = (PurpleAccount *)aop_option_menu_get_selected(optmenu);
-	show_all = GPOINTER_TO_INT(g_object_get_data(G_OBJECT(optmenu), "show_all"));
-	filter_func = g_object_get_data(G_OBJECT(optmenu), "filter_func");
-
-	aop_option_menu_replace_menu(optmenu, create_account_menu(account, filter_func, show_all));
-}
-
-static void
-account_menu_sign_on_off_cb(PurpleConnection *gc, GtkWidget *optmenu)
-{
-	regenerate_account_menu(optmenu);
-}
-
-static void
-account_menu_added_removed_cb(PurpleAccount *account, GtkWidget *optmenu)
-{
-	regenerate_account_menu(optmenu);
-}
-
-static gboolean
-account_menu_destroyed_cb(GtkWidget *optmenu, GdkEvent *event,
-						  void *user_data)
-{
-	purple_signals_disconnect_by_handle(optmenu);
-
-	return FALSE;
-}
-
-void
-pidgin_account_option_menu_set_selected(GtkWidget *optmenu, PurpleAccount *account)
-{
-	aop_option_menu_select_by_data(optmenu, account);
-}
-
-GtkWidget *
-pidgin_account_option_menu_new(PurpleAccount *default_account,
-								 gboolean show_all, GCallback cb,
-								 PurpleFilterAccountFunc filter_func,
-								 gpointer user_data)
-{
-	GtkWidget *optmenu;
-
-	/* Create the option menu */
-	optmenu = aop_option_menu_new(create_account_menu(default_account, filter_func, show_all), cb, user_data);
-
-	g_signal_connect(G_OBJECT(optmenu), "destroy",
-					 G_CALLBACK(account_menu_destroyed_cb), NULL);
-
-	/* Register the purple sign on/off event callbacks. */
-	purple_signal_connect(purple_connections_get_handle(), "signed-on",
-						optmenu, PURPLE_CALLBACK(account_menu_sign_on_off_cb),
-						optmenu);
-	purple_signal_connect(purple_connections_get_handle(), "signed-off",
-						optmenu, PURPLE_CALLBACK(account_menu_sign_on_off_cb),
-						optmenu);
-	purple_signal_connect(purple_accounts_get_handle(), "account-added",
-						optmenu, PURPLE_CALLBACK(account_menu_added_removed_cb),
-						optmenu);
-	purple_signal_connect(purple_accounts_get_handle(), "account-removed",
-						optmenu, PURPLE_CALLBACK(account_menu_added_removed_cb),
-						optmenu);
-
-	/* Set some data. */
-	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
-	g_object_set_data(G_OBJECT(optmenu), "show_all", GINT_TO_POINTER(show_all));
-	g_object_set_data(G_OBJECT(optmenu), "filter_func", filter_func);
-
-	return optmenu;
-}
-
 void
 pidgin_save_accels_cb(GtkAccelGroup *accel_group, guint arg1,
                          GdkModifierType arg2, GClosure *arg3,
@@ -861,8 +608,7 @@ pidgin_save_accels(gpointer data)
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
-	                            "accels", NULL);
+	filename = g_build_filename(purple_config_dir(), "accels", NULL);
 	purple_debug(PURPLE_DEBUG_MISC, "accels", "saving accels to %s\n", filename);
 	gtk_accel_map_save(filename);
 	g_free(filename);
@@ -876,8 +622,7 @@ pidgin_load_accels()
 {
 	char *filename = NULL;
 
-	filename = g_build_filename(purple_user_dir(), G_DIR_SEPARATOR_S,
-	                            "accels", NULL);
+	filename = g_build_filename(purple_config_dir(), "accels", NULL);
 	gtk_accel_map_load(filename);
 	g_free(filename);
 }
@@ -1260,18 +1005,11 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 		*y = CLAMP (*y, monitor.y,
 			   monitor.y + monitor.height - requisition.height);
-	}
-	else if (requisition.height > space_below &&
-	         requisition.height > space_above)
-	{
+	} else {
 		if (space_below >= space_above)
 			*y = monitor.y + monitor.height - requisition.height;
 		else
 			*y = monitor.y;
-	}
-	else
-	{
-		*y = monitor.y;
 	}
 }
 
@@ -1337,7 +1075,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 	GStatBuf st;
 	GError *err = NULL;
 	PurpleConversation *conv;
-	PidginConversation *gtkconv;
 	PurpleBuddy *buddy;
 	PurpleContact *contact;
 	PurpleImage *img;
@@ -1369,7 +1106,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		break;
 	case DND_IM_IMAGE:
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(data->account, data->who));
-		gtkconv = PIDGIN_CONVERSATION(conv);
 
 		if (!g_file_get_contents(data->filename, &filedata, &size,
 					 &err)) {
@@ -1389,7 +1125,8 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		img = purple_image_new_from_data((guint8 *)filedata, size);
 		purple_image_set_friendly_filename(img, shortname);
 
-		pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
+# warning fix this when talkatu has a way to programmatically insert an image
+		// pidgin_webview_insert_image(PIDGIN_WEBVIEW(gtkconv->entry), img);
 		g_object_unref(img);
 
 		break;
@@ -1424,7 +1161,7 @@ pidgin_dnd_file_send_image(PurpleAccount *account, const gchar *who,
 {
 	PurpleConnection *gc = purple_account_get_connection(account);
 	PurpleProtocol *protocol = NULL;
-	_DndData *data = g_malloc(sizeof(_DndData));
+	_DndData *data = g_new0(_DndData, 1);
 	gboolean ft = FALSE, im = FALSE;
 
 	data->who = g_strdup(who);
@@ -1540,7 +1277,7 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 
 
 	/* If any of this is null, do nothing. */
-	if (!name || !type || url) {
+	if (!name || !type || !url) {
 		g_free(type);
 		g_free(name);
 		g_free(url);
@@ -1564,11 +1301,19 @@ pidgin_dnd_file_send_desktop(PurpleAccount *account, const gchar *who,
 					"launcher itself."), NULL);
 
 	} else {
+		GtkTextBuffer *buffer = NULL;
+		GtkTextMark *mark = NULL;
+		GtkTextIter iter;
 
 		conv = PURPLE_CONVERSATION(purple_im_conversation_new(account, who));
 		gtkconv =  PIDGIN_CONVERSATION(conv);
-		pidgin_webview_insert_link(PIDGIN_WEBVIEW(gtkconv->entry),
-				url, name);
+
+		buffer = talkatu_editor_get_buffer(TALKATU_EDITOR(gtkconv->editor));
+		mark = gtk_text_buffer_get_insert(buffer);
+
+		gtk_text_buffer_get_iter_at_mark(buffer, &iter, mark);
+
+		talkatu_buffer_insert_link(TALKATU_BUFFER(buffer), &iter, name, url);
 	}
 
 	g_free(type);
@@ -1759,29 +1504,13 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 {
 	GtkWidget *menuitem;
 	GList *list;
-	const gchar *stock_id;
-	GtkWidget *icon_image = NULL;
 
 	if (act == NULL) {
 		return pidgin_separator(menu);
 	}
 
-	stock_id = purple_action_menu_get_stock_icon(act);
-	if (stock_id) {
-		icon_image = gtk_image_new_from_stock(stock_id,
-			gtk_icon_size_from_name(
-				PIDGIN_ICON_SIZE_TANGO_EXTRA_SMALL));
-	}
-
-	if (icon_image) {
-		menuitem = gtk_image_menu_item_new_with_mnemonic(
-			purple_action_menu_get_label(act));
-		gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(menuitem),
-			icon_image);
-	} else {
-		menuitem = gtk_menu_item_new_with_mnemonic(
-			purple_action_menu_get_label(act));
-	}
+	menuitem = gtk_menu_item_new_with_mnemonic(
+	        purple_action_menu_get_label(act));
 
 	list = purple_action_menu_get_children(act);
 
@@ -2001,8 +1730,8 @@ add_completion_list(PidginCompletionData *data)
 
 	gtk_list_store_clear(data->store);
 
-	for (gnode = purple_blist_get_buddy_list()->root; gnode != NULL; gnode = gnode->next)
-	{
+	for (gnode = purple_blist_get_default_root(); gnode != NULL;
+	     gnode = gnode->next) {
 		if (!PURPLE_IS_GROUP(gnode))
 			continue;
 
@@ -2053,7 +1782,9 @@ repopulate_autocomplete(gpointer something, gpointer data)
 }
 
 void
-pidgin_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *accountopt, PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data)
+pidgin_setup_screenname_autocomplete(
+        GtkWidget *entry, GtkWidget *chooser,
+        PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data)
 {
 	PidginCompletionData *data;
 
@@ -2072,7 +1803,7 @@ pidgin_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *accountopt, Pi
 	                           G_TYPE_POINTER);
 
 	data->entry = entry;
-	data->accountopt = accountopt;
+	data->accountopt = chooser;
 	if (filter_func == NULL) {
 		data->filter_func = pidgin_screenname_autocomplete_default_filter;
 		data->filter_func_user_data = NULL;
@@ -2160,10 +1891,6 @@ icon_filesel_choose_cb(GtkWidget *widget, gint response, struct _icon_chooser *d
 	char *filename, *current_folder;
 
 	if (response != GTK_RESPONSE_ACCEPT) {
-		if (response == GTK_RESPONSE_CANCEL) {
-			gtk_widget_destroy(dialog->icon_filesel);
-		}
-		dialog->icon_filesel = NULL;
 		if (dialog->callback)
 			dialog->callback(NULL, dialog->data);
 		g_free(dialog);
@@ -2180,7 +1907,6 @@ icon_filesel_choose_cb(GtkWidget *widget, gint response, struct _icon_chooser *d
 
 	if (dialog->callback)
 		dialog->callback(filename, dialog->data);
-	gtk_widget_destroy(dialog->icon_filesel);
 	g_free(filename);
 	g_free(dialog);
 }
@@ -2208,7 +1934,7 @@ icon_preview_change_cb(GtkFileChooser *widget, struct _icon_chooser *dialog)
 
 	gdk_pixbuf_get_file_info(filename, &width, &height);
 	basename = g_path_get_basename(filename);
-	size = purple_str_size_to_units(st.st_size);
+	size = g_format_size(st.st_size);
 	markup = g_strdup_printf(_("<b>File:</b> %s\n"
 							   "<b>File size:</b> %s\n"
 							   "<b>Image size:</b> %dx%d"),
@@ -2224,8 +1950,11 @@ icon_preview_change_cb(GtkFileChooser *widget, struct _icon_chooser *dialog)
 	g_free(markup);
 }
 
-
-GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char *, gpointer), gpointer data) {
+GtkFileChooserNative *
+pidgin_buddy_icon_chooser_new(GtkWindow *parent,
+                              void (*callback)(const char *, gpointer),
+                              gpointer data)
+{
 	struct _icon_chooser *dialog = g_new0(struct _icon_chooser, 1);
 
 	GtkWidget *vbox;
@@ -2236,13 +1965,9 @@ GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(cons
 
 	current_folder = purple_prefs_get_path(PIDGIN_PREFS_ROOT "/filelocations/last_icon_folder");
 
-	dialog->icon_filesel = gtk_file_chooser_dialog_new(_("Buddy Icon"),
-							   parent,
-							   GTK_FILE_CHOOSER_ACTION_OPEN,
-							   GTK_STOCK_CANCEL, GTK_RESPONSE_CANCEL,
-							   GTK_STOCK_OPEN, GTK_RESPONSE_ACCEPT,
-							   NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(dialog->icon_filesel), GTK_RESPONSE_ACCEPT);
+	dialog->icon_filesel = gtk_file_chooser_native_new(
+	        _("Buddy Icon"), parent, GTK_FILE_CHOOSER_ACTION_OPEN, _("_Open"),
+	        _("_Cancel"));
 	if ((current_folder != NULL) && (*current_folder != '\0'))
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dialog->icon_filesel),
 						    current_folder);
@@ -2265,11 +1990,6 @@ GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(cons
 	g_signal_connect(G_OBJECT(dialog->icon_filesel), "response",
 					 G_CALLBACK(icon_filesel_choose_cb), dialog);
 	icon_preview_change_cb(NULL, dialog);
-
-#ifdef _WIN32
-	g_signal_connect(G_OBJECT(dialog->icon_filesel), "show",
-		G_CALLBACK(winpidgin_ensure_onscreen), dialog->icon_filesel);
-#endif
 
 	return dialog->icon_filesel;
 }
@@ -3119,355 +2839,6 @@ pidgin_pixbuf_scale_down(GdkPixbuf *src, guint max_width, guint max_height,
 	return dst;
 }
 
-static void
-url_copy(GtkWidget *w, gchar *url)
-{
-	GtkClipboard *clipboard;
-
-	clipboard = gtk_widget_get_clipboard(w, GDK_SELECTION_PRIMARY);
-	gtk_clipboard_set_text(clipboard, url, -1);
-
-	clipboard = gtk_widget_get_clipboard(w, GDK_SELECTION_CLIPBOARD);
-	gtk_clipboard_set_text(clipboard, url, -1);
-}
-
-static gboolean
-link_context_menu(PidginWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu)
-{
-	GtkWidget *img, *item;
-	char *url;
-
-	url = webkit_dom_html_anchor_element_get_href(link);
-
-	/* Open Link */
-	img = gtk_image_new_from_stock(GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Open Link"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	g_signal_connect_swapped(G_OBJECT(item), "activate",
-	                         G_CALLBACK(pidgin_webview_activate_anchor), link);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	/* Copy Link Location */
-	img = gtk_image_new_from_stock(GTK_STOCK_COPY, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Copy Link Location"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	/* The signal owns url now: */
-	g_signal_connect_data(G_OBJECT(item), "activate", G_CALLBACK(url_copy),
-	                      (gpointer)url, (GClosureNotify)g_free, 0);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	return TRUE;
-}
-
-static gboolean
-copy_email_address(PidginWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu)
-{
-	GtkWidget *img, *item;
-	char *text;
-	char *address;
-#define MAILTOSIZE  (sizeof("mailto:") - 1)
-
-	text = webkit_dom_html_anchor_element_get_href(link);
-	if (!text || strlen(text) <= MAILTOSIZE) {
-		g_free(text);
-		return FALSE;
-	}
-	address = text + MAILTOSIZE;
-
-	/* Copy Email Address */
-	img = gtk_image_new_from_stock(GTK_STOCK_COPY, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Copy Email Address"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	g_signal_connect_data(G_OBJECT(item), "activate", G_CALLBACK(url_copy),
-	                      g_strdup(address), (GClosureNotify)g_free, 0);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	g_free(text);
-
-	return TRUE;
-}
-
-/*
- * open_file:
- * @filename: The path to a file. Specifically this is the link target
- *        from a link in an IM window with the leading "file://" removed.
- */
-static void
-open_file(PidginWebView *webview, const char *filename)
-{
-	/* Copied from gtkft.c:open_button_cb */
-#ifdef _WIN32
-	/* If using Win32... */
-	int code;
-	/* Escape URI by replacing double-quote with 2 double-quotes. */
-	gchar *escaped = purple_strreplace(filename, "\"", "\"\"");
-	gchar *param = g_strconcat("/select,\"", escaped, "\"", NULL);
-	wchar_t *wc_param = g_utf8_to_utf16(param, -1, NULL, NULL, NULL);
-
-	/* TODO: Better to use SHOpenFolderAndSelectItems()? */
-	code = (int)ShellExecuteW(NULL, L"OPEN", L"explorer.exe", wc_param, NULL, SW_NORMAL);
-
-	g_free(wc_param);
-	g_free(param);
-	g_free(escaped);
-
-	if (code == SE_ERR_ASSOCINCOMPLETE || code == SE_ERR_NOASSOC)
-	{
-		purple_notify_error(webview, NULL,
-				_("There is no application configured to open this type of file."),
-				NULL, NULL);
-	}
-	else if (code < 32)
-	{
-		purple_notify_error(webview, NULL,
-				_("An error occurred while opening the file."), NULL, NULL);
-		purple_debug_warning("gtkutils", "filename: %s; code: %d\n",
-				filename, code);
-	}
-#else
-	char *command = NULL;
-	GError *error = NULL;
-
-	if (purple_running_gnome())
-	{
-		char *escaped = g_shell_quote(filename);
-		command = g_strdup_printf("gnome-open %s", escaped);
-		g_free(escaped);
-	}
-	else if (purple_running_kde())
-	{
-		char *escaped = g_shell_quote(filename);
-
-		if (purple_str_has_suffix(filename, ".desktop"))
-			command = g_strdup_printf("kfmclient openURL %s 'text/plain'", escaped);
-		else
-			command = g_strdup_printf("kfmclient openURL %s", escaped);
-		g_free(escaped);
-	}
-	else
-	{
-		purple_notify_uri(NULL, filename);
-		return;
-	}
-
-	if (purple_program_is_valid(command))
-	{
-		gint exit_status;
-		if (!g_spawn_command_line_sync(command, NULL, NULL, &exit_status, &error))
-		{
-			gchar *tmp = g_strdup_printf(_("Error launching %s: %s"),
-							filename, error->message);
-			purple_notify_error(webview, NULL, _("Unable to open file."), tmp, NULL);
-			g_free(tmp);
-			g_error_free(error);
-		}
-		if (exit_status != 0)
-		{
-			char *primary = g_strdup_printf(_("Error running %s"), command);
-			char *secondary = g_strdup_printf(_("Process returned error code %d"),
-									exit_status);
-			purple_notify_error(webview, NULL, primary, secondary, NULL);
-			g_free(primary);
-			g_free(secondary);
-		}
-	}
-#endif
-}
-
-#define FILELINKSIZE  (sizeof("file://") - 1)
-static gboolean
-file_clicked_cb(PidginWebView *webview, const char *uri)
-{
-	/* Strip "file://" from the URI. */
-	open_file(webview, uri + FILELINKSIZE);
-	return TRUE;
-}
-
-static gboolean
-open_containing_cb(PidginWebView *webview, const char *uri)
-{
-	char *dir = g_path_get_dirname(uri + FILELINKSIZE);
-	open_file(webview, dir);
-	g_free(dir);
-	return TRUE;
-}
-
-static gboolean
-file_context_menu(PidginWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu)
-{
-	GtkWidget *img, *item;
-	char *url;
-
-	url = webkit_dom_html_anchor_element_get_href(link);
-
-	/* Open File */
-	img = gtk_image_new_from_stock(GTK_STOCK_JUMP_TO, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Open File"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	g_signal_connect_swapped(G_OBJECT(item), "activate",
-	                         G_CALLBACK(pidgin_webview_activate_anchor), link);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	/* Open Containing Directory */
-	img = gtk_image_new_from_stock(GTK_STOCK_DIRECTORY, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("Open _Containing Directory"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	/* The signal owns url now: */
-	g_signal_connect_data(G_OBJECT(item), "activate",
-	                      G_CALLBACK(open_containing_cb), (gpointer)url,
-	                      (GClosureNotify)g_free, 0);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	return TRUE;
-}
-
-#define AUDIOLINKSIZE  (sizeof("audio://") - 1)
-static gboolean
-audio_clicked_cb(PidginWebView *webview, const char *uri)
-{
-	PidginConversation *conv = g_object_get_data(G_OBJECT(webview), "gtkconv");
-	if (!conv) /* no playback in debug window */
-		return TRUE;
-	purple_sound_play_file(uri + AUDIOLINKSIZE, NULL);
-	return TRUE;
-}
-
-static void
-savefile_write_cb(gpointer user_data, char *file)
-{
-	char *temp_file = user_data;
-	gchar *contents;
-	gsize length;
-	GError *error = NULL;
-
-	if (!g_file_get_contents(temp_file, &contents, &length, &error)) {
-		purple_debug_error("gtkutils", "Unable to read contents of %s: %s\n",
-		                   temp_file, error->message);
-		g_error_free(error);
-		g_free(temp_file);
-		return;
-	}
-	g_free(temp_file);
-
-	if (!purple_util_write_data_to_file_absolute(file, contents, length)) {
-		purple_debug_error("gtkutils", "Unable to write contents to %s\n",
-		                   file);
-	}
-}
-
-static gboolean
-save_file_cb(GtkWidget *item, const char *url)
-{
-	PidginConversation *gtkconv = g_object_get_data(G_OBJECT(item), "gtkconv");
-	PurpleConversation *conv;
-	if (!gtkconv)
-		return TRUE;
-	conv = gtkconv->active_conv;
-	purple_request_file(conv, _("Save File"), NULL, TRUE,
-		G_CALLBACK(savefile_write_cb), G_CALLBACK(g_free),
-		purple_request_cpar_from_conversation(conv),
-		(gpointer)g_strdup(url));
-	return TRUE;
-}
-
-static gboolean
-audio_context_menu(PidginWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu)
-{
-	GtkWidget *img, *item;
-	char *url;
-	PidginConversation *conv = g_object_get_data(G_OBJECT(webview), "gtkconv");
-	if (!conv) /* No menu in debug window */
-		return TRUE;
-
-	url = webkit_dom_html_anchor_element_get_href(link);
-
-	/* Play Sound */
-	img = gtk_image_new_from_stock(GTK_STOCK_MEDIA_PLAY, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Play Sound"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	g_signal_connect_swapped(G_OBJECT(item), "activate",
-	                         G_CALLBACK(pidgin_webview_activate_anchor), link);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	/* Save File */
-	img = gtk_image_new_from_stock(GTK_STOCK_SAVE, GTK_ICON_SIZE_MENU);
-	item = gtk_image_menu_item_new_with_mnemonic(_("_Save File"));
-	gtk_image_menu_item_set_image(GTK_IMAGE_MENU_ITEM(item), img);
-	g_signal_connect_data(G_OBJECT(item), "activate",
-	                      G_CALLBACK(save_file_cb), g_strdup(url+AUDIOLINKSIZE),
-	                      (GClosureNotify)g_free, 0);
-	g_object_set_data(G_OBJECT(item), "gtkconv", conv);
-	gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
-
-	g_free(url);
-
-	return TRUE;
-}
-
-/* XXX: The following two functions are for demonstration purposes only! */
-static gboolean
-open_dialog(PidginWebView *webview, const char *url)
-{
-	const char *str;
-
-	if (!url || strlen(url) < sizeof("open://")) {
-		return FALSE;
-	}
-
-	str = url + sizeof("open://") - 1;
-
-	if (purple_strequal(str, "accounts"))
-		pidgin_accounts_window_show();
-	else if (purple_strequal(str, "prefs"))
-		pidgin_prefs_show();
-	else
-		return FALSE;
-	return TRUE;
-}
-
-static gboolean
-dummy(PidginWebView *webview, WebKitDOMHTMLAnchorElement *link, GtkWidget *menu)
-{
-	return TRUE;
-}
-
-#ifdef _WIN32
-static void
-winpidgin_register_win32_url_handlers(void)
-{
-	int idx = 0;
-	LONG ret = ERROR_SUCCESS;
-
-	do {
-		DWORD nameSize = 256;
-		wchar_t start[256];
-		ret = RegEnumKeyExW(HKEY_CLASSES_ROOT, idx++, start, &nameSize,
-							NULL, NULL, NULL, NULL);
-		if (ret == ERROR_SUCCESS) {
-			HKEY reg_key = NULL;
-			ret = RegOpenKeyExW(HKEY_CLASSES_ROOT, start, 0, KEY_READ, &reg_key);
-			if (ret == ERROR_SUCCESS) {
-				ret = RegQueryValueExW(reg_key, L"URL Protocol", NULL, NULL, NULL, NULL);
-				if (ret == ERROR_SUCCESS) {
-					gchar *utf8 = g_utf16_to_utf8(start, -1, NULL, NULL, NULL);
-					gchar *protocol = g_strdup_printf("%s:", utf8);
-					g_free(utf8);
-					registered_url_handlers = g_slist_prepend(registered_url_handlers, protocol);
-					/* We still pass everything to the "http" "open" handler for security reasons */
-					pidgin_webview_class_register_protocol(protocol, url_clicked_cb, link_context_menu);
-				}
-				RegCloseKey(reg_key);
-			}
-			ret = ERROR_SUCCESS;
-		}
-	} while (ret == ERROR_SUCCESS);
-
-	if (ret != ERROR_NO_MORE_ITEMS)
-		purple_debug_error("winpidgin", "Error iterating HKEY_CLASSES_ROOT subkeys: %ld\n",
-						   ret);
-}
-#endif
-
 GtkWidget *
 pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPolicyType vscrollbar_policy, GtkShadowType shadow_type, int width, int height)
 {
@@ -3488,50 +2859,3 @@ pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPol
 	return child;
 }
 
-void pidgin_utils_init(void)
-{
-	pidgin_webview_class_register_protocol("http://", url_clicked_cb, link_context_menu);
-	pidgin_webview_class_register_protocol("https://", url_clicked_cb, link_context_menu);
-	pidgin_webview_class_register_protocol("ftp://", url_clicked_cb, link_context_menu);
-	pidgin_webview_class_register_protocol("gopher://", url_clicked_cb, link_context_menu);
-	pidgin_webview_class_register_protocol("mailto:", url_clicked_cb, copy_email_address);
-
-	pidgin_webview_class_register_protocol("file://", file_clicked_cb, file_context_menu);
-	pidgin_webview_class_register_protocol("audio://", audio_clicked_cb, audio_context_menu);
-
-	/* Example custom URL handler. */
-	pidgin_webview_class_register_protocol("open://", open_dialog, dummy);
-
-#ifdef _WIN32
-	winpidgin_register_win32_url_handlers();
-#endif
-
-}
-
-void pidgin_utils_uninit(void)
-{
-	pidgin_webview_class_register_protocol("open://", NULL, NULL);
-
-	/* If we have GNOME handlers registered, unregister them. */
-	if (registered_url_handlers)
-	{
-		GSList *l;
-		for (l = registered_url_handlers; l; l = l->next)
-		{
-			pidgin_webview_class_register_protocol((char *)l->data, NULL, NULL);
-			g_free(l->data);
-		}
-		g_slist_free(registered_url_handlers);
-		registered_url_handlers = NULL;
-		return;
-	}
-
-	pidgin_webview_class_register_protocol("audio://", NULL, NULL);
-	pidgin_webview_class_register_protocol("file://", NULL, NULL);
-
-	pidgin_webview_class_register_protocol("http://", NULL, NULL);
-	pidgin_webview_class_register_protocol("https://", NULL, NULL);
-	pidgin_webview_class_register_protocol("ftp://", NULL, NULL);
-	pidgin_webview_class_register_protocol("mailto:", NULL, NULL);
-	pidgin_webview_class_register_protocol("gopher://", NULL, NULL);
-}

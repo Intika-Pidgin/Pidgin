@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_PURPLEW_H
-#define _GGP_PURPLEW_H
+#ifndef PURPLE_GG_PURPLEW_H
+#define PURPLE_GG_PURPLEW_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -73,4 +73,4 @@ GList * ggp_purplew_group_get_buddies(PurpleGroup *group, PurpleAccount *account
 /* you must g_free returned list */
 GList * ggp_purplew_account_get_groups(PurpleAccount *account, gboolean exclusive);
 
-#endif /* _GGP_PURPLEW_H */
+#endif /* PURPLE_GG_PURPLEW_H */

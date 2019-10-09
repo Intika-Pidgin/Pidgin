@@ -24,7 +24,7 @@
 static void generate_prediction(CapStatistics *statistics) {
 	if(statistics->buddy) {
 		if(statistics->prediction == NULL)
-			statistics->prediction = g_malloc(sizeof(CapPrediction));
+			statistics->prediction = g_new0(CapPrediction, 1);
 		statistics->prediction->probability = generate_prediction_for(statistics->buddy);
 		statistics->prediction->generated_at = time(NULL);
 	}
@@ -480,7 +480,7 @@ static void signed_off(PurpleConnection *gc) {
 	PurpleAccount *account = purple_connection_get_account(gc);
 	const char *my_purple_name = purple_account_get_username(account);
 	gchar *my_name = g_strdup(my_purple_name);
-	time_t *offline_time = g_malloc(sizeof(time_t));
+	time_t *offline_time = g_new0(time_t, 1);
 	const gchar *account_id = purple_account_get_username(account);
 	const gchar *protocol_id = purple_account_get_protocol_id(account);
 	char *sql;
@@ -571,7 +571,7 @@ static gboolean create_database_connection() {
 		return TRUE;
 
 	/* build the path */
-	path = g_build_filename(purple_user_dir(), "cap.db", (gchar *)NULL);
+	path = g_build_filename(purple_data_dir(), "cap.db", (gchar *)NULL);
 
 	/* make database connection here */
 	rc = sqlite3_open(path, &_db);
@@ -728,7 +728,7 @@ static void write_stats_on_unload(gpointer key, gpointer value, gpointer user_da
 }
 
 static CapPrefsUI * create_cap_prefs_ui() {
-	CapPrefsUI *ui = g_malloc(sizeof(CapPrefsUI));
+	CapPrefsUI *ui = g_new0(CapPrefsUI, 1);
 
 	ui->ret = gtk_box_new(GTK_ORIENTATION_VERTICAL, 18);
 	gtk_container_set_border_width(GTK_CONTAINER(ui->ret), 10);

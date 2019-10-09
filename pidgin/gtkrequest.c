@@ -33,6 +33,7 @@
 #include "pidginstock.h"
 #include "gtkblist.h"
 #include "gtkinternal.h"
+#include "pidginaccountchooser.h"
 
 #include <gdk/gdkkeysyms.h>
 
@@ -43,7 +44,8 @@ typedef struct
 	PurpleRequestType type;
 
 	void *user_data;
-	GtkWidget *dialog;
+	/* May be GtkWidget or GtkNativeDialog */
+	gpointer dialog;
 
 	GtkWidget *ok_button;
 
@@ -267,9 +269,10 @@ field_choice_option_cb(GtkRadioButton *button, PurpleRequestField *field)
 }
 
 static void
-field_account_cb(GObject *w, PurpleAccount *account, PurpleRequestField *field)
+field_account_cb(GObject *w, PurpleRequestField *field)
 {
-	purple_request_field_account_set_value(field, account);
+	purple_request_field_account_set_value(
+	        field, pidgin_account_chooser_get_selected(GTK_WIDGET(w)));
 }
 
 static void
@@ -1350,12 +1353,14 @@ create_account_field(PurpleRequestField *field)
 {
 	GtkWidget *widget;
 
-	widget = pidgin_account_option_menu_new(
-		purple_request_field_account_get_default_value(field),
-		purple_request_field_account_get_show_all(field),
-		G_CALLBACK(field_account_cb),
-		purple_request_field_account_get_filter(field),
-		field);
+	widget = pidgin_account_chooser_new(
+	        purple_request_field_account_get_default_value(field),
+	        purple_request_field_account_get_show_all(field));
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(widget),
+	        purple_request_field_account_get_filter(field));
+	g_signal_connect(widget, "changed", G_CALLBACK(field_account_cb),
+	                 field);
 
 	gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
 	g_signal_connect(widget, "changed",
@@ -1565,8 +1570,7 @@ datasheet_get_selected_row(GtkWidget *sheet_widget)
 
 	sel_list = gtk_tree_selection_get_selected_rows(selection, &model);
 	gtk_tree_model_get_iter(model, &iter, sel_list->data);
-	g_list_foreach(sel_list, (GFunc)gtk_tree_path_free, NULL);
-	g_list_free(sel_list);
+	g_list_free_full(sel_list, (GDestroyNotify)gtk_tree_path_free);
 
 	gtk_tree_model_get(model, &iter, 0, &key, -1);
 
@@ -2289,13 +2293,8 @@ pidgin_request_fields(const char *title, const char *primary,
 
 				gtk_widget_set_hexpand(widget, TRUE);
 				gtk_widget_set_vexpand(widget, TRUE);
-#if GTK_CHECK_VERSION(3,12,0)
 				gtk_widget_set_margin_start(widget, 5);
 				gtk_widget_set_margin_end(widget, 5);
-#else
-				gtk_widget_set_margin_left(widget, 5);
-				gtk_widget_set_margin_right(widget, 5);
-#endif
 
 				if (type == PURPLE_REQUEST_FIELD_STRING &&
 					purple_request_field_string_is_multiline(field))
@@ -2348,26 +2347,9 @@ pidgin_request_fields(const char *title, const char *primary,
 }
 
 static void
-file_yes_no_cb(PidginRequestData *data, gint id)
-{
-	/* Only call the callback if yes was selected, otherwise the request
-	 * (eg. file transfer) will be cancelled, then when a new filename is chosen
-	 * things go BOOM */
-	if (id == 1) {
-		if (data->cbs[1] != NULL)
-			((PurpleRequestFileCb)data->cbs[1])(data->user_data, data->u.file.name);
-		purple_request_close(data->type, data);
-	} else {
-		pidgin_clear_cursor(GTK_WIDGET(data->dialog));
-	}
-}
-
-static void
 file_ok_check_if_exists_cb(GtkWidget *widget, gint response, PidginRequestData *data)
 {
 	gchar *current_folder;
-
-	generic_response_start(data);
 
 	if (response != GTK_RESPONSE_ACCEPT) {
 		if (data->cbs[0] != NULL)
@@ -2386,16 +2368,10 @@ file_ok_check_if_exists_cb(GtkWidget *widget, gint response, PidginRequestData *
 		}
 		g_free(current_folder);
 	}
-	if ((data->u.file.savedialog == TRUE) &&
-		(g_file_test(data->u.file.name, G_FILE_TEST_EXISTS))) {
-		purple_request_action(data, NULL, _("That file already exists"),
-							_("Would you like to overwrite it?"), 0,
-							NULL,
-							data, 2,
-							_("Overwrite"), G_CALLBACK(file_yes_no_cb),
-							_("Choose New Name"), G_CALLBACK(file_yes_no_cb));
-	} else
-		file_yes_no_cb(data, 1);
+	if (data->cbs[1] != NULL) {
+		((PurpleRequestFileCb)data->cbs[1])(data->user_data, data->u.file.name);
+	}
+	purple_request_close(data->type, data);
 }
 
 static void *
@@ -2404,7 +2380,7 @@ pidgin_request_file(const char *title, const char *filename,
 	PurpleRequestCommonParameters *cpar, void *user_data)
 {
 	PidginRequestData *data;
-	GtkWidget *filesel;
+	GtkFileChooserNative *filesel;
 #ifdef _WIN32
 	const gchar *current_folder;
 	gboolean folder_set = FALSE;
@@ -2419,20 +2395,15 @@ pidgin_request_file(const char *title, const char *filename,
 	data->cbs[1] = ok_cb;
 	data->u.file.savedialog = savedialog;
 
-	filesel = gtk_file_chooser_dialog_new(
-						title ? title : (savedialog ? _("Save File...")
-													: _("Open File...")),
-						NULL,
-						savedialog ? GTK_FILE_CHOOSER_ACTION_SAVE
-								   : GTK_FILE_CHOOSER_ACTION_OPEN,
-						_("_Cancel"), GTK_RESPONSE_CANCEL,
-						savedialog ? _("_Save")
-								   : _("_Open"),
-						GTK_RESPONSE_ACCEPT,
-						NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(filesel), GTK_RESPONSE_ACCEPT);
-
-	pidgin_request_add_help(GTK_DIALOG(filesel), cpar);
+	filesel = gtk_file_chooser_native_new(
+	        title ? title
+	              : (savedialog ? _("Save File...") : _("Open File...")),
+	        NULL,
+	        savedialog ? GTK_FILE_CHOOSER_ACTION_SAVE
+	                   : GTK_FILE_CHOOSER_ACTION_OPEN,
+	        savedialog ? _("_Save") : _("_Open"), _("_Cancel"));
+	gtk_file_chooser_set_do_overwrite_confirmation(GTK_FILE_CHOOSER(filesel),
+	                                               TRUE);
 
 	if ((filename != NULL) && (*filename != '\0')) {
 		if (savedialog)
@@ -2468,10 +2439,13 @@ pidgin_request_file(const char *title, const char *filename,
 	g_signal_connect(G_OBJECT(GTK_FILE_CHOOSER(filesel)), "response",
 					 G_CALLBACK(file_ok_check_if_exists_cb), data);
 
+#if 0
+	/* FIXME: Not implemented for native dialogs. */
 	pidgin_auto_parent_window(filesel);
+#endif
 
 	data->dialog = filesel;
-	gtk_widget_show(filesel);
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(filesel));
 
 	return (void *)data;
 }
@@ -2482,7 +2456,7 @@ pidgin_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 	void *user_data)
 {
 	PidginRequestData *data;
-	GtkWidget *dirsel;
+	GtkFileChooserNative *dirsel;
 
 	data = g_new0(PidginRequestData, 1);
 	data->type = PURPLE_REQUEST_FOLDER;
@@ -2493,16 +2467,9 @@ pidgin_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 	data->cbs[1] = ok_cb;
 	data->u.file.savedialog = FALSE;
 
-	dirsel = gtk_file_chooser_dialog_new(
-						title ? title : _("Select Folder..."),
-						NULL,
-						GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER,
-						_("_Cancel"), GTK_RESPONSE_CANCEL,
-						_("_OK"), GTK_RESPONSE_ACCEPT,
-						NULL);
-	gtk_dialog_set_default_response(GTK_DIALOG(dirsel), GTK_RESPONSE_ACCEPT);
-
-	pidgin_request_add_help(GTK_DIALOG(dirsel), cpar);
+	dirsel = gtk_file_chooser_native_new(
+	        title ? title : _("Select Folder..."), NULL,
+	        GTK_FILE_CHOOSER_ACTION_SELECT_FOLDER, _("_OK"), _("_Cancel"));
 
 	if ((dirname != NULL) && (*dirname != '\0'))
 		gtk_file_chooser_set_current_folder(GTK_FILE_CHOOSER(dirsel), dirname);
@@ -2511,9 +2478,12 @@ pidgin_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 						G_CALLBACK(file_ok_check_if_exists_cb), data);
 
 	data->dialog = dirsel;
+#if 0
+	/* FIXME: Not implemented for native dialogs. */
 	pidgin_auto_parent_window(dirsel);
+#endif
 
-	gtk_widget_show(dirsel);
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(dirsel));
 
 	return (void *)data;
 }
@@ -2553,9 +2523,14 @@ pidgin_close_request(PurpleRequestType type, void *ui_handle)
 
 	g_free(data->cbs);
 
-	pidgin_window_detach_children(GTK_WINDOW(data->dialog));
+	if (type == PURPLE_REQUEST_FILE || type == PURPLE_REQUEST_FOLDER) {
+		/* Will be a GtkNativeDialog, not GtkDialog. */
+		g_object_unref(data->dialog);
+	} else {
+		pidgin_window_detach_children(GTK_WINDOW(data->dialog));
 
-	gtk_widget_destroy(data->dialog);
+		gtk_widget_destroy(data->dialog);
+	}
 
 	if (type == PURPLE_REQUEST_FIELDS)
 		purple_request_fields_destroy(data->u.multifield.fields);
@@ -2572,6 +2547,13 @@ pidgin_request_get_dialog_window(void *ui_handle)
 
 	g_return_val_if_fail(
 		purple_request_is_valid_ui_handle(data, NULL), NULL);
+
+	if (data->type == PURPLE_REQUEST_FILE ||
+	    data->type == PURPLE_REQUEST_FOLDER) {
+		/* Not a GtkWidget, but a GtkFileChooserNative. Eventually this function
+		 * should not be needed, once we don't need to auto-parent. */
+		return NULL;
+	}
 
 	return GTK_WINDOW(data->dialog);
 }

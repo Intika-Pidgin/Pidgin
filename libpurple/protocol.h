@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_PROTOCOL_H_
-#define _PURPLE_PROTOCOL_H_
+#ifndef PURPLE_PROTOCOL_H
+#define PURPLE_PROTOCOL_H
 /**
  * SECTION:protocol
  * @section_id: libpurple-protocol
@@ -54,21 +54,6 @@ typedef struct _PurpleProtocolClass PurpleProtocolClass;
 #include "roomlist.h"
 #include "status.h"
 #include "whiteboard.h"
-
-/**
- * PurpleProtocolOverrideFlags:
- *
- * Flags to indicate what base protocol's data a derived protocol wants to
- * override.
- *
- * See purple_protocol_override().
- */
-typedef enum /*< flags >*/
-{
-    PURPLE_PROTOCOL_OVERRIDE_USER_SPLITS      = 1 << 1,
-    PURPLE_PROTOCOL_OVERRIDE_PROTOCOL_OPTIONS = 1 << 2,
-    PURPLE_PROTOCOL_OVERRIDE_ICON_SPEC        = 1 << 3,
-} PurpleProtocolOverrideFlags;
 
 /**
  * PurpleProtocol:
@@ -143,12 +128,12 @@ struct _PurpleProtocolClass
 	void (*_purple_reserved4)(void);
 };
 
-#define PURPLE_TYPE_PROTOCOL_CLIENT_IFACE     (purple_protocol_client_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_CLIENT (purple_protocol_client_iface_get_type())
 
-typedef struct _PurpleProtocolClientIface PurpleProtocolClientIface;
+typedef struct _PurpleProtocolClientInterface PurpleProtocolClientInterface;
 
 /**
- * PurpleProtocolClientIface:
+ * PurpleProtocolClientInterface:
  * @get_actions:     Returns the actions the protocol can perform. These will
  *                   show up in the Accounts menu, under a submenu with the name
  *                   of the account.
@@ -209,7 +194,7 @@ typedef struct _PurpleProtocolClientIface PurpleProtocolClientIface;
  *
  * This interface provides a gateway between purple and the protocol.
  */
-struct _PurpleProtocolClientIface
+struct _PurpleProtocolClientInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -243,16 +228,16 @@ struct _PurpleProtocolClientIface
 	gssize (*get_max_message_size)(PurpleConversation *conv);
 };
 
-#define PURPLE_PROTOCOL_HAS_CLIENT_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_CLIENT_IFACE))
-#define PURPLE_PROTOCOL_GET_CLIENT_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CLIENT_IFACE, \
-                                               PurpleProtocolClientIface))
+#define PURPLE_IS_PROTOCOL_CLIENT(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_CLIENT))
+#define PURPLE_PROTOCOL_CLIENT_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CLIENT, \
+                                               PurpleProtocolClientInterface))
 
-#define PURPLE_TYPE_PROTOCOL_SERVER_IFACE     (purple_protocol_server_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_SERVER (purple_protocol_server_iface_get_type())
 
-typedef struct _PurpleProtocolServerIface PurpleProtocolServerIface;
+typedef struct _PurpleProtocolServerInterface PurpleProtocolServerInterface;
 
 /**
- * PurpleProtocolServerIface:
+ * PurpleProtocolServerInterface:
  * @register_user:   New user registration
  * @unregister_user: Remove the user from the server. The account can either be
  *                   connected or disconnected. After the removal is finished,
@@ -320,7 +305,7 @@ typedef struct _PurpleProtocolServerIface PurpleProtocolServerIface;
  *
  * This interface provides a gateway between purple and the protocol's server.
  */
-struct _PurpleProtocolServerIface
+struct _PurpleProtocolServerInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -381,16 +366,16 @@ struct _PurpleProtocolServerIface
 	                         PurpleGetPublicAliasFailureCallback failure_cb);
 };
 
-#define PURPLE_PROTOCOL_HAS_SERVER_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_SERVER_IFACE))
-#define PURPLE_PROTOCOL_GET_SERVER_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_SERVER_IFACE, \
-                                               PurpleProtocolServerIface))
+#define PURPLE_IS_PROTOCOL_SERVER(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_SERVER))
+#define PURPLE_PROTOCOL_SERVER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_SERVER, \
+                                               PurpleProtocolServerInterface))
 
-#define PURPLE_TYPE_PROTOCOL_IM_IFACE     (purple_protocol_im_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_IM (purple_protocol_im_iface_get_type())
 
-typedef struct _PurpleProtocolIMIface PurpleProtocolIMIface;
+typedef struct _PurpleProtocolIMInterface PurpleProtocolIMInterface;
 
 /**
- * PurpleProtocolIMIface:
+ * PurpleProtocolIMInterface:
  * @send:        This protocol function should return a positive value on
  *               success. If the message is too big to be sent, return
  *               <literal>-E2BIG</literal>. If the account is not connected,
@@ -409,7 +394,7 @@ typedef struct _PurpleProtocolIMIface PurpleProtocolIMIface;
  *
  * This interface provides callbacks needed by protocols that implement IMs.
  */
-struct _PurpleProtocolIMIface
+struct _PurpleProtocolIMInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -421,16 +406,16 @@ struct _PurpleProtocolIMIface
 							PurpleIMTypingState state);
 };
 
-#define PURPLE_PROTOCOL_HAS_IM_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_IM_IFACE))
-#define PURPLE_PROTOCOL_GET_IM_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_IM_IFACE, \
-                                           PurpleProtocolIMIface))
+#define PURPLE_IS_PROTOCOL_IM(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_IM))
+#define PURPLE_PROTOCOL_IM_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_IM, \
+                                           PurpleProtocolIMInterface))
 
-#define PURPLE_TYPE_PROTOCOL_CHAT_IFACE     (purple_protocol_chat_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_CHAT (purple_protocol_chat_iface_get_type())
 
-typedef struct _PurpleProtocolChatIface PurpleProtocolChatIface;
+typedef struct _PurpleProtocolChatInterface PurpleProtocolChatInterface;
 
 /**
- * PurpleProtocolChatIface:
+ * PurpleProtocolChatInterface:
  * @info: Returns a list of #PurpleProtocolChatEntry structs, which represent
  *        information required by the protocol to join a chat. libpurple will
  *        call join_chat along with the information filled by the user.
@@ -492,7 +477,7 @@ typedef struct _PurpleProtocolChatIface PurpleProtocolChatIface;
  *
  * This interface provides callbacks needed by protocols that implement chats.
  */
-struct _PurpleProtocolChatIface
+struct _PurpleProtocolChatInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -520,16 +505,16 @@ struct _PurpleProtocolChatIface
 	void (*set_topic)(PurpleConnection *gc, int id, const char *topic);
 };
 
-#define PURPLE_PROTOCOL_HAS_CHAT_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_CHAT_IFACE))
-#define PURPLE_PROTOCOL_GET_CHAT_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CHAT_IFACE, \
-                                             PurpleProtocolChatIface))
+#define PURPLE_IS_PROTOCOL_CHAT(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_CHAT))
+#define PURPLE_PROTOCOL_CHAT_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_CHAT, \
+                                             PurpleProtocolChatInterface))
 
-#define PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE     (purple_protocol_privacy_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_PRIVACY (purple_protocol_privacy_iface_get_type())
 
-typedef struct _PurpleProtocolPrivacyIface PurpleProtocolPrivacyIface;
+typedef struct _PurpleProtocolPrivacyInterface PurpleProtocolPrivacyInterface;
 
 /**
- * PurpleProtocolPrivacyIface:
+ * PurpleProtocolPrivacyInterface:
  * @add_permit:		Add the buddy on the required authorized list.
  * @add_deny:		Add the buddy on the required blocked list.
  * @rem_permit:		Remove the buddy from the requried authorized list.
@@ -540,7 +525,7 @@ typedef struct _PurpleProtocolPrivacyIface PurpleProtocolPrivacyIface;
  *
  * This interface provides privacy callbacks such as to permit/deny users.
  */
-struct _PurpleProtocolPrivacyIface
+struct _PurpleProtocolPrivacyInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -557,48 +542,16 @@ struct _PurpleProtocolPrivacyIface
 	void (*set_permit_deny)(PurpleConnection *gc);
 };
 
-#define PURPLE_PROTOCOL_HAS_PRIVACY_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE))
-#define PURPLE_PROTOCOL_GET_PRIVACY_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE, \
-                                                PurpleProtocolPrivacyIface))
+#define PURPLE_IS_PROTOCOL_PRIVACY(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY))
+#define PURPLE_PROTOCOL_PRIVACY_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_PRIVACY, \
+                                                PurpleProtocolPrivacyInterface))
 
-#define PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE     (purple_protocol_roomlist_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_MEDIA (purple_protocol_media_iface_get_type())
 
-typedef struct _PurpleProtocolRoomlistIface PurpleProtocolRoomlistIface;
-
-/**
- * PurpleProtocolRoomlistIface:
- *
- * The protocol roomlist interface.
- *
- * This interface provides callbacks for room listing.
- */
-struct _PurpleProtocolRoomlistIface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	PurpleRoomlist *(*get_list)(PurpleConnection *gc);
-
-	void (*cancel)(PurpleRoomlist *list);
-
-	void (*expand_category)(PurpleRoomlist *list,
-						 PurpleRoomlistRoom *category);
-
-	/* room list serialize */
-	char *(*room_serialize)(PurpleRoomlistRoom *room);
-};
-
-#define PURPLE_PROTOCOL_HAS_ROOMLIST_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE))
-#define PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE, \
-                                                 PurpleProtocolRoomlistIface))
-
-#define PURPLE_TYPE_PROTOCOL_MEDIA_IFACE     (purple_protocol_media_iface_get_type())
-
-typedef struct _PurpleProtocolMediaIface PurpleProtocolMediaIface;
+typedef struct _PurpleProtocolMediaInterface PurpleProtocolMediaInterface;
 
 /**
- * PurpleProtocolMediaIface:
+ * PurpleProtocolMediaInterface:
  * @initiate_session: Initiate a media session with the given contact.
  *                    <sbr/>@account: The account to initiate the media session
  *                                    on.
@@ -620,7 +573,7 @@ typedef struct _PurpleProtocolMediaIface PurpleProtocolMediaIface;
  *
  * This interface provides callbacks for media sessions on the protocol.
  */
-struct _PurpleProtocolMediaIface
+struct _PurpleProtocolMediaInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -636,16 +589,16 @@ struct _PurpleProtocolMediaIface
 				    guint8 volume, guint8 duration);
 };
 
-#define PURPLE_PROTOCOL_HAS_MEDIA_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_MEDIA_IFACE))
-#define PURPLE_PROTOCOL_GET_MEDIA_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_MEDIA_IFACE, \
-                                              PurpleProtocolMediaIface))
+#define PURPLE_IS_PROTOCOL_MEDIA(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_MEDIA))
+#define PURPLE_PROTOCOL_MEDIA_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_MEDIA, \
+                                              PurpleProtocolMediaInterface))
 
-#define PURPLE_TYPE_PROTOCOL_FACTORY_IFACE     (purple_protocol_factory_iface_get_type())
+#define PURPLE_TYPE_PROTOCOL_FACTORY (purple_protocol_factory_iface_get_type())
 
-typedef struct _PurpleProtocolFactoryIface PurpleProtocolFactoryIface;
+typedef struct _PurpleProtocolFactoryInterface PurpleProtocolFactoryInterface;
 
 /**
- * PurpleProtocolFactoryIface:
+ * PurpleProtocolFactoryInterface:
  * @connection_new: Creates a new protocol-specific connection object that
  *                  inherits #PurpleConnection.
  * @roomlist_new:   Creates a new protocol-specific room list object that
@@ -660,7 +613,7 @@ typedef struct _PurpleProtocolFactoryIface PurpleProtocolFactoryIface;
  * This interface provides callbacks for construction of protocol-specific
  * subclasses of some purple objects.
  */
-struct _PurpleProtocolFactoryIface
+struct _PurpleProtocolFactoryInterface
 {
 	/*< private >*/
 	GTypeInterface parent_iface;
@@ -674,27 +627,24 @@ struct _PurpleProtocolFactoryIface
 
 	PurpleWhiteboard *(*whiteboard_new)(PurpleAccount *account,
 	                                    const char *who, int state);
-
-	PurpleXfer *(*xfer_new)(PurpleAccount *account, PurpleXferType type,
-	                        const char *who);
 };
 
-#define PURPLE_PROTOCOL_HAS_FACTORY_IFACE(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_FACTORY_IFACE))
-#define PURPLE_PROTOCOL_GET_FACTORY_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_FACTORY_IFACE, \
-                                                PurpleProtocolFactoryIface))
+#define PURPLE_IS_PROTOCOL_FACTORY(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_FACTORY))
+#define PURPLE_PROTOCOL_FACTORY_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_FACTORY, \
+                                                PurpleProtocolFactoryInterface))
 
 /**
  * PURPLE_PROTOCOL_IMPLEMENTS:
  * @protocol: The protocol in which to check
- * @IFACE:    The interface name in caps. e.g. <literal>CLIENT_IFACE</literal>
+ * @IFACE:    The interface name in caps. e.g. <literal>CLIENT</literal>
  * @func:     The function to check
  *
  * Returns: %TRUE if a protocol implements a function in an interface,
  *          %FALSE otherwise.
  */
 #define PURPLE_PROTOCOL_IMPLEMENTS(protocol, IFACE, func) \
-	(PURPLE_PROTOCOL_HAS_##IFACE(protocol) && \
-	 PURPLE_PROTOCOL_GET_##IFACE(protocol)->func != NULL)
+	(PURPLE_IS_PROTOCOL_##IFACE(protocol) && \
+	 PURPLE_PROTOCOL_##IFACE##_GET_IFACE(protocol)->func != NULL)
 
 G_BEGIN_DECLS
 
@@ -745,7 +695,8 @@ PurpleProtocolOptions purple_protocol_get_options(const PurpleProtocol *protocol
  *
  * Returns the user splits of a protocol.
  *
- * Returns: The user splits of the protocol.
+ * Returns: (element-type PurpleAccountUserSplit) (transfer none): The user
+ *          splits of the protocol.
  */
 GList *purple_protocol_get_user_splits(const PurpleProtocol *protocol);
 
@@ -755,7 +706,8 @@ GList *purple_protocol_get_user_splits(const PurpleProtocol *protocol);
  *
  * Returns the account options for a protocol.
  *
- * Returns: The account options for the protocol.
+ * Returns: (element-type PurpleAccountOption) (transfer none): The account
+ *          options for the protocol.
  */
 GList *purple_protocol_get_account_options(const PurpleProtocol *protocol);
 
@@ -778,19 +730,6 @@ PurpleBuddyIconSpec *purple_protocol_get_icon_spec(const PurpleProtocol *protoco
  * Returns: The whiteboard ops of the protocol.
  */
 PurpleWhiteboardOps *purple_protocol_get_whiteboard_ops(const PurpleProtocol *protocol);
-
-/**
- * purple_protocol_override:
- * @protocol: The protocol instance.
- * @flags:    What instance data to delete.
- *
- * Lets derived protocol types override the base type's instance data, such as
- * protocol options, user splits, icon spec, etc.
- * This function is called in the *_init() function of your derived protocol,
- * to delete the parent type's data so you can define your own.
- */
-void purple_protocol_override(PurpleProtocol *protocol,
-		PurpleProtocolOverrideFlags flags);
 
 /**************************************************************************/
 /* Protocol Class API                                                     */
@@ -850,7 +789,7 @@ const char *purple_protocol_client_iface_list_emblem(PurpleProtocol *protocol,
 /**
  * purple_protocol_client_iface_status_text:
  * @protocol: The #PurpleProtocol instance.
- * @buddy: The #ProtocolBuddy instance.
+ * @buddy: The #PurpleBuddy instance.
  *
  * Gets the status text for @buddy.
  *
@@ -1257,73 +1196,6 @@ void purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 		PurpleConnection *connection);
 
 /**************************************************************************/
-/* Protocol Roomlist Interface API                                        */
-/**************************************************************************/
-
-/**
- * purple_protocol_roomlist_iface_get_type:
- *
- * Returns: The #GType for the protocol roomlist interface.
- *
- * Since: 3.0.0
- */
-GType purple_protocol_roomlist_iface_get_type(void);
-
-/**
- * purple_protocol_roomlist_iface_get_list:
- * @protocol: The #PurpleProtocol instance.
- * @gc: The #PurpleAccount to get the roomlist for.
- *
- * Gets the list of rooms for @gc.
- *
- * Returns: (transfer full): The roomlist for @gc.
- *
- * Since: 3.0.0
- */
-PurpleRoomlist *purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
-		PurpleConnection *gc);
-
-/**
- * purple_protocol_roomlist_iface_cancel:
- * @protocol: The #PurpleProtocol instance.
- * @list: The #PurpleRoomlist instance.
- *
- * Requesting a roomlist can take a long time.  This function cancels a request
- * that's already in progress.
- *
- * Since: 3.0.0
- */
-void purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
-		PurpleRoomlist *list);
-
-/**
- * purple_protocol_roomlist_iface_expand_category:
- * @protocol: The #PurpleProtocol instance.
- * @list: The #PurpleRoomlist instance.
- * @category: The category to expand.
- *
- * Expands the given @category for @list.
- *
- * Since: 3.0.0
- */
-void purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
-		PurpleRoomlist *list, PurpleRoomlistRoom *category);
-
-/**
- * purple_protocol_roomlist_iface_room_serialize:
- * @protocol: The #PurpleProtocol instance.
- * @room: The #PurpleRoomlistRoom instance.
- *
- * Serializes @room into a string that will be displayed in a user interface.
- *
- * Returns: (transfer full): The serialized form of @room.
- *
- * Since: 3.0.0
- */
-char *purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
-		PurpleRoomlistRoom *room);
-
-/**************************************************************************/
 /* Protocol Media Interface API                                           */
 /**************************************************************************/
 
@@ -1417,12 +1289,6 @@ PurpleRoomlist *purple_protocol_factory_iface_roomlist_new(PurpleProtocol *proto
 PurpleWhiteboard *purple_protocol_factory_iface_whiteboard_new(PurpleProtocol *protocol,
 		PurpleAccount *account, const char *who, int state);
 
-/**
- * purple_protocol_factory_iface_xfer_new: (skip)
- */
-PurpleXfer *purple_protocol_factory_iface_xfer_new(PurpleProtocol *protocol,
-		PurpleAccount *account, PurpleXferType type, const char *who);
-
 G_END_DECLS
 
-#endif /* _PROTOCOL_H_ */
+#endif /* PURPLE_PROTOCOL_H */

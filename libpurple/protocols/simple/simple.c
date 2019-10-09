@@ -1,6 +1,4 @@
 /**
- * @file simple.c
- *
  * purple
  *
  * Copyright (C) 2005 Thomas Butter <butter@uni-mannheim.de>
@@ -25,19 +23,7 @@
  */
 
 #include "internal.h"
-
-#include "accountopt.h"
-#include "buddylist.h"
-#include "conversation.h"
-#include "core.h"
-#include "debug.h"
-#include "notify.h"
-#include "protocol.h"
-#include "plugins.h"
-#include "util.h"
-#include "version.h"
-#include "network.h"
-#include "xmlnode.h"
+#include <purple.h>
 
 #include "simple.h"
 #include "sipmsg.h"
@@ -67,9 +53,9 @@ static const char *simple_list_icon(PurpleAccount *a, PurpleBuddy *b) {
 }
 
 static gint
-simple_uri_handler_find_account(gconstpointer a, gconstpointer b)
+simple_uri_handler_find_account(PurpleAccount *account,
+                                G_GNUC_UNUSED gconstpointer data)
 {
-	PurpleAccount *account = PURPLE_ACCOUNT(a);
 	const gchar *protocol_id;
 
 	protocol_id = purple_account_get_protocol_id(account);
@@ -104,8 +90,8 @@ simple_uri_handler(const gchar *scheme, const gchar *screenname,
 
 	/* Find online SIMPLE account */
 	accounts = purple_accounts_get_all();
-	account_node = g_list_find_custom(accounts, NULL,
-			simple_uri_handler_find_account);
+	account_node = g_list_find_custom(
+	        accounts, NULL, (GCompareFunc)simple_uri_handler_find_account);
 
 	if (account_node == NULL) {
 		return FALSE;
@@ -2044,6 +2030,7 @@ static void simple_login(PurpleAccount *account)
 		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_INVALID_SETTINGS,
 			_("SIP connect server not specified"));
+		g_strfreev(userserver);
 		return;
 	}
 
@@ -2146,8 +2133,9 @@ static void simple_close(PurpleConnection *gc)
 }
 
 static void
-simple_protocol_init(PurpleProtocol *protocol)
+simple_protocol_init(SIMPLEProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 
@@ -2176,16 +2164,23 @@ simple_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-simple_protocol_class_init(PurpleProtocolClass *klass)
+simple_protocol_class_init(SIMPLEProtocolClass *klass)
 {
-	klass->login        = simple_login;
-	klass->close        = simple_close;
-	klass->status_types = simple_status_types;
-	klass->list_icon    = simple_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = simple_login;
+	protocol_class->close = simple_close;
+	protocol_class->status_types = simple_status_types;
+	protocol_class->list_icon = simple_list_icon;
 }
 
 static void
-simple_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+simple_protocol_class_finalize(G_GNUC_UNUSED SIMPLEProtocolClass *klass)
+{
+}
+
+static void
+simple_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->set_status   = simple_set_status;
 	server_iface->add_buddy    = simple_add_buddy;
@@ -2195,21 +2190,20 @@ simple_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-simple_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+simple_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send        = simple_im_send;
 	im_iface->send_typing = simple_typing;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	SIMPLEProtocol, simple_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        SIMPLEProtocol, simple_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  simple_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      simple_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  simple_protocol_im_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      simple_protocol_im_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -2238,7 +2232,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	simple_protocol_register_type(plugin);
+	simple_protocol_register_type(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(SIMPLE_TYPE_PROTOCOL, error);
 	if (!my_protocol)
