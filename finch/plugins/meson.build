@@ -1,5 +1,5 @@
 if PLUGINS
-	if with_x
+	if x11.found()
 		gntclipboard = library('gntclipboard', 'gntclipboard.c',
 		    dependencies : [x11, libpurple_dep, libfinch_dep, glib],
 		    name_prefix : '',
