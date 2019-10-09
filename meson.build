@@ -22,7 +22,7 @@
 #
 project('pidgin', 'c',
     version : '3.0.0-devel',
-    meson_version : '>=0.37.0')
+    meson_version : '>=0.47.0')
 purple_soversion = 20
 
 parts = meson.project_version().split('-')
@@ -72,10 +72,8 @@ pkgconfig = import('pkgconfig')
 sedpath = find_program('sed')
 
 # Storing build arguments
-if meson.version().version_compare('>=0.42.0')
-	meson.add_postconf_script('mkmesonconf.py')
-	conf.set('HAVE_MESON_CONFIG', true)
-endif
+meson.add_postconf_script('mkmesonconf.py')
+conf.set('HAVE_MESON_CONFIG', true)
 
 # Checks for programs.
 compiler = meson.get_compiler('c')
@@ -290,13 +288,17 @@ else
 endif
 conf.set_quoted('DISPLAY_VERSION', DISPLAY_VERSION)
 
-force_deps = not get_option('missing-dependencies')
+#######################################################################
+# Check for GObject Introspection
+#######################################################################
+
+enable_introspection = dependency('gobject-introspection-1.0', version : '>= 1.30.0',
+                                  required : get_option('introspection')).found()
+conf.set('ENABLE_INTROSPECTION', enable_introspection)
 
 # #######################################################################
 # # Check for GTK+ 2.18 and other things used by the GTK UI
 # #######################################################################
-enable_gestures = get_option('gestures')
-
 # #######################################################################
 # Check Pidgin dependencies
 # #######################################################################
@@ -313,7 +315,7 @@ if get_option('gtkui')
 		talkatu_proj = subproject('talkatu',
 		    default_options : [
 		        'doc=' + get_option('doc').to_string(),
-		        'gobject-introspection=' + get_option('introspection').to_string(),
+		        'gobject-introspection=' + enable_introspection.to_string(),
 		        'nls=' + get_option('nls').to_string(),
 		    ]
 		)
@@ -329,25 +331,15 @@ ENABLE_GTK = get_option('gtkui')
 #######################################################################
 # Check if we should compile with X support
 #######################################################################
-with_x = get_option('x') and not IS_WIN32
-
-if with_x
-	x11 = dependency('x11')
-	if x11.found()
-		conf.set('HAVE_X11', true)
-	else
-		with_x = false
-		if force_deps
-			error('''
-X11 development headers not found.
-Use -Dx=false if you do not need X11 support.
-''')
-		endif
-	endif
+if IS_WIN32
+	x11 = disabler()
 else
-	x11 = []
+	x11 = dependency('x11', required : get_option('x'))
 endif
-if not get_option('gtkui') or not with_x
+conf.set('HAVE_X11', x11.found())
+
+enable_gestures = get_option('gestures')
+if not get_option('gtkui') or not x11.found()
 	enable_gestures = false
 endif
 
@@ -369,59 +361,39 @@ json = dependency('json-glib-1.0', version : '>= 0.14.0')
 # Check for GStreamer
 #######################################################################
 
-enable_gst = get_option('gstreamer')
-if enable_gst
-	gstreamer = dependency('gstreamer-1.0', required : force_deps)
-	if gstreamer.found()
-		conf.set('USE_GSTREAMER', true)
-	else
-		enable_gst = false
-	endif
-else
-	gstreamer = []
-endif
+gstreamer = dependency('gstreamer-1.0', required : get_option('gstreamer'))
+conf.set('USE_GSTREAMER', gstreamer.found())
 
 #######################################################################
 # Check for GStreamer Video
 #######################################################################
-enable_gstvideo = enable_gst and get_option('gstreamer-video')
-if enable_gstvideo
+if gstreamer.found()
 	gstreamer_video = dependency('gstreamer-video-1.0',
-	                             required : false)
-	if gstreamer_video.found()
-		conf.set('USE_GSTVIDEO', true)
-	else
-		enable_gstvideo = false
-	endif
+	                             required : get_option('gstreamer-video'))
+	conf.set('USE_GSTVIDEO', gstreamer_video.found())
 else
-	gstreamer_video = []
+	gstreamer_video = disabler()
 endif
 
 #######################################################################
 # Check for Farstream
 #######################################################################
-if get_option('farstream')
-	farstream = dependency('farstream-0.2', version : '>= 0.2.7',
-	                       required : false)
-	enable_farstream = farstream.found()
-else
-	farstream = []
-	enable_farstream = false
-endif
+farstream = dependency('farstream-0.2', version : '>= 0.2.7',
+                       required : get_option('farstream'))
 
 #######################################################################
 # Check for Voice and Video support
 #######################################################################
-if get_option('vv')
-	if enable_gst and enable_gstvideo and enable_farstream
+if get_option('vv').enabled() or get_option('vv').auto()
+	if gstreamer.found() and gstreamer_video.found() and farstream.found()
 		conf.set('USE_VV', true)
 		enable_vv = true
 	else
-		if force_deps
+		if get_option('vv').enabled()
 			error('''
 Dependencies for voice/video were not met.
 Install the necessary gstreamer and farstream packages first.
-Or use -Dvv=false if you do not need voice/video support.
+Or use -Dvv=disabled if you do not need voice/video support.
 			''')
 		endif
 		enable_vv = false
@@ -447,73 +419,43 @@ endif
 #######################################################################
 # Check for Meanwhile headers (for Sametime)
 #######################################################################
-if get_option('meanwhile')
-	meanwhile = dependency('meanwhile', version : ['>= 1.0.0', '< 2.0.0'], required : force_deps)
-	gmime = dependency('gmime-3.0', version : '>= 3.0.0', required : force_deps)
-	enable_meanwhile = meanwhile.found() and gmime.found()
-else
-	enable_meanwhile = false
-	meanwhile = []
-endif
+meanwhile = dependency('meanwhile', version : ['>= 1.0.0', '< 2.0.0'], required : get_option('meanwhile'))
+gmime = dependency('gmime-3.0', version : '>= 3.0.0', required : get_option('meanwhile'))
+enable_meanwhile = meanwhile.found() and gmime.found()
 
 #######################################################################
 # Check for Native Avahi headers (for Bonjour)
 #######################################################################
 
-enable_avahi = get_option('avahi')
-avahi = []
-if enable_avahi and IS_WIN32
+if IS_WIN32
 	# Just keep enabled.
-elif enable_avahi
+	enable_avahi = get_option('avahi').enabled() or get_option('avahi').auto()
+	avahi = []
+else
 	# Attempt to autodetect Avahi
-	avahi_client = dependency('avahi-client', required : false)
-	avahi_glib = dependency('avahi-glib', required : false)
-	if avahi_client.found() and avahi_glib.found()
-		avahi = [avahi_client, avahi_glib]
-	else
-		enable_avahi = false
-		if force_deps
-			error('''
-avahi development package not found.
-Use -Davahi=false if you do not need avahi (Bonjour) support.
-''')
-		endif
-	endif
+	avahi_client = dependency('avahi-client', required : get_option('avahi'))
+	avahi_glib = dependency('avahi-glib', required : get_option('avahi'))
+	avahi = [avahi_client, avahi_glib]
+	enable_avahi = avahi_client.found() and avahi_glib.found()
 endif
 
 
 #######################################################################
 # Check for SILC client includes and libraries
 #######################################################################
-have_silc = false
-if get_option('silc')
-	silc = dependency('silcclient', version : '>= 1.1', required : false)
-	if silc.found()
-		have_silc = true
-		# SILC Toolkit >= 1.0.1 has a new MIME API
-		conf.set('HAVE_SILCMIME_H', true)
-	else
-		if force_deps
-			error('''
-SILC development package not found.
-Use -Dsilc=false if you do not need SILC support.
-''')
-		endif
-	endif
-endif
+silc = dependency('silcclient', version : '>= 1.1', required : get_option('silc'))
 
 #######################################################################
 # Check for Gadu-Gadu protocol library (libgadu)
 #######################################################################
 
-enable_libgadu = get_option('libgadu')
-if enable_libgadu
-	libgadu = dependency('libgadu', version : '>= 1.12.0', required : false)
-	have_libgadu = libgadu.found()
+libgadu = dependency('libgadu', version : '>= 1.12.0', required : get_option('libgadu'))
 
-	if have_libgadu
-		if not compiler.has_function('gg_is_gpl_compliant', dependencies : libgadu)
-			have_libgadu = false
+if libgadu.found()
+	if not compiler.has_function('gg_is_gpl_compliant', dependencies : libgadu)
+		if get_option('libgadu').auto()
+			libgadu = disabler()
+		else
 			message('''
 libgadu is not compatible with the GPL when compiled with OpenSSL support.
 
@@ -523,15 +465,6 @@ Then rerun this Meson build
 			''')
 		endif
 	endif
-
-	if not have_libgadu and force_deps
-		error('''
-Libgadu development headers not found.
-Use -Dlibgadu=false if you do not need GG (GaduGadu) support.
-''')
-	endif
-else
-	have_libgadu = false
 endif
 
 
@@ -551,9 +484,9 @@ foreach prpl : dynamic_list
 		# Do nothing.
 	elif prpl == 'bonjour' and not enable_avahi
 		# Do nothing.
-	elif prpl == 'silc' and not have_silc
+	elif prpl == 'silc' and not silc.found()
 		# Do nothing.
-	elif prpl == 'gg' and not have_libgadu
+	elif prpl == 'gg' and not libgadu.found()
 		# Do nothing.
 	elif prpl == 'zephyr' and IS_WIN32
 		# Do nothing.
@@ -622,26 +555,6 @@ if get_option('buildtype') != 'plain' and compiler.get_id() == 'gcc'
 			add_project_arguments(newflag, language : 'c')
 		endif
 	endforeach
-
-	if get_option('fortify')
-#		AC_MSG_CHECKING(for FORTIFY_SOURCE support)
-#		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#include <features.h>]], [[
-#			#if !(__GNUC_PREREQ (4, 1) \
-#				|| (defined __GNUC_RH_RELEASE__ && __GNUC_PREREQ (4, 0)) \
-#				|| (defined __GNUC_RH_RELEASE__ && __GNUC_PREREQ (3, 4) \
-#					&& __GNUC_MINOR__ == 4 \
-#					&& (__GNUC_PATCHLEVEL__ > 2 \
-#						|| (__GNUC_PATCHLEVEL__ == 2 && __GNUC_RH_RELEASE__ >= 8))))
-#			#error No FORTIFY_SOURCE support
-#			#endif
-#				return 0;
-#		]])], [
-#			AC_MSG_RESULT(yes)
-#			DEBUG_CFLAGS='$DEBUG_CFLAGS -Wp,-D_FORTIFY_SOURCE=2'
-#		], [
-#			AC_MSG_RESULT(no)
-#		])
-	endif
 endif
 if get_option('buildtype') != 'plain' and SUNCC
 	add_project_arguments('-features=extensions', language : 'c')
@@ -661,12 +574,12 @@ endif
 # Check for Unity and Messaging Menu
 # Remove when Ubuntu 16.04 is EOL
 #######################################################################
-enable_unity = get_option('unity-integration')
+UNITY = [
+	dependency('unity', version : '>= 6.8', required : get_option('unity-integration')),
+	dependency('messaging-menu', version : '>= 12.10', required : get_option('unity-integration'))
+]
+enable_unity = UNITY[0].found() and UNITY[1].found()
 if enable_unity
-	UNITY = [
-		dependency('unity', version : '>= 6.8'),
-		dependency('messaging-menu', version : '>= 12.10')
-	]
 	conf.set('USES_MM_CHAT_SECTION', 'X-MessagingMenu-UsesChatSection=true')
 else
 	conf.set('USES_MM_CHAT_SECTION', '')
@@ -676,22 +589,19 @@ endif
 # Check for Secret Service headers
 #######################################################################
 
-enable_secret_service = get_option('secret-service') and not IS_WIN32
-if enable_secret_service
-	secretservice = dependency('libsecret-1', required : force_deps)
-	if secretservice.found()
-	else
-		enable_secret_service = false
-	endif
+if IS_WIN32
+	secretservice = disabler()
+else
+	secretservice = dependency('libsecret-1', required : get_option('secret-service'))
 endif
 
 #######################################################################
 # Check for KWallet headers
 #######################################################################
 
-enable_kwallet = get_option('kwallet') and not IS_WIN32
-
-if enable_kwallet
+if IS_WIN32
+	kwallet = disabler()
+else
 	# Ensure C++ compiler works
 	add_languages('cpp')
 	cxx_compiler = meson.get_compiler('cpp')
@@ -699,9 +609,9 @@ if enable_kwallet
 
 	qt5 = import('qt5')
 
-	qt5_dep = dependency('qt5', modules: ['Core'])
+	qt5_dep = dependency('qt5', modules: ['Core'], required : get_option('kwallet'))
 
-	kwallet = dependency('KF5Wallet')
+	kwallet = dependency('KF5Wallet', required : get_option('kwallet'))
 endif
 
 #######################################################################
@@ -717,7 +627,7 @@ else
 	gplugin_proj = subproject('gplugin',
 	    default_options : [
 	        'doc=' + get_option('doc').to_string(),
-	        'gobject-introspection=' + get_option('introspection').to_string(),
+	        'gobject-introspection=' + enable_introspection.to_string(),
 	        'nls=' + get_option('nls').to_string(),
 	    ]
 	)
@@ -726,46 +636,14 @@ else
 	gplugin_include_directories = []
 endif
 
-#######################################################################
-# Check for GObject Introspection
-#######################################################################
-
-enable_introspection = get_option('introspection')
-if enable_introspection
-	if dependency('gobject-introspection-1.0', version : '>= 1.30.0',
-	              required : force_deps).found()
-		conf.set('ENABLE_INTROSPECTION', true)
-	else
-		enable_introspection = false
-	endif
-endif
-
-if get_option('plugins')
-	PLUGINS = true
-else
-	PLUGINS = false
-endif
+PLUGINS = get_option('plugins')
 
 #######################################################################
 # Check for Nettle (Crypto Library)
 #######################################################################
 
-enable_nettle = get_option('nettle')
-
-if enable_nettle
-	nettle = dependency('nettle', version : '>= 3.0', required : false)
-	enable_nettle = nettle.found()
-	conf.set('HAVE_NETTLE', enable_nettle)
-
-	if not enable_nettle and force_deps
-		error('''
-Nettle development headers not found
-Use -Dnettle=false if you do not need it.
-''')
-	endif
-else
-	nettle = []
-endif
+nettle = dependency('nettle', version : '>= 3.0', required : get_option('nettle'))
+conf.set('HAVE_NETTLE', nettle.found())
 
 #######################################################################
 # Check for Cyrus-SASL (for xmpp/irc)
@@ -774,22 +652,15 @@ foreach func : ['snprintf', 'connect']
 	conf.set('HAVE_' + func.to_upper(),
 	    compiler.has_function(func))
 endforeach
-enable_cyrus_sasl = get_option('cyrus-sasl')
-if enable_cyrus_sasl
-	sasl = dependency('libsasl2', version : '>= 2.0', required : false)
-	enable_cyrus_sasl = sasl.found()
-	conf.set('HAVE_CYRUS_SASL', enable_cyrus_sasl)
+sasl = dependency('libsasl2', version : '>= 2.0', required : get_option('cyrus-sasl'))
+conf.set('HAVE_CYRUS_SASL', sasl.found())
 
-	if not enable_cyrus_sasl and force_deps
-		error('''
-Cyrus SASL library not found
-Use -Dcyrus-sasl=false if you do not need it.
-''')
-	endif
-else
-	enable_cyrus_sasl = false
-	sasl = []
-endif
+#######################################################################
+# Check for external libzephyr
+#######################################################################
+ext_zephyr = dependency('zephyr', required : get_option('zephyr'))
+EXTERNAL_LIBZEPHYR = ext_zephyr.found()
+conf.set('LIBZEPHYR_EXT', EXTERNAL_LIBZEPHYR)
 
 #######################################################################
 # Check for Kerberos (for Zephyr)
@@ -828,19 +699,6 @@ if not kerberos
 	krb4 = []
 endif
 
-#######################################################################
-# Check for external libzephyr
-#######################################################################
-zephyr = get_option('zephyr')
-if zephyr
-	ext_zephyr = dependency('zephyr', required : force_deps)
-	zephyr = ext_zephyr.found()
-else
-	ext_zephyr = []
-endif
-EXTERNAL_LIBZEPHYR = zephyr
-conf.set('LIBZEPHYR_EXT', EXTERNAL_LIBZEPHYR)
-
 #AC_MSG_CHECKING(for me pot o' gold)
 #AC_MSG_RESULT(no)
 foreach func : ['timegm']
@@ -877,14 +735,6 @@ INSTALL_PIXMAPS = get_option('pixmaps-install')
 
 # check for gtk-doc
 ENABLE_DOC = get_option('doc')
-if ENABLE_DOC
-	if meson.version().version_compare('<0.41.2')
-		if force_deps
-			error('Meson 0.41.2 or newer is required to build documentation.')
-		endif
-		ENABLE_DOC = false
-	endif
-endif
 
 enable_debug = get_option('console-logging')
 conf.set('DEBUG', enable_debug)
@@ -907,26 +757,28 @@ message('pidgin ' + meson.project_version())
 message('')
 message('Build GTK+ UI................. : ' + get_option('gtkui').to_string())
 message('Build console UI.............. : ' + enable_consoleui.to_string())
-message('Build for X11................. : ' + with_x.to_string())
+message('Build for X11................. : ' + x11.found().to_string())
 message('')
 message('Enable Gestures............... : ' + enable_gestures.to_string())
 message('Protocols to build dynamically : @0@'.format(DYNAMIC_PRPLS))
 message('')
-message('Build with GStreamer support.. : ' + enable_gst.to_string())
+message('Build with GStreamer support.. : ' + gstreamer.found().to_string())
 message('Build with voice and video.... : ' + enable_vv.to_string())
-message('Build with GNU Libidn......... : ' + get_option('idn').to_string())
-message('Build with Nettle support..... : ' + enable_nettle.to_string())
-message('Build with Cyrus SASL support. : ' + enable_cyrus_sasl.to_string())
+message('Build with GNU Libidn......... : ' + idn.found().to_string())
+message('Build with Nettle support..... : ' + nettle.found().to_string())
+message('Build with Cyrus SASL support. : ' + sasl.found().to_string())
+message('Use external libzephyr........ : ' + EXTERNAL_LIBZEPHYR.to_string())
+if not EXTERNAL_LIBZEPHYR
 message('Use kerberos 4 with zephyr.... : ' + kerberos.to_string())
-message('Use external libzephyr........ : ' + zephyr.to_string())
+endif
 message('Install pixmaps............... : ' + INSTALL_PIXMAPS.to_string())
 message('Install translations.......... : ' + INSTALL_I18N.to_string())
 message('Has you....................... : yes')
 message('')
 message('Build Unity integration plugin.: ' + enable_unity.to_string())
 message('')
-message('Build with KWallet............ : ' + enable_kwallet.to_string())
-message('Build with Secret Service..... : ' + enable_secret_service.to_string())
+message('Build with KWallet............ : ' + kwallet.found().to_string())
+message('Build with Secret Service..... : ' + secretservice.found().to_string())
 message('')
 message('Build plugins................. : ' + PLUGINS.to_string())
 message('Enable Introspection...........: ' + enable_introspection.to_string())

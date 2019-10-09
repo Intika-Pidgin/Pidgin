@@ -2,11 +2,10 @@
 # Check for Internationalized Domain Name support
 #######################################################################
 
-if get_option('idn')
-	idn = dependency('libidn', version : '>= 0.0.0', required : force_deps)
+idn = dependency('libidn', version : '>= 0.0.0', required : get_option('idn'))
+if idn.found()
 	use_idn = [ '-DUSE_IDN' ]
 else
-	idn = []
 	use_idn = []
 endif
 
@@ -104,7 +103,7 @@ JABBERSOURCES = [
 	'xmpp.h'
 ]
 
-if enable_cyrus_sasl
+if sasl.found()
 	JABBERSOURCES += ['auth_cyrus.c']
 endif
 
