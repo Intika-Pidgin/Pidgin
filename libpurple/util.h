@@ -1244,30 +1244,6 @@ const char *purple_url_encode(const char *str);
 gboolean purple_email_is_valid(const char *address);
 
 /**
- * purple_ip_address_is_valid:
- * @ip: The IP address to validate.
- *
- * Checks if the given IP address is a syntactically valid IPv4 or
- * IPv6 address.
- * If you specifically want to check for an IPv4 address use
- * purple_ipv4_address_is_valid(), or for an IPv6 address use
- * purple_ipv6_address_is_valid().
- *
- * Returns: True if the IP address is syntactically correct.
- */
-gboolean purple_ip_address_is_valid(const char *ip);
-
-/**
- * purple_ipv4_address_is_valid:
- * @ip: The IP address to validate.
- *
- * Checks if the given IP address is a syntactically valid IPv4 address.
- *
- * Returns: True if the IP address is syntactically correct.
- */
-gboolean purple_ipv4_address_is_valid(const char *ip);
-
-/**
  * purple_ipv6_address_is_valid:
  * @ip: The IP address to validate.
  *
