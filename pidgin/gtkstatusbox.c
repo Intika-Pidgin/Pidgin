@@ -1647,7 +1647,7 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 	gtk_box_pack_start(GTK_BOX(status_box->hbox), status_box->vsep, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(status_box->hbox), status_box->arrow, FALSE, FALSE, 0);
 	gtk_widget_show_all(status_box->toggle_button);
-	gtk_button_set_focus_on_click(GTK_BUTTON(status_box->toggle_button), FALSE);
+	gtk_widget_set_focus_on_click(status_box->toggle_button, FALSE);
 
 	text_rend = gtk_cell_renderer_text_new();
 	icon_rend = gtk_cell_renderer_pixbuf_new();

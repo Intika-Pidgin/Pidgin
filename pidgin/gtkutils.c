@@ -167,7 +167,7 @@ pidgin_create_small_button(GtkWidget *image)
 	gtk_button_set_relief(GTK_BUTTON(button), GTK_RELIEF_NONE);
 
 	/* don't allow focus on the close button */
-	gtk_button_set_focus_on_click(GTK_BUTTON(button), FALSE);
+	gtk_widget_set_focus_on_click(button, FALSE);
 
 	gtk_widget_show(image);
 
