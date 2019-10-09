@@ -1241,24 +1241,13 @@ pidgin_status_box_list_position (PidginStatusBox *status_box, int *x, int *y, in
 static gboolean
 popup_grab_on_window(GdkWindow *window, GdkEvent *event)
 {
-	guint32 activate_time = gdk_event_get_time(event);
-	GdkDevice *device = gdk_event_get_device(event);
+	GdkSeat *seat = gdk_event_get_seat(event);
 	GdkGrabStatus status;
 
-	status = gdk_device_grab(device, window, GDK_OWNERSHIP_WINDOW, TRUE,
-	                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-	                         GDK_POINTER_MOTION_MASK | GDK_KEY_PRESS_MASK |
-	                         GDK_KEY_RELEASE_MASK, NULL, activate_time);
+	status = gdk_seat_grab(seat, window, GDK_SEAT_CAPABILITY_ALL, TRUE, NULL,
+	                       event, NULL, NULL);
 	if (status == GDK_GRAB_SUCCESS) {
-		status = gdk_device_grab(gdk_device_get_associated_device(device),
-		                         window, GDK_OWNERSHIP_WINDOW, TRUE,
-		                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-		                         GDK_POINTER_MOTION_MASK | GDK_KEY_PRESS_MASK |
-		                         GDK_KEY_RELEASE_MASK, NULL, activate_time);
-		if (status == GDK_GRAB_SUCCESS)
-			return TRUE;
-		else
-			gdk_device_ungrab(device, activate_time);
+		return TRUE;
 	}
 
 	return FALSE;
@@ -1294,16 +1283,13 @@ pidgin_status_box_popup(PidginStatusBox *box, GdkEvent *event)
 static void
 pidgin_status_box_popdown(PidginStatusBox *box, GdkEvent *event)
 {
-	guint32 time;
-	GdkDevice *device;
+	GdkSeat *seat;
 	gtk_widget_hide(box->popup_window);
 	box->popup_in_progress = FALSE;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), FALSE);
 	gtk_grab_remove(box->popup_window);
-	time = gdk_event_get_time(event);
-	device = gdk_event_get_device(event);
-	gdk_device_ungrab(device, time);
-	gdk_device_ungrab(gdk_device_get_associated_device(device), time);
+	seat = gdk_event_get_seat(event);
+	gdk_seat_ungrab(seat);
 }
 
 static gboolean
