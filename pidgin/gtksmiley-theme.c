@@ -555,8 +555,8 @@ _pidgin_smiley_theme_init(void)
 	probe_dirs = g_new0(gchar*, 3);
 	probe_dirs[0] = g_build_filename(
 		PURPLE_DATADIR, "pixmaps", "pidgin", "emotes", NULL);
-	user_smileys_dir = probe_dirs[1] = g_build_filename(
-		purple_user_dir(), "smileys", NULL);
+	user_smileys_dir = probe_dirs[1] =
+	        g_build_filename(purple_data_dir(), "smileys", NULL);
 
 	if (!g_file_test(user_smileys_dir, G_FILE_TEST_IS_DIR)) {
 		if (g_mkdir(user_smileys_dir, S_IRUSR | S_IWUSR | S_IXUSR) == 0) {
