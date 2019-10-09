@@ -1,6 +1,7 @@
 PROGS = [
     'account_option',
     'attention_type',
+    'circular_buffer',
     'image',
     'protocol_action',
     'protocol_attention',
