@@ -18,7 +18,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#define _PIDGIN_GTKDIALOGS_C_
 
 #include <talkatu.h>
 
@@ -166,6 +165,7 @@ void pidgin_dialogs_plugins_info(void)
 	GList *plugins, *l = NULL;
 	PurplePlugin *plugin = NULL;
 	PurplePluginInfo *info;
+	GPluginPluginInfo *ginfo;
 	PurplePluginExtraCb extra_cb;
 	char *title = g_strdup_printf(_("%s Plugin Information"), PIDGIN_NAME);
 	char *pname = NULL, *authors, *pauthors, *pextra;
@@ -184,10 +184,12 @@ void pidgin_dialogs_plugins_info(void)
 	for(l = plugins; l; l = l->next) {
 		plugin = PURPLE_PLUGIN(l->data);
 		info = purple_plugin_get_info(plugin);
+		ginfo = GPLUGIN_PLUGIN_INFO(info);
 		extra_cb = purple_plugin_info_get_extra_cb(info);
 
-		pname = g_markup_escape_text(purple_plugin_info_get_name(info), -1);
-		authorlist = purple_plugin_info_get_authors(info);
+		pname = g_markup_escape_text(
+		        gplugin_plugin_info_get_name(ginfo), -1);
+		authorlist = gplugin_plugin_info_get_authors(ginfo);
 
 		if (authorlist) {
 			authors = g_strjoinv(", ", (gchar **)authorlist);
@@ -202,10 +204,10 @@ void pidgin_dialogs_plugins_info(void)
 		else
 			pauthors = NULL;
 
-		pver = purple_plugin_info_get_version(info);
-		plicense = purple_plugin_info_get_license_id(info);
-		pwebsite = purple_plugin_info_get_website(info);
-		pid = purple_plugin_info_get_id(info);
+		pver = gplugin_plugin_info_get_version(ginfo);
+		plicense = gplugin_plugin_info_get_license_id(ginfo);
+		pwebsite = gplugin_plugin_info_get_website(ginfo);
+		pid = gplugin_plugin_info_get_id(ginfo);
 		ploadable = !purple_plugin_info_get_error(info);
 		ploaded = purple_plugin_is_loaded(plugin);
 
@@ -215,9 +217,11 @@ void pidgin_dialogs_plugins_info(void)
 			pextra = NULL;
 
 		g_string_append_printf(str, "<dt>%s</dt><dd>", pname);
-		if (pauthors)
+		if (pauthors) {
 			g_string_append_printf(str, "<b>%s:</b> %s<br/>",
-				(n_authors > 1 ? "Authors" : "Author"), pauthors ? pauthors : "");
+			                       (n_authors > 1 ? "Authors" : "Author"),
+			                       pauthors);
+		}
 		g_string_append_printf(str,
 				"<b>Version:</b> %s<br/>"
 				"<b>License:</b> %s<br/>"
@@ -310,14 +314,12 @@ pidgin_dialogs_im(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_blist_get_buddy_list(), _("New Instant Message"),
-						NULL,
-						_("Please enter the username or alias of the person "
-						  "you would like to IM."),
-						fields,
-						_("OK"), G_CALLBACK(pidgin_dialogs_im_cb),
-						_("Cancel"), NULL,
-						NULL, NULL);
+	purple_request_fields(
+	        purple_blist_get_default(), _("New Instant Message"), NULL,
+	        _("Please enter the username or alias of the person "
+	          "you would like to IM."),
+	        fields, _("OK"), G_CALLBACK(pidgin_dialogs_im_cb), _("Cancel"),
+	        NULL, NULL, NULL);
 }
 
 void
@@ -451,14 +453,12 @@ pidgin_dialogs_info(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_blist_get_buddy_list(), _("Get User Info"),
-						NULL,
-						_("Please enter the username or alias of the person "
-						  "whose info you would like to view."),
-						fields,
-						_("OK"), G_CALLBACK(pidgin_dialogs_info_cb),
-						_("Cancel"), NULL,
-						NULL, NULL);
+	purple_request_fields(
+	        purple_blist_get_default(), _("Get User Info"), NULL,
+	        _("Please enter the username or alias of the person "
+	          "whose info you would like to view."),
+	        fields, _("OK"), G_CALLBACK(pidgin_dialogs_info_cb),
+	        _("Cancel"), NULL, NULL, NULL);
 }
 
 static void
@@ -542,14 +542,12 @@ pidgin_dialogs_log(void)
 	purple_request_field_set_required(field, TRUE);
 	purple_request_field_group_add_field(group, field);
 
-	purple_request_fields(purple_blist_get_buddy_list(), _("View User Log"),
-						NULL,
-						_("Please enter the username or alias of the person "
-						  "whose log you would like to view."),
-						fields,
-						_("OK"), G_CALLBACK(pidgin_dialogs_log_cb),
-						_("Cancel"), NULL,
-						NULL, NULL);
+	purple_request_fields(
+	        purple_blist_get_default(), _("View User Log"), NULL,
+	        _("Please enter the username or alias of the person "
+	          "whose log you would like to view."),
+	        fields, _("OK"), G_CALLBACK(pidgin_dialogs_log_cb), _("Cancel"),
+	        NULL, NULL, NULL);
 }
 
 static void

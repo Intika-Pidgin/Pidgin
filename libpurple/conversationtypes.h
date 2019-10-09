@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_CONVERSATION_TYPES_H_
-#define _PURPLE_CONVERSATION_TYPES_H_
+#ifndef PURPLE_CONVERSATION_TYPES_H
+#define PURPLE_CONVERSATION_TYPES_H
 /**
  * SECTION:conversationtypes
  * @section_id: libpurple-conversationtypes
@@ -377,13 +377,11 @@ void purple_chat_conversation_unignore(PurpleChatConversation *chat, const char 
 /**
  * purple_chat_conversation_set_ignored:
  * @chat:    The chat.
- * @ignored: (element-type char*):
- *           The list of ignored users.
+ * @ignored: (element-type utf8): The list of ignored users.
  *
  * Sets the list of ignored users in the chat room.
  *
- * Returns: (element-type char*) (transfer none):
- *          The list passed.
+ * Returns: (element-type utf8) (transfer none): The list passed.
  */
 GList *purple_chat_conversation_set_ignored(PurpleChatConversation *chat, GList *ignored);
 
@@ -393,8 +391,7 @@ GList *purple_chat_conversation_set_ignored(PurpleChatConversation *chat, GList 
  *
  * Returns the list of ignored users in the chat room.
  *
- * Returns: (element-type char*) (transfer none):
- *          The list of ignored users.
+ * Returns: (element-type utf8) (transfer none): The list of ignored users.
  */
 GList *purple_chat_conversation_get_ignored(PurpleChatConversation *chat);
 
@@ -494,20 +491,17 @@ void purple_chat_conversation_add_user(PurpleChatConversation *chat, const char 
 
 /**
  * purple_chat_conversation_add_users:
- * @chat:         The chat.
- * @users: (element-type char*):
- *                The list of users to add.
- * @extra_msgs: (element-type char*) (nullable):
- *                An extra message to display with the join message for each
- *                     user.  This list may be shorter than @users, in which
- *                     case, the users after the end of extra_msgs will not have
- *                     an extra message.  By extension, this means that extra_msgs
- *                     can simply be %NULL and none of the users will have an
- *                     extra message.
- * @flags: (element-type PurpleChatUserFlags):
- *                The list of flags for each user.
- *                This list data should be an int converted to pointer using
- *                GINT_TO_POINTER(flag)
+ * @chat: The chat.
+ * @users: (element-type utf8): The list of users to add.
+ * @extra_msgs: (element-type utf8) (nullable): An extra message to display
+ *              with the join message for each user.  This list may be shorter
+ *              than @users, in which case, the users after the end of
+ *              extra_msgs will not have an extra message.  By extension, this
+ *              means that extra_msgs can simply be %NULL and none of the users
+ *              will have an extra message.
+ * @flags: (element-type PurpleChatUserFlags): The list of flags for each user.
+ *         This list data should be an int converted to pointer using
+ *         GINT_TO_POINTER(flag)
  * @new_arrivals: Decides whether or not to show join notices.
  *
  * Adds a list of users to a chat.
@@ -545,8 +539,7 @@ void purple_chat_conversation_remove_user(PurpleChatConversation *chat,
 /**
  * purple_chat_conversation_remove_users:
  * @chat:   The chat.
- * @users: (element-type char*)
- *          The users that are being removed.
+ * @users: (element-type utf8): The users that are being removed.
  * @reason: The optional reason given for the removal. Can be %NULL.
  *
  * Removes a list of users from a chat, optionally with a single reason.
@@ -765,4 +758,4 @@ gboolean purple_chat_user_is_buddy(PurpleChatUser *cb);
 
 G_END_DECLS
 
-#endif /* _PURPLE_CONVERSATION_TYPES_H_ */
+#endif /* PURPLE_CONVERSATION_TYPES_H */

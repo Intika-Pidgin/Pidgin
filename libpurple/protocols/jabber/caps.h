@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef PURPLE_JABBER_CAPS_H_
-#define PURPLE_JABBER_CAPS_H_
+#ifndef PURPLE_JABBER_CAPS_H
+#define PURPLE_JABBER_CAPS_H
 
 typedef struct _JabberCapsClientInfo JabberCapsClientInfo;
 
@@ -127,4 +127,4 @@ void jabber_caps_broadcast_change(void);
  */
 JabberCapsClientInfo *jabber_caps_parse_client_info(PurpleXmlNode *query);
 
-#endif /* PURPLE_JABBER_CAPS_H_ */
+#endif /* PURPLE_JABBER_CAPS_H */

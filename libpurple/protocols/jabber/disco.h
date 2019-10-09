@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_DISCO_H_
-#define PURPLE_JABBER_DISCO_H_
+
+#ifndef PURPLE_JABBER_DISCO_H
+#define PURPLE_JABBER_DISCO_H
 
 #include "jabber.h"
 
@@ -48,4 +49,4 @@ void jabber_disco_items_server(JabberStream *js);
 void jabber_disco_info_do(JabberStream *js, const char *who,
 		JabberDiscoInfoCallback *callback, gpointer data);
 
-#endif /* PURPLE_JABBER_DISCO_H_ */
+#endif /* PURPLE_JABBER_DISCO_H */

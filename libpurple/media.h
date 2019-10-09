@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_MEDIA_H_
-#define _PURPLE_MEDIA_H_
+#ifndef PURPLE_MEDIA_H
+#define PURPLE_MEDIA_H
 /**
  * SECTION:media
  * @section_id: libpurple-media
@@ -110,7 +110,7 @@ GList *purple_media_get_session_ids(PurpleMedia *media);
  *
  * Gets the PurpleAccount this media session is on.
  *
- * Returns: The account retrieved.
+ * Returns: (transfer none): The account retrieved.
  */
 PurpleAccount *purple_media_get_account(PurpleMedia *media);
 
@@ -185,8 +185,10 @@ void purple_media_stream_info(PurpleMedia *media, PurpleMediaInfoType type,
  *   - "sdes-note"     : The NOTE to put in SDES messages
  *   - "sdes-phone"    : The PHONE to put in SDES messages
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void purple_media_set_params(PurpleMedia *media,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * purple_media_get_available_params:
@@ -196,7 +198,8 @@ void purple_media_set_params(PurpleMedia *media,
  *
  * The list is owned by the #PurpleMedia internals and should NOT be freed.
  *
- * Returns: NULL-terminated array of names of supported parameters.
+ * Returns: (array zero-terminated=1) (transfer none): Names of supported
+ *          parameters.
  */
 const gchar **purple_media_get_available_params(PurpleMedia *media);
 
@@ -229,10 +232,12 @@ gboolean purple_media_param_is_supported(PurpleMedia *media, const gchar *param)
  *
  * Returns: %TRUE The stream was added successfully, %FALSE otherwise.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean purple_media_add_stream(PurpleMedia *media, const gchar *sess_id,
 		const gchar *who, PurpleMediaSessionType type,
 		gboolean initiator, const gchar *transmitter,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * purple_media_get_session_type:
@@ -262,7 +267,8 @@ struct _PurpleMediaManager *purple_media_get_manager(PurpleMedia *media);
  *
  * Gets the codecs from a session.
  *
- * Returns: (element-type PurpleMediaCodec): The retrieved codecs.
+ * Returns: (element-type PurpleMediaCodec) (transfer full): The retrieved
+ *          codecs.
  */
 GList *purple_media_get_codecs(PurpleMedia *media, const gchar *sess_id);
 
@@ -289,7 +295,8 @@ void purple_media_add_remote_candidates(PurpleMedia *media,
  *
  * Gets the local candidates from a stream.
  *
- * Returns: (element-type PurpleMediaCandidate): The local candidates.
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The local
+ *          candidates.
  */
 GList *purple_media_get_local_candidates(PurpleMedia *media,
 					 const gchar *sess_id,
@@ -304,7 +311,7 @@ GList *purple_media_get_local_candidates(PurpleMedia *media,
  *
  * Gets the active local candidates for the stream.
  *
- * Returns: (element-type PurpleMediaCandidate): The active
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The active
  *          candidates retrieved.
  */
 GList *purple_media_get_active_local_candidates(PurpleMedia *media,
@@ -319,7 +326,7 @@ GList *purple_media_get_active_local_candidates(PurpleMedia *media,
  *
  * Gets the active remote candidates for the stream.
  *
- * Returns: (element-type PurpleMediaCandidate): The remote
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The remote
  *          candidates retrieved.
  */
 GList *purple_media_get_active_remote_candidates(PurpleMedia *media,
@@ -515,4 +522,4 @@ gboolean purple_media_send_dtmf(PurpleMedia *media, const gchar *session_id,
 
 G_END_DECLS
 
-#endif  /* _PURPLE_MEDIA_H_ */
+#endif /* PURPLE_MEDIA_H */

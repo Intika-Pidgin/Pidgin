@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef PURPLE_JABBER_USERMOOD_H_
-#define PURPLE_JABBER_USERMOOD_H_
+#ifndef PURPLE_JABBER_USERMOOD_H
+#define PURPLE_JABBER_USERMOOD_H
 
 #include "jabber.h"
 
@@ -47,4 +47,4 @@ jabber_mood_set(JabberStream *js, const char *mood, const char *text);
 
 PurpleMood *jabber_get_moods(PurpleAccount *account);
 
-#endif /* PURPLE_JABBER_USERMOOD_H_ */
+#endif /* PURPLE_JABBER_USERMOOD_H */

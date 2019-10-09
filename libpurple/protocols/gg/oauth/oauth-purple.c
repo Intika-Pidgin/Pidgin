@@ -79,8 +79,6 @@ void ggp_oauth_request(PurpleConnection *gc, ggp_oauth_request_cb callback,
 	const char *url = "http://api.gadu-gadu.pl/request_token";
 	ggp_oauth_data *data;
 
-	g_return_if_fail((method == NULL) == (url == NULL));
-
 	purple_debug_misc("gg", "ggp_oauth_request: requesting token...\n");
 
 	auth = gg_oauth_generate_header(method, url,

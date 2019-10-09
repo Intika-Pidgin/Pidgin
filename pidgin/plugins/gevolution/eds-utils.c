@@ -137,7 +137,7 @@ gevo_run_query_in_source(ESource *source, EBookQuery *query)
 			/* Break off the first contact and free the rest. */
 			cards->next = NULL;
 			cards2->prev = NULL;
-			g_list_foreach(cards2, (GFunc)g_object_unref, NULL);
+			g_list_free_full(cards2, g_object_unref);
 		}
 
 		/* Free the whole list. */

@@ -82,34 +82,6 @@ typedef gboolean (*PidginFilterBuddyCompletionEntryFunc) (const PidginBuddyCompl
 G_BEGIN_DECLS
 
 /**
- * pidgin_setup_webview:
- * @webview: The gtkwebview widget to setup.
- *
- * Sets up a gtkwebview widget and sets the default signal handlers.
- */
-void pidgin_setup_webview(GtkWidget *webview);
-
-/**
- * pidgin_create_webview:
- * @editable: %TRUE if this webview should be editable.  If this is
- *        %FALSE, then the toolbar will NOT be created.  If this webview
- *        should be read-only at first, but may become editable later, then
- *        pass in %TRUE here and then manually call
- *        webkit_web_view_set_editable() later.
- * @webview_ret: A pointer to a pointer to a GtkWidget.  This pointer
- *        will be set to the webview when this function exits.
- * @sw_ret: This will be filled with a pointer to the scrolled window
- *        widget which contains the webview.
- *
- * Create an PidginWebView widget and associated PidginWebViewToolbar widget.  This
- * function puts both widgets in a nice GtkFrame.  They're separated by an
- * attractive GtkSeparator.
- *
- * Returns: (transfer full): The GtkFrame containing the toolbar and webview.
- */
-GtkWidget *pidgin_create_webview(gboolean editable, GtkWidget **webview_ret, GtkWidget **sw_ret);
-
-/**
  * pidgin_create_small_button:
  * @image:   A button image.
  *
@@ -303,7 +275,7 @@ GtkWidget *pidgin_protocol_option_menu_new(const char *id,
 /**
  * pidgin_protocol_option_menu_get_selected:
  * @optmenu: The drop-down option menu created by
- *        pidgin_account_option_menu_new.
+ *           pidgin_protocol_option_menu_new().
  *
  * Gets the currently selected protocol from a protocol drop down box.
  *
@@ -312,57 +284,21 @@ GtkWidget *pidgin_protocol_option_menu_new(const char *id,
 const char *pidgin_protocol_option_menu_get_selected(GtkWidget *optmenu);
 
 /**
- * pidgin_account_option_menu_new:
- * @default_account: The account to select by default.
- * @show_all: Whether or not to show all accounts, or just
- *            active accounts.
- * @cb: (scope call): The callback to call when an account is selected.
- * @filter_func: (scope call): A function for checking if an account should
- *               be shown. This can be NULL.
- * @user_data: Data to pass to the callback function.
- *
- * Creates a drop-down option menu filled with accounts.
- *
- * Returns: (transfer full): The drop-down option menu.
- */
-GtkWidget *pidgin_account_option_menu_new(PurpleAccount *default_account,
-		gboolean show_all, GCallback cb,
-		PurpleFilterAccountFunc filter_func, gpointer user_data);
-
-/**
- * pidgin_account_option_menu_get_selected:
- * @optmenu: The drop-down option menu created by
- *        pidgin_account_option_menu_new.
- *
- * Gets the currently selected account from an account drop down box.
- *
- * Returns: (transfer none): Returns the PurpleAccount that is currently selected.
- */
-PurpleAccount *pidgin_account_option_menu_get_selected(GtkWidget *optmenu);
-
-/**
- * pidgin_account_option_menu_set_selected:
- * @optmenu: The GtkOptionMenu created by
- *        pidgin_account_option_menu_new.
- * @account: The PurpleAccount to select.
- *
- * Sets the currently selected account for an account drop down box.
- */
-void pidgin_account_option_menu_set_selected(GtkWidget *optmenu, PurpleAccount *account);
-
-/**
  * pidgin_setup_screenname_autocomplete:
  * @entry:       The GtkEntry on which to setup autocomplete.
- * @optmenu:     A menu for accounts, returned by pidgin_account_option_menu_new().
- *                    If @optmenu is not %NULL, it'll be updated when a username is chosen
- *                    from the autocomplete list.
+ * @chooser: A menu for accounts, returned by pidgin_account_chooser_new(). If
+ *           @chooser is not %NULL, it'll be updated when a username is chosen
+ *           from the autocomplete list.
  * @filter_func: (scope call): A function for checking if an autocomplete entry
  *                    should be shown. This can be %NULL.
  * @user_data:  The data to be passed to the filter_func function.
  *
- * Add autocompletion of screenames to an entry, supporting a filtering function.
+ * Add autocompletion of screenames to an entry, supporting a filtering
+ * function.
  */
-void pidgin_setup_screenname_autocomplete(GtkWidget *entry, GtkWidget *optmenu, PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data);
+void pidgin_setup_screenname_autocomplete(
+        GtkWidget *entry, GtkWidget *chooser,
+        PidginFilterBuddyCompletionEntryFunc filter_func, gpointer user_data);
 
 /**
  * pidgin_screenname_autocomplete_default_filter:
@@ -602,7 +538,9 @@ void pidgin_clear_cursor(GtkWidget *widget);
  *
  * Returns: (transfer full): The file dialog
  */
-GtkWidget *pidgin_buddy_icon_chooser_new(GtkWindow *parent, void(*callback)(const char*,gpointer), gpointer data);
+GtkFileChooserNative *pidgin_buddy_icon_chooser_new(
+        GtkWindow *parent, void (*callback)(const char *, gpointer),
+        gpointer data);
 
 /**
  * pidgin_convert_buddy_icon:
@@ -919,20 +857,6 @@ pidgin_pixbuf_scale_down(GdkPixbuf *src, guint max_width, guint max_height,
  * Returns: (transfer full): A scrolled window with @child packed inside of it.
  */
 GtkWidget *pidgin_make_scrollable(GtkWidget *child, GtkPolicyType hscrollbar_policy, GtkPolicyType vscrollbar_policy, GtkShadowType shadow_type, int width, int height);
-
-/**
- * pidgin_utils_init:
- *
- * Initialize some utility functions.
- */
-void pidgin_utils_init(void);
-
-/**
- * pidgin_utils_uninit:
- *
- * Uninitialize some utility functions.
- */
-void pidgin_utils_uninit(void);
 
 G_END_DECLS
 

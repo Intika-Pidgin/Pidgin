@@ -30,6 +30,8 @@
 
 #include "xfer.h"
 
+G_BEGIN_DECLS
+
 /**
  * PidginXferDialog:
  *
@@ -38,22 +40,13 @@
  * The structure is opaque, as nobody should be touching anything inside of
  * it.
  */
-typedef struct _PidginXferDialog PidginXferDialog;
-
 #define PIDGIN_TYPE_XFER_DIALOG (pidgin_xfer_dialog_get_type())
-
-G_BEGIN_DECLS
+G_DECLARE_FINAL_TYPE(PidginXferDialog, pidgin_xfer_dialog, PIDGIN, XFER_DIALOG,
+                     GtkDialog)
 
 /**************************************************************************/
 /* GTK+ File Transfer Dialog API                                          */
 /**************************************************************************/
-
-/**
- * pidgin_xfer_dialog_get_type:
- *
- * Returns: The #GType for the #PidginXferDialog boxed structure.
- */
-GType pidgin_xfer_dialog_get_type(void);
 
 /**
  * pidgin_xfer_dialog_new:

@@ -416,7 +416,7 @@ void winpidgin_init(void) {
 	if (MySetLogFile) {
 		gchar *debug_dir, *locale_debug_dir;
 
-		debug_dir = g_build_filename(purple_user_dir(), "pidgin.RPT", NULL);
+		debug_dir = g_build_filename(purple_cache_dir(), "pidgin.RPT", NULL);
 		locale_debug_dir = g_locale_from_utf8(debug_dir, -1, NULL, NULL, NULL);
 
 		purple_debug_info("winpidgin", "Setting exchndl.dll LogFile to %s\n", debug_dir);

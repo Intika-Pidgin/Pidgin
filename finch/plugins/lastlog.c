@@ -1,6 +1,4 @@
 /**
- * @file lastlog.c Lastlog plugin for purple-text.
- *
  * Copyright (C) 2006 Sadrul Habib Chowdhury <sadrul@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -17,7 +15,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-
 
 #define PLUGIN_STATIC_NAME	GntLastlog
 

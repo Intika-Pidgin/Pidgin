@@ -1,4 +1,4 @@
-/**
+/*
  * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
@@ -19,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 #include <locale.h>
 #include "finch.h"
@@ -230,7 +231,7 @@ init_libpurple(int argc, char **argv)
 		abort();
 	}
 
-	path = g_build_filename(purple_user_dir(), "plugins", NULL);
+	path = g_build_filename(purple_data_dir(), "plugins", NULL);
 	if (g_mkdir(path, S_IRUSR | S_IWUSR | S_IXUSR) != 0 && errno != EEXIST)
 		fprintf(stderr, "Couldn't create plugins dir\n");
 	purple_plugins_add_search_path(path);

@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -17,8 +18,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
- *
  */
+
 #include <internal.h>
 
 #include NCURSES_HEADER
@@ -168,7 +169,7 @@ signed_on_off_cb(PurpleConnection *gc, gpointer user_data)
 static void
 setup_buddy_list_suggestion(GntEntry *entry, gboolean offline)
 {
-	PurpleBlistNode *node = purple_blist_get_root();
+	PurpleBlistNode *node = purple_blist_get_default_root();
 	for (; node; node = purple_blist_node_next(node, offline)) {
 		if (!PURPLE_IS_BUDDY(node))
 			continue;

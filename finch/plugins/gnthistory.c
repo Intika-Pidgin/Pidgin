@@ -1,6 +1,4 @@
 /**
- * @file gnthistory.c Show log from previous conversation
- *
  * Copyright (C) 2006 Sadrul Habib Chowdhury <sadrul@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -129,8 +127,7 @@ static void historize(PurpleConversation *c)
 
 	purple_conversation_write_system_message(c, "<hr>", mflag);
 
-	g_list_foreach(logs, (GFunc)purple_log_free, NULL);
-	g_list_free(logs);
+	g_list_free_full(logs, (GDestroyNotify)purple_log_free);
 }
 
 static void

@@ -1,6 +1,4 @@
 /**
- * @file gnttinyurl.c
- *
  * Copyright (C) 2009 Richard Nelson <wabz@whatsbeef.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -18,7 +16,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-
 #include "internal.h"
 #include <glib.h>
 
@@ -26,7 +23,6 @@
 #define PREFS_BASE          "/plugins/gnt/tinyurl"
 #define PREF_LENGTH  PREFS_BASE "/length"
 #define PREF_URL  PREFS_BASE "/url"
-
 
 #include <conversation.h>
 #include <http.h>
@@ -241,11 +237,6 @@ static void url_fetched(PurpleHttpConnection *http_conn,
 	purple_debug_info("TinyURL", "Conversation no longer exists... :(\n");
 }
 
-static void free_urls(gpointer data, gpointer null)
-{
-	g_free(data);
-}
-
 static gboolean writing_msg(PurpleConversation *conv, PurpleMessage *msg, gpointer _unused)
 {
 	GString *t;
@@ -256,9 +247,7 @@ static gboolean writing_msg(PurpleConversation *conv, PurpleMessage *msg, gpoint
 		return FALSE;
 
 	urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
-	if (urls != NULL) /* message was cancelled somewhere? Reset. */
-		g_list_foreach(urls, free_urls, NULL);
-	g_list_free(urls);
+	g_list_free_full(urls, g_free);
 	urls = extract_urls(purple_message_get_contents(msg));
 	if (!urls)
 		return FALSE;
@@ -322,7 +311,7 @@ process_urls(PurpleConversation *conv, GList *urls)
 	for (iter = urls, c = 1; iter; iter = iter->next, c++) {
 		int i;
 		CbInfo *cbdata;
-		gchar *url, *str;
+		gchar *url;
 		gchar *original_url;
 		const gchar *tiny_url;
 
@@ -351,9 +340,8 @@ process_urls(PurpleConversation *conv, GList *urls)
 			url = g_strdup_printf("%s%s", purple_prefs_get_string(PREF_URL), purple_url_encode(original_url));
 		}
 		purple_http_get(NULL, url_fetched, cbdata, url);
-		str = g_strdup_printf(_("\nFetching TinyURL..."));
-		gnt_text_view_append_text_with_tag((tv), str, GNT_TEXT_FLAG_DIM, cbdata->tag);
-		g_free(str);
+		gnt_text_view_append_text_with_tag((tv), _("\nFetching TinyURL..."),
+		                                   GNT_TEXT_FLAG_DIM, cbdata->tag);
 		if (i == 0)
 			gnt_text_view_scroll(tv, 0);
 		g_free(iter->data);
@@ -366,9 +354,7 @@ static void
 free_conv_urls(PurpleConversation *conv)
 {
 	GList *urls = g_object_get_data(G_OBJECT(conv), "TinyURLs");
-	if (urls)
-		g_list_foreach(urls, free_urls, NULL);
-	g_list_free(urls);
+	g_list_free_full(urls, g_free);
 }
 
 static void

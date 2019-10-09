@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_CORE_H_
-#define _PURPLE_CORE_H_
+#ifndef PURPLE_CORE_H
+#define PURPLE_CORE_H
 /**
  * SECTION:core
  * @section_id: libpurple-core
@@ -207,8 +207,8 @@ PurpleCoreUiOps *purple_core_get_ui_ops(void);
  *   </tbody></tgroup>
  * </informaltable>
  *
- * Returns: A GHashTable with strings for keys and values.  This
- * hash table must not be freed and should not be modified.
+ * Returns: (transfer none): A GHashTable with strings for keys and values.
+ *          This hash table should not be modified.
  *
  */
 GHashTable* purple_core_get_ui_info(void);
@@ -228,7 +228,7 @@ gboolean purple_core_migrate_to_xdg_base_dirs(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_CORE_H_ */
+#endif /* PURPLE_CORE_H */
 
 /*
 

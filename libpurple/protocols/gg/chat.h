@@ -25,8 +25,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef _GGP_CHAT_H
-#define _GGP_CHAT_H
+
+#ifndef PURPLE_GG_CHAT_H
+#define PURPLE_GG_CHAT_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -55,4 +56,4 @@ void ggp_chat_got_message(PurpleConnection *gc, uint64_t chat_id,
 
 PurpleRoomlist * ggp_chat_roomlist_get_list(PurpleConnection *gc);
 
-#endif /* _GGP_CHAT_H */
+#endif /* PURPLE_GG_CHAT_H */

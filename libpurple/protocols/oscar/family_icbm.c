@@ -172,13 +172,13 @@ error(OscarData *od, FlapConnection *conn, aim_module_t *mod, FlapFrame *frame, 
 
 	if (!purple_conversation_present_error(bn, purple_connection_get_account(gc), buf)) {
 		g_free(buf);
-		if (errcode != 0 && errcode < errcodereasonlen)
+		if (errcode != 0 && errcode < errcodereasonlen) {
 			buf = g_strdup_printf(_("Unable to send message to %s: %s (%s)"),
-			                      bn ? bn : "(unknown)", reason_str,
-			                      _(errcodereason[errcode]));
-		else
-			buf = g_strdup_printf(_("Unable to send message to %s: %s"),
-			                      bn ? bn : "(unknown)", reason_str);
+			                      bn, reason_str, _(errcodereason[errcode]));
+		} else {
+			buf = g_strdup_printf(_("Unable to send message to %s: %s"), bn,
+			                      reason_str);
+		}
 		purple_notify_error(od->gc, NULL, buf, reason_str,
 			purple_request_cpar_from_connection(od->gc));
 	}
@@ -424,7 +424,7 @@ int aim_im_sendch2_chatinvite(OscarData *od, const char *bn, const char *msg, gu
 	snacid = aim_cachesnac(od, SNAC_FAMILY_ICBM, 0x0006, 0x0000, bn, strlen(bn)+1);
 
 	/* XXX should be uncached by an unwritten 'invite accept' handler */
-	priv = g_malloc(sizeof(struct aim_invite_priv));
+	priv = g_new0(struct aim_invite_priv, 1);
 	priv->bn = g_strdup(bn);
 	priv->roomname = g_strdup(roomname);
 	priv->exchange = exchange;

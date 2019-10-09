@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_BUDDY_H_
-#define PURPLE_JABBER_BUDDY_H_
+
+#ifndef PURPLE_JABBER_BUDDY_H
+#define PURPLE_JABBER_BUDDY_H
 
 typedef struct _JabberBuddy JabberBuddy;
 
@@ -124,4 +125,4 @@ const gchar *
 jabber_resource_get_identity_category_type(const JabberBuddyResource *jbr,
 	const gchar *category);
 
-#endif /* PURPLE_JABBER_BUDDY_H_ */
+#endif /* PURPLE_JABBER_BUDDY_H */

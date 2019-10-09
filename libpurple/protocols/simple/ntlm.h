@@ -1,4 +1,5 @@
-/* purple
+/*
+ * purple
  *
  * Copyright (C) 2005, Thomas Butter <butter@uni-mannheim.de>
  *
@@ -20,8 +21,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_NTLM_H
-#define _PURPLE_NTLM_H
+#ifndef PURPLE_SIMPLE_NTLM_H
+#define PURPLE_SIMPLE_NTLM_H
 
 G_BEGIN_DECLS
 
@@ -55,4 +56,4 @@ gchar *purple_ntlm_gen_type3(const gchar *username, const gchar *passw, const gc
 
 G_END_DECLS
 
-#endif /* _PURPLE_NTLM_H */
+#endif /* PURPLE_SIMPLE_NTLM_H */

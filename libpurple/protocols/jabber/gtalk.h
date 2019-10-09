@@ -19,8 +19,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _GTALK_H_
-#define _GTALK_H_
+
+#ifndef PURPLE_JABBER_GTALK_H
+#define PURPLE_JABBER_GTALK_H
 
 #include "jabber.h"
 
@@ -44,11 +45,12 @@ typedef struct
 /**
  * Registers the GTalkProtocol type in the type system.
  */
-void gtalk_protocol_register_type(PurplePlugin *plugin);
+G_GNUC_INTERNAL
+void gtalk_protocol_register(PurplePlugin *plugin);
 
 /**
  * Returns the GType for the GTalkProtocol object.
  */
 G_MODULE_EXPORT GType gtalk_protocol_get_type(void);
 
-#endif /* _GTALK_H_ */
+#endif /* PURPLE_JABBER_GTALK_H */

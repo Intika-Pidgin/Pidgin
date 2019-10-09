@@ -48,7 +48,8 @@ struct _GtkTickerChild
 
 G_MODULE_EXPORT
 G_DECLARE_FINAL_TYPE(GtkTicker, gtk_ticker, GTK, TICKER, GtkContainer)
-void       gtk_ticker_register_type     (PurplePlugin *plugin);
+G_GNUC_INTERNAL
+void gtk_ticker_register(PurplePlugin *plugin);
 
 GtkWidget* gtk_ticker_new               (void);
 void       gtk_ticker_add               (GtkTicker       *ticker,

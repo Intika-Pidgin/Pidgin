@@ -83,7 +83,8 @@ fb_get_group(gboolean friend)
 		grp = purple_group_new(title);
 		node = NULL;
 
-		for (n = purple_blist_get_root(); n != NULL; n = n->next) {
+		for (n = purple_blist_get_default_root(); n != NULL;
+		     n = n->next) {
 			node = n;
 		}
 
@@ -1535,8 +1536,9 @@ fb_cmd_leave(PurpleConversation *conv, const gchar *cmd, gchar **args,
 }
 
 static void
-facebook_protocol_init(PurpleProtocol *protocol)
+facebook_protocol_init(FacebookProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	GList *opts = NULL;
 	PurpleAccountOption *opt;
 
@@ -1572,16 +1574,23 @@ facebook_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-facebook_protocol_class_init(PurpleProtocolClass *klass)
+facebook_protocol_class_init(FacebookProtocolClass *klass)
 {
-	klass->login        = fb_login;
-	klass->close        = fb_close;
-	klass->status_types = fb_status_types;
-	klass->list_icon    = fb_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = fb_login;
+	protocol_class->close = fb_close;
+	protocol_class->status_types = fb_status_types;
+	protocol_class->list_icon = fb_list_icon;
 }
 
 static void
-facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
+facebook_protocol_class_finalize(G_GNUC_UNUSED FacebookProtocolClass *klass)
+{
+}
+
+static void
+facebook_protocol_client_iface_init(PurpleProtocolClientInterface *iface)
 {
 	iface->tooltip_text    = fb_client_tooltip_text;
 	iface->blist_node_menu = fb_client_blist_node_menu;
@@ -1589,20 +1598,20 @@ facebook_protocol_client_iface_init(PurpleProtocolClientIface *iface)
 }
 
 static void
-facebook_protocol_server_iface_init(PurpleProtocolServerIface *iface)
+facebook_protocol_server_iface_init(PurpleProtocolServerInterface *iface)
 {
 	iface->set_status = fb_server_set_status;
 }
 
 static void
-facebook_protocol_im_iface_init(PurpleProtocolIMIface *iface)
+facebook_protocol_im_iface_init(PurpleProtocolIMInterface *iface)
 {
 	iface->send        = fb_im_send;
 	iface->send_typing = fb_im_send_typing;
 }
 
 static void
-facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
+facebook_protocol_chat_iface_init(PurpleProtocolChatInterface *iface)
 {
 	iface->info          = fb_chat_info;
 	iface->info_defaults = fb_chat_info_defaults;
@@ -1614,26 +1623,25 @@ facebook_protocol_chat_iface_init(PurpleProtocolChatIface *iface)
 }
 
 static void
-facebook_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *iface)
+facebook_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *iface)
 {
 	iface->get_list = fb_roomlist_get_list;
 	iface->cancel   = fb_roomlist_cancel;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	FacebookProtocol, facebook_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        FacebookProtocol, facebook_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  facebook_protocol_client_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  facebook_protocol_server_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  facebook_protocol_im_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-	                                  facebook_protocol_chat_iface_init)
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-	                                  facebook_protocol_roomlist_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      facebook_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      facebook_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      facebook_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      facebook_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      facebook_protocol_roomlist_iface_init));
 
 static void
 fb_cmds_register(void)
@@ -1693,7 +1701,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	facebook_protocol_register_type(plugin);
+	facebook_protocol_register_type(G_TYPE_MODULE(plugin));
 	fb_protocol = purple_protocols_add(FACEBOOK_TYPE_PROTOCOL, error);
 
 	if (fb_protocol == NULL) {

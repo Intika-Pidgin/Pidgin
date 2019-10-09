@@ -14,14 +14,7 @@
 
 static Code_t Z_RetSubs(ZNotice_t *notice, int *nsubs, Z_AuthProc auth_routine);
 
-/* Need STDC definition when possible for unsigned short argument. */
-#ifdef __STDC__
 Code_t ZRetrieveSubscriptions(unsigned short port, int *nsubs)
-#else
-Code_t ZRetrieveSubscriptions(port,nsubs)
-	unsigned short port;
-	int *nsubs;
-#endif
 {
 	int retval;
 	ZNotice_t notice;
@@ -126,7 +119,7 @@ static Code_t Z_RetSubs(notice, nsubs, auth_routine)
 		__subscriptions_list = (ZSubscription_t *)
 			malloc((unsigned)(__subscriptions_num*
 					  sizeof(ZSubscription_t)));
-		if (__subscriptions_num && !__subscriptions_list) {
+		if (!__subscriptions_list) {
 			ZFreeNotice(&retnotice);
 			return (ENOMEM);
 		}

@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FINCH_H_
-#define _FINCH_H_
+#ifndef FINCH_H
+#define FINCH_H
+
 /**
  * SECTION:finch
  * @section_id: finch-finch
@@ -34,14 +36,16 @@
 
 #define FINCH_PREFS_ROOT "/finch"
 
-#define FINCH_GET_DATA(obj)        (obj)->ui_data
-#define FINCH_SET_DATA(obj, data)  (obj)->ui_data = data
-
 /**
  * finch_start:
+ * @argc: Address of the argc parameter of your main() function (or 0 if argv
+ *        is %NULL). This will be changed if any arguments were handled.
+ * @argv: Address of the argv parameter of main(), or %NULL. Any options
+ *        understood by Finch are stripped before return.
  *
  * Start finch with the given command line arguments.
  */
 gboolean finch_start(int *argc, char ***argv);
 
-#endif
+#endif /* FINCH_H */
+

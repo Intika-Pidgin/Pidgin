@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_CONVERSATION_H_
-#define _PURPLE_CONVERSATION_H_
+#ifndef PURPLE_CONVERSATION_H
+#define PURPLE_CONVERSATION_H
 /**
  * SECTION:conversation
  * @section_id: libpurple-conversation
@@ -619,10 +619,9 @@ void purple_conversation_send_confirm(PurpleConversation *conv, const char *mess
  *
  * Retrieves the extended menu items for the conversation.
  *
- * Returns: (element-type PurpleActionMenu):
- *          A list of PurpleActionMenu items, harvested by the
- *          chat-extended-menu signal. The list and the menuaction
- *          items should be freed by the caller.
+ * Returns: (element-type PurpleActionMenu) (transfer full): The extended menu
+ *          items for a conversation, as harvested by the chat-extended-menu
+ *          signal.
  */
 GList * purple_conversation_get_extended_menu(PurpleConversation *conv);
 
@@ -647,7 +646,7 @@ gboolean purple_conversation_do_command(PurpleConversation *conv,
  *
  * Gets the maximum message size in bytes for the conversation.
  *
- * See #PurpleProtocolClientIface's <literal>get_max_message_size</literal>.
+ * See #PurpleProtocolClientInterface's <literal>get_max_message_size</literal>.
  *
  * Returns: Maximum message size, 0 if unspecified, -1 for infinite.
  */
@@ -708,4 +707,4 @@ gboolean purple_conversation_present_error(const char *who, PurpleAccount *accou
 
 G_END_DECLS
 
-#endif /* _PURPLE_CONVERSATION_H_ */
+#endif /* PURPLE_CONVERSATION_H */

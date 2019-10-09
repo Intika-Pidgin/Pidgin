@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_ROSTER_H
-#define _GGP_ROSTER_H
+#ifndef PURPLE_GG_ROSTER_H
+#define PURPLE_GG_ROSTER_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -70,4 +70,4 @@ void ggp_roster_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 void ggp_roster_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 	PurpleGroup *group);
 
-#endif /* _GGP_ROSTER_H */
+#endif /* PURPLE_GG_ROSTER_H */

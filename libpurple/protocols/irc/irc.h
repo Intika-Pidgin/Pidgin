@@ -1,6 +1,4 @@
 /**
- * @file irc.h
- *
  * purple
  *
  * Copyright (C) 2003, 2012 Ethan Blanton <elb@pidgin.im>
@@ -20,8 +18,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_IRC_H
-#define _PURPLE_IRC_H
+#ifndef PURPLE_IRC_IRC_H
+#define PURPLE_IRC_IRC_H
 
 #include <glib.h>
 #include <gmodule.h>
@@ -30,10 +28,7 @@
 #include <sasl/sasl.h>
 #endif
 
-#include "circularbuffer.h"
-#include "xfer.h"
-#include "queuedoutputstream.h"
-#include "roomlist.h"
+#include <purple.h>
 
 #define IRC_TYPE_PROTOCOL             (irc_protocol_get_type())
 #define IRC_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), IRC_TYPE_PROTOCOL, IRCProtocol))
@@ -238,7 +233,13 @@ int irc_cmd_wallops(struct irc_conn *irc, const char *cmd, const char *target, c
 int irc_cmd_whois(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 int irc_cmd_whowas(struct irc_conn *irc, const char *cmd, const char *target, const char **args);
 
+#define IRC_TYPE_XFER (irc_xfer_get_type())
+G_DECLARE_FINAL_TYPE(IrcXfer, irc_xfer, IRC, XFER, PurpleXfer);
+
+void irc_xfer_register(GTypeModule *module);
+
 PurpleXfer *irc_dccsend_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 void irc_dccsend_send_file(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
 void irc_dccsend_recv(struct irc_conn *irc, const char *from, const char *msg);
-#endif /* _PURPLE_IRC_H */
+
+#endif /* PURPLE_IRC_IRC_H */

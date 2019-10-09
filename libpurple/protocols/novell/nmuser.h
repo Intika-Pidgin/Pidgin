@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_USER_H__
-#define __NM_USER_H__
+#ifndef PURPLE_NOVELL_NMUSER_H
+#define PURPLE_NOVELL_NMUSER_H
 
 #include <glib.h>
 #include <stdio.h>
@@ -677,4 +677,4 @@ char *nm_typed_to_dotted(const char *typed);
  */
 const char *nm_error_to_string (NMERR_T err);
 
-#endif
+#endif /* PURPLE_NOVELL_NMUSER_H */

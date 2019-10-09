@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_IDLE_H_
-#define _GNT_IDLE_H_
+#ifndef FINCH_IDLE_H
+#define FINCH_IDLE_H
+
 /**
  * SECTION:gntidle
  * @section_id: finch-gntidle
@@ -43,4 +45,5 @@
  */
 PurpleIdleUiOps *finch_idle_get_ui_ops(void);
 
-#endif /* _Finch_IDLE_H_ */
+#endif /* FINCH_IDLE_H */
+

@@ -6,7 +6,7 @@ if get_option('consoleui')
 	else
 		libgnt_proj = subproject('libgnt',
 		    default_options : [
-		        'introspection=' + get_option('introspection').to_string(),
+		        'introspection=' + enable_introspection.to_string(),
 		    ]
 		)
 		libgnt_dep = libgnt_proj.get_variable('libgnt_dep')
@@ -196,7 +196,7 @@ if enable_consoleui
 
 		gnome.generate_gir(libfinch,
 		    sources : introspection_sources,
-		    includes : [libgnt_gir[0], libpurple_gir[0]],
+		    includes : [libgnt_gir[0], libpurple_gir[0], gplugin_gir],
 		    namespace : 'Finch',
 		    symbol_prefix : 'finch',
 		    identifier_prefix : 'Finch',

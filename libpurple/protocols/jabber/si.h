@@ -21,12 +21,18 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_SI_H_
-#define PURPLE_JABBER_SI_H_
+
+#ifndef PURPLE_JABBER_SI_H
+#define PURPLE_JABBER_SI_H
 
 #include "xfer.h"
 
 #include "jabber.h"
+
+G_BEGIN_DECLS
+
+#define JABBER_TYPE_SI_XFER (jabber_si_xfer_get_type())
+G_DECLARE_FINAL_TYPE(JabberSIXfer, jabber_si_xfer, JABBER, SI_XFER, PurpleXfer);
 
 void jabber_bytestreams_parse(JabberStream *js, const char *from,
                               JabberIqType type, const char *id, PurpleXmlNode *query);
@@ -34,7 +40,12 @@ void jabber_si_parse(JabberStream *js, const char *from, JabberIqType type,
                      const char *id, PurpleXmlNode *si);
 PurpleXfer *jabber_si_new_xfer(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who);
 void jabber_si_xfer_send(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who, const char *file);
+
+void jabber_si_xfer_register(GTypeModule *module);
+
 void jabber_si_init(void);
 void jabber_si_uninit(void);
 
-#endif /* PURPLE_JABBER_SI_H_ */
+G_END_DECLS
+
+#endif /* PURPLE_JABBER_SI_H */

@@ -29,6 +29,7 @@
 #include "gtkutils.h"
 #include "pidgin.h"
 #include "request.h"
+#include "pidginaccountchooser.h"
 #include "pidgintooltip.h"
 
 #include "gtk3compat.h"
@@ -51,11 +52,6 @@ pidgin_disco_list_destroy(PidginDiscoList *list)
 	g_hash_table_destroy(list->services);
 	if (list->dialog && list->dialog->discolist == list)
 		list->dialog->discolist = NULL;
-
-	if (list->tree) {
-		gtk_widget_destroy(list->tree);
-		list->tree = NULL;
-	}
 
 	g_free((gchar*)list->server);
 	g_free(list);
@@ -92,13 +88,13 @@ void pidgin_disco_list_set_in_progress(PidginDiscoList *list, gboolean in_progre
 	list->in_progress = in_progress;
 
 	if (in_progress) {
-		gtk_widget_set_sensitive(dialog->account_widget, FALSE);
+		gtk_widget_set_sensitive(dialog->account_chooser, FALSE);
 		gtk_widget_set_sensitive(dialog->stop_button, TRUE);
 		gtk_widget_set_sensitive(dialog->browse_button, FALSE);
 	} else {
 		gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(dialog->progress), 0.0);
 
-		gtk_widget_set_sensitive(dialog->account_widget, TRUE);
+		gtk_widget_set_sensitive(dialog->account_chooser, TRUE);
 
 		gtk_widget_set_sensitive(dialog->stop_button, FALSE);
 		gtk_widget_set_sensitive(dialog->browse_button, TRUE);
@@ -150,22 +146,16 @@ pidgin_disco_load_icon(XmppDiscoService *service, const char *size)
 	return pixbuf;
 }
 
-static void pidgin_disco_create_tree(PidginDiscoList *pdl);
-
-static void dialog_select_account_cb(GObject *w, PurpleAccount *account,
-                                     PidginDiscoDialog *dialog)
+static void
+dialog_select_account_cb(GtkWidget *chooser, PidginDiscoDialog *dialog)
 {
+	PurpleAccount *account = pidgin_account_chooser_get_selected(chooser);
 	gboolean change = (account != dialog->account);
 	dialog->account = account;
 	gtk_widget_set_sensitive(dialog->browse_button, account != NULL);
 
-	if (change && dialog->discolist) {
-		if (dialog->discolist->tree) {
-			gtk_widget_destroy(dialog->discolist->tree);
-			dialog->discolist->tree = NULL;
-		}
-		pidgin_disco_list_unref(dialog->discolist);
-		dialog->discolist = NULL;
+	if (change) {
+		g_clear_pointer(&dialog->discolist, pidgin_disco_list_unref);
 	}
 }
 
@@ -217,13 +207,8 @@ static void browse_button_cb(GtkWidget *button, PidginDiscoDialog *dialog)
 	gtk_widget_set_sensitive(dialog->add_button, FALSE);
 	gtk_widget_set_sensitive(dialog->register_button, FALSE);
 
-	if (dialog->discolist != NULL) {
-		if (dialog->discolist->tree) {
-			gtk_widget_destroy(dialog->discolist->tree);
-			dialog->discolist->tree = NULL;
-		}
-		pidgin_disco_list_unref(dialog->discolist);
-	}
+	g_clear_pointer(&dialog->discolist, pidgin_disco_list_unref);
+	gtk_tree_store_clear(dialog->model);
 
 	pdl = dialog->discolist = g_new0(PidginDiscoList, 1);
 	pdl->services = g_hash_table_new_full(NULL, NULL, NULL,
@@ -233,10 +218,8 @@ static void browse_button_cb(GtkWidget *button, PidginDiscoDialog *dialog)
 	pidgin_disco_list_ref(pdl);
 
 	pdl->dialog = dialog;
-	pidgin_disco_create_tree(pdl);
 
-	if (dialog->account_widget)
-		gtk_widget_set_sensitive(dialog->account_widget, FALSE);
+	gtk_widget_set_sensitive(dialog->account_chooser, FALSE);
 
 	username = purple_account_get_username(dialog->account);
 	at = strchr(username, '@');
@@ -283,7 +266,7 @@ static void add_to_blist_cb(GtkWidget *unused, PidginDiscoDialog *dialog)
 static gboolean
 service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 {
-	PidginDiscoList *pdl;
+	PidginDiscoDialog *dialog = user_data;
 	XmppDiscoService *service;
 	GtkWidget *menu;
 
@@ -294,17 +277,15 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 	if (!gdk_event_triggers_context_menu((GdkEvent *)event))
 		return FALSE;
 
-	pdl = user_data;
-
 	/* Figure out what was clicked */
 	if (!gtk_tree_view_get_path_at_pos(tree, event->x, event->y, &path,
 		                               NULL, NULL, NULL))
 		return FALSE;
-	gtk_tree_model_get_iter(GTK_TREE_MODEL(pdl->model), &iter, path);
+	gtk_tree_model_get_iter(GTK_TREE_MODEL(dialog->model), &iter, path);
 	gtk_tree_path_free(path);
 	val.g_type = 0;
-	gtk_tree_model_get_value(GTK_TREE_MODEL(pdl->model), &iter, SERVICE_COLUMN,
-	                         &val);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+	                         SERVICE_COLUMN, &val);
 	service = g_value_get_pointer(&val);
 
 	if (!service)
@@ -312,15 +293,16 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 
 	menu = gtk_menu_new();
 
-	if (service->flags & XMPP_DISCO_ADD)
+	if (service->flags & XMPP_DISCO_ADD) {
 		pidgin_new_menu_item(menu, _("Add to Buddy List"), NULL,
-                                G_CALLBACK(add_to_blist_cb), pdl->dialog);
+		                     G_CALLBACK(add_to_blist_cb), dialog);
+	}
 
 	if (service->flags & XMPP_DISCO_REGISTER) {
 		GtkWidget *item = pidgin_new_menu_item(menu, _("Register"),
                                 NULL, NULL, NULL);
 		g_signal_connect(G_OBJECT(item), "activate",
-		                 G_CALLBACK(register_button_cb), pdl->dialog);
+		                 G_CALLBACK(register_button_cb), dialog);
 	}
 
 	gtk_widget_show_all(menu);
@@ -329,15 +311,15 @@ service_click_cb(GtkTreeView *tree, GdkEventButton *event, gpointer user_data)
 }
 
 static void
-selection_changed_cb(GtkTreeSelection *selection, PidginDiscoList *pdl)
+selection_changed_cb(GtkTreeSelection *selection, PidginDiscoDialog *dialog)
 {
 	GtkTreeIter iter;
 	GValue val;
-	PidginDiscoDialog *dialog = pdl->dialog;
 
 	if (gtk_tree_selection_get_selected(selection, NULL, &iter)) {
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(pdl->model), &iter, SERVICE_COLUMN, &val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         SERVICE_COLUMN, &val);
 		dialog->selected = g_value_get_pointer(&val);
 		if (!dialog->selected) {
 			gtk_widget_set_sensitive(dialog->add_button, FALSE);
@@ -357,15 +339,13 @@ static void
 row_expanded_cb(GtkTreeView *tree, GtkTreeIter *arg1, GtkTreePath *rg2,
                 gpointer user_data)
 {
-	PidginDiscoList *pdl;
+	PidginDiscoDialog *dialog = user_data;
 	XmppDiscoService *service;
 	GValue val;
 
-	pdl = user_data;
-
 	val.g_type = 0;
-	gtk_tree_model_get_value(GTK_TREE_MODEL(pdl->model), arg1, SERVICE_COLUMN,
-	                         &val);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), arg1,
+	                         SERVICE_COLUMN, &val);
 	service = g_value_get_pointer(&val);
 	xmpp_disco_service_expand(service);
 }
@@ -376,34 +356,41 @@ row_activated_cb(GtkTreeView       *tree_view,
                  GtkTreeViewColumn *column,
                  gpointer           user_data)
 {
-	PidginDiscoList *pdl = user_data;
+	PidginDiscoDialog *dialog = user_data;
 	GtkTreeIter iter;
 	XmppDiscoService *service;
 	GValue val;
 
-	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(pdl->model), &iter, path))
+	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(dialog->model), &iter,
+	                             path)) {
 		return;
+	}
 
 	val.g_type = 0;
-	gtk_tree_model_get_value(GTK_TREE_MODEL(pdl->model), &iter, SERVICE_COLUMN,
-	                         &val);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+	                         SERVICE_COLUMN, &val);
 	service = g_value_get_pointer(&val);
 
-	if (service->flags & XMPP_DISCO_BROWSE)
-		if (gtk_tree_view_row_expanded(GTK_TREE_VIEW(pdl->tree), path))
-			gtk_tree_view_collapse_row(GTK_TREE_VIEW(pdl->tree), path);
-		else
-			gtk_tree_view_expand_row(GTK_TREE_VIEW(pdl->tree), path, FALSE);
-	else if (service->flags & XMPP_DISCO_REGISTER)
-		register_button_cb(NULL, pdl->dialog);
-	else if (service->flags & XMPP_DISCO_ADD)
-		add_to_blist_cb(NULL, pdl->dialog);
+	if (service->flags & XMPP_DISCO_BROWSE) {
+		if (gtk_tree_view_row_expanded(GTK_TREE_VIEW(dialog->tree),
+		                               path)) {
+			gtk_tree_view_collapse_row(GTK_TREE_VIEW(dialog->tree),
+			                           path);
+		} else {
+			gtk_tree_view_expand_row(GTK_TREE_VIEW(dialog->tree),
+			                         path, FALSE);
+		}
+	} else if (service->flags & XMPP_DISCO_REGISTER) {
+		register_button_cb(NULL, dialog);
+	} else if (service->flags & XMPP_DISCO_ADD) {
+		add_to_blist_cb(NULL, dialog);
+	}
 }
 
 static void
-destroy_win_cb(GtkWidget *window, gpointer d)
+destroy_win_cb(GtkWidget *window, G_GNUC_UNUSED gpointer data)
 {
-	PidginDiscoDialog *dialog = d;
+	PidginDiscoDialog *dialog = PIDGIN_DISCO_DIALOG(window);
 	PidginDiscoList *list = dialog->discolist;
 
 	if (dialog->prompt_handle)
@@ -418,8 +405,7 @@ destroy_win_cb(GtkWidget *window, gpointer d)
 		pidgin_disco_list_unref(list);
 	}
 
-	dialogs = g_list_remove(dialogs, d);
-	g_free(dialog);
+	dialogs = g_list_remove(dialogs, dialog);
 }
 
 static void stop_button_cb(GtkButton *button, PidginDiscoDialog *dialog)
@@ -429,9 +415,7 @@ static void stop_button_cb(GtkButton *button, PidginDiscoDialog *dialog)
 
 static void close_button_cb(GtkButton *button, PidginDiscoDialog *dialog)
 {
-	GtkWidget *window = dialog->window;
-
-	gtk_widget_destroy(window);
+	gtk_widget_destroy(GTK_WIDGET(dialog));
 }
 
 static gboolean account_filter_func(PurpleAccount *account)
@@ -453,7 +437,7 @@ static gboolean
 disco_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 		gpointer data, int *w, int *h)
 {
-	PidginDiscoList *pdl = data;
+	PidginDiscoDialog *dialog = data;
 	GtkTreeIter iter;
 	PangoLayout *layout;
 	int width, height;
@@ -462,12 +446,14 @@ disco_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 	const char *type = NULL;
 	char *markup, *jid, *name, *desc = NULL;
 
-	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(pdl->model), &iter, path))
+	if (!gtk_tree_model_get_iter(GTK_TREE_MODEL(dialog->model), &iter,
+	                             path)) {
 		return FALSE;
+	}
 
 	val.g_type = 0;
-	gtk_tree_model_get_value(GTK_TREE_MODEL(pdl->model), &iter, SERVICE_COLUMN,
-	                         &val);
+	gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+	                         SERVICE_COLUMN, &val);
 	service = g_value_get_pointer(&val);
 	if (!service)
 		return FALSE;
@@ -529,69 +515,6 @@ disco_create_tooltip(GtkWidget *tipwindow, GtkTreePath *path,
 	return TRUE;
 }
 
-static void pidgin_disco_create_tree(PidginDiscoList *pdl)
-{
-	GtkCellRenderer *text_renderer, *pixbuf_renderer;
-	GtkTreeViewColumn *column;
-	GtkTreeSelection *selection;
-
-	pdl->model = gtk_tree_store_new(NUM_OF_COLUMNS,
-			GDK_TYPE_PIXBUF,	/* PIXBUF_COLUMN */
-			G_TYPE_STRING,		/* NAME_COLUMN */
-			G_TYPE_STRING,		/* DESCRIPTION_COLUMN */
-			G_TYPE_POINTER		/* SERVICE_COLUMN */
-	);
-
-	pdl->tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(pdl->model));
-
-	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(pdl->tree));
-	g_signal_connect(G_OBJECT(selection), "changed",
-					 G_CALLBACK(selection_changed_cb), pdl);
-
-	g_object_unref(pdl->model);
-
-	gtk_container_add(GTK_CONTAINER(pdl->dialog->sw), pdl->tree);
-	gtk_widget_show(pdl->tree);
-
-	text_renderer = gtk_cell_renderer_text_new();
-	pixbuf_renderer = gtk_cell_renderer_pixbuf_new();
-
-	column = gtk_tree_view_column_new();
-	gtk_tree_view_column_set_title(column, _("Name"));
-
-	gtk_tree_view_column_pack_start(column, pixbuf_renderer, FALSE);
-	gtk_tree_view_column_set_attributes(column, pixbuf_renderer,
-			"pixbuf", PIXBUF_COLUMN, NULL);
-
-	gtk_tree_view_column_pack_start(column, text_renderer, TRUE);
-	gtk_tree_view_column_set_attributes(column, text_renderer,
-			"text", NAME_COLUMN, NULL);
-
-	gtk_tree_view_column_set_sizing(GTK_TREE_VIEW_COLUMN(column),
-	                                GTK_TREE_VIEW_COLUMN_GROW_ONLY);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_column_set_sort_column_id(GTK_TREE_VIEW_COLUMN(column), NAME_COLUMN);
-	gtk_tree_view_column_set_reorderable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(pdl->tree), column);
-
-	column = gtk_tree_view_column_new_with_attributes(_("Description"), text_renderer,
-				"text", DESCRIPTION_COLUMN, NULL);
-	gtk_tree_view_column_set_sizing(GTK_TREE_VIEW_COLUMN(column),
-	                                GTK_TREE_VIEW_COLUMN_GROW_ONLY);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_column_set_sort_column_id(GTK_TREE_VIEW_COLUMN(column), DESCRIPTION_COLUMN);
-	gtk_tree_view_column_set_reorderable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(pdl->tree), column);
-
-	g_signal_connect(G_OBJECT(pdl->tree), "button-press-event", G_CALLBACK(service_click_cb), pdl);
-	g_signal_connect(G_OBJECT(pdl->tree), "row-expanded", G_CALLBACK(row_expanded_cb), pdl);
-	g_signal_connect(G_OBJECT(pdl->tree), "row-activated", G_CALLBACK(row_activated_cb), pdl);
-
-	pidgin_tooltip_setup_for_treeview(pdl->tree, pdl,
-	                                  disco_create_tooltip,
-	                                  disco_paint_tooltip);
-}
-
 void pidgin_disco_signed_off_cb(PurpleConnection *pc)
 {
 	GList *node;
@@ -604,16 +527,15 @@ void pidgin_disco_signed_off_cb(PurpleConnection *pc)
 			if (list->in_progress)
 				pidgin_disco_list_set_in_progress(list, FALSE);
 
-			if (list->tree) {
-				gtk_widget_destroy(list->tree);
-				list->tree = NULL;
-			}
+			gtk_tree_store_clear(dialog->model);
 
 			pidgin_disco_list_unref(list);
 			dialog->discolist = NULL;
 
-			gtk_widget_set_sensitive(dialog->browse_button,
-					pidgin_account_option_menu_get_selected(dialog->account_widget) != NULL);
+			gtk_widget_set_sensitive(
+			        dialog->browse_button,
+			        pidgin_account_chooser_get_selected(
+			                dialog->account_chooser) != NULL);
 
 			gtk_widget_set_sensitive(dialog->register_button, FALSE);
 			gtk_widget_set_sensitive(dialog->add_button, FALSE);
@@ -624,87 +546,103 @@ void pidgin_disco_signed_off_cb(PurpleConnection *pc)
 void pidgin_disco_dialogs_destroy_all(void)
 {
 	while (dialogs) {
-		PidginDiscoDialog *dialog = dialogs->data;
+		GtkWidget *dialog = dialogs->data;
 
-		gtk_widget_destroy(dialog->window);
+		gtk_widget_destroy(dialog);
 		/* destroy_win_cb removes the dialog from the list */
 	}
 }
 
-PidginDiscoDialog *pidgin_disco_dialog_new(void)
-{
-	PidginDiscoDialog *dialog;
-	GtkWidget *window, *vbox, *vbox2, *bbox;
+/******************************************************************************
+ * GObject implementation
+ *****************************************************************************/
 
-	dialog = g_new0(PidginDiscoDialog, 1);
+G_DEFINE_DYNAMIC_TYPE(PidginDiscoDialog, pidgin_disco_dialog, GTK_TYPE_DIALOG)
+
+static void
+pidgin_disco_dialog_class_init(PidginDiscoDialogClass *klass)
+{
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	gtk_widget_class_set_template_from_resource(
+	        widget_class, "/im/pidgin/Pidgin/Plugin/XMPPDisco/disco.ui");
+
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     account_chooser);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     progress);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     stop_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     browse_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     register_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     add_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     tree);
+	gtk_widget_class_bind_template_child(widget_class, PidginDiscoDialog,
+	                                     model);
+
+	gtk_widget_class_bind_template_callback(widget_class, destroy_win_cb);
+	gtk_widget_class_bind_template_callback(widget_class, stop_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, browse_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        register_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, add_to_blist_cb);
+	gtk_widget_class_bind_template_callback(widget_class, close_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        dialog_select_account_cb);
+	gtk_widget_class_bind_template_callback(widget_class, row_activated_cb);
+	gtk_widget_class_bind_template_callback(widget_class, row_expanded_cb);
+	gtk_widget_class_bind_template_callback(widget_class, service_click_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        selection_changed_cb);
+}
+
+static void
+pidgin_disco_dialog_class_finalize(PidginDiscoDialogClass *klass)
+{
+}
+
+static void
+pidgin_disco_dialog_init(PidginDiscoDialog *dialog)
+{
 	dialogs = g_list_prepend(dialogs, dialog);
 
-	/* Create the window. */
-	dialog->window = window = pidgin_create_dialog(_("Service Discovery"), PIDGIN_HIG_BORDER, "service discovery", TRUE);
-
-	g_signal_connect(G_OBJECT(window), "destroy",
-					 G_CALLBACK(destroy_win_cb), dialog);
-
-	/* Create the parent vbox for everything. */
-	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(window), FALSE, PIDGIN_HIG_BORDER);
-
-	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(vbox), vbox2);
-	gtk_widget_show(vbox2);
+	gtk_widget_init_template(GTK_WIDGET(dialog));
 
 	/* accounts dropdown list */
-	dialog->account_widget = pidgin_account_option_menu_new(NULL, FALSE,
-	                         G_CALLBACK(dialog_select_account_cb), account_filter_func, dialog);
-	dialog->account = pidgin_account_option_menu_get_selected(dialog->account_widget);
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
-
-	/* scrolled window */
-	dialog->sw = pidgin_make_scrollable(NULL, GTK_POLICY_ALWAYS, GTK_POLICY_ALWAYS, GTK_SHADOW_IN, -1, 250);
-	gtk_box_pack_start(GTK_BOX(vbox2), dialog->sw, TRUE, TRUE, 0);
-
-	/* progress bar */
-	dialog->progress = gtk_progress_bar_new();
-	gtk_progress_bar_set_pulse_step(GTK_PROGRESS_BAR(dialog->progress), 0.1);
-	gtk_box_pack_start(GTK_BOX(vbox2), dialog->progress, FALSE, FALSE, 0);
-	gtk_widget_show(dialog->progress);
-
-	/* button box */
-	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(window));
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-
-	/* stop button */
-	dialog->stop_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Stop"),
-		                         G_CALLBACK(stop_button_cb), dialog);
-	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(dialog->account_chooser),
+	        account_filter_func);
+	dialog->account =
+	        pidgin_account_chooser_get_selected(dialog->account_chooser);
 
 	/* browse button */
-	dialog->browse_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Browse"),
-		                         G_CALLBACK(browse_button_cb), dialog);
 	gtk_widget_set_sensitive(dialog->browse_button, dialog->account != NULL);
 
-	/* register button */
-	dialog->register_button =
-		pidgin_dialog_add_button(GTK_DIALOG(dialog->window), _("Register"),
-		                         G_CALLBACK(register_button_cb), dialog);
-	gtk_widget_set_sensitive(dialog->register_button, FALSE);
+	pidgin_tooltip_setup_for_treeview(GTK_WIDGET(dialog->tree), dialog,
+	                                  disco_create_tooltip,
+	                                  disco_paint_tooltip);
+}
 
-	/* add button */
-	dialog->add_button =
-		pidgin_dialog_add_button(GTK_DIALOG(dialog->window), _("_Add"),
-		                         G_CALLBACK(add_to_blist_cb), dialog);
-	gtk_widget_set_sensitive(dialog->add_button, FALSE);
+/******************************************************************************
+ * Public API
+ *****************************************************************************/
 
-	/* close button */
-	dialog->close_button =
-		pidgin_dialog_add_button(GTK_DIALOG(window), _("_Close"),
-		                         G_CALLBACK(close_button_cb), dialog);
+void
+pidgin_disco_dialog_register(PurplePlugin *plugin)
+{
+	pidgin_disco_dialog_register_type(G_TYPE_MODULE(plugin));
+}
 
-	/* show the dialog window and return the dialog */
-	gtk_widget_show(dialog->window);
-
+PidginDiscoDialog *
+pidgin_disco_dialog_new(void)
+{
+	PidginDiscoDialog *dialog =
+	        g_object_new(PIDGIN_TYPE_DISCO_DIALOG, NULL);
+	gtk_widget_show_all(GTK_WIDGET(dialog));
 	return dialog;
 }
 
@@ -732,14 +670,17 @@ void pidgin_disco_add_service(PidginDiscoList *pdl, XmppDiscoService *service, X
 		rr = g_hash_table_lookup(pdl->services, parent);
 		path = gtk_tree_row_reference_get_path(rr);
 		if (path) {
-			gtk_tree_model_get_iter(GTK_TREE_MODEL(pdl->model), &parent_iter, path);
+			gtk_tree_model_get_iter(GTK_TREE_MODEL(dialog->model),
+			                        &parent_iter, path);
 			gtk_tree_path_free(path);
 
-			if (gtk_tree_model_iter_children(GTK_TREE_MODEL(pdl->model), &child,
-			                                 &parent_iter)) {
+			if (gtk_tree_model_iter_children(
+			            GTK_TREE_MODEL(dialog->model), &child,
+			            &parent_iter)) {
 				PidginDiscoList *tmp;
-				gtk_tree_model_get(GTK_TREE_MODEL(pdl->model), &child,
-				                   SERVICE_COLUMN, &tmp, -1);
+				gtk_tree_model_get(
+				        GTK_TREE_MODEL(dialog->model), &child,
+				        SERVICE_COLUMN, &tmp, -1);
 				if (!tmp)
 					append = FALSE;
 			}
@@ -748,35 +689,36 @@ void pidgin_disco_add_service(PidginDiscoList *pdl, XmppDiscoService *service, X
 
 	if (service == NULL) {
 		if (parent != NULL && !append)
-			gtk_tree_store_remove(pdl->model, &child);
+			gtk_tree_store_remove(dialog->model, &child);
 		return;
 	}
 
-	if (append)
-		gtk_tree_store_append(pdl->model, &iter, (parent ? &parent_iter : NULL));
-	else
+	if (append) {
+		gtk_tree_store_append(dialog->model, &iter,
+		                      (parent ? &parent_iter : NULL));
+	} else {
 		iter = child;
+	}
 
 	if (service->flags & XMPP_DISCO_BROWSE) {
 		GtkTreeRowReference *rr;
 		GtkTreePath *path;
 
-		gtk_tree_store_append(pdl->model, &child, &iter);
+		gtk_tree_store_append(dialog->model, &child, &iter);
 
-		path = gtk_tree_model_get_path(GTK_TREE_MODEL(pdl->model), &iter);
-		rr = gtk_tree_row_reference_new(GTK_TREE_MODEL(pdl->model), path);
+		path = gtk_tree_model_get_path(GTK_TREE_MODEL(dialog->model),
+		                               &iter);
+		rr = gtk_tree_row_reference_new(GTK_TREE_MODEL(dialog->model),
+		                                path);
 		g_hash_table_insert(pdl->services, service, rr);
 		gtk_tree_path_free(path);
 	}
 
 	pixbuf = pidgin_disco_load_icon(service, "16");
 
-	gtk_tree_store_set(pdl->model, &iter,
-			PIXBUF_COLUMN, pixbuf,
-			NAME_COLUMN, service->name,
-			DESCRIPTION_COLUMN, service->description,
-			SERVICE_COLUMN, service,
-			-1);
+	gtk_tree_store_set(dialog->model, &iter, PIXBUF_COLUMN, pixbuf,
+	                   NAME_COLUMN, service->name, DESCRIPTION_COLUMN,
+	                   service->description, SERVICE_COLUMN, service, -1);
 
 	if (pixbuf)
 		g_object_unref(pixbuf);

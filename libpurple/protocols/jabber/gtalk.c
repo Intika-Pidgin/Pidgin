@@ -34,8 +34,9 @@ gtalk_list_icon(PurpleAccount *a, PurpleBuddy *b)
 }
 
 static void
-gtalk_protocol_init(PurpleProtocol *protocol)
+gtalk_protocol_init(GTalkProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountUserSplit *split;
 	PurpleAccountOption *option;
 	GList *encryption_values = NULL;
@@ -104,22 +105,36 @@ gtalk_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-gtalk_protocol_class_init(PurpleProtocolClass *klass)
+gtalk_protocol_class_init(GTalkProtocolClass *klass)
 {
-	klass->list_icon = gtalk_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->list_icon = gtalk_list_icon;
 }
 
 static void
-gtalk_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+gtalk_protocol_class_finalize(G_GNUC_UNUSED GTalkProtocolClass *klass)
+{
+}
+
+static void
+gtalk_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	/* disable xmpp functions not available for gtalk */
 	server_iface->register_user   = NULL;
 	server_iface->unregister_user = NULL;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	GTalkProtocol, gtalk_protocol, JABBER_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        GTalkProtocol, gtalk_protocol, JABBER_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  gtalk_protocol_server_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      gtalk_protocol_server_iface_init));
+
+/* This exists solely because the above macro makes gtalk_protocol_register_type
+ * static. */
+void
+gtalk_protocol_register(PurplePlugin *plugin)
+{
+	gtalk_protocol_register_type(G_TYPE_MODULE(plugin));
+}

@@ -303,8 +303,9 @@ purple_str_to_time(const char *timestamp, gboolean utc,
 		str++;
 
 	if (*str == '\0') {
-		if (rest != NULL && *str != '\0')
+		if (rest != NULL) {
 			*rest = str;
+		}
 
 		return 0;
 	}
@@ -645,16 +646,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 
 			/* Quarter */
 			case 'Q':
-				if (count <= 2) {
-					/* Numerical */
-				} else if (count == 3) {
-					/* Abbreviation */
-				} else if (count >= 4) {
-					/* Full */
-					count = 4;
-				}
-				break;
-
 			/* Stand-alone Quarter */
 			case 'q':
 				if (count <= 2) {
@@ -669,21 +660,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 
 			/* Month */
 			case 'M':
-				if (count <= 2) {
-					/* Numerical */
-					g_string_append(string, purple_utf8_strftime("%m", tm));
-				} else if (count == 3) {
-					/* Abbreviation */
-					g_string_append(string, purple_utf8_strftime("%b", tm));
-				} else if (count == 4) {
-					/* Full */
-					g_string_append(string, purple_utf8_strftime("%B", tm));
-				} else if (count >= 5) {
-					g_string_append_len(string, purple_utf8_strftime("%b", tm), 1);
-					count = 5;
-				}
-				break;
-
 			/* Stand-alone Month */
 			case 'L':
 				if (count <= 2) {
@@ -825,14 +801,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 
 			/* Hour (0-11) */
 			case 'K':
-				if (count == 1) {
-					/* No padding */
-				} else if (count >= 2) {
-					/* Zero-padded */
-					count = 2;
-				}
-				break;
-
 			/* Hour (1-24) */
 			case 'k':
 				if (count == 1) {
@@ -929,16 +897,6 @@ purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
 	}
 
 	return g_string_free(string, FALSE);
-}
-
-
-/**************************************************************************/
-/* GLib Event Loop Functions                                              */
-/**************************************************************************/
-
-void purple_timeout_reset(GSource *source, gint64 seconds_from_now)
-{
-	g_source_set_ready_time(source, g_get_monotonic_time() + (seconds_from_now * G_USEC_PER_SEC));
 }
 
 
@@ -1371,9 +1329,7 @@ purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo 
 		return FALSE;
 
 	if (q != NULL && (!no_value_token ||
-					  (no_value_token && strncmp(p, no_value_token,
-												 strlen(no_value_token)))))
-	{
+	                  strncmp(p, no_value_token, strlen(no_value_token)))) {
 		GString *dest = g_string_new("");
 
 		if (is_link)
@@ -2355,6 +2311,7 @@ purple_markup_linkify(const char *text)
 					char *d;
 
 					url_buf = g_string_free(gurl_buf, FALSE);
+					gurl_buf = NULL;
 
 					/* strip off trailing periods */
 					if (*url_buf) {
@@ -2378,6 +2335,10 @@ purple_markup_linkify(const char *text)
 					g_string_append_unichar(gurl_buf, g);
 					t = g_utf8_find_next_char(t, NULL);
 				}
+			}
+
+			if (gurl_buf) {
+				g_string_free(gurl_buf, TRUE);
 			}
 		}
 
@@ -3107,7 +3068,7 @@ purple_validate(const PurpleProtocol *protocol, const char *str)
 	if (str[0] == '\0')
 		return FALSE;
 
-	if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT_IFACE, normalize))
+	if (!PURPLE_PROTOCOL_IMPLEMENTS(protocol, CLIENT, normalize))
 		return TRUE;
 
 	normalized = purple_protocol_client_iface_normalize(PURPLE_PROTOCOL(protocol),
@@ -3333,35 +3294,6 @@ const char *
 purple_strcasestr(const char *haystack, const char *needle)
 {
 	return purple_strcasestr_len(haystack, -1, needle, -1);
-}
-
-char *
-purple_str_size_to_units(goffset size)
-{
-	static const char * const size_str[] = { "bytes", "KiB", "MiB", "GiB", "TiB", "PiB", "EiB" };
-	float size_mag;
-	gsize size_index = 0;
-
-	if (size == -1) {
-		return g_strdup(_("Calculating..."));
-	}
-	else if (size == 0) {
-		return g_strdup(_("Unknown."));
-	}
-	else {
-		size_mag = (float)size;
-
-		while ((size_index < G_N_ELEMENTS(size_str) - 1) && (size_mag > 1024)) {
-			size_mag /= 1024;
-			size_index++;
-		}
-
-		if (size_index == 0) {
-			return g_strdup_printf("%" G_GOFFSET_FORMAT " %s", size, _(size_str[size_index]));
-		} else {
-			return g_strdup_printf("%.2f %s", size_mag, _(size_str[size_index]));
-		}
-	}
 }
 
 char *

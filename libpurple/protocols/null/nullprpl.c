@@ -51,22 +51,9 @@
  * it with code to include your own config.h or similar.  If you're going to
  * provide for translation, you'll also need to setup the gettext macros. */
 #include "internal.h"
+#include <purple.h>
 
 #include "nullprpl.h"
-
-#include "account.h"
-#include "accountopt.h"
-#include "buddylist.h"
-#include "cmds.h"
-#include "conversation.h"
-#include "connection.h"
-#include "debug.h"
-#include "notify.h"
-#include "plugins.h"
-#include "roomlist.h"
-#include "status.h"
-#include "util.h"
-#include "version.h"
 
 /*
  * reference to the protocol instance, used for registering signals, prefs,
@@ -367,6 +354,7 @@ static void null_login(PurpleAccount *acct)
 {
   PurpleConnection *gc = purple_account_get_connection(acct);
   GList *offline_messages;
+  GList *all_offline_messages;
 
   purple_debug_info("nullprpl", "logging in %s\n", purple_account_get_username(acct));
 
@@ -390,7 +378,8 @@ static void null_login(PurpleAccount *acct)
   /* fetch stored offline messages */
   purple_debug_info("nullprpl", "checking for offline messages for %s\n",
                     purple_account_get_username(acct));
-  offline_messages = g_hash_table_lookup(goffline_messages, purple_account_get_username(acct));
+  all_offline_messages = offline_messages = g_hash_table_lookup(
+	      goffline_messages, purple_account_get_username(acct));
   while (offline_messages) {
     GOfflineMessage *message = (GOfflineMessage *)offline_messages->data;
     purple_debug_info("nullprpl", "delivering offline message to %s: %s\n",
@@ -404,8 +393,8 @@ static void null_login(PurpleAccount *acct)
     g_free(message);
   }
 
-  g_list_free(offline_messages);
   g_hash_table_remove(goffline_messages, purple_account_get_username(acct));
+  g_list_free(all_offline_messages);
 }
 
 static void null_close(PurpleConnection *gc)
@@ -855,10 +844,10 @@ static const char *null_normalize(const PurpleAccount *acct,
 }
 
 static void null_set_buddy_icon(PurpleConnection *gc,
-                                    PurpleStoredImage *img) {
+                                    PurpleImage *img) {
  purple_debug_info("nullprpl", "setting %s's buddy icon to %s\n",
                    purple_account_get_username(purple_connection_get_account(gc)),
-                   img ? purple_imgstore_get_filename(img) : "(null)");
+                   img ? purple_image_get_path(img) : "(null)");
 }
 
 static void null_remove_group(PurpleConnection *gc, PurpleGroup *group) {
@@ -975,10 +964,13 @@ static void null_roomlist_expand_category(PurpleRoomlist *list,
                    purple_roomlist_room_get_name(category));
 }
 
+/* PurpleClientIface->offline_message takes a const PurpleBuddy *, this needs
+ * to change, but didn't want to do that in this pull request.
+ */
 static gboolean null_offline_message(const PurpleBuddy *buddy) {
   purple_debug_info("nullprpl",
                     "reporting that offline messages are supported for %s\n",
-                    purple_buddy_get_name(buddy));
+                    purple_buddy_get_name((PurpleBuddy *)buddy));
   return TRUE;
 }
 
@@ -986,36 +978,38 @@ static gboolean null_offline_message(const PurpleBuddy *buddy) {
  * Initialize the protocol instance. see protocol.h for more information.
  */
 static void
-null_protocol_init(PurpleProtocol *protocol)
+null_protocol_init(NullProtocol *self)
 {
-  PurpleAccountUserSplit *split;
-  PurpleAccountOption *option;
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
+	PurpleAccountUserSplit *split;
+	PurpleAccountOption *option;
 
-  protocol->id        = "prpl-null";
-  protocol->name      = "Null - Testing Protocol";
-  protocol->options   = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC;
-  protocol->icon_spec = purple_buddy_icon_spec_new(
-      "png,jpg,gif",                   /* format */
-      0,                               /* min_width */
-      0,                               /* min_height */
-      128,                             /* max_width */
-      128,                             /* max_height */
-      10000,                           /* max_filesize */
-      PURPLE_ICON_SCALE_DISPLAY        /* scale_rules */
-  );
+	protocol->id = "prpl-null";
+	protocol->name = "Null - Testing Protocol";
+	protocol->options = OPT_PROTO_NO_PASSWORD | OPT_PROTO_CHAT_TOPIC;
+	protocol->icon_spec = purple_buddy_icon_spec_new(
+	        "png,jpg,gif",            /* format */
+	        0,                        /* min_width */
+	        0,                        /* min_height */
+	        128,                      /* max_width */
+	        128,                      /* max_height */
+	        10000,                    /* max_filesize */
+	        PURPLE_ICON_SCALE_DISPLAY /* scale_rules */
+	);
 
-  /* see accountopt.h for information about user splits and protocol options */
-  split = purple_account_user_split_new(
-    _("Example user split"),  /* text shown to user */
-    "default",                /* default value */
-    '@');                     /* field separator */
-  option = purple_account_option_string_new(
-    _("Example option"),      /* text shown to user */
-    "example",                /* pref name */
-    "default");               /* default value */
+	/* see accountopt.h for information about user splits and protocol
+	 * options */
+	split = purple_account_user_split_new(
+	        _("Example user split"), /* text shown to user */
+	        "default",               /* default value */
+	        '@');                    /* field separator */
+	option = purple_account_option_string_new(
+	        _("Example option"), /* text shown to user */
+	        "example",           /* pref name */
+	        "default");          /* default value */
 
-  protocol->user_splits = g_list_append(NULL, split);
-  protocol->account_options = g_list_append(NULL, option);
+	protocol->user_splits = g_list_append(NULL, split);
+	protocol->account_options = g_list_append(NULL, option);
 }
 
 /*
@@ -1024,16 +1018,23 @@ null_protocol_init(PurpleProtocol *protocol)
  */
 
 static void
-null_protocol_class_init(PurpleProtocolClass *klass)
+null_protocol_class_init(NullProtocolClass *klass)
 {
-  klass->login        = null_login;
-  klass->close        = null_close;
-  klass->status_types = null_status_types;
-  klass->list_icon    = null_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = null_login;
+	protocol_class->close = null_close;
+	protocol_class->status_types = null_status_types;
+	protocol_class->list_icon = null_list_icon;
 }
 
 static void
-null_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+null_protocol_class_finalize(G_GNUC_UNUSED NullProtocolClass *klass)
+{
+}
+
+static void
+null_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
   client_iface->get_actions     = null_get_actions;
   client_iface->status_text     = null_status_text;
@@ -1045,7 +1046,7 @@ null_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-null_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+null_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
   server_iface->register_user  = null_register_user;
   server_iface->set_info       = null_set_info;
@@ -1065,14 +1066,14 @@ null_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-null_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+null_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
   im_iface->send        = null_send_im;
   im_iface->send_typing = null_send_typing;
 }
 
 static void
-null_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
+null_protocol_chat_iface_init(PurpleProtocolChatInterface *chat_iface)
 {
   chat_iface->info          = null_chat_info;
   chat_iface->info_defaults = null_chat_info_defaults;
@@ -1086,7 +1087,7 @@ null_protocol_chat_iface_init(PurpleProtocolChatIface *chat_iface)
 }
 
 static void
-null_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
+null_protocol_privacy_iface_init(PurpleProtocolPrivacyInterface *privacy_iface)
 {
   privacy_iface->add_permit      = null_add_permit;
   privacy_iface->add_deny        = null_add_deny;
@@ -1096,7 +1097,7 @@ null_protocol_privacy_iface_init(PurpleProtocolPrivacyIface *privacy_iface)
 }
 
 static void
-null_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
+null_protocol_roomlist_iface_init(PurpleProtocolRoomlistInterface *roomlist_iface)
 {
   roomlist_iface->get_list        = null_roomlist_get_list;
   roomlist_iface->cancel          = null_roomlist_cancel;
@@ -1109,27 +1110,26 @@ null_protocol_roomlist_iface_init(PurpleProtocolRoomlistIface *roomlist_iface)
  * to register this type with the type system, and null_protocol_get_type()
  * which returns the registered GType.
  */
-PURPLE_DEFINE_TYPE_EXTENDED(
-  NullProtocol, null_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        NullProtocol, null_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-                                    null_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      null_protocol_client_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-                                    null_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      null_protocol_server_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-                                    null_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      null_protocol_im_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CHAT_IFACE,
-                                    null_protocol_chat_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CHAT,
+                                      null_protocol_chat_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_PRIVACY_IFACE,
-                                    null_protocol_privacy_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_PRIVACY,
+                                      null_protocol_privacy_iface_init)
 
-  PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_ROOMLIST_IFACE,
-                                    null_protocol_roomlist_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_ROOMLIST,
+                                      null_protocol_roomlist_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -1155,11 +1155,9 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-  PurpleCmdId id;
-
   /* register the NULL_TYPE_PROTOCOL type in the type system. this function
-   * is defined by PURPLE_DEFINE_TYPE_EXTENDED. */
-  null_protocol_register_type(plugin);
+   * is defined by G_DEFINE_DYNAMIC_TYPE_EXTENDED. */
+  null_protocol_register_type(G_TYPE_MODULE(plugin));
 
   /* add the protocol to the core */
   my_protocol = purple_protocols_add(NULL_TYPE_PROTOCOL, error);

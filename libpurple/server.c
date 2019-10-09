@@ -128,7 +128,7 @@ int purple_serv_send_im(PurpleConnection *gc, PurpleMessage *msg)
 	protocol = purple_connection_get_protocol(gc);
 
 	g_return_val_if_fail(protocol != NULL, val);
-	g_return_val_if_fail(PURPLE_PROTOCOL_HAS_IM_IFACE(protocol), val);
+	g_return_val_if_fail(PURPLE_IS_PROTOCOL_IM(protocol), val);
 
 	account  = purple_connection_get_account(gc);
 	presence = purple_account_get_presence(account);
@@ -136,7 +136,7 @@ int purple_serv_send_im(PurpleConnection *gc, PurpleMessage *msg)
 
 	im = purple_conversations_find_im_with_account(recipient, account);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, IM_IFACE, send))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, IM, send))
 		val = purple_protocol_im_iface_send(protocol, gc, msg);
 
 	/*
@@ -177,7 +177,7 @@ void purple_serv_set_info(PurpleConnection *gc, const char *info)
 	if (gc) {
 		protocol = purple_connection_get_protocol(gc);
 
-		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, set_info)) {
+		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, set_info)) {
 			account = purple_connection_get_account(gc);
 
 			purple_signal_emit(purple_accounts_get_handle(),
@@ -419,7 +419,7 @@ void purple_serv_chat_invite(PurpleConnection *gc, int id, const char *message, 
 {
 	PurpleProtocol *protocol = NULL;
 	PurpleChatConversation *chat;
-	char *buffy = message && *message ? g_strdup(message) : NULL;
+	char *buffy;
 
 	chat = purple_conversations_find_chat(gc, id);
 
@@ -429,6 +429,7 @@ void purple_serv_chat_invite(PurpleConnection *gc, int id, const char *message, 
 	if(gc)
 		protocol = purple_connection_get_protocol(gc);
 
+	buffy = message && *message ? g_strdup(message) : NULL;
 	purple_signal_emit(purple_conversations_get_handle(), "chat-inviting-user",
 					 chat, name, &buffy);
 
@@ -461,7 +462,7 @@ int purple_serv_chat_send(PurpleConnection *gc, int id, PurpleMessage *msg)
 
 	g_return_val_if_fail(msg != NULL, -EINVAL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT_IFACE, send))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, CHAT, send))
 		return purple_protocol_chat_iface_send(protocol, gc, id, msg);
 
 	return -EINVAL;

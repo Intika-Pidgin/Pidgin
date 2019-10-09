@@ -82,8 +82,8 @@ gg_oauth_generate_signature(const char *method, const char *url,
 
 	res = gg_hmac_sha1(key, text);
 
-	free(key);
-	free(text);
+	g_free(key);
+	g_free(text);
 
 	return res;
 }

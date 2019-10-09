@@ -33,6 +33,16 @@
 #include "signals.h"
 #include "util.h"
 
+/**
+ * PurpleAccount:
+ *
+ * Structure representing an account.
+ */
+struct _PurpleAccount
+{
+	GObject gparent;
+};
+
 typedef struct
 {
 	char *username;             /* The username.                          */
@@ -1539,7 +1549,6 @@ purple_account_request_change_user_info(PurpleAccount *account)
 void
 purple_account_set_username(PurpleAccount *account, const char *username)
 {
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 
 	g_return_if_fail(PURPLE_IS_ACCOUNT(account));
@@ -1555,9 +1564,7 @@ purple_account_set_username(PurpleAccount *account, const char *username)
 
 	/* if the name changes, we should re-write the buddy list
 	 * to disk with the new name */
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 }
 
 void
@@ -1782,11 +1789,8 @@ purple_account_set_status_types(PurpleAccount *account, GList *status_types)
 	priv = purple_account_get_instance_private(account);
 
 	/* Out with the old... */
-	if (priv->status_types != NULL)
-	{
-		g_list_foreach(priv->status_types, (GFunc)purple_status_type_destroy, NULL);
-		g_list_free(priv->status_types);
-	}
+	g_list_free_full(priv->status_types,
+	                 (GDestroyNotify)purple_status_type_destroy);
 
 	/* In with the new... */
 	priv->status_types = status_types;
@@ -1856,7 +1860,7 @@ purple_account_set_public_alias(PurpleAccount *account,
 	gc = purple_account_get_connection(account);
 	protocol = purple_connection_get_protocol(gc);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, set_public_alias))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, set_public_alias))
 		purple_protocol_server_iface_set_public_alias(protocol, gc, alias, success_cb, failure_cb);
 	else if (failure_cb) {
 		struct public_alias_closure *closure =
@@ -1881,7 +1885,7 @@ purple_account_get_public_alias(PurpleAccount *account,
 	gc = purple_account_get_connection(account);
 	protocol = purple_connection_get_protocol(gc);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, get_public_alias))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, get_public_alias))
 		purple_protocol_server_iface_get_public_alias(protocol, gc, success_cb, failure_cb);
 	else if (failure_cb) {
 		struct public_alias_closure *closure =
@@ -2067,22 +2071,6 @@ purple_account_set_ui_bool(PurpleAccount *account, const char *ui,
 	g_hash_table_insert(table, g_strdup(name), setting);
 
 	purple_accounts_schedule_save();
-}
-
-void
-purple_account_set_ui_data(PurpleAccount *account, gpointer ui_data)
-{
-	g_return_if_fail(PURPLE_IS_ACCOUNT(account));
-
-	account->ui_data = ui_data;
-}
-
-gpointer
-purple_account_get_ui_data(PurpleAccount *account)
-{
-	g_return_val_if_fail(PURPLE_IS_ACCOUNT(account), NULL);
-
-	return account->ui_data;
 }
 
 gboolean
@@ -2306,7 +2294,6 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	GSList *l;
 	char *name;
 	PurpleBuddy *buddy;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2337,9 +2324,7 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->permit_added != NULL)
 		ui_ops->permit_added(account, who);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	/* This lets the UI know a buddy has had its privacy setting changed */
 	buddy = purple_blist_find_buddy(account, name);
@@ -2358,7 +2343,6 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	const char *name;
 	PurpleBuddy *buddy;
 	char *del;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2390,9 +2374,7 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->permit_removed != NULL)
 		ui_ops->permit_removed(account, who);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	buddy = purple_blist_find_buddy(account, name);
 	if (buddy != NULL) {
@@ -2410,7 +2392,6 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	GSList *l;
 	char *name;
 	PurpleBuddy *buddy;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2441,9 +2422,7 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	if (ui_ops != NULL && ui_ops->deny_added != NULL)
 		ui_ops->deny_added(account, who);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	buddy = purple_blist_find_buddy(account, name);
 	if (buddy != NULL) {
@@ -2461,7 +2440,6 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 	const char *normalized;
 	char *name;
 	PurpleBuddy *buddy;
-	PurpleBlistUiOps *blist_ops;
 	PurpleAccountPrivate *priv;
 	PurpleAccountUiOps *ui_ops = purple_accounts_get_ui_ops();
 
@@ -2499,9 +2477,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 
 	g_free(name);
 
-	blist_ops = purple_blist_get_ui_ops();
-	if (blist_ops != NULL && blist_ops->save_account != NULL)
-		blist_ops->save_account(account);
+	purple_blist_save_account(purple_blist_get_default(), account);
 
 	return TRUE;
 }
@@ -2601,20 +2577,22 @@ purple_account_privacy_deny(PurpleAccount *account, const char *who)
 GSList *
 purple_account_privacy_get_permitted(PurpleAccount *account)
 {
-	PurpleAccountPrivate *priv = purple_account_get_instance_private(account);
+	PurpleAccountPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ACCOUNT(account), NULL);
 
+	priv = purple_account_get_instance_private(account);
 	return priv->permit;
 }
 
 GSList *
 purple_account_privacy_get_denied(PurpleAccount *account)
 {
-	PurpleAccountPrivate *priv = purple_account_get_instance_private(account);
+	PurpleAccountPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ACCOUNT(account), NULL);
 
+	priv = purple_account_get_instance_private(account);
 	return priv->deny;
 }
 
@@ -2975,9 +2953,9 @@ purple_account_add_buddies(PurpleAccount *account, GList *buddies, const char *m
 			groups = g_list_append(groups, purple_buddy_get_group(buddy));
 		}
 
-		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddies))
+		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, add_buddies))
 			purple_protocol_server_iface_add_buddies(protocol, gc, buddies, groups, message);
-		else if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, add_buddy)) {
+		else if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, add_buddy)) {
 			GList *curb = buddies, *curg = groups;
 
 			while ((curb != NULL) && (curg != NULL)) {
@@ -3015,7 +2993,7 @@ purple_account_remove_buddies(PurpleAccount *account, GList *buddies, GList *gro
 		protocol = purple_connection_get_protocol(gc);
 
 	if (protocol) {
-		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, remove_buddies))
+		if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, remove_buddies))
 			purple_protocol_server_iface_remove_buddies(protocol, gc, buddies, groups);
 		else {
 			GList *curb = buddies;

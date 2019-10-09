@@ -273,9 +273,6 @@ ALL+="ARC_VV_LIBTHEORA "
 ARC_VV_LIBVORBIS="${DOWNLOAD_HOST}mingw32-libvorbis-1.3.3-1.8.noarch.rpm libvorbis 1.3.3-1.8 sha1sum:c9efd698ed62c26cf62442dafc2d9d2dcbcd651c"
 ALL+="ARC_VV_LIBVORBIS "
 
-ARC_WEBKITGTK="${DOWNLOAD_HOST}mingw32-libwebkitgtk-1.10.2-9.2.noarch.rpm WebKitGTK+ 1.10.2-9.2 sha1sum:010dbad413f824696cd1e32fe70046c9a1cb425f"
-ALL+="ARC_WEBKITGTK "
-
 ARC_ZLIB="${DOWNLOAD_HOST}mingw32-zlib-1.2.8-2.6.noarch.rpm zlib 1.2.8-2.6 sha1sum:bb75b2a341309eb75daacb93d43d6c072c71923c"
 ALL+="ARC_ZLIB "
 

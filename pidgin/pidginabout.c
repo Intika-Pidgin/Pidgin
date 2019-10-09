@@ -32,25 +32,9 @@
 #include "meson-config.h"
 #endif
 
-typedef struct _PidginAboutDialogPrivate PidginAboutDialogPrivate;
-
 struct _PidginAboutDialog {
 	GtkDialog parent;
 
-	/*< private >*/
-	PidginAboutDialogPrivate *priv;
-};
-
-struct _PidginAboutDialogClass {
-	GtkDialogClass parent;
-
-	void (*_pidgin_reserved1)(void);
-	void (*_pidgin_reserved2)(void);
-	void (*_pidgin_reserved3)(void);
-	void (*_pidgin_reserved4)(void);
-};
-
-struct _PidginAboutDialogPrivate {
 	GtkWidget *close_button;
 	GtkWidget *application_name;
 	GtkWidget *stack;
@@ -71,8 +55,6 @@ struct _PidginAboutDialogPrivate {
 	GtkTreeStore *build_info_store;
 };
 
-G_DEFINE_TYPE_WITH_PRIVATE(PidginAboutDialog, pidgin_about_dialog, GTK_TYPE_DIALOG);
-
 /******************************************************************************
  * Helpers
  *****************************************************************************/
@@ -84,14 +66,13 @@ _pidgin_about_dialog_load_application_name(PidginAboutDialog *about) {
 		VERSION
 	);
 
-	gtk_label_set_text(GTK_LABEL(about->priv->application_name), label);
+	gtk_label_set_text(GTK_LABEL(about->application_name), label);
 
 	g_free(label);
 }
 
 static void
 _pidgin_about_dialog_load_main_page(PidginAboutDialog *about) {
-	PidginAboutDialogPrivate *priv = pidgin_about_dialog_get_instance_private(about);
 	GtkTextIter start;
 	GInputStream *istream = NULL;
 	GString *str = NULL;
@@ -113,10 +94,10 @@ _pidgin_about_dialog_load_main_page(PidginAboutDialog *about) {
 		size += read;
 	}
 
-	gtk_text_buffer_get_start_iter(priv->main_buffer, &start);
+	gtk_text_buffer_get_start_iter(about->main_buffer, &start);
 
 	talkatu_markdown_buffer_insert_markdown(
-		TALKATU_MARKDOWN_BUFFER(priv->main_buffer),
+		TALKATU_MARKDOWN_BUFFER(about->main_buffer),
 		&start,
 		str->str,
 		size
@@ -208,12 +189,12 @@ _pidgin_about_dialog_load_json(GtkTreeStore *store, const gchar *json_section) {
 
 static void
 _pidgin_about_dialog_load_developers(PidginAboutDialog *about) {
-	_pidgin_about_dialog_load_json(about->priv->developers_store, "developers");
+	_pidgin_about_dialog_load_json(about->developers_store, "developers");
 }
 
 static void
 _pidgin_about_dialog_load_translators(PidginAboutDialog *about) {
-	_pidgin_about_dialog_load_json(about->priv->translators_store, "languages");
+	_pidgin_about_dialog_load_json(about->translators_store, "languages");
 }
 
 static void
@@ -228,9 +209,9 @@ _pidgin_about_dialog_add_build_args(
 	gint idx = 0;
 
 	markup = g_strdup_printf("<span font-weight=\"bold\">%s</span>", title);
-	gtk_tree_store_append(about->priv->build_info_store, &section, NULL);
+	gtk_tree_store_append(about->build_info_store, &section, NULL);
 	gtk_tree_store_set(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		0, markup,
 		-1
@@ -246,14 +227,9 @@ _pidgin_about_dialog_add_build_args(
 			continue;
 		}
 
-		gtk_tree_store_append(about->priv->build_info_store, &value, &section);
-		gtk_tree_store_set(
-			about->priv->build_info_store,
-			&value,
-			0, value_split[0] ? value_split[0] : "",
-			1, value_split[1] ? value_split[1] : "",
-			-1
-		);
+		gtk_tree_store_append(about->build_info_store, &value, &section);
+		gtk_tree_store_set(about->build_info_store, &value, 0, value_split[0],
+		                   1, value_split[1] ? value_split[1] : "", -1);
 
 		g_strfreev(value_split);
 	}
@@ -293,9 +269,9 @@ _pidgin_about_dialog_load_build_info(PidginAboutDialog *about) {
 		"<span font-weight=\"bold\">%s</span>",
 		_("Build Information")
 	);
-	gtk_tree_store_append(about->priv->build_info_store, &section, NULL);
+	gtk_tree_store_append(about->build_info_store, &section, NULL);
 	gtk_tree_store_set(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		0, markup,
 		-1
@@ -303,9 +279,9 @@ _pidgin_about_dialog_load_build_info(PidginAboutDialog *about) {
 	g_free(markup);
 
 	/* add the commit hash */
-	gtk_tree_store_append(about->priv->build_info_store, &item, &section);
+	gtk_tree_store_append(about->build_info_store, &item, &section);
 	gtk_tree_store_set(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&item,
 		0, "Commit Hash",
 		1, REVISION,
@@ -314,7 +290,7 @@ _pidgin_about_dialog_load_build_info(PidginAboutDialog *about) {
 
 	/* add the purple version */
 	_pidgin_about_dialog_build_info_add_version(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		_("Purple Version"),
 		PURPLE_MAJOR_VERSION,
@@ -324,7 +300,7 @@ _pidgin_about_dialog_load_build_info(PidginAboutDialog *about) {
 
 	/* add the glib version */
 	_pidgin_about_dialog_build_info_add_version(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		_("GLib Version"),
 		GLIB_MAJOR_VERSION,
@@ -334,7 +310,7 @@ _pidgin_about_dialog_load_build_info(PidginAboutDialog *about) {
 
 	/* add the gtk version */
 	_pidgin_about_dialog_build_info_add_version(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		_("GTK+ Version"),
 		GTK_MAJOR_VERSION,
@@ -353,9 +329,9 @@ _pidgin_about_dialog_load_runtime_info(PidginAboutDialog *about) {
 		"<span font-weight=\"bold\">%s</span>",
 		_("Runtime Information")
 	);
-	gtk_tree_store_append(about->priv->build_info_store, &section, NULL);
+	gtk_tree_store_append(about->build_info_store, &section, NULL);
 	gtk_tree_store_set(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		0, markup,
 		-1
@@ -364,7 +340,7 @@ _pidgin_about_dialog_load_runtime_info(PidginAboutDialog *about) {
 
 	/* add the purple version */
 	_pidgin_about_dialog_build_info_add_version(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		_("Purple Version"),
 		purple_major_version,
@@ -374,7 +350,7 @@ _pidgin_about_dialog_load_runtime_info(PidginAboutDialog *about) {
 
 	/* add the glib version */
 	_pidgin_about_dialog_build_info_add_version(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		_("GLib Version"),
 		glib_major_version,
@@ -384,7 +360,7 @@ _pidgin_about_dialog_load_runtime_info(PidginAboutDialog *about) {
 
 	/* add the gtk version */
 	_pidgin_about_dialog_build_info_add_version(
-		about->priv->build_info_store,
+		about->build_info_store,
 		&section,
 		_("GTK+ Version"),
 		gtk_major_version,
@@ -414,6 +390,8 @@ _pidgin_about_dialog_close(GtkWidget *b, gpointer data) {
 /******************************************************************************
  * GObject Stuff
  *****************************************************************************/
+G_DEFINE_TYPE(PidginAboutDialog, pidgin_about_dialog, GTK_TYPE_DIALOG);
+
 static void
 pidgin_about_dialog_class_init(PidginAboutDialogClass *klass) {
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
@@ -423,35 +401,33 @@ pidgin_about_dialog_class_init(PidginAboutDialogClass *klass) {
 		"/im/pidgin/Pidgin/About/about.ui"
 	);
 
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, close_button);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, application_name);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, stack);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, close_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, application_name);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, stack);
 
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, main_scrolled_window);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, main_buffer);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, main_scrolled_window);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, main_buffer);
 
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, developers_page);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, developers_store);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, developers_treeview);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, developers_page);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, developers_store);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, developers_treeview);
 
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, translators_page);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, translators_store);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, translators_treeview);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, translators_page);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, translators_store);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, translators_treeview);
 
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, build_info_page);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, build_info_store);
-	gtk_widget_class_bind_template_child_private(widget_class, PidginAboutDialog, build_info_treeview);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, build_info_page);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, build_info_store);
+	gtk_widget_class_bind_template_child(widget_class, PidginAboutDialog, build_info_treeview);
 }
 
 static void
 pidgin_about_dialog_init(PidginAboutDialog *about) {
-	about->priv = pidgin_about_dialog_get_instance_private(about);
-
 	gtk_widget_init_template(GTK_WIDGET(about));
 
 	/* wire up the close button */
 	g_signal_connect(
-		about->priv->close_button,
+		about->close_button,
 		"clicked",
 		G_CALLBACK(_pidgin_about_dialog_close),
 		about
@@ -465,15 +441,15 @@ pidgin_about_dialog_init(PidginAboutDialog *about) {
 
 	/* setup the developers stuff */
 	_pidgin_about_dialog_load_developers(about);
-	gtk_tree_view_expand_all(GTK_TREE_VIEW(about->priv->developers_treeview));
+	gtk_tree_view_expand_all(GTK_TREE_VIEW(about->developers_treeview));
 
 	/* setup the translators stuff */
 	_pidgin_about_dialog_load_translators(about);
-	gtk_tree_view_expand_all(GTK_TREE_VIEW(about->priv->translators_treeview));
+	gtk_tree_view_expand_all(GTK_TREE_VIEW(about->translators_treeview));
 
 	/* setup the build info page */
 	_pidgin_about_dialog_load_build_configuration(about);
-	gtk_tree_view_expand_all(GTK_TREE_VIEW(about->priv->build_info_treeview));
+	gtk_tree_view_expand_all(GTK_TREE_VIEW(about->build_info_treeview));
 }
 
 GtkWidget *

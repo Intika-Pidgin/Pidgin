@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_MULTILOGON_H
-#define _GGP_MULTILOGON_H
+#ifndef PURPLE_GG_MULTILOGON_H
+#define PURPLE_GG_MULTILOGON_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -43,4 +43,4 @@ void ggp_multilogon_info(PurpleConnection *gc,
 
 void ggp_multilogon_dialog(PurpleConnection *gc);
 
-#endif /* _GGP_MULTILOGON_H */
+#endif /* PURPLE_GG_MULTILOGON_H */

@@ -43,22 +43,19 @@
 
 struct _PidginXferDialog
 {
-	gint box_count;
+	GtkDialog parent;
 
-	gboolean keep_open;
-	gboolean auto_clear;
+	GtkWidget *keep_open;
+	GtkWidget *auto_clear;
 
 	gint num_transfers;
 
 	PurpleXfer *selected_xfer;
 
-	GtkWidget *window;
 	GtkWidget *tree;
 	GtkListStore *model;
 
 	GtkWidget *expander;
-
-	GtkWidget *grid;
 
 	GtkWidget *local_user_desc_label;
 	GtkWidget *local_user_label;
@@ -81,6 +78,8 @@ struct _PidginXferDialog
 	GtkWidget *close_button;
 };
 
+G_DEFINE_TYPE(PidginXferDialog, pidgin_xfer_dialog, GTK_TYPE_DIALOG);
+
 typedef struct
 {
 	GtkTreeIter iter;
@@ -100,10 +99,9 @@ enum
 	COLUMN_FILENAME,
 	COLUMN_SIZE,
 	COLUMN_REMAINING,
-	COLUMN_DATA,
+	COLUMN_XFER,
 	NUM_COLUMNS
 };
-
 
 /**************************************************************************
  * Utility Functions
@@ -114,23 +112,24 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 {
 	double kb_sent, kb_rem;
 	double kbps = 0.0;
-	time_t elapsed, now;
+	gint64 now;
+	gint64 elapsed = 0;
 
-	now = purple_xfer_get_end_time(xfer);
-	if (now == 0)
-		now = time(NULL);
-
-	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1024.0;
-	kb_rem  = purple_xfer_get_bytes_remaining(xfer) / 1024.0;
 	elapsed = purple_xfer_get_start_time(xfer);
-	if (elapsed > 0)
+	if (elapsed > 0) {
+		now = purple_xfer_get_end_time(xfer);
+		if (now == 0) {
+			now = g_get_monotonic_time();
+		}
 		elapsed = now - elapsed;
-	else
-		elapsed = 0;
-	kbps    = (elapsed > 0 ? (kb_sent / elapsed) : 0);
+	}
+
+	kb_sent = purple_xfer_get_bytes_sent(xfer) / 1000.0;
+	kb_rem  = purple_xfer_get_bytes_remaining(xfer) / 1000.0;
+	kbps = (elapsed > 0 ? (kb_sent * G_USEC_PER_SEC) / elapsed : 0);
 
 	if (kbsec != NULL) {
-		*kbsec = g_strdup_printf(_("%.2f KiB/s"), kbps);
+		*kbsec = g_strdup_printf(_("%.2f KB/s"), kbps);
 	}
 
 	if (time_elapsed != NULL)
@@ -138,18 +137,15 @@ get_xfer_info_strings(PurpleXfer *xfer, char **kbsec, char **time_elapsed,
 		int h, m, s;
 		int secs_elapsed;
 
-		if (purple_xfer_get_start_time(xfer) > 0)
-		{
-			secs_elapsed = now - purple_xfer_get_start_time(xfer);
+		if (purple_xfer_get_start_time(xfer) > 0) {
+			secs_elapsed = elapsed / G_USEC_PER_SEC;
 
 			h = secs_elapsed / 3600;
 			m = (secs_elapsed % 3600) / 60;
 			s = secs_elapsed % 60;
 
 			*time_elapsed = g_strdup_printf("%d:%02d:%02d", h, m, s);
-		}
-		else
-		{
+		} else {
 			*time_elapsed = g_strdup(_("Not started"));
 		}
 	}
@@ -191,9 +187,6 @@ update_title_progress(PidginXferDialog *dialog)
 	guint64 total_bytes_xferred = 0;
 	guint64 total_file_size = 0;
 
-	if (dialog->window == NULL)
-		return;
-
 	valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(dialog->model), &iter);
 
 	/* Find all active transfers */
@@ -202,10 +195,10 @@ update_title_progress(PidginXferDialog *dialog)
 		PurpleXfer *xfer = NULL;
 
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model),
-				&iter, COLUMN_DATA, &val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         COLUMN_XFER, &val);
+		xfer = g_value_get_object(&val);
 
-		xfer = g_value_get_pointer(&val);
 		if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_STARTED) {
 			num_active_xfers++;
 			total_bytes_xferred += purple_xfer_get_bytes_sent(xfer);
@@ -229,10 +222,10 @@ update_title_progress(PidginXferDialog *dialog)
 						 "File Transfers - %d%% of %d files",
 						 num_active_xfers),
 					total_pct, num_active_xfers);
-		gtk_window_set_title(GTK_WINDOW(dialog->window), title);
+		gtk_window_set_title(GTK_WINDOW(dialog), title);
 		g_free(title);
 	} else {
-		gtk_window_set_title(GTK_WINDOW(dialog->window), _("File Transfers"));
+		gtk_window_set_title(GTK_WINDOW(dialog), _("File Transfers"));
 	}
 }
 
@@ -398,19 +391,19 @@ delete_win_cb(GtkWidget *w, GdkEventAny *e, gpointer d)
 }
 
 static void
-toggle_keep_open_cb(GtkWidget *w, PidginXferDialog *dialog)
+toggle_keep_open_cb(GtkWidget *w, G_GNUC_UNUSED gpointer data)
 {
-	dialog->keep_open = !dialog->keep_open;
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/filetransfer/keep_open",
-						dialog->keep_open);
+	purple_prefs_set_bool(
+	        PIDGIN_PREFS_ROOT "/filetransfer/keep_open",
+	        !gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w)));
 }
 
 static void
-toggle_clear_finished_cb(GtkWidget *w, PidginXferDialog *dialog)
+toggle_clear_finished_cb(GtkWidget *w, G_GNUC_UNUSED gpointer data)
 {
-	dialog->auto_clear = !dialog->auto_clear;
-	purple_prefs_set_bool(PIDGIN_PREFS_ROOT "/filetransfer/clear_finished",
-						dialog->auto_clear);
+	purple_prefs_set_bool(
+	        PIDGIN_PREFS_ROOT "/filetransfer/clear_finished",
+	        gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(w)));
 }
 
 static void
@@ -425,10 +418,9 @@ selection_changed_cb(GtkTreeSelection *selection, PidginXferDialog *dialog)
 		gtk_widget_set_sensitive(dialog->expander, TRUE);
 
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model),
-								 &iter, COLUMN_DATA, &val);
-
-		xfer = g_value_get_pointer(&val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         COLUMN_XFER, &val);
+		xfer = g_value_get_object(&val);
 
 		update_detailed_info(dialog, xfer);
 
@@ -551,266 +543,104 @@ close_button_cb(GtkButton *button, PidginXferDialog *dialog)
 /**************************************************************************
  * Dialog Building Functions
  **************************************************************************/
-static GtkWidget *
-setup_tree(PidginXferDialog *dialog)
-{
-	GtkWidget *tree;
-	GtkListStore *model;
-	GtkCellRenderer *renderer;
-	GtkTreeViewColumn *column;
-	GtkTreeSelection *selection;
-
-	/* Build the tree model */
-	/* Transfer type, Progress Bar, Filename, Size, Remaining */
-	model = gtk_list_store_new(NUM_COLUMNS, G_TYPE_STRING, G_TYPE_INT,
-							   G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING,
-							   G_TYPE_POINTER);
-	dialog->model = model;
-
-	/* Create the treeview */
-	dialog->tree = tree = gtk_tree_view_new_with_model(GTK_TREE_MODEL(model));
-	selection = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
-	/* gtk_tree_selection_set_mode(selection, GTK_SELECTION_MULTIPLE); */
-
-	gtk_widget_show(tree);
-
-	g_signal_connect(G_OBJECT(selection), "changed",
-					 G_CALLBACK(selection_changed_cb), dialog);
-
-	g_object_unref(G_OBJECT(model));
-
-
-	/* Columns */
-
-	/* Transfer Type column */
-	renderer = gtk_cell_renderer_pixbuf_new();
-	column = gtk_tree_view_column_new_with_attributes(NULL, renderer,
-				"icon-name", COLUMN_STATUS, NULL);
-	gtk_tree_view_column_set_sizing(GTK_TREE_VIEW_COLUMN(column),
-									GTK_TREE_VIEW_COLUMN_FIXED);
-	gtk_tree_view_column_set_fixed_width(GTK_TREE_VIEW_COLUMN(column), 25);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
-
-	/* Progress bar column */
-	renderer = gtk_cell_renderer_progress_new();
-	column = gtk_tree_view_column_new_with_attributes(_("Progress"), renderer,
-				"value", COLUMN_PROGRESS, NULL);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
-
-	/* Filename column */
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes(_("Filename"), renderer,
-				"text", COLUMN_FILENAME, NULL);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
-
-	/* File Size column */
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes(_("Size"), renderer,
-				"text", COLUMN_SIZE, NULL);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
-
-	/* Bytes Remaining column */
-	renderer = gtk_cell_renderer_text_new();
-	column = gtk_tree_view_column_new_with_attributes(_("Remaining"),
-				renderer, "text", COLUMN_REMAINING, NULL);
-	gtk_tree_view_column_set_resizable(GTK_TREE_VIEW_COLUMN(column), TRUE);
-	gtk_tree_view_append_column(GTK_TREE_VIEW(tree), column);
-
-	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(tree));
-
-	gtk_widget_show(tree);
-
-	return tree;
-}
-
-static GtkWidget *
-make_info_grid(PidginXferDialog *dialog)
-{
-	GtkWidget *grid;
-	GtkWidget *label;
-	gsize i;
-
-	struct
-	{
-		GtkWidget **desc_label;
-		GtkWidget **val_label;
-		const char *desc;
-
-	} labels[] =
-	{
-		{ &dialog->local_user_desc_label, &dialog->local_user_label, NULL },
-		{ &dialog->remote_user_desc_label, &dialog->remote_user_label, NULL },
-		{ &label, &dialog->protocol_label,       _("Protocol:") },
-		{ &label, &dialog->filename_label,       _("Filename:") },
-		{ &label, &dialog->localfile_label,      _("Local File:") },
-		{ &label, &dialog->status_label,         _("Status:") },
-		{ &label, &dialog->speed_label,          _("Speed:") },
-		{ &label, &dialog->time_elapsed_label,   _("Time Elapsed:") },
-		{ &label, &dialog->time_remaining_label, _("Time Remaining:") }
-	};
-
-	/* Setup the initial grid */
-	dialog->grid = grid = gtk_grid_new();
-	gtk_grid_set_row_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
-	gtk_grid_set_column_spacing(GTK_GRID(grid), PIDGIN_HIG_BOX_SPACE);
-
-	/* Setup the labels */
-	for (i = 0; i < G_N_ELEMENTS(labels); i++) {
-		GtkWidget *label;
-		char buf[256];
-
-		g_snprintf(buf, sizeof(buf), "<b>%s</b>",
-			   labels[i].desc != NULL ? labels[i].desc : "");
-
-		*labels[i].desc_label = label = gtk_label_new(NULL);
-		gtk_label_set_markup(GTK_LABEL(label), buf);
-		gtk_label_set_justify(GTK_LABEL(label), GTK_JUSTIFY_RIGHT);
-		gtk_label_set_xalign(GTK_LABEL(label), 0);
-		gtk_grid_attach(GTK_GRID(grid), label, 0, i, 1, 1);
-		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
-
-		gtk_widget_show(label);
-
-		*labels[i].val_label = label = gtk_label_new(NULL);
-		gtk_label_set_xalign(GTK_LABEL(label), 0);
-		gtk_grid_attach(GTK_GRID(grid), label, 1, i, 1, 1);
-		gtk_widget_set_hexpand(label, TRUE);
-		gtk_widget_set_valign(label, GTK_ALIGN_CENTER);
-
-		gtk_widget_show(label);
-	}
-
-	/* Setup the progress bar */
-	dialog->progress = gtk_progress_bar_new();
-	gtk_grid_attach(GTK_GRID(grid), dialog->progress,
-		0, G_N_ELEMENTS(labels), 2, 1);
-
-	gtk_widget_show(dialog->progress);
-
-	return grid;
-}
-
 PidginXferDialog *
 pidgin_xfer_dialog_new(void)
 {
-	PidginXferDialog *dialog;
-	GtkWidget *window;
-	GtkWidget *vbox;
-	GtkWidget *expander;
-#if !GTK_CHECK_VERSION(3,14,0)
-	GtkWidget *alignment;
-#endif
-	GtkWidget *grid;
-	GtkWidget *checkbox;
-	GtkWidget *bbox;
+	return PIDGIN_XFER_DIALOG(g_object_new(PIDGIN_TYPE_XFER_DIALOG, NULL));
+}
 
-	dialog = g_new0(PidginXferDialog, 1);
-	dialog->keep_open =
-		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/filetransfer/keep_open");
-	dialog->auto_clear =
-		purple_prefs_get_bool(PIDGIN_PREFS_ROOT "/filetransfer/clear_finished");
+static void
+pidgin_xfer_dialog_class_init(PidginXferDialogClass *klass)
+{
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
-	/* Create the window. */
-	dialog->window = window = pidgin_create_dialog(_("File Transfers"), 0, "file transfer", TRUE);
-	gtk_window_set_default_size(GTK_WINDOW(window), 450, 250);
+	gtk_widget_class_set_template_from_resource(
+	        widget_class, "/im/pidgin/Pidgin/Xfer/xfer.ui");
 
-	g_signal_connect(G_OBJECT(window), "delete_event",
-					 G_CALLBACK(delete_win_cb), dialog);
+	gtk_widget_class_bind_template_callback(widget_class, delete_win_cb);
 
-	/* Create the main vbox for top half of the window. */
-	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(window), FALSE, PIDGIN_HIG_BORDER);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     tree);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     model);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        selection_changed_cb);
 
-	/* Setup the listbox */
-	gtk_box_pack_start(GTK_BOX(vbox),
-		pidgin_make_scrollable(setup_tree(dialog), GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, 140),
-		TRUE, TRUE, 0);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     keep_open);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        toggle_keep_open_cb);
+
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     auto_clear);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        toggle_clear_finished_cb);
+
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     expander);
+
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     local_user_desc_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     local_user_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     remote_user_desc_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     remote_user_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     protocol_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     filename_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     localfile_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     status_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     speed_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     time_elapsed_label);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     time_remaining_label);
+
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     progress);
+
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     open_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     remove_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     stop_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginXferDialog,
+	                                     close_button);
+
+	gtk_widget_class_bind_template_callback(widget_class, open_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, remove_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, stop_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, close_button_cb);
+}
+
+static void
+pidgin_xfer_dialog_init(PidginXferDialog *dialog)
+{
+	gtk_widget_init_template(GTK_WIDGET(dialog));
 
 	/* "Close this window when all transfers finish" */
-	checkbox = gtk_check_button_new_with_mnemonic(
-			_("Close this window when all transfers _finish"));
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox),
-								 !dialog->keep_open);
-	g_signal_connect(G_OBJECT(checkbox), "toggled",
-					 G_CALLBACK(toggle_keep_open_cb), dialog);
-	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
-	gtk_widget_show(checkbox);
+	gtk_toggle_button_set_active(
+	        GTK_TOGGLE_BUTTON(dialog->keep_open),
+	        !purple_prefs_get_bool(PIDGIN_PREFS_ROOT
+	                               "/filetransfer/keep_open"));
 
 	/* "Clear finished transfers" */
-	checkbox = gtk_check_button_new_with_mnemonic(
-			_("C_lear finished transfers"));
-	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(checkbox),
-								 dialog->auto_clear);
-	g_signal_connect(G_OBJECT(checkbox), "toggled",
-					 G_CALLBACK(toggle_clear_finished_cb), dialog);
-	gtk_box_pack_start(GTK_BOX(vbox), checkbox, FALSE, FALSE, 0);
-	gtk_widget_show(checkbox);
-
-	/* "Download Details" arrow */
-	expander = gtk_expander_new_with_mnemonic(_("File transfer _details"));
-	dialog->expander = expander;
-	gtk_box_pack_start(GTK_BOX(vbox), expander, FALSE, FALSE, 0);
-	gtk_widget_show(expander);
-
-	gtk_widget_set_sensitive(expander, FALSE);
-
-#if GTK_CHECK_VERSION(3,14,0)
-	/* The grid of information. */
-	grid = make_info_grid(dialog);
-	gtk_container_add(GTK_CONTAINER(expander), grid);
-	gtk_widget_show(grid);
-
-	/* Small indent make grid fall under GtkExpander's label */
-	gtk_widget_set_margin_start(grid, 20);
-#else
-	/* Small indent make grid fall under GtkExpander's label */
-	alignment = gtk_alignment_new(1, 0, 1, 1);
-	gtk_alignment_set_padding(GTK_ALIGNMENT(alignment), 0, 0, 20, 0);
-	gtk_container_add(GTK_CONTAINER(expander), alignment);
-	gtk_widget_show(alignment);
-
-	/* The grid of information. */
-	grid = make_info_grid(dialog);
-	gtk_container_add(GTK_CONTAINER(alignment), grid);
-	gtk_widget_show(grid);
-#endif
-
-	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(window));
-
-#define ADD_BUTTON(b, label, callback, callbackdata) do { \
-		GtkWidget *button = gtk_button_new_from_stock(label); \
-		gtk_box_pack_start(GTK_BOX(bbox), button, FALSE, FALSE, 0); \
-		g_signal_connect(G_OBJECT(button), "clicked", callback, callbackdata); \
-		gtk_widget_show(button); \
-		b = button; \
-	} while (0)
-
-	/* Open button */
-	ADD_BUTTON(dialog->open_button, GTK_STOCK_OPEN, G_CALLBACK(open_button_cb), dialog);
-	gtk_widget_set_sensitive(dialog->open_button, FALSE);
-
-	/* Remove button */
-	ADD_BUTTON(dialog->remove_button, GTK_STOCK_REMOVE, G_CALLBACK(remove_button_cb), dialog);
-	gtk_widget_hide(dialog->remove_button);
-
-	/* Stop button */
-	ADD_BUTTON(dialog->stop_button, GTK_STOCK_STOP, G_CALLBACK(stop_button_cb), dialog);
-	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
-
-	/* Close button */
-	ADD_BUTTON(dialog->close_button, GTK_STOCK_CLOSE, G_CALLBACK(close_button_cb), dialog);
-
-#undef ADD_BUTTON
+	gtk_toggle_button_set_active(
+	        GTK_TOGGLE_BUTTON(dialog->auto_clear),
+	        purple_prefs_get_bool(PIDGIN_PREFS_ROOT
+	                              "/filetransfer/clear_finished"));
 
 #ifdef _WIN32
-	g_signal_connect(G_OBJECT(dialog->window), "show",
-		G_CALLBACK(winpidgin_ensure_onscreen), dialog->window);
+	g_signal_connect(G_OBJECT(dialog), "show",
+	                 G_CALLBACK(winpidgin_ensure_onscreen), NULL);
 #endif
-
-	return dialog;
 }
 
 void
@@ -820,9 +650,7 @@ pidgin_xfer_dialog_destroy(PidginXferDialog *dialog)
 
 	purple_notify_close_with_handle(dialog);
 
-	gtk_widget_destroy(dialog->window);
-
-	g_free(dialog);
+	gtk_widget_destroy(GTK_WIDGET(dialog));
 }
 
 void
@@ -838,9 +666,9 @@ pidgin_xfer_dialog_show(PidginXferDialog *dialog)
 			pidgin_set_xfer_dialog(tmp);
 		}
 
-		gtk_widget_show(tmp->window);
+		gtk_widget_show(GTK_WIDGET(tmp));
 	} else {
-		gtk_window_present(GTK_WINDOW(dialog->window));
+		gtk_window_present(GTK_WINDOW(dialog));
 	}
 }
 
@@ -851,7 +679,7 @@ pidgin_xfer_dialog_hide(PidginXferDialog *dialog)
 
 	purple_notify_close_with_handle(dialog);
 
-	gtk_widget_hide(dialog->window);
+	gtk_widget_hide(GTK_WIDGET(dialog));
 }
 
 void
@@ -877,8 +705,8 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 
 	type = purple_xfer_get_xfer_type(xfer);
 
-	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
-	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
+	size_str = g_format_size(purple_xfer_get_size(xfer));
+	remaining_str = g_format_size(purple_xfer_get_bytes_remaining(xfer));
 
 	icon_name = (type == PURPLE_XFER_TYPE_RECEIVE ?  "go-down" : "go-up");
 
@@ -887,16 +715,14 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	utf8 = g_filename_to_utf8(lfilename, -1, NULL, NULL, NULL);
 	g_free(lfilename);
 	lfilename = utf8;
-	gtk_list_store_set(dialog->model, &data->iter,
-					   COLUMN_STATUS, icon_name,
-					   COLUMN_PROGRESS, 0,
-					   COLUMN_FILENAME, (type == PURPLE_XFER_TYPE_RECEIVE)
-					                     ? purple_xfer_get_filename(xfer)
-							     : lfilename,
-					   COLUMN_SIZE, size_str,
-					   COLUMN_REMAINING, _("Waiting for transfer to begin"),
-					   COLUMN_DATA, xfer,
-					   -1);
+	gtk_list_store_set(dialog->model, &data->iter, COLUMN_STATUS, icon_name,
+	                   COLUMN_PROGRESS, 0, COLUMN_FILENAME,
+	                   (type == PURPLE_XFER_TYPE_RECEIVE)
+	                           ? purple_xfer_get_filename(xfer)
+	                           : lfilename,
+	                   COLUMN_SIZE, size_str, COLUMN_REMAINING,
+	                   _("Waiting for transfer to begin"), COLUMN_XFER,
+	                   xfer, -1);
 	g_free(lfilename);
 
 	gtk_tree_view_columns_autosize(GTK_TREE_VIEW(dialog->tree));
@@ -957,7 +783,9 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 	if (!data->in_list)
 		return;
 
-	if ((purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_CANCEL_LOCAL) && (dialog->auto_clear)) {
+	if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_CANCEL_LOCAL &&
+	    gtk_toggle_button_get_active(
+	            GTK_TOGGLE_BUTTON(dialog->auto_clear))) {
 		pidgin_xfer_dialog_remove_xfer(dialog, xfer);
 		return;
 	}
@@ -1008,8 +836,8 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 	}
 	data->last_updated_time = current_time;
 
-	size_str      = purple_str_size_to_units(purple_xfer_get_size(xfer));
-	remaining_str = purple_str_size_to_units(purple_xfer_get_bytes_remaining(xfer));
+	size_str = g_format_size(purple_xfer_get_size(xfer));
+	remaining_str = g_format_size(purple_xfer_get_bytes_remaining(xfer));
 
 	gtk_list_store_set(xfer_dialog->model, &data->iter,
 					   COLUMN_PROGRESS, (gint)(purple_xfer_get_progress(xfer) * 100),
@@ -1032,17 +860,22 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 	if (xfer == dialog->selected_xfer)
 		update_detailed_info(xfer_dialog, xfer);
 
-	if (purple_xfer_is_completed(xfer) && dialog->auto_clear)
+	if (purple_xfer_is_completed(xfer) &&
+	    gtk_toggle_button_get_active(
+	            GTK_TOGGLE_BUTTON(dialog->auto_clear))) {
 		pidgin_xfer_dialog_remove_xfer(dialog, xfer);
-	else
+	} else {
 		update_buttons(dialog, xfer);
+	}
 
 	/*
 	 * If all transfers are finished, and the pref is set, then
 	 * close the dialog.  Otherwise just exit this function.
 	 */
-	if (dialog->keep_open)
+	if (!gtk_toggle_button_get_active(
+	            GTK_TOGGLE_BUTTON(dialog->keep_open))) {
 		return;
+	}
 
 	valid = gtk_tree_model_get_iter_first(GTK_TREE_MODEL(dialog->model), &iter);
 	while (valid)
@@ -1051,10 +884,10 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 		PurpleXfer *next;
 
 		val.g_type = 0;
-		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model),
-				&iter, COLUMN_DATA, &val);
+		gtk_tree_model_get_value(GTK_TREE_MODEL(dialog->model), &iter,
+		                         COLUMN_XFER, &val);
+		next = g_value_get_object(&val);
 
-		next = g_value_get_pointer(&val);
 		if (!purple_xfer_is_completed(next))
 			return;
 
@@ -1063,43 +896,6 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 
 	/* If we got to this point then we know everything is finished */
 	pidgin_xfer_dialog_hide(dialog);
-}
-
-/**************************************************************************
- * PidginXferDialog GBoxed code
- **************************************************************************/
-static PidginXferDialog *
-pidgin_xfer_dialog_ref(PidginXferDialog *dialog)
-{
-	g_return_val_if_fail(dialog != NULL, NULL);
-
-	dialog->box_count++;
-
-	return dialog;
-}
-
-static void
-pidgin_xfer_dialog_unref(PidginXferDialog *dialog)
-{
-	g_return_if_fail(dialog != NULL);
-	g_return_if_fail(dialog->box_count >= 0);
-
-	if (!dialog->box_count--)
-		pidgin_xfer_dialog_destroy(dialog);
-}
-
-GType
-pidgin_xfer_dialog_get_type(void)
-{
-	static GType type = 0;
-
-	if (type == 0) {
-		type = g_boxed_type_register_static("PidginXferDialog",
-				(GBoxedCopyFunc)pidgin_xfer_dialog_ref,
-				(GBoxedFreeFunc)pidgin_xfer_dialog_unref);
-	}
-
-	return type;
 }
 
 /**************************************************************************

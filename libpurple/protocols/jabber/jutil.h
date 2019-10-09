@@ -21,8 +21,9 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#ifndef PURPLE_JABBER_JUTIL_H_
-#define PURPLE_JABBER_JUTIL_H_
+
+#ifndef PURPLE_JABBER_JUTIL_H
+#define PURPLE_JABBER_JUTIL_H
 
 typedef struct {
 	char *node;
@@ -94,4 +95,4 @@ JabberBuddyState jabber_buddy_status_id_get_state(const char *id);
 /* show attr (presence stanza) -> state */
 JabberBuddyState jabber_buddy_show_get_state(const char *id);
 
-#endif /* PURPLE_JABBER_JUTIL_H_ */
+#endif /* PURPLE_JABBER_JUTIL_H */

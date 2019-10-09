@@ -18,8 +18,8 @@
  *
  */
 
-#ifndef __NM_EVENT_H__
-#define __NM_EVENT_H__
+#ifndef PURPLE_NOVELL_NMEVENT_H
+#define PURPLE_NOVELL_NMEVENT_H
 
 typedef struct _NMEvent NMEvent;
 
@@ -175,4 +175,4 @@ int nm_event_get_type(NMEvent * event);
  */
 time_t nm_event_get_gmt(NMEvent * event);
 
-#endif
+#endif /* PURPLE_NOVELL_NMEVENT_H */

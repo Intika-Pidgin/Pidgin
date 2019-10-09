@@ -31,16 +31,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-/* Purple headers */
-#include <plugins.h>
-#include <version.h>
-
-#include <action.h>
-#include <buddylist.h>
-#include <conversation.h>
-#include <xfer.h>
-#include <request.h>
-#include <notify.h>
+#include <purple.h>
 
 #define PREF_PREFIX		"/plugins/core/" PLUGIN_ID
 #define PREF_PATH		PREF_PREFIX "/path"
@@ -145,7 +136,10 @@ file_recv_request_cb(PurpleXfer *xfer, gpointer handle)
 				/* Split at the first dot, to avoid uniquifying "foo.tar.gz" to "foo.tar-2.gz" */
 				name_and_ext = g_strsplit(escape, ".", 2);
 				name = name_and_ext[0];
-				g_return_if_fail(name != NULL);
+				if (name == NULL) {
+					g_strfreev(name_and_ext);
+					g_return_if_reached();
+				}
 				if (name_and_ext[1] != NULL) {
 					/* g_strsplit does not include the separator in each chunk. */
 					ext = g_strdup_printf(".%s", name_and_ext[1]);

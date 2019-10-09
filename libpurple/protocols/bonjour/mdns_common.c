@@ -17,7 +17,7 @@
 #include <string.h>
 
 #include "internal.h"
-#include "debug.h"
+#include <purple.h>
 
 #include "mdns_common.h"
 #include "mdns_interface.h"
@@ -70,9 +70,17 @@ get_max_txt_record_value(const char *key, const char *value)
 	return buffer;
 }
 
+static inline GSList *
+_add_txt_record(GSList *list, const gchar *key, const gchar *value)
+{
+	PurpleKeyValuePair *kvp = g_new0(PurpleKeyValuePair, 1);
+	kvp->key = g_strdup(key);
+	kvp->value = g_strdup(get_max_txt_record_value(key, value));
+	return g_slist_prepend(list, kvp);
+}
+
 static GSList *generate_presence_txt_records(BonjourDnsSd *data) {
 	GSList *ret = NULL;
-	PurpleKeyValuePair *kvp;
 	char portstring[6];
 	const char *jid, *aim, *email;
 
@@ -82,12 +90,6 @@ static GSList *generate_presence_txt_records(BonjourDnsSd *data) {
 	jid = purple_account_get_string(data->account, "jid", NULL);
 	aim = purple_account_get_string(data->account, "AIM", NULL);
 	email = purple_account_get_string(data->account, "email", NULL);
-
-#define _M_ADD_R(k, v) \
-	kvp = g_new0(PurpleKeyValuePair, 1); \
-	kvp->key = g_strdup(k); \
-	kvp->value = g_strdup(get_max_txt_record_value(k, v)); \
-	ret = g_slist_prepend(ret, kvp); \
 
 	/* We should try to follow XEP-0174, but some clients have "issues", so we humor them.
 	 * See http://telepathy.freedesktop.org/wiki/SalutInteroperability
@@ -101,34 +103,34 @@ static GSList *generate_presence_txt_records(BonjourDnsSd *data) {
 	 */
 
 	/* Needed by iChat */
-	_M_ADD_R("txtvers", "1")
+	ret = _add_txt_record(ret, "txtvers", "1");
 	/* Needed by Gaim/Pidgin <= 2.0.1 (remove at some point) */
-	_M_ADD_R("1st", data->first)
+	ret = _add_txt_record(ret, "1st", data->first);
 	/* Needed by Gaim/Pidgin <= 2.0.1 (remove at some point) */
-	_M_ADD_R("last", data->last)
+	ret = _add_txt_record(ret, "last", data->last);
 	/* Needed by Adium */
-	_M_ADD_R("port.p2pj", portstring)
+	ret = _add_txt_record(ret, "port.p2pj", portstring);
 	/* Needed by iChat, Gaim/Pidgin <= 2.0.1 */
-	_M_ADD_R("status", data->status)
-	_M_ADD_R("node", "libpurple")
-	_M_ADD_R("ver", VERSION)
+	ret = _add_txt_record(ret, "status", data->status);
+	ret = _add_txt_record(ret, "node", "libpurple");
+	ret = _add_txt_record(ret, "ver", VERSION);
 	/* Currently always set to "!" since we don't support AV and wont ever be in a conference */
-	_M_ADD_R("vc", data->vc)
+	ret = _add_txt_record(ret, "vc", data->vc);
 	if (email != NULL && *email != '\0') {
-		_M_ADD_R("email", email)
+		ret = _add_txt_record(ret, "email", email);
 	}
 	if (jid != NULL && *jid != '\0') {
-		_M_ADD_R("jid", jid)
+		ret = _add_txt_record(ret, "jid", jid);
 	}
 	/* Nonstandard, but used by iChat */
 	if (aim != NULL && *aim != '\0') {
-		_M_ADD_R("AIM", aim)
+		ret = _add_txt_record(ret, "AIM", aim);
 	}
 	if (data->msg != NULL && *data->msg != '\0') {
-		_M_ADD_R("msg", data->msg)
+		ret = _add_txt_record(ret, "msg", data->msg);
 	}
 	if (data->phsh != NULL && *data->phsh != '\0') {
-		_M_ADD_R("phsh", data->phsh)
+		ret = _add_txt_record(ret, "phsh", data->phsh);
 	}
 
 	/* TODO: ext, nick */

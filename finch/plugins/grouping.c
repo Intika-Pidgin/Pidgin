@@ -1,6 +1,4 @@
 /**
- * @file grouping.c  Provides different grouping options.
- *
  * Copyright (C) 2008 Sadrul Habib Chowdhury <sadrul@users.sourceforge.net>
  *
  * This program is free software; you can redistribute it and/or modify
@@ -43,18 +41,23 @@ static FinchBlistManager *default_manager;
  * GObject code
  */
 static void
-finch_grouping_node_init(FinchGroupingNode *node)
+finch_grouping_node_init(G_GNUC_UNUSED FinchGroupingNode *node)
 {
 }
 
 static void
-finch_grouping_node_class_init(FinchGroupingNodeClass *klass)
+finch_grouping_node_class_init(G_GNUC_UNUSED FinchGroupingNodeClass *klass)
+{
+}
+
+static void
+finch_grouping_node_class_finalize(G_GNUC_UNUSED FinchGroupingNodeClass *klass)
 {
 }
 
 GType finch_grouping_node_get_type(void);
-PURPLE_DEFINE_TYPE(FinchGroupingNode, finch_grouping_node,
-                   PURPLE_TYPE_BLIST_NODE);
+G_DEFINE_DYNAMIC_TYPE(FinchGroupingNode, finch_grouping_node,
+                      PURPLE_TYPE_BLIST_NODE);
 
 /**
  * Online/Offline
@@ -292,8 +295,9 @@ static gboolean
 nested_group_create_tooltip(gpointer selected_row, GString **body, char **title)
 {
 	PurpleBlistNode *node = selected_row;
-	if (!node || !FINCH_IS_GROUPING_NODE(node))
+	if (!FINCH_IS_GROUPING_NODE(node)) {
 		return default_manager->create_tooltip(selected_row, body, title);
+	}
 	if (body)
 		*body = g_string_new(_("Nested Subgroup"));  /* Perhaps list the child groups/subgroups? */
 	return TRUE;
@@ -312,7 +316,7 @@ nested_group_can_add_node(PurpleBlistNode *node)
 		return TRUE;
 
 	len = strlen(purple_group_get_name(PURPLE_GROUP(node)));
-	group = purple_blist_get_root();
+	group = purple_blist_get_default_root();
 	for (; group; group = purple_blist_node_get_sibling_next(group)) {
 		if (group == node)
 			continue;
@@ -360,7 +364,7 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	finch_grouping_node_register_type(plugin);
+	finch_grouping_node_register_type(G_TYPE_MODULE(plugin));
 
 	default_manager = finch_blist_manager_find("default");
 

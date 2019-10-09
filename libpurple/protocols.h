@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_PROTOCOLS_H_
-#define _PURPLE_PROTOCOLS_H_
+#ifndef PURPLE_PROTOCOLS_H
+#define PURPLE_PROTOCOLS_H
 /**
  * SECTION:protocols
  * @section_id: libpurple-protocols
@@ -370,7 +370,7 @@ void purple_protocol_got_media_caps(PurpleAccount *account, const char *who);
  *
  * Gets the safe maximum message size in bytes for the protocol.
  *
- * See #PurpleProtocolClientIface's <literal>get_max_message_size</literal>.
+ * See #PurpleProtocolClientInterface's <literal>get_max_message_size</literal>.
  *
  * Returns: Maximum message size, 0 if unspecified, -1 for infinite.
  */
@@ -386,6 +386,8 @@ purple_protocol_get_max_message_size(PurpleProtocol *protocol);
  * @id: The protocol's ID.
  *
  * Finds a protocol by ID.
+ *
+ * Returns: (transfer none): The protocol, if found, or %NULL otherwise.
  */
 PurpleProtocol *purple_protocols_find(const char *id);
 
@@ -397,7 +399,8 @@ PurpleProtocol *purple_protocols_find(const char *id);
  *
  * Adds a protocol to the list of protocols.
  *
- * Returns: The protocol instance if the protocol was added, else %NULL.
+ * Returns: (transfer none): The protocol instance if the protocol was added,
+ *          else %NULL.
  */
 PurpleProtocol *purple_protocols_add(GType protocol_type, GError **error);
 
@@ -454,4 +457,4 @@ void purple_protocols_uninit(void);
 
 G_END_DECLS
 
-#endif /* _PROTOCOLS_H_ */
+#endif /* PURPLE_PROTOCOLS_H */

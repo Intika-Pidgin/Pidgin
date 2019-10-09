@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_MEDIA_CODEC_H_
-#define _PURPLE_MEDIA_CODEC_H_
+#ifndef PURPLE_MEDIA_CODEC_H
+#define PURPLE_MEDIA_CODEC_H
 /**
  * SECTION:codec
  * @section_id: libpurple-codec
@@ -161,7 +161,7 @@ PurpleKeyValuePair *purple_media_codec_get_optional_parameter(
  *
  * Copies a PurpleMediaCodec object.
  *
- * Returns: The copy of the codec.
+ * Returns: (transfer full): The copy of the codec.
  */
 PurpleMediaCodec *purple_media_codec_copy(PurpleMediaCodec *codec);
 
@@ -172,7 +172,8 @@ PurpleMediaCodec *purple_media_codec_copy(PurpleMediaCodec *codec);
  *
  * Copies a GList of PurpleMediaCodec and its contents.
  *
- * Returns: (element-type PurpleMediaCodec): The copy of the GList.
+ * Returns: (element-type PurpleMediaCodec) (transfer full): The copy of the
+ *          codec list.
  */
 GList *purple_media_codec_list_copy(GList *codecs);
 
@@ -197,5 +198,4 @@ gchar *purple_media_codec_to_string(PurpleMediaCodec *codec);
 
 G_END_DECLS
 
-#endif  /* _PURPLE_MEDIA_CODEC_H_ */
-
+#endif /* PURPLE_MEDIA_CODEC_H */

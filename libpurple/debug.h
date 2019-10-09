@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_DEBUG_H_
-#define _PURPLE_DEBUG_H_
+#ifndef PURPLE_DEBUG_H
+#define PURPLE_DEBUG_H
 /**
  * SECTION:debug
  * @section_id: libpurple-debug
@@ -259,7 +259,7 @@ void purple_debug_set_ui(PurpleDebugUi *ops);
  * Returns the UI operations structure used when outputting debug
  * information.
  *
- * Returns: The UI operations structure in use.
+ * Returns: (transfer none): The UI operations structure in use.
  */
 PurpleDebugUi *purple_debug_get_ui(void);
 
@@ -276,4 +276,4 @@ void purple_debug_init(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_DEBUG_H_ */
+#endif /* PURPLE_DEBUG_H */

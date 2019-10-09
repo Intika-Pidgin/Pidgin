@@ -10,6 +10,6 @@ if DYNAMIC_SAMETIME
 	    c_args : ['-DG_LOG_DOMAIN="sametime"'],
 	    dependencies : [meanwhile, gmime, libpurple_dep, glib],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
-	
+
 	subdir('tests')
 endif

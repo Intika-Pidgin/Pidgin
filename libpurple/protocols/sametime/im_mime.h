@@ -21,8 +21,8 @@
  *
  */
 
-#ifndef SAMETIME_IM_MIME_H
-#define SAMETIME_IM_MIME_H
+#ifndef PURPLE_SAMETIME_IM_MIME_H
+#define PURPLE_SAMETIME_IM_MIME_H
 
 #include <glib.h>
 
@@ -36,4 +36,4 @@ gchar *im_mime_parse(const char *data);
  */
 gchar *im_mime_generate(const char *message);
 
-#endif /* SAMETIME_IM_MIME_H */
+#endif /* PURPLE_SAMETIME_IM_MIME_H */

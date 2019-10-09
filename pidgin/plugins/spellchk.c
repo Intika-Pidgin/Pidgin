@@ -1785,7 +1785,7 @@ static void load_conf(void)
 	gboolean complete = TRUE;
 	gboolean case_sensitive = FALSE;
 
-	buf = g_build_filename(purple_user_dir(), "dict", NULL);
+	buf = g_build_filename(purple_config_dir(), "dict", NULL);
 	if (!(g_file_get_contents(buf, &ibuf, &size, NULL) && ibuf)) {
 		ibuf = g_strdup(defaultconf);
 		size = strlen(defaultconf);
@@ -2080,7 +2080,7 @@ static void save_list()
 		} while (gtk_tree_model_iter_next(GTK_TREE_MODEL(model), &iter));
 	}
 
-	purple_util_write_data_to_file("dict", data->str, -1);
+	purple_util_write_data_to_config_file("dict", data->str, -1);
 
 	g_string_free(data, TRUE);
 }

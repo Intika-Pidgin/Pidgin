@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -711,7 +712,7 @@ gg_create_menu(FinchConv *ggc)
 		PurpleProtocol *protocol =
 			gc ? purple_connection_get_protocol(gc) : NULL;
 
-		if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, get_info)) {
+		if (protocol && PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, get_info)) {
 			item = gnt_menuitem_new(_("Get Info"));
 			gnt_menu_add_item(GNT_MENU(sub), item);
 			gnt_menuitem_set_callback(item, get_info_cb, ggc);
@@ -802,7 +803,7 @@ gained_focus_cb(GntWindow *window, FinchConv *fc)
 }
 
 static void
-completion_cb(GntEntry *entry, const char *start, const char *end)
+completion_cb(GntEntry *entry, const char *start, G_GNUC_UNUSED const char *end)
 {
 	if (start == gnt_entry_get_text(entry) && *start != '/')
 		gnt_widget_key_pressed(GNT_WIDGET(entry), ": ");
@@ -1061,6 +1062,7 @@ finch_write_conv(PurpleConversation *conv, PurpleMessage *msg)
 				name, msgflags);
 		gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(ggconv->tv), me ? " " : ": ", GNT_TEXT_FLAG_NORMAL);
 		g_free(name);
+		g_free(msg_text);
 	} else
 		fl = GNT_TEXT_FLAG_DIM;
 
@@ -1283,8 +1285,13 @@ debug_command_cb(PurpleConversation *conv,
 		const GList *plugins = purple_plugins_get_loaded();
 		if (plugins) {
 			for (; plugins; plugins = plugins->next) {
-				PurplePluginInfo *plugin_info = purple_plugin_get_info(plugins->data);
-				str = g_string_append(str, purple_plugin_info_get_name(plugin_info));
+				GPluginPluginInfo *plugin_info =
+				        GPLUGIN_PLUGIN_INFO(
+				                purple_plugin_get_info(
+				                        plugins->data));
+				str = g_string_append(
+				        str, gplugin_plugin_info_get_name(
+				                     plugin_info));
 
 				if (plugins->next)
 					str = g_string_append(str, ", ");

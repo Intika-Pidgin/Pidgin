@@ -167,8 +167,7 @@ static void historize(PurpleConversation *c)
 	g_object_ref(G_OBJECT(gtkconv->webview));
 	g_idle_add(_scroll_webview_to_end, gtkconv->webview);
 
-	g_list_foreach(logs, (GFunc)purple_log_free, NULL);
-	g_list_free(logs);
+	g_list_free_full(logs, (GDestroyNotify)purple_log_free);
 }
 
 static void

@@ -97,16 +97,17 @@ gboolean purple_group_on_account(PurpleGroup *g, PurpleAccount *account) {
  * TODO: If merging, prompt the user if they want to merge.
  */
 void purple_group_set_name(PurpleGroup *source, const char *name) {
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
+	PurpleGroupPrivate *priv = NULL;
 	PurpleGroup *dest;
 	gchar *old_name;
 	gchar *new_name;
 	GList *moved_buddies = NULL;
 	GSList *accts;
-	PurpleGroupPrivate *priv = purple_group_get_instance_private(source);
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_GROUP(source));
 	g_return_if_fail(name != NULL);
+
+	priv = purple_group_get_instance_private(source);
 
 	new_name = purple_utf8_strip_unprintables(name);
 
@@ -177,12 +178,12 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 	}
 
 	/* Save our changes */
-	if (ops && ops->save_node)
-		ops->save_node(PURPLE_BLIST_NODE(source));
+	purple_blist_save_node(purple_blist_get_default(),
+	                       PURPLE_BLIST_NODE(source));
 
 	/* Update the UI */
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(source));
+	purple_blist_update_node(purple_blist_get_default(),
+	                         PURPLE_BLIST_NODE(source));
 
 	/* Notify all protocols */
 	/* TODO: Is this condition needed?  Seems like it would always be TRUE */
@@ -208,7 +209,7 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 					buddies = g_list_append(buddies, (PurpleBlistNode *)buddy);
 			}
 
-			if(PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER_IFACE, rename_group)) {
+			if(PURPLE_PROTOCOL_IMPLEMENTS(protocol, SERVER, rename_group)) {
 				purple_protocol_server_iface_rename_group(protocol, gc, old_name, source, buddies);
 			} else {
 				GList *cur, *groups = NULL;
@@ -234,10 +235,11 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 }
 
 const char *purple_group_get_name(PurpleGroup *group) {
-	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
+	PurpleGroupPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_GROUP(group), NULL);
 
+	priv = purple_group_get_instance_private(group);
 	return priv->name;
 }
 
@@ -293,12 +295,11 @@ static void
 purple_group_constructed(GObject *object) {
 	PurpleGroup *group = PURPLE_GROUP(object);
 	PurpleGroupPrivate *priv = purple_group_get_instance_private(group);
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	G_OBJECT_CLASS(purple_group_parent_class)->constructed(object);
 
-	if (ops && ops->new_node)
-		ops->new_node(PURPLE_BLIST_NODE(group));
+	purple_blist_new_node(purple_blist_get_default(),
+	                      PURPLE_BLIST_NODE(group));
 
 	priv->is_constructed = TRUE;
 }

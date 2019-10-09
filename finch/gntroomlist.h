@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GNT_ROOMLIST_H
-#define _GNT_ROOMLIST_H
+#ifndef FINCH_ROOMLIST_H
+#define FINCH_ROOMLIST_H
+
 /**
  * SECTION:gntroomlist
  * @section_id: finch-gntroomlist
@@ -64,5 +66,5 @@ void finch_roomlist_show_all(void);
  */
 void finch_roomlist_uninit(void);
 
-#endif
+#endif /* FINCH_ROOMLIST_H */
 

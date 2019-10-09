@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -18,6 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
+
 #include <internal.h>
 #include "finch.h"
 
@@ -43,7 +45,7 @@ static GHashTable *log_viewers = NULL;
 static void populate_log_tree(FinchLogViewer *lv);
 static FinchLogViewer *syslog_viewer = NULL;
 
-struct log_viewer_hash_t {
+struct log_viewer_hash {
 	PurpleLogType type;
 	char *username;
 	PurpleAccount *account;
@@ -52,7 +54,7 @@ struct log_viewer_hash_t {
 
 static guint log_viewer_hash(gconstpointer data)
 {
-	const struct log_viewer_hash_t *viewer = data;
+	const struct log_viewer_hash *viewer = data;
 
 	if (viewer->contact != NULL)
 		return g_direct_hash(viewer->contact);
@@ -67,7 +69,7 @@ static guint log_viewer_hash(gconstpointer data)
 
 static gboolean log_viewer_equal(gconstpointer y, gconstpointer z)
 {
-	const struct log_viewer_hash_t *a, *b;
+	const struct log_viewer_hash *a, *b;
 	int ret;
 	char *normal;
 
@@ -147,7 +149,8 @@ static void search_cb(GntWidget *button, FinchLogViewer *lv)
 
 }
 
-static void destroy_cb(GntWidget *w, struct log_viewer_hash_t *ht)
+static void
+destroy_cb(GntWidget *w, struct log_viewer_hash *ht)
 {
 	FinchLogViewer *lv = syslog_viewer;
 
@@ -162,8 +165,7 @@ static void destroy_cb(GntWidget *w, struct log_viewer_hash_t *ht)
 
 	purple_request_close_with_handle(lv);
 
-	g_list_foreach(lv->logs, (GFunc)purple_log_free, NULL);
-	g_list_free(lv->logs);
+	g_list_free_full(lv->logs, (GDestroyNotify)purple_log_free);
 
 	g_free(lv->search);
 	g_free(lv);
@@ -268,8 +270,9 @@ static void populate_log_tree(FinchLogViewer *lv)
 	}
 }
 
-static FinchLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *logs,
-						const char *title, int log_size)
+static FinchLogViewer *
+display_log_viewer(struct log_viewer_hash *ht, GList *logs, const char *title,
+                   int log_size)
 {
 	FinchLogViewer *lv;
 	char *text;
@@ -342,7 +345,7 @@ static FinchLogViewer *display_log_viewer(struct log_viewer_hash_t *ht, GList *l
 	gnt_box_add_widget(GNT_BOX(vbox), hbox);
 	/* Log size ************/
 	if (log_size) {
-		char *sz_txt = purple_str_size_to_units(log_size);
+		char *sz_txt = g_format_size(log_size);
 		text = g_strdup_printf("%s %s", _("Total log size:"), sz_txt);
 		size_label = gnt_label_new(text);
 		gnt_box_add_widget(GNT_BOX(hbox), size_label);
@@ -375,7 +378,7 @@ our_logging_blows(PurpleLogSet *set, PurpleLogSet *setagain, GList **list)
 
 void finch_log_show(PurpleLogType type, const char *username, PurpleAccount *account)
 {
-	struct log_viewer_hash_t *ht;
+	struct log_viewer_hash *ht;
 	FinchLogViewer *lv = NULL;
 	const char *name = username;
 	char *title;
@@ -387,7 +390,7 @@ void finch_log_show(PurpleLogType type, const char *username, PurpleAccount *acc
 		g_return_if_fail(username != NULL);
 	}
 
-	ht = g_new0(struct log_viewer_hash_t, 1);
+	ht = g_new0(struct log_viewer_hash, 1);
 
 	ht->type = type;
 	ht->username = g_strdup(username);
@@ -442,7 +445,7 @@ void finch_log_show(PurpleLogType type, const char *username, PurpleAccount *acc
 
 void finch_log_show_contact(PurpleContact *contact)
 {
-	struct log_viewer_hash_t *ht;
+	struct log_viewer_hash *ht;
 	PurpleBlistNode *child;
 	FinchLogViewer *lv = NULL;
 	GList *logs = NULL;
@@ -452,7 +455,7 @@ void finch_log_show_contact(PurpleContact *contact)
 
 	g_return_if_fail(contact != NULL);
 
-	ht = g_new0(struct log_viewer_hash_t, 1);
+	ht = g_new0(struct log_viewer_hash, 1);
 	ht->type = PURPLE_LOG_IM;
 	ht->contact = contact;
 
@@ -488,8 +491,9 @@ void finch_log_show_contact(PurpleContact *contact)
 	 * There is probably a better way to deal with this. */
 	if (name == NULL) {
 		child = purple_blist_node_get_first_child((PurpleBlistNode*)contact);
-		if (child != NULL && PURPLE_IS_BUDDY(child))
+		if (PURPLE_IS_BUDDY(child)) {
 			name = purple_buddy_get_contact_alias((PurpleBuddy *)child);
+		}
 		if (name == NULL)
 			name = "";
 	}

@@ -445,7 +445,7 @@ destroy_icon_box(PidginStatusBox *statusbox)
 	g_clear_object(&statusbox->buddy_icon);
 	g_clear_object(&statusbox->buddy_icon_hover);
 
-	g_clear_pointer(&statusbox->buddy_icon_sel, gtk_widget_destroy);
+	g_clear_object(&statusbox->buddy_icon_sel);
 
 	g_clear_pointer(&statusbox->icon_box_menu, gtk_widget_destroy);
 
@@ -713,7 +713,7 @@ pidgin_status_box_refresh(PidginStatusBox *status_box)
 }
 
 static PurpleStatusType *
-find_status_type_by_index(const PurpleAccount *account, gint active)
+find_status_type_by_index(PurpleAccount *account, gint active)
 {
 	GList *l = purple_account_get_status_types(account);
 	gint i;
@@ -1241,24 +1241,13 @@ pidgin_status_box_list_position (PidginStatusBox *status_box, int *x, int *y, in
 static gboolean
 popup_grab_on_window(GdkWindow *window, GdkEvent *event)
 {
-	guint32 activate_time = gdk_event_get_time(event);
-	GdkDevice *device = gdk_event_get_device(event);
+	GdkSeat *seat = gdk_event_get_seat(event);
 	GdkGrabStatus status;
 
-	status = gdk_device_grab(device, window, GDK_OWNERSHIP_WINDOW, TRUE,
-	                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-	                         GDK_POINTER_MOTION_MASK | GDK_KEY_PRESS_MASK |
-	                         GDK_KEY_RELEASE_MASK, NULL, activate_time);
+	status = gdk_seat_grab(seat, window, GDK_SEAT_CAPABILITY_ALL, TRUE, NULL,
+	                       event, NULL, NULL);
 	if (status == GDK_GRAB_SUCCESS) {
-		status = gdk_device_grab(gdk_device_get_associated_device(device),
-		                         window, GDK_OWNERSHIP_WINDOW, TRUE,
-		                         GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK |
-		                         GDK_POINTER_MOTION_MASK | GDK_KEY_PRESS_MASK |
-		                         GDK_KEY_RELEASE_MASK, NULL, activate_time);
-		if (status == GDK_GRAB_SUCCESS)
-			return TRUE;
-		else
-			gdk_device_ungrab(device, activate_time);
+		return TRUE;
 	}
 
 	return FALSE;
@@ -1294,16 +1283,13 @@ pidgin_status_box_popup(PidginStatusBox *box, GdkEvent *event)
 static void
 pidgin_status_box_popdown(PidginStatusBox *box, GdkEvent *event)
 {
-	guint32 time;
-	GdkDevice *device;
+	GdkSeat *seat;
 	gtk_widget_hide(box->popup_window);
 	box->popup_in_progress = FALSE;
 	gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(box->toggle_button), FALSE);
 	gtk_grab_remove(box->popup_window);
-	time = gdk_event_get_time(event);
-	device = gdk_event_get_device(event);
-	gdk_device_ungrab(device, time);
-	gdk_device_ungrab(gdk_device_get_associated_device(device), time);
+	seat = gdk_event_get_seat(event);
+	gdk_seat_ungrab(seat);
 }
 
 static gboolean
@@ -1410,12 +1396,10 @@ remove_buddy_icon_cb(GtkWidget *w, PidginStatusBox *box)
 static void
 choose_buddy_icon_cb(GtkWidget *w, PidginStatusBox *box)
 {
-	if (box->buddy_icon_sel) {
-		gtk_window_present(GTK_WINDOW(box->buddy_icon_sel));
-	} else {
+	if (box->buddy_icon_sel == NULL) {
 		box->buddy_icon_sel = pidgin_buddy_icon_chooser_new(GTK_WINDOW(gtk_widget_get_toplevel(w)), icon_choose_cb, box);
-		gtk_widget_show_all(box->buddy_icon_sel);
 	}
+	gtk_native_dialog_show(GTK_NATIVE_DIALOG(box->buddy_icon_sel));
 }
 
 static void
@@ -1430,7 +1414,7 @@ icon_choose_cb(const char *filename, gpointer data)
 			buddy_icon_set_cb(filename, box);
 	}
 
-	box->buddy_icon_sel = NULL;
+	g_clear_object(&box->buddy_icon_sel);
 }
 
 static void
@@ -1646,11 +1630,7 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 	status_box->hbox = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
 	status_box->cell_view = gtk_cell_view_new();
 	status_box->vsep = gtk_separator_new(GTK_ORIENTATION_VERTICAL);
-#if GTK_CHECK_VERSION(3,14,0)
 	status_box->arrow = gtk_image_new_from_icon_name("pan-down-symbolic", GTK_ICON_SIZE_BUTTON);
-#else
-	status_box->arrow = gtk_arrow_new(GTK_ARROW_DOWN, GTK_SHADOW_NONE);
-#endif
 
 	status_box->store = gtk_list_store_new(NUM_COLUMNS, G_TYPE_INT, G_TYPE_STRING, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_STRING,
 					       G_TYPE_STRING, G_TYPE_POINTER, GDK_TYPE_PIXBUF, G_TYPE_BOOLEAN);
@@ -1667,7 +1647,7 @@ pidgin_status_box_init (PidginStatusBox *status_box)
 	gtk_box_pack_start(GTK_BOX(status_box->hbox), status_box->vsep, FALSE, FALSE, 0);
 	gtk_box_pack_start(GTK_BOX(status_box->hbox), status_box->arrow, FALSE, FALSE, 0);
 	gtk_widget_show_all(status_box->toggle_button);
-	gtk_button_set_focus_on_click(GTK_BUTTON(status_box->toggle_button), FALSE);
+	gtk_widget_set_focus_on_click(status_box->toggle_button, FALSE);
 
 	text_rend = gtk_cell_renderer_text_new();
 	icon_rend = gtk_cell_renderer_pixbuf_new();

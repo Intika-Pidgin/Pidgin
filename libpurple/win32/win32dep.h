@@ -20,8 +20,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  *
  */
-#ifndef _WIN32DEP_H_
-#define _WIN32DEP_H_
+#ifndef PURPLE_WIN32_WIN32DEP_H
+#define PURPLE_WIN32_WIN32DEP_H
 
 #include <config.h>
 
@@ -78,5 +78,4 @@ void wpurple_cleanup(void);
 
 G_END_DECLS
 
-#endif /* _WIN32DEP_H_ */
-
+#endif /* PURPLE_WIN32_WIN32DEP_H */

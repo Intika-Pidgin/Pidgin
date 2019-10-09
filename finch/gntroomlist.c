@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -115,10 +116,11 @@ static void fl_add_chat(GntWidget *button, gpointer null)
 
 	protocol = purple_connection_get_protocol(gc);
 
-	if(protocol != NULL && PURPLE_PROTOCOL_IMPLEMENTS(protocol, ROOMLIST_IFACE, room_serialize))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, ROOMLIST, room_serialize)) {
 		name = purple_protocol_roomlist_iface_room_serialize(protocol, room);
-	else
+	} else {
 		name = g_strdup(purple_roomlist_room_get_name(room));
+	}
 
 	purple_blist_request_add_chat(froomlist.account, NULL, NULL, name);
 
@@ -237,7 +239,7 @@ reset_account_list(PurpleAccount *account)
 
 		protocol = purple_connection_get_protocol(gc);
 		if (PURPLE_CONNECTION_IS_CONNECTED(gc) &&
-		        PURPLE_PROTOCOL_IMPLEMENTS(protocol, ROOMLIST_IFACE, get_list)) {
+		        PURPLE_PROTOCOL_IMPLEMENTS(protocol, ROOMLIST, get_list)) {
 			PurpleAccount *account = purple_connection_get_account(gc);
 			char *text = g_strdup_printf("%s (%s)",
 					purple_account_get_username(account),

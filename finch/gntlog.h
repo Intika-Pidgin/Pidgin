@@ -1,4 +1,5 @@
-/* finch
+/*
+ * finch
  *
  * Finch is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -19,8 +20,9 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _FINCHLOG_H_
-#define _FINCHLOG_H_
+#ifndef FINCH_LOG_H
+#define FINCH_LOG_H
+
 /**
  * SECTION:gntlog
  * @section_id: finch-gntlog
@@ -41,6 +43,7 @@ typedef struct _FinchLogViewer FinchLogViewer;
  * @tree:   The tree representing said treestore
  * @text:   The text to display said logs
  * @entry:  The search entry, in which search terms are entered
+ * @label:  The label for the log viewer
  * @flags:  The most recently used log flags
  * @search: The string currently being searched for
  *
@@ -92,4 +95,5 @@ void *finch_log_get_handle(void);
  */
 void finch_log_uninit(void);
 
-#endif
+#endif /* FINCH_LOG_H */
+

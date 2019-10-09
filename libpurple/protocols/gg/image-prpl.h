@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_IMAGE_H
-#define _GGP_IMAGE_H
+#ifndef PURPLE_GG_IMAGE_PRPL_H
+#define PURPLE_GG_IMAGE_PRPL_H
 
 #include <internal.h>
 #include <libgadu.h>
@@ -65,4 +65,4 @@ ggp_image_send(PurpleConnection *gc,
 PurpleImage *
 ggp_image_request(PurpleConnection *gc, uin_t uin, uint64_t id);
 
-#endif /* _GGP_IMAGE_H */
+#endif /* PURPLE_GG_IMAGE_PRPL_H */

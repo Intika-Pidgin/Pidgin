@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_ACCOUNT_H
-#define _GGP_ACCOUNT_H
+#ifndef PURPLE_GG_ACCOUNT_H
+#define PURPLE_GG_ACCOUNT_H
 
 #error "This file is outdated"
 
@@ -59,4 +59,4 @@ void ggp_account_register(PurpleAccount *account);
 
 void ggp_account_chpass(PurpleConnection *gc);
 
-#endif /* _GGP_ACCOUNT_H */
+#endif /* PURPLE_GG_ACCOUNT_H */

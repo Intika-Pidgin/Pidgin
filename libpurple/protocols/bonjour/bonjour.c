@@ -31,13 +31,7 @@
 #endif
 
 #include "internal.h"
-
-#include "account.h"
-#include "accountopt.h"
-#include "debug.h"
-#include "plugins.h"
-#include "util.h"
-#include "version.h"
+#include <purple.h>
 
 #include "bonjour.h"
 #include "mdns_common.h"
@@ -112,8 +106,6 @@ bonjour_login(PurpleAccount *account)
 
 	/* Start waiting for jabber connections (iChat style) */
 	bd->jabber_data = g_new0(BonjourJabber, 1);
-	bd->jabber_data->socket = -1;
-	bd->jabber_data->socket6 = -1;
 	bd->jabber_data->port = purple_account_get_int(account, "port", BONJOUR_DEFAULT_PORT);
 	bd->jabber_data->account = account;
 
@@ -632,8 +624,9 @@ initialize_default_account_values(void)
 }
 
 static void
-bonjour_protocol_init(PurpleProtocol *protocol)
+bonjour_protocol_init(BonjourProtocol *self)
 {
+	PurpleProtocol *protocol = PURPLE_PROTOCOL(self);
 	PurpleAccountOption *option;
 
 	protocol->id        = "prpl-bonjour";
@@ -664,16 +657,23 @@ bonjour_protocol_init(PurpleProtocol *protocol)
 }
 
 static void
-bonjour_protocol_class_init(PurpleProtocolClass *klass)
+bonjour_protocol_class_init(BonjourProtocolClass *klass)
 {
-	klass->login        = bonjour_login;
-	klass->close        = bonjour_close;
-	klass->status_types = bonjour_status_types;
-	klass->list_icon    = bonjour_list_icon;
+	PurpleProtocolClass *protocol_class = PURPLE_PROTOCOL_CLASS(klass);
+
+	protocol_class->login = bonjour_login;
+	protocol_class->close = bonjour_close;
+	protocol_class->status_types = bonjour_status_types;
+	protocol_class->list_icon = bonjour_list_icon;
 }
 
 static void
-bonjour_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
+bonjour_protocol_class_finalize(G_GNUC_UNUSED BonjourProtocolClass *klass)
+{
+}
+
+static void
+bonjour_protocol_client_iface_init(PurpleProtocolClientInterface *client_iface)
 {
 	client_iface->status_text          = bonjour_status_text;
 	client_iface->tooltip_text         = bonjour_tooltip_text;
@@ -682,7 +682,7 @@ bonjour_protocol_client_iface_init(PurpleProtocolClientIface *client_iface)
 }
 
 static void
-bonjour_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
+bonjour_protocol_server_iface_init(PurpleProtocolServerInterface *server_iface)
 {
 	server_iface->add_buddy      = bonjour_fake_add_buddy;
 	server_iface->remove_buddy   = bonjour_remove_buddy;
@@ -693,7 +693,7 @@ bonjour_protocol_server_iface_init(PurpleProtocolServerIface *server_iface)
 }
 
 static void
-bonjour_protocol_im_iface_init(PurpleProtocolIMIface *im_iface)
+bonjour_protocol_im_iface_init(PurpleProtocolIMInterface *im_iface)
 {
 	im_iface->send = bonjour_send_im;
 }
@@ -706,21 +706,20 @@ bonjour_protocol_xfer_iface_init(PurpleProtocolXferInterface *xfer_iface)
 	xfer_iface->new_xfer    = bonjour_new_xfer;
 }
 
-PURPLE_DEFINE_TYPE_EXTENDED(
-	BonjourProtocol, bonjour_protocol, PURPLE_TYPE_PROTOCOL, 0,
+G_DEFINE_DYNAMIC_TYPE_EXTENDED(
+        BonjourProtocol, bonjour_protocol, PURPLE_TYPE_PROTOCOL, 0,
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_CLIENT_IFACE,
-	                                  bonjour_protocol_client_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_CLIENT,
+                                      bonjour_protocol_client_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_SERVER_IFACE,
-	                                  bonjour_protocol_server_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_SERVER,
+                                      bonjour_protocol_server_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_IM_IFACE,
-	                                  bonjour_protocol_im_iface_init)
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_IM,
+                                      bonjour_protocol_im_iface_init)
 
-	PURPLE_IMPLEMENT_INTERFACE_STATIC(PURPLE_TYPE_PROTOCOL_XFER,
-	                                  bonjour_protocol_xfer_iface_init)
-);
+        G_IMPLEMENT_INTERFACE_DYNAMIC(PURPLE_TYPE_PROTOCOL_XFER,
+                                      bonjour_protocol_xfer_iface_init));
 
 static PurplePluginInfo *
 plugin_query(GError **error)
@@ -743,7 +742,9 @@ plugin_query(GError **error)
 static gboolean
 plugin_load(PurplePlugin *plugin, GError **error)
 {
-	bonjour_protocol_register_type(plugin);
+	bonjour_protocol_register_type(G_TYPE_MODULE(plugin));
+
+	xep_xfer_register(G_TYPE_MODULE(plugin));
 
 	my_protocol = purple_protocols_add(BONJOUR_TYPE_PROTOCOL, error);
 	if (!my_protocol)

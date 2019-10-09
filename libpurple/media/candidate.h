@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_MEDIA_CANDIDATE_H_
-#define _PURPLE_MEDIA_CANDIDATE_H_
+#ifndef PURPLE_MEDIA_CANDIDATE_H
+#define PURPLE_MEDIA_CANDIDATE_H
 /**
  * SECTION:candidate
  * @section_id: libpurple-candidate
@@ -71,7 +71,7 @@ PurpleMediaCandidate *purple_media_candidate_new(
  *
  * Copies a PurpleMediaCandidate.
  *
- * Returns: The copy of the PurpleMediaCandidate.
+ * Returns: (transfer full): The copy of the PurpleMediaCandidate.
  */
 PurpleMediaCandidate *purple_media_candidate_copy(
 		PurpleMediaCandidate *candidate);
@@ -83,7 +83,8 @@ PurpleMediaCandidate *purple_media_candidate_copy(
  *
  * Copies a GList of PurpleMediaCandidate and its contents.
  *
- * Returns: (element-type PurpleMediaCandidate): The copy of the GList.
+ * Returns: (element-type PurpleMediaCandidate) (transfer full): The copy of
+ *          the candidate list.
  */
 GList *purple_media_candidate_list_copy(GList *candidates);
 
@@ -225,5 +226,4 @@ guint purple_media_candidate_get_ttl(PurpleMediaCandidate *candidate);
 
 G_END_DECLS
 
-#endif  /* _PURPLE_MEDIA_CANDIDATE_H_ */
-
+#endif /* PURPLE_MEDIA_CANDIDATE_H */

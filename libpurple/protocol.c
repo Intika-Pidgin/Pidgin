@@ -119,20 +119,6 @@ icon_spec_free(PurpleProtocol *protocol)
 	protocol->icon_spec = NULL;
 }
 
-void
-purple_protocol_override(PurpleProtocol *protocol,
-                         PurpleProtocolOverrideFlags flags)
-{
-	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
-
-	if (flags & PURPLE_PROTOCOL_OVERRIDE_USER_SPLITS)
-		user_splits_free(protocol);
-	if (flags & PURPLE_PROTOCOL_OVERRIDE_PROTOCOL_OPTIONS)
-		account_options_free(protocol);
-	if (flags & PURPLE_PROTOCOL_OVERRIDE_ICON_SPEC)
-		icon_spec_free(protocol);
-}
-
 /**************************************************************************
  * GObject stuff
  **************************************************************************/
@@ -255,14 +241,14 @@ purple_protocol_class_list_icon(PurpleProtocol *protocol,
  * Protocol Client Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolClientIface *client_iface = \
-		PURPLE_PROTOCOL_GET_CLIENT_IFACE(protocol); \
+	PurpleProtocolClientInterface *client_iface = \
+		PURPLE_PROTOCOL_CLIENT_GET_IFACE(protocol); \
 	if (client_iface && client_iface->funcname) \
 		client_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolClientIface *client_iface = \
-		PURPLE_PROTOCOL_GET_CLIENT_IFACE(protocol); \
+	PurpleProtocolClientInterface *client_iface = \
+		PURPLE_PROTOCOL_CLIENT_GET_IFACE(protocol); \
 	if (client_iface && client_iface->funcname) \
 		return client_iface->funcname(__VA_ARGS__); \
 	else \
@@ -275,11 +261,11 @@ purple_protocol_client_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolClientIface),
+			.class_size = sizeof(PurpleProtocolClientInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolClientIface", &info, 0);
+				"PurpleProtocolClientInterface", &info, 0);
 	}
 	return type;
 }
@@ -384,14 +370,14 @@ purple_protocol_client_iface_get_max_message_size(PurpleProtocol *protocol,
  * Protocol Server Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolServerIface *server_iface = \
-		PURPLE_PROTOCOL_GET_SERVER_IFACE(protocol); \
+	PurpleProtocolServerInterface *server_iface = \
+		PURPLE_PROTOCOL_SERVER_GET_IFACE(protocol); \
 	if (server_iface && server_iface->funcname) \
 		server_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolServerIface *server_iface = \
-		PURPLE_PROTOCOL_GET_SERVER_IFACE(protocol); \
+	PurpleProtocolServerInterface *server_iface = \
+		PURPLE_PROTOCOL_SERVER_GET_IFACE(protocol); \
 	if (server_iface && server_iface->funcname) \
 		return server_iface->funcname(__VA_ARGS__); \
 	else \
@@ -404,11 +390,11 @@ purple_protocol_server_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolServerIface),
+			.class_size = sizeof(PurpleProtocolServerInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolServerIface", &info, 0);
+				"PurpleProtocolServerInterface", &info, 0);
 	}
 	return type;
 }
@@ -577,14 +563,14 @@ purple_protocol_server_iface_get_public_alias(PurpleProtocol *protocol,
  * Protocol IM Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolIMIface *im_iface = \
-		PURPLE_PROTOCOL_GET_IM_IFACE(protocol); \
+	PurpleProtocolIMInterface *im_iface = \
+		PURPLE_PROTOCOL_IM_GET_IFACE(protocol); \
 	if (im_iface && im_iface->funcname) \
 		im_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolIMIface *im_iface = \
-		PURPLE_PROTOCOL_GET_IM_IFACE(protocol); \
+	PurpleProtocolIMInterface *im_iface = \
+		PURPLE_PROTOCOL_IM_GET_IFACE(protocol); \
 	if (im_iface && im_iface->funcname) \
 		return im_iface->funcname(__VA_ARGS__); \
 	else \
@@ -597,11 +583,11 @@ purple_protocol_im_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolIMIface),
+			.class_size = sizeof(PurpleProtocolIMInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolIMIface", &info, 0);
+				"PurpleProtocolIMInterface", &info, 0);
 	}
 	return type;
 }
@@ -627,14 +613,14 @@ purple_protocol_im_iface_send_typing(PurpleProtocol *protocol,
  * Protocol Chat Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolChatIface *chat_iface = \
-		PURPLE_PROTOCOL_GET_CHAT_IFACE(protocol); \
+	PurpleProtocolChatInterface *chat_iface = \
+		PURPLE_PROTOCOL_CHAT_GET_IFACE(protocol); \
 	if (chat_iface && chat_iface->funcname) \
 		chat_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolChatIface *chat_iface = \
-		PURPLE_PROTOCOL_GET_CHAT_IFACE(protocol); \
+	PurpleProtocolChatInterface *chat_iface = \
+		PURPLE_PROTOCOL_CHAT_GET_IFACE(protocol); \
 	if (chat_iface && chat_iface->funcname) \
 		return chat_iface->funcname(__VA_ARGS__); \
 	else \
@@ -647,11 +633,11 @@ purple_protocol_chat_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolChatIface),
+			.class_size = sizeof(PurpleProtocolChatInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolChatIface", &info, 0);
+				"PurpleProtocolChatInterface", &info, 0);
 	}
 	return type;
 }
@@ -734,14 +720,14 @@ purple_protocol_chat_iface_set_topic(PurpleProtocol *protocol,
  * Protocol Privacy Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolPrivacyIface *privacy_iface = \
-		PURPLE_PROTOCOL_GET_PRIVACY_IFACE(protocol); \
+	PurpleProtocolPrivacyInterface *privacy_iface = \
+		PURPLE_PROTOCOL_PRIVACY_GET_IFACE(protocol); \
 	if (privacy_iface && privacy_iface->funcname) \
 		privacy_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolPrivacyIface *privacy_iface = \
-		PURPLE_PROTOCOL_GET_PRIVACY_IFACE(protocol); \
+	PurpleProtocolPrivacyInterface *privacy_iface = \
+		PURPLE_PROTOCOL_PRIVACY_GET_IFACE(protocol); \
 	if (privacy_iface && privacy_iface->funcname) \
 		return privacy_iface->funcname(__VA_ARGS__); \
 	else \
@@ -754,11 +740,11 @@ purple_protocol_privacy_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolPrivacyIface),
+			.class_size = sizeof(PurpleProtocolPrivacyInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolPrivacyIface", &info, 0);
+				"PurpleProtocolPrivacyInterface", &info, 0);
 	}
 	return type;
 }
@@ -802,81 +788,17 @@ purple_protocol_privacy_iface_set_permit_deny(PurpleProtocol *protocol,
 #undef DEFINE_PROTOCOL_FUNC
 
 /**************************************************************************
- * Protocol Roomlist Interface API
- **************************************************************************/
-#define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolRoomlistIface *roomlist_iface = \
-		PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(protocol); \
-	if (roomlist_iface && roomlist_iface->funcname) \
-		roomlist_iface->funcname(__VA_ARGS__);
-
-#define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolRoomlistIface *roomlist_iface = \
-		PURPLE_PROTOCOL_GET_ROOMLIST_IFACE(protocol); \
-	if (roomlist_iface && roomlist_iface->funcname) \
-		return roomlist_iface->funcname(__VA_ARGS__); \
-	else \
-		return defaultreturn;
-
-GType
-purple_protocol_roomlist_iface_get_type(void)
-{
-	static GType type = 0;
-
-	if (G_UNLIKELY(type == 0)) {
-		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolRoomlistIface),
-		};
-
-		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolRoomlistIface", &info, 0);
-	}
-	return type;
-}
-
-PurpleRoomlist *
-purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
-		PurpleConnection *gc)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, get_list, gc);
-}
-
-void
-purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
-		PurpleRoomlist *list)
-{
-	DEFINE_PROTOCOL_FUNC(protocol, cancel, list);
-}
-
-void
-purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
-		PurpleRoomlist *list, PurpleRoomlistRoom *category)
-{
-	DEFINE_PROTOCOL_FUNC(protocol, expand_category, list, category);
-}
-
-char *
-purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
-		PurpleRoomlistRoom *room)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, room_serialize, room);
-}
-
-#undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
-#undef DEFINE_PROTOCOL_FUNC
-
-/**************************************************************************
  * Protocol Media Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolMediaIface *media_iface = \
-		PURPLE_PROTOCOL_GET_MEDIA_IFACE(protocol); \
+	PurpleProtocolMediaInterface *media_iface = \
+		PURPLE_PROTOCOL_MEDIA_GET_IFACE(protocol); \
 	if (media_iface && media_iface->funcname) \
 		media_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolMediaIface *media_iface = \
-		PURPLE_PROTOCOL_GET_MEDIA_IFACE(protocol); \
+	PurpleProtocolMediaInterface *media_iface = \
+		PURPLE_PROTOCOL_MEDIA_GET_IFACE(protocol); \
 	if (media_iface && media_iface->funcname) \
 		return media_iface->funcname(__VA_ARGS__); \
 	else \
@@ -889,11 +811,11 @@ purple_protocol_media_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolMediaIface),
+			.class_size = sizeof(PurpleProtocolMediaInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolMediaIface", &info, 0);
+				"PurpleProtocolMediaInterface", &info, 0);
 	}
 	return type;
 }
@@ -927,14 +849,14 @@ gboolean purple_protocol_media_iface_send_dtmf(PurpleProtocol *protocol,
  * Protocol Factory Interface API
  **************************************************************************/
 #define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
-	PurpleProtocolFactoryIface *factory_iface = \
-		PURPLE_PROTOCOL_GET_FACTORY_IFACE(protocol); \
+	PurpleProtocolFactoryInterface *factory_iface = \
+		PURPLE_PROTOCOL_FACTORY_GET_IFACE(protocol); \
 	if (factory_iface && factory_iface->funcname) \
 		factory_iface->funcname(__VA_ARGS__);
 
 #define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
-	PurpleProtocolFactoryIface *factory_iface = \
-		PURPLE_PROTOCOL_GET_FACTORY_IFACE(protocol); \
+	PurpleProtocolFactoryInterface *factory_iface = \
+		PURPLE_PROTOCOL_FACTORY_GET_IFACE(protocol); \
 	if (factory_iface && factory_iface->funcname) \
 		return factory_iface->funcname(__VA_ARGS__); \
 	else \
@@ -947,11 +869,11 @@ purple_protocol_factory_iface_get_type(void)
 
 	if (G_UNLIKELY(type == 0)) {
 		static const GTypeInfo info = {
-			.class_size = sizeof(PurpleProtocolFactoryIface),
+			.class_size = sizeof(PurpleProtocolFactoryInterface),
 		};
 
 		type = g_type_register_static(G_TYPE_INTERFACE,
-				"PurpleProtocolFactoryIface", &info, 0);
+				"PurpleProtocolFactoryInterface", &info, 0);
 	}
 	return type;
 }
@@ -977,14 +899,6 @@ purple_protocol_factory_iface_whiteboard_new(PurpleProtocol *protocol,
 {
 	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, whiteboard_new, account,
 			who, state);
-}
-
-PurpleXfer *
-purple_protocol_factory_iface_xfer_new(PurpleProtocol *protocol,
-		PurpleAccount *account, PurpleXferType type, const char *who)
-{
-	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, xfer_new, account, type,
-			who);
 }
 
 #undef DEFINE_PROTOCOL_FUNC_WITH_RETURN

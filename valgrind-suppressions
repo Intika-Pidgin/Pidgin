@@ -159,40 +159,6 @@
    ...
 }
 {
-   webkitgtk uninitialized values
-   Memcheck:Cond
-   ...
-   obj:/usr/lib/libwebkitgtk-*
-   ...
-}
-{
-   webkitgtk uninitialized values 2
-   Memcheck:Value4
-   ...
-   obj:/usr/lib/libwebkitgtk-*
-   ...
-}
-{
-   webkitgtk uninitialized values 3
-   Memcheck:Cond
-   ...
-   fun:_ZN3JSC17ConservativeRoots14genericAddSpanINS_13DummyMarkHookEEEvPvS3_RT_
-   ...
-}
-{
-   webkitgtk uninitialized values 4
-   Memcheck:Value4
-   ...
-   fun:_ZN3JSC17ConservativeRoots14genericAddSpanINS_13DummyMarkHookEEEvPvS3_RT_
-   ...
-}
-{
-   webkitgtk uninitialized values 5
-   Memcheck:Value4
-   ...
-   obj:/usr/lib/libjavascriptcoregtk-
-}
-{
    wcslen_sse2 optimization
    Memcheck:Addr8
    fun:__wcslen_sse2

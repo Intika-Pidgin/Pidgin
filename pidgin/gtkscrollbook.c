@@ -255,6 +255,15 @@ close_button_entered_cb(GtkWidget *widget, GdkEventCrossing *event, GtkLabel *la
 static void
 pidgin_scroll_book_init (PidginScrollBook *scroll_book)
 {
+	const gchar *left_arrow_icon_names[] = {
+	        "pan-start-symbolic",
+	        "pan-left-symbolic",
+	};
+	const gchar *right_arrow_icon_names[] = {
+	        "pan-end-symbolic",
+	        "pan-right-symbolic",
+	};
+	GIcon *icon;
 	GtkWidget *eb;
 	GtkWidget *close_button;
 
@@ -276,11 +285,11 @@ pidgin_scroll_book_init (PidginScrollBook *scroll_book)
 	/* Right arrow */
 	eb = gtk_event_box_new();
 	gtk_box_pack_end(GTK_BOX(scroll_book->hbox), eb, FALSE, FALSE, 0);
-#if GTK_CHECK_VERSION(3,14,0)
-	scroll_book->right_arrow = gtk_image_new_from_icon_name("pan-right-symbolic", GTK_ICON_SIZE_BUTTON);
-#else
-	scroll_book->right_arrow = gtk_arrow_new(GTK_ARROW_RIGHT, GTK_SHADOW_NONE);
-#endif
+	icon = g_themed_icon_new_from_names((char **)right_arrow_icon_names,
+	                                    G_N_ELEMENTS(right_arrow_icon_names));
+	scroll_book->right_arrow =
+	        gtk_image_new_from_gicon(icon, GTK_ICON_SIZE_BUTTON);
+	g_object_unref(icon);
 	gtk_container_add(GTK_CONTAINER(eb), scroll_book->right_arrow);
 	g_signal_connect_swapped(G_OBJECT(eb), "button-press-event", G_CALLBACK(scroll_right_cb), scroll_book);
 
@@ -291,11 +300,11 @@ pidgin_scroll_book_init (PidginScrollBook *scroll_book)
 	/* Left arrow */
 	eb = gtk_event_box_new();
 	gtk_box_pack_end(GTK_BOX(scroll_book->hbox), eb, FALSE, FALSE, 0);
-#if GTK_CHECK_VERSION(3,14,0)
-	scroll_book->left_arrow = gtk_image_new_from_icon_name("pan-left-symbolic", GTK_ICON_SIZE_BUTTON);
-#else
-	scroll_book->left_arrow = gtk_arrow_new(GTK_ARROW_LEFT, GTK_SHADOW_NONE);
-#endif
+	icon = g_themed_icon_new_from_names((char **)left_arrow_icon_names,
+	                                    G_N_ELEMENTS(left_arrow_icon_names));
+	scroll_book->left_arrow =
+	        gtk_image_new_from_gicon(icon, GTK_ICON_SIZE_BUTTON);
+	g_object_unref(icon);
 	gtk_container_add(GTK_CONTAINER(eb), scroll_book->left_arrow);
 	g_signal_connect_swapped(G_OBJECT(eb), "button-press-event", G_CALLBACK(scroll_left_cb), scroll_book);
 

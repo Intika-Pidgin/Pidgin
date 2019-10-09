@@ -94,21 +94,21 @@ void purple_roomlist_show_with_account(PurpleAccount *account)
 
 PurpleAccount *purple_roomlist_get_account(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ROOMLIST(list), NULL);
 
+	priv = purple_roomlist_get_instance_private(list);
 	return priv->account;
 }
 
 void purple_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 
+	priv = purple_roomlist_get_instance_private(list);
 	priv->fields = fields;
 
 	if (ops && ops->set_fields)
@@ -119,11 +119,11 @@ void purple_roomlist_set_fields(PurpleRoomlist *list, GList *fields)
 
 void purple_roomlist_set_in_progress(PurpleRoomlist *list, gboolean in_progress)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 
+	priv = purple_roomlist_get_instance_private(list);
 	priv->in_progress = in_progress;
 
 	if (ops && ops->in_progress)
@@ -134,22 +134,22 @@ void purple_roomlist_set_in_progress(PurpleRoomlist *list, gboolean in_progress)
 
 gboolean purple_roomlist_get_in_progress(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, FALSE);
+	g_return_val_if_fail(PURPLE_IS_ROOMLIST(list), FALSE);
 
+	priv = purple_roomlist_get_instance_private(list);
 	return priv->in_progress;
 }
 
 void purple_roomlist_room_add(PurpleRoomlist *list, PurpleRoomlistRoom *room)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 	g_return_if_fail(room != NULL);
 
+	priv = purple_roomlist_get_instance_private(list);
 	priv->rooms = g_list_append(priv->rooms, room);
 
 	if (ops && ops->add_room)
@@ -173,15 +173,15 @@ PurpleRoomlist *purple_roomlist_get_list(PurpleConnection *gc)
 
 void purple_roomlist_cancel_get_list(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 	PurpleProtocol *protocol = NULL;
 	PurpleConnection *gc;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
+
+	priv = purple_roomlist_get_instance_private(list);
 
 	gc = purple_account_get_connection(priv->account);
-
 	g_return_if_fail(PURPLE_IS_CONNECTION(gc));
 
 	if(gc)
@@ -193,14 +193,15 @@ void purple_roomlist_cancel_get_list(PurpleRoomlist *list)
 
 void purple_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *category)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 	PurpleProtocol *protocol = NULL;
 	PurpleConnection *gc;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 	g_return_if_fail(category != NULL);
 	g_return_if_fail(category->type & PURPLE_ROOMLIST_ROOMTYPE_CATEGORY);
+
+	priv = purple_roomlist_get_instance_private(list);
 
 	gc = purple_account_get_connection(priv->account);
 	g_return_if_fail(PURPLE_IS_CONNECTION(gc));
@@ -214,31 +215,31 @@ void purple_roomlist_expand_category(PurpleRoomlist *list, PurpleRoomlistRoom *c
 
 GList * purple_roomlist_get_fields(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ROOMLIST(list), NULL);
 
+	priv = purple_roomlist_get_instance_private(list);
 	return priv->fields;
 }
 
 gpointer purple_roomlist_get_protocol_data(PurpleRoomlist *list)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_val_if_fail(priv != NULL, NULL);
+	g_return_val_if_fail(PURPLE_IS_ROOMLIST(list), NULL);
 
+	priv = purple_roomlist_get_instance_private(list);
 	return priv->proto_data;
 }
 
 void purple_roomlist_set_protocol_data(PurpleRoomlist *list, gpointer proto_data)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 
+	priv = purple_roomlist_get_instance_private(list);
 	priv->proto_data = proto_data;
 }
 
@@ -345,8 +346,7 @@ purple_roomlist_finalize(GObject *object)
 	}
 	g_list_free(priv->rooms);
 
-	g_list_foreach(priv->fields, (GFunc)purple_roomlist_field_free, NULL);
-	g_list_free(priv->fields);
+	g_list_free_full(priv->fields, (GDestroyNotify)purple_roomlist_field_free);
 
 	G_OBJECT_CLASS(purple_roomlist_parent_class)->finalize(object);
 }
@@ -393,7 +393,7 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account)
 
 	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), NULL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY_IFACE, roomlist_new))
+	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, roomlist_new))
 		list = purple_protocol_factory_iface_roomlist_new(protocol, account);
 	else
 		list = g_object_new(PURPLE_TYPE_ROOMLIST,
@@ -405,6 +405,70 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account)
 
 	return list;
 }
+
+/**************************************************************************
+ * Protocol Roomlist Interface API
+ **************************************************************************/
+#define DEFINE_PROTOCOL_FUNC(protocol,funcname,...) \
+	PurpleProtocolRoomlistInterface *roomlist_iface = \
+		PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(protocol); \
+	if (roomlist_iface && roomlist_iface->funcname) \
+		roomlist_iface->funcname(__VA_ARGS__);
+
+#define DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol,defaultreturn,funcname,...) \
+	PurpleProtocolRoomlistInterface *roomlist_iface = \
+		PURPLE_PROTOCOL_ROOMLIST_GET_IFACE(protocol); \
+	if (roomlist_iface && roomlist_iface->funcname) \
+		return roomlist_iface->funcname(__VA_ARGS__); \
+	else \
+		return defaultreturn;
+
+GType
+purple_protocol_roomlist_iface_get_type(void)
+{
+	static GType type = 0;
+
+	if (G_UNLIKELY(type == 0)) {
+		static const GTypeInfo info = {
+			.class_size = sizeof(PurpleProtocolRoomlistInterface),
+		};
+
+		type = g_type_register_static(G_TYPE_INTERFACE,
+				"PurpleProtocolRoomlistInterface", &info, 0);
+	}
+	return type;
+}
+
+PurpleRoomlist *
+purple_protocol_roomlist_iface_get_list(PurpleProtocol *protocol,
+		PurpleConnection *gc)
+{
+	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, get_list, gc);
+}
+
+void
+purple_protocol_roomlist_iface_cancel(PurpleProtocol *protocol,
+		PurpleRoomlist *list)
+{
+	DEFINE_PROTOCOL_FUNC(protocol, cancel, list);
+}
+
+void
+purple_protocol_roomlist_iface_expand_category(PurpleProtocol *protocol,
+		PurpleRoomlist *list, PurpleRoomlistRoom *category)
+{
+	DEFINE_PROTOCOL_FUNC(protocol, expand_category, list, category);
+}
+
+char *
+purple_protocol_roomlist_iface_room_serialize(PurpleProtocol *protocol,
+		PurpleRoomlistRoom *room)
+{
+	DEFINE_PROTOCOL_FUNC_WITH_RETURN(protocol, NULL, room_serialize, room);
+}
+
+#undef DEFINE_PROTOCOL_FUNC_WITH_RETURN
+#undef DEFINE_PROTOCOL_FUNC
 
 /**************************************************************************/
 /* Room API                                                               */
@@ -427,12 +491,13 @@ PurpleRoomlistRoom *purple_roomlist_room_new(PurpleRoomlistRoomType type, const 
 
 void purple_roomlist_room_add_field(PurpleRoomlist *list, PurpleRoomlistRoom *room, gconstpointer field)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 	PurpleRoomlistField *f;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 	g_return_if_fail(room != NULL);
+
+	priv = purple_roomlist_get_instance_private(list);
 	g_return_if_fail(priv->fields != NULL);
 
 	/* If this is the first call for this room, grab the first field in
@@ -462,14 +527,15 @@ void purple_roomlist_room_add_field(PurpleRoomlist *list, PurpleRoomlistRoom *ro
 
 void purple_roomlist_room_join(PurpleRoomlist *list, PurpleRoomlistRoom *room)
 {
-	PurpleRoomlistPrivate *priv =
-			purple_roomlist_get_instance_private(list);
+	PurpleRoomlistPrivate *priv = NULL;
 	GHashTable *components;
 	GList *l, *j;
 	PurpleConnection *gc;
 
-	g_return_if_fail(priv != NULL);
+	g_return_if_fail(PURPLE_IS_ROOMLIST(list));
 	g_return_if_fail(room != NULL);
+
+	priv = purple_roomlist_get_instance_private(list);
 
 	gc = purple_account_get_connection(priv->account);
 	if (!gc)

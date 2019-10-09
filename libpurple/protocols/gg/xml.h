@@ -27,8 +27,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _GGP_XML_H
-#define _GGP_XML_H
+#ifndef PURPLE_GG_XML_H
+#define PURPLE_GG_XML_H
 
 #include <internal.h>
 #include <xmlnode.h>
@@ -45,4 +45,4 @@ void ggp_xmlnode_remove_children(PurpleXmlNode *xml);
 
 unsigned int ggp_xml_child_count(PurpleXmlNode *xml, const gchar *childName);
 
-#endif /* _GGP_XML_H */
+#endif /* PURPLE_GG_XML_H */

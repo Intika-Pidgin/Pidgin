@@ -18,7 +18,6 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
-#define _PURPLE_BUDDYICON_C_
 
 #include "internal.h"
 #include "buddyicon.h"
@@ -636,6 +635,7 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 		const char *protocol_icon_file;
 		const char *dirname;
 		gboolean caching;
+		gchar *path;
 		guchar *data;
 		size_t len;
 
@@ -655,23 +655,20 @@ purple_buddy_icons_find(PurpleAccount *account, const char *username)
 		 * functions. */
 		purple_buddy_icons_set_caching(FALSE);
 
-		if (protocol_icon_file != NULL)
-		{
-			char *path = g_build_filename(dirname, protocol_icon_file, NULL);
-			if (read_icon_file(path, &data, &len))
-			{
-				const char *checksum;
+		path = g_build_filename(dirname, protocol_icon_file, NULL);
+		if (read_icon_file(path, &data, &len)) {
+			const char *checksum;
 
-				icon = purple_buddy_icon_create(account, username);
-				icon->img = NULL;
-				checksum = purple_blist_node_get_string((PurpleBlistNode*)b, "icon_checksum");
-				purple_buddy_icon_set_data(icon, data, len, checksum);
-			}
-			else
-				delete_buddy_icon_settings((PurpleBlistNode*)b, "buddy_icon");
-
-			g_free(path);
+			icon = purple_buddy_icon_create(account, username);
+			icon->img = NULL;
+			checksum = purple_blist_node_get_string((PurpleBlistNode *)b,
+			                                        "icon_checksum");
+			purple_buddy_icon_set_data(icon, data, len, checksum);
+		} else {
+			delete_buddy_icon_settings((PurpleBlistNode *)b, "buddy_icon");
 		}
+
+		g_free(path);
 
 		purple_buddy_icons_set_caching(caching);
 	}
@@ -848,7 +845,6 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 	char *old_icon;
 	PurpleImage *old_img;
 	PurpleImage *img = NULL;
-	PurpleBlistUiOps *ops = purple_blist_get_ui_ops();
 
 	g_return_val_if_fail(node != NULL, NULL);
 
@@ -903,8 +899,8 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 			/* Is this call necessary anymore? Can the buddies
 			 * themselves need updating when the custom buddy
 			 * icon changes? */
-			if (ops && ops->update)
-				ops->update(purple_blist_get_buddy_list(), PURPLE_BLIST_NODE(buddy));
+			purple_blist_update_node(purple_blist_get_default(),
+			                         PURPLE_BLIST_NODE(buddy));
 		}
 	} else if (PURPLE_IS_CHAT(node)) {
 		PurpleChatConversation *chat = NULL;
@@ -915,8 +911,7 @@ purple_buddy_icons_node_set_custom_icon(PurpleBlistNode *node,
 		}
 	}
 
-	if (ops && ops->update)
-		ops->update(purple_blist_get_buddy_list(), node);
+	purple_blist_update_node(purple_blist_get_default(), node);
 
 	if (old_img) {
 		g_object_unref(old_img);
@@ -995,7 +990,7 @@ _purple_buddy_icons_account_loaded_cb()
 void
 _purple_buddy_icons_blist_loaded_cb()
 {
-	PurpleBlistNode *node = purple_blist_get_root();
+	PurpleBlistNode *node = purple_blist_get_default_root();
 	const char *dirname = purple_buddy_icons_get_cache_dir();
 
 	while (node != NULL)

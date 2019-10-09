@@ -19,8 +19,8 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
-#ifndef _PURPLE_STUN_H_
-#define _PURPLE_STUN_H_
+#ifndef PURPLE_STUN_H
+#define PURPLE_STUN_H
 /**
  * SECTION:stun
  * @section_id: libpurple-stun
@@ -85,7 +85,7 @@ struct _PurpleStunNatDiscovery {
 	PurpleStunNatType type;
 	char publicip[16];
 	char *servername;
-	time_t lookup_time;
+	gint64 lookup_time;
 };
 
 typedef void (*PurpleStunCallback) (PurpleStunNatDiscovery *discovery);
@@ -94,9 +94,9 @@ G_BEGIN_DECLS
 
 /**
  * purple_stun_discover:
- * @cb: The callback to call when the STUN discovery is finished if the
- *           discovery would block.  If the discovery is done, this is NOT
- *           called.
+ * @cb: (scope async): The callback to call when the STUN discovery is finished
+ *      if the discovery would block. If the discovery is done, this is NOT
+ *      called.
  *
  * Starts a NAT discovery. It returns a PurpleStunNatDiscovery if the discovery
  * is already done. Otherwise the callback is called when the discovery is over
@@ -111,4 +111,4 @@ void purple_stun_init(void);
 
 G_END_DECLS
 
-#endif /* _PURPLE_STUN_H_ */
+#endif /* PURPLE_STUN_H */
