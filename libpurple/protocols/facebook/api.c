@@ -734,9 +734,6 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 		g_free(data);
 	}
 
-	soup_message_headers_replace(msg->request_headers, "User-Agent",
-	                             FB_API_AGENT);
-
 	data = fb_http_params_close(params, NULL);
 	soup_message_set_request(msg,
 	                         "application/x-www-form-urlencoded; charset=utf-8",
@@ -1903,8 +1900,9 @@ fb_api_new(PurpleConnection *gc, GProxyResolver *resolver)
 	priv = api->priv;
 
 	priv->gc = gc;
-	priv->cons = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
-	                                           resolver, NULL);
+	priv->cons = soup_session_new_with_options(
+	        SOUP_SESSION_PROXY_RESOLVER, resolver, SOUP_SESSION_USER_AGENT,
+	        FB_API_AGENT, NULL);
 	priv->mqtt = fb_mqtt_new(gc);
 
 	g_signal_connect(priv->mqtt,
