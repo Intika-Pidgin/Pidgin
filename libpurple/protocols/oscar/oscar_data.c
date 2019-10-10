@@ -105,8 +105,11 @@ oscar_data_destroy(OscarData *od)
 {
 	aim_cleansnacs(od, -1);
 
-	/* Only used when connecting with clientLogin */
-	purple_http_conn_cancel(od->hc);
+	/* Only used when connecting with clientLogin or Kerberos. */
+	if (od->http_conns) {
+		soup_session_abort(od->http_conns);
+		g_object_unref(od->http_conns);
+	}
 
 	while (od->requesticon)
 	{

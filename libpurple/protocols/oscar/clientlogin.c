@@ -307,39 +307,39 @@ static gboolean parse_start_oscar_session_response(PurpleConnection *gc, const g
 }
 
 static void
-start_oscar_session_cb(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _od)
+start_oscar_session_cb(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                       gpointer user_data)
 {
-	OscarData *od = _od;
+	OscarData *od = user_data;
 	PurpleConnection *gc;
 	char *host, *cookie;
 	char *tls_certname = NULL;
 	unsigned short port;
 	guint8 *cookiedata;
 	gsize cookiedata_len = 0;
-	const gchar *got_data;
-	size_t got_len;
 
 	gc = od->gc;
 
-	od->hc = NULL;
+	g_clear_object(&od->http_conns);
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		gchar *tmp;
 		/* Translators: The first %s is a URL, the second is a brief error
 		   message. */
-		tmp = g_strdup_printf(_("Error requesting %s: %s"),
-				get_start_oscar_session_url(od),
-				purple_http_response_get_error(response));
+		tmp = g_strdup_printf(_("Error requesting %s: %d %s"),
+		                      get_start_oscar_session_url(od), msg->status_code,
+		                      msg->reason_phrase);
 		purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	}
 
-	got_data = purple_http_response_get_data(response, &got_len);
-	if (!parse_start_oscar_session_response(gc, got_data, got_len, &host, &port, &cookie, &tls_certname))
+	if (!parse_start_oscar_session_response(gc, msg->response_body->data,
+	                                        msg->response_body->length, &host,
+	                                        &port, &cookie, &tls_certname)) {
 		return;
+	}
 
 	cookiedata = g_base64_decode(cookie, &cookiedata_len);
 	oscar_connect_to_bos(gc, od, host, port, cookiedata, cookiedata_len, tls_certname);
@@ -352,7 +352,8 @@ start_oscar_session_cb(PurpleHttpConnection *http_conn,
 
 static void send_start_oscar_session(OscarData *od, const char *token, const char *session_key, time_t hosttime)
 {
-	char *query_string, *signature;
+	gchar *query_string, *signature, *uri;
+	SoupMessage *msg;
 	PurpleAccount *account = purple_connection_get_account(od->gc);
 	const gchar *encryption_type = purple_account_get_string(account, "encryption", OSCAR_DEFAULT_ENCRYPTION);
 
@@ -374,12 +375,16 @@ static void send_start_oscar_session(OscarData *od, const char *token, const cha
 	signature = generate_signature("GET", get_start_oscar_session_url(od),
 			query_string, session_key);
 
-	od->hc = purple_http_get_printf(od->gc, start_oscar_session_cb, od,
-		"%s?%s&sig_sha256=%s", get_start_oscar_session_url(od),
-		query_string, signature);
+	uri = g_strdup_printf("%s?%s&sig_sha256=%s",
+	                      get_start_oscar_session_url(od), query_string,
+	                      signature);
+
+	msg = soup_message_new("GET", uri);
+	soup_session_queue_message(od->http_conns, msg, start_oscar_session_cb, od);
 
 	g_free(query_string);
 	g_free(signature);
+	g_free(uri);
 }
 
 /**
@@ -546,37 +551,32 @@ static gboolean parse_client_login_response(PurpleConnection *gc, const gchar *r
 }
 
 static void
-client_login_cb(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _od)
+client_login_cb(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                gpointer user_data)
 {
-	OscarData *od = _od;
+	OscarData *od = user_data;
 	PurpleConnection *gc;
 	char *token, *secret, *session_key;
 	time_t hosttime;
 	int password_len;
 	char *password;
-	const gchar *got_data;
-	size_t got_len;
 
 	gc = od->gc;
 
-	od->hc = NULL;
-
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		gchar *tmp;
-		tmp = g_strdup_printf(_("Error requesting %s: %s"),
-				get_client_login_url(od),
-				purple_http_response_get_error(response));
+		tmp = g_strdup_printf(_("Error requesting %s: %d %s"),
+		                      get_client_login_url(od), msg->status_code,
+		                      msg->reason_phrase);
 		purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
 		return;
 	}
 
-	got_data = purple_http_response_get_data(response, &got_len);
-	if (!parse_client_login_response(gc, got_data, got_len, &token, &secret,
-		&hosttime))
-	{
+	if (!parse_client_login_response(gc, msg->response_body->data,
+	                                 msg->response_body->length, &token,
+	                                 &secret, &hosttime)) {
 		return;
 	}
 
@@ -603,8 +603,7 @@ client_login_cb(PurpleHttpConnection *http_conn,
 void send_client_login(OscarData *od, const char *username)
 {
 	PurpleConnection *gc;
-	PurpleHttpRequest *req;
-	GString *body;
+	SoupMessage *msg;
 	const char *tmp;
 	char *password;
 	int password_len;
@@ -626,21 +625,10 @@ void send_client_login(OscarData *od, const char *username)
 	password_len = strlen(tmp);
 	password = g_strndup(tmp, od->icq ? MIN(password_len, MAXICQPASSLEN) : password_len);
 
-	/* Construct the body of the HTTP POST request */
-	body = g_string_new("");
-	g_string_append_printf(body, "devId=%s", get_client_key(od));
-	g_string_append_printf(body, "&f=xml");
-	g_string_append_printf(body, "&pwd=%s", purple_url_encode(password));
-	g_string_append_printf(body, "&s=%s", purple_url_encode(username));
+	msg = soup_form_request_new("POST", get_client_login_url(od), "devId",
+	                            get_client_key(od), "f", "xml", "pwd", password,
+	                            "s", username, NULL);
+	soup_session_queue_message(od->http_conns, msg, client_login_cb, od);
+
 	g_free(password);
-
-	req = purple_http_request_new(get_client_login_url(od));
-	purple_http_request_set_method(req, "POST");
-	purple_http_request_header_set(req, "Content-Type",
-		"application/x-www-form-urlencoded; charset=UTF-8");
-	purple_http_request_set_contents(req, body->str, body->len);
-	od->hc = purple_http_request(gc, req, client_login_cb, od);
-	purple_http_request_unref(req);
-
-	g_string_free(body, TRUE);
 }

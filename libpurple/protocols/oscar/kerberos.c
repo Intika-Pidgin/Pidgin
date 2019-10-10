@@ -148,13 +148,11 @@ aim_xsnac_free(aim_xsnac_t *xsnac)
 }
 
 static void
-kerberos_login_cb(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _od)
+kerberos_login_cb(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                  gpointer user_data)
 {
-	OscarData *od = _od;
+	OscarData *od = user_data;
 	PurpleConnection *gc;
-	const gchar *got_data;
-	size_t got_len;
 	ByteStream bs;
 	aim_xsnac_t xsnac = {0};
 	guint16 len;
@@ -167,16 +165,15 @@ kerberos_login_cb(PurpleHttpConnection *http_conn,
 
 	gc = od->gc;
 
-	od->hc = NULL;
+	g_clear_object(&od->http_conns);
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		gchar *tmp;
 		gchar *url;
 
 		url = get_kdc_url(od);
-		tmp = g_strdup_printf(_("Error requesting %s: %s"),
-				url,
-				purple_http_response_get_error(response));
+		tmp = g_strdup_printf(_("Error requesting %s: %d %s"), url,
+		                      msg->status_code, msg->reason_phrase);
 		purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
 		g_free(tmp);
@@ -184,13 +181,13 @@ kerberos_login_cb(PurpleHttpConnection *http_conn,
 		return;
 	}
 
-	got_data = purple_http_response_get_data(response, &got_len);
 	purple_debug_info("oscar",
-	                  "Received kerberos login HTTP response %" G_GSIZE_FORMAT
+	                  "Received kerberos login HTTP response %" G_GOFFSET_FORMAT
 	                  " : ",
-	                  got_len);
+	                  msg->response_body->length);
 
-	byte_stream_init(&bs, (guint8 *)got_data, got_len);
+	byte_stream_init(&bs, (guint8 *)msg->response_body->data,
+	                 msg->response_body->length);
 
 	xsnac.family = byte_stream_get16(&bs);
 	xsnac.subtype = byte_stream_get16(&bs);
@@ -329,7 +326,7 @@ kerberos_login_cb(PurpleHttpConnection *http_conn,
 void send_kerberos_login(OscarData *od, const char *username)
 {
 	PurpleConnection *gc;
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 	gchar *url;
 	const gchar *password;
 	gchar password_xored[MAXAIMPASSLEN];
@@ -416,16 +413,13 @@ void send_kerberos_login(OscarData *od, const char *username)
 	g_free(imapp_key);
 
 	url = get_kdc_url(od);
-	req = purple_http_request_new(url);
-	purple_http_request_set_method(req, "POST");
-	purple_http_request_header_set(req, "Content-Type",
-		"application/x-snac");
-	purple_http_request_header_set(req, "Accept",
-		"application/x-snac");
-	purple_http_request_set_contents(req, body->str, body->len);
-	od->hc = purple_http_request(gc, req, kerberos_login_cb, od);
-	purple_http_request_unref(req);
+	msg = soup_message_new("POST", url);
+	soup_message_set_request(msg, "application/x-snac", SOUP_MEMORY_TAKE,
+	                         body->str, body->len);
+	soup_message_headers_replace(msg->request_headers, "Accept",
+	                             "application/x-snac");
+	soup_session_queue_message(od->http_conns, msg, kerberos_login_cb, od);
 
-	g_string_free(body, TRUE);
+	g_string_free(body, FALSE);
 	g_free(url);
 }
