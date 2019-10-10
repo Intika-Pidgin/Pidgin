@@ -125,7 +125,6 @@ fb_data_init(FbData *fata)
 	FbDataPrivate *priv = fb_data_get_instance_private(fata);
 	fata->priv = priv;
 
-	priv->cons = soup_session_new();
 	priv->msgs = g_queue_new();
 
 	priv->imgs = g_hash_table_new_full(g_direct_hash, g_direct_equal,
@@ -167,7 +166,7 @@ fb_data_image_init(FbDataImage *img)
 }
 
 FbData *
-fb_data_new(PurpleConnection *gc)
+fb_data_new(PurpleConnection *gc, GProxyResolver *resolver)
 {
 	FbData *fata;
 	FbDataPrivate *priv;
@@ -175,7 +174,9 @@ fb_data_new(PurpleConnection *gc)
 	fata = g_object_new(FB_TYPE_DATA, NULL);
 	priv = fata->priv;
 
-	priv->api = fb_api_new(gc);
+	priv->cons = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
+	                                           resolver, NULL);
+	priv->api = fb_api_new(gc, resolver);
 	priv->gc = gc;
 
 	return fata;

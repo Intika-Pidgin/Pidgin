@@ -994,10 +994,20 @@ fb_login(PurpleAccount *acct)
 	FbData *fata;
 	gpointer convh;
 	PurpleConnection *gc;
+	GProxyResolver *resolver;
+	GError *error = NULL;
 
 	gc = purple_account_get_connection(acct);
 
-	fata = fb_data_new(gc);
+	resolver = purple_proxy_get_proxy_resolver(acct, &error);
+	if (resolver == NULL) {
+		fb_util_debug_error("Unable to get account proxy resolver: %s",
+		                    error->message);
+		purple_connection_g_error(gc, error);
+		return;
+	}
+
+	fata = fb_data_new(gc, resolver);
 	api = fb_data_get_api(fata);
 	convh = purple_conversations_get_handle();
 	purple_connection_set_protocol_data(gc, fata);

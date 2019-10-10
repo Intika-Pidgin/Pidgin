@@ -522,10 +522,8 @@ static void
 fb_api_init(FbApi *api)
 {
 	FbApiPrivate *priv = fb_api_get_instance_private(api);
-
 	api->priv = priv;
 
-	priv->cons = soup_session_new();
 	priv->msgs = g_queue_new();
 	priv->data = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                   NULL, NULL);
@@ -1948,7 +1946,7 @@ fb_api_cb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, GByteArray *pload,
 }
 
 FbApi *
-fb_api_new(PurpleConnection *gc)
+fb_api_new(PurpleConnection *gc, GProxyResolver *resolver)
 {
 	FbApi *api;
 	FbApiPrivate *priv;
@@ -1957,6 +1955,8 @@ fb_api_new(PurpleConnection *gc)
 	priv = api->priv;
 
 	priv->gc = gc;
+	priv->cons = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
+	                                           resolver, NULL);
 	priv->mqtt = fb_mqtt_new(gc);
 
 	g_signal_connect(priv->mqtt,

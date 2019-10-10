@@ -83,14 +83,14 @@ typedef void (*FbDataImageFunc) (FbDataImage *img, GError *error);
 /**
  * fb_data_new:
  * @gc: The #PurpleConnection.
+ * @resolver: The proxy resolver to use from the account.
  *
  * Creates a new #FbData. The returned #FbData should be freed with
  * #g_object_unref() when no longer needed.
  *
  * Returns: The new #FbData.
  */
-FbData *
-fb_data_new(PurpleConnection *gc);
+FbData *fb_data_new(PurpleConnection *gc, GProxyResolver *resolver);
 
 /**
  * fb_data_load:
