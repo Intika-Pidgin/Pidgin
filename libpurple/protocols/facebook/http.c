@@ -112,18 +112,14 @@ fb_http_conns_reset(FbHttpConns *cons)
 }
 
 gboolean
-fb_http_error_chk(PurpleHttpResponse *res, GError **error)
+fb_http_error_chk(SoupMessage *res, GError **error)
 {
-	const gchar *msg;
-	gint code;
-
-	if (purple_http_response_is_successful(res)) {
+	if (SOUP_STATUS_IS_SUCCESSFUL(res->status_code)) {
 		return TRUE;
 	}
 
-	msg = purple_http_response_get_error(res);
-	code = purple_http_response_get_code(res);
-	g_set_error(error, FB_HTTP_ERROR, code, "%s", msg);
+	g_set_error(error, FB_HTTP_ERROR, res->status_code, "%s",
+	            res->reason_phrase);
 	return FALSE;
 }
 
