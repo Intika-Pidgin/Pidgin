@@ -45,7 +45,9 @@
 #include <stdarg.h>
 #include <errno.h>
 #include <time.h>
+
 #include <gmodule.h>
+#include <libsoup/soup.h>
 
 #ifndef _WIN32
 #include <sys/time.h>
@@ -341,8 +343,8 @@ struct aim_ssi_itemlist {
  */
 struct _OscarData
 {
-	/** Only used when connecting with clientLogin */
-	PurpleHttpConnection *hc;
+	/* Only used when connecting with clientLogin or Kerberos. */
+	SoupSession *http_conns;
 
 	gboolean iconconnecting;
 	gboolean set_icon;
