@@ -32,8 +32,6 @@
 #include "thrift.h"
 #include "util.h"
 
-typedef struct _FbApiData FbApiData;
-
 enum
 {
 	PROP_0,
@@ -53,7 +51,6 @@ typedef struct
 	FbMqtt *mqtt;
 	SoupSession *cons;
 	PurpleConnection *gc;
-	GHashTable *data;
 	gboolean retrying;
 
 	FbId uid;
@@ -80,12 +77,6 @@ struct _FbApi
 {
 	GObject parent;
 	FbApiPrivate *priv;
-};
-
-struct _FbApiData
-{
-	gpointer data;
-	GDestroyNotify func;
 };
 
 static void fb_api_error_literal(FbApi *api, FbApiError error,
@@ -179,24 +170,15 @@ fb_api_get_property(GObject *obj, guint prop, GValue *val, GParamSpec *pspec)
 static void
 fb_api_dispose(GObject *obj)
 {
-	FbApiData *fata;
 	FbApiPrivate *priv = FB_API(obj)->priv;
-	GHashTableIter iter;
 
 	soup_session_abort(priv->cons);
-	g_hash_table_iter_init(&iter, priv->data);
-
-	while (g_hash_table_iter_next(&iter, NULL, (gpointer) &fata)) {
-		fata->func(fata->data);
-		g_free(fata);
-	}
 
 	if (G_UNLIKELY(priv->mqtt != NULL)) {
 		g_object_unref(priv->mqtt);
 	}
 
 	g_object_unref(priv->cons);
-	g_hash_table_destroy(priv->data);
 	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
 
 	g_free(priv->cid);
@@ -525,8 +507,6 @@ fb_api_init(FbApi *api)
 	api->priv = priv;
 
 	priv->msgs = g_queue_new();
-	priv->data = g_hash_table_new_full(g_direct_hash, g_direct_equal,
-	                                   NULL, NULL);
 }
 
 GQuark
@@ -539,38 +519,6 @@ fb_api_error_quark(void)
 	}
 
 	return q;
-}
-
-static void
-fb_api_data_set(FbApi *api, gpointer handle, gpointer data,
-                GDestroyNotify func)
-{
-	FbApiData *fata;
-	FbApiPrivate *priv = api->priv;
-
-	fata = g_new0(FbApiData, 1);
-	fata->data = data;
-	fata->func = func;
-	g_hash_table_replace(priv->data, handle, fata);
-}
-
-static gpointer
-fb_api_data_take(FbApi *api, gconstpointer handle)
-{
-	FbApiData *fata;
-	FbApiPrivate *priv = api->priv;
-	gpointer data;
-
-	fata = g_hash_table_lookup(priv->data, handle);
-
-	if (fata == NULL) {
-		return NULL;
-	}
-
-	data = fata->data;
-	g_hash_table_remove(priv->data, handle);
-	g_free(fata);
-	return data;
 }
 
 static gboolean
@@ -2084,7 +2032,7 @@ fb_api_cb_attach(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
 		return;
 	);
 
-	msg = fb_api_data_take(api, res);
+	msg = g_object_steal_data(G_OBJECT(res), "fb-api-msg");
 	str = fb_json_values_next_str(values, NULL);
 	name = g_ascii_strdown(str, -1);
 
@@ -2119,7 +2067,8 @@ fb_api_attach(FbApi *api, FbId aid, const gchar *msgid, FbApiMessage *msg)
 	http = fb_api_http_req(api, FB_API_URL_ATTACH, "getAttachment",
 	                       "messaging.getAttachment", prms,
 			       fb_api_cb_attach);
-	fb_api_data_set(api, http, msg, (GDestroyNotify) fb_api_message_free);
+	g_object_set_data_full(G_OBJECT(http), "fb-api-msg", msg,
+	                       (GDestroyNotify)fb_api_message_free);
 }
 
 static void
@@ -2912,7 +2861,7 @@ fb_api_cb_sticker(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
 		return;
 	);
 
-	msg = fb_api_data_take(api, res);
+	msg = g_object_steal_data(G_OBJECT(res), "fb-api-msg");
 	msg->flags |= FB_API_MESSAGE_FLAG_IMAGE;
 	msg->text = fb_json_values_next_str_dup(values, NULL);
 	msgs = g_slist_prepend(msgs, msg);
@@ -2936,7 +2885,8 @@ fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg)
 
 	http = fb_api_http_query(api, FB_API_QUERY_STICKER, bldr,
 	                         fb_api_cb_sticker);
-	fb_api_data_set(api, http, msg, (GDestroyNotify) fb_api_message_free);
+	g_object_set_data_full(G_OBJECT(http), "fb-api-msg", msg,
+	                       (GDestroyNotify)fb_api_message_free);
 }
 
 static gboolean
