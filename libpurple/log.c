@@ -1395,8 +1395,8 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 
 		date = purple_date_format_full(localtime(&log->time));
 
-		written += fprintf(data->file, "<html><head>");
-		written += fprintf(data->file, "<meta http-equiv=\"content-type\" content=\"text/html; charset=UTF-8\">");
+		written += fprintf(data->file, "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01//EN\" \"http://www.w3.org/TR/html4/strict.dtd\"><html><head>");
+		written += fprintf(data->file, "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\">");
 		written += fprintf(data->file, "<title>");
 		if (log->type == PURPLE_LOG_SYSTEM)
 			header = g_strdup_printf("System log for account %s (%s) connected at %s",
@@ -1407,7 +1407,7 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 
 		written += fprintf(data->file, "%s", header);
 		written += fprintf(data->file, "</title></head><body>");
-		written += fprintf(data->file, "<h3>%s</h3>\n", header);
+		written += fprintf(data->file, "<h1>%s</h1><p>\n", header);
 		g_free(header);
 	}
 
@@ -1428,39 +1428,39 @@ static gsize html_logger_write(PurpleLog *log, PurpleMessageFlags type,
 	date = log_get_timestamp(log, time);
 
 	if(log->type == PURPLE_LOG_SYSTEM){
-		written += fprintf(data->file, "---- %s @ %s ----<br/>\n", msg_fixed, date);
+		written += fprintf(data->file, "---- %s @ %s ----<br>\n", msg_fixed, date);
 	} else {
 		if (type & PURPLE_MESSAGE_SYSTEM)
-			written += fprintf(data->file, "<font size=\"2\">(%s)</font><b> %s</b><br/>\n", date, msg_fixed);
+			written += fprintf(data->file, "<span style=\"font-size: smaller\">(%s)</span><b> %s</b><br>\n", date, msg_fixed);
 		else if (type & PURPLE_MESSAGE_RAW)
-			written += fprintf(data->file, "<font size=\"2\">(%s)</font> %s<br/>\n", date, msg_fixed);
+			written += fprintf(data->file, "<span style=\"font-size: smaller\">(%s)</span> %s<br>\n", date, msg_fixed);
 		else if (type & PURPLE_MESSAGE_ERROR)
-			written += fprintf(data->file, "<font color=\"#FF0000\"><font size=\"2\">(%s)</font><b> %s</b></font><br/>\n", date, msg_fixed);
+			written += fprintf(data->file, "<span style=\"color: #FF0000\"><span style=\"font-size: smaller\">(%s)</span><b> %s</b></span><br>\n", date, msg_fixed);
 		else if (type & PURPLE_MESSAGE_WHISPER)
-			written += fprintf(data->file, "<font color=\"#6C2585\"><font size=\"2\">(%s)</font><b> %s:</b></font> %s<br/>\n",
+			written += fprintf(data->file, "<span style=\"color: #6C2585\"><span style=\"font-size: smaller\">(%s)</span><b> %s:</b></span> %s<br>\n",
 					date, escaped_from, msg_fixed);
 		else if (type & PURPLE_MESSAGE_AUTO_RESP) {
 			if (type & PURPLE_MESSAGE_SEND)
-				written += fprintf(data->file, _("<font color=\"#16569E\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, escaped_from, msg_fixed);
+				written += fprintf(data->file, _("<span style=\"color: #16569E\"><span style=\"font-size: smaller\">(%s)</span> <b>%s &lt;AUTO-REPLY&gt;:</b></span> %s<br>\n"), date, escaped_from, msg_fixed);
 			else if (type & PURPLE_MESSAGE_RECV)
-				written += fprintf(data->file, _("<font color=\"#A82F2F\"><font size=\"2\">(%s)</font> <b>%s &lt;AUTO-REPLY&gt;:</b></font> %s<br/>\n"), date, escaped_from, msg_fixed);
+				written += fprintf(data->file, _("<span style=\"color: #A82F2F\"><span style=\"font-size: smaller\">(%s)</span> <b>%s &lt;AUTO-REPLY&gt;:</b></span> %s<br>\n"), date, escaped_from, msg_fixed);
 		} else if (type & PURPLE_MESSAGE_RECV) {
 			if(purple_message_meify(msg_fixed, -1))
-				written += fprintf(data->file, "<font color=\"#062585\"><font size=\"2\">(%s)</font> <b>***%s</b></font> %s<br/>\n",
+				written += fprintf(data->file, "<span style=\"color: #062585\"><span style=\"font-size: smaller\">(%s)</span> <b>***%s</b></span> %s<br>\n",
 						date, escaped_from, msg_fixed);
 			else
-				written += fprintf(data->file, "<font color=\"#A82F2F\"><font size=\"2\">(%s)</font> <b>%s:</b></font> %s<br/>\n",
+				written += fprintf(data->file, "<span style=\"color: #A82F2F\"><span style=\"font-size: smaller\">(%s)</span> <b>%s:</b></span> %s<br>\n",
 						date, escaped_from, msg_fixed);
 		} else if (type & PURPLE_MESSAGE_SEND) {
 			if(purple_message_meify(msg_fixed, -1))
-				written += fprintf(data->file, "<font color=\"#062585\"><font size=\"2\">(%s)</font> <b>***%s</b></font> %s<br/>\n",
+				written += fprintf(data->file, "<span style=\"color: #062585\"><span style=\"font-size: smaller\">(%s)</span> <b>***%s</b></span> %s<br>\n",
 						date, escaped_from, msg_fixed);
 			else
-				written += fprintf(data->file, "<font color=\"#16569E\"><font size=\"2\">(%s)</font> <b>%s:</b></font> %s<br/>\n",
+				written += fprintf(data->file, "<span style=\"color: #16569E\"><span style=\"font-size: smaller\">(%s)</span> <b>%s:</b></span> %s<br>\n",
 						date, escaped_from, msg_fixed);
 		} else {
 			purple_debug_error("log", "Unhandled message type.\n");
-			written += fprintf(data->file, "<font size=\"2\">(%s)</font><b> %s:</b></font> %s<br/>\n",
+			written += fprintf(data->file, "<span style=\"font-size: smaller\">(%s)</font><b> %s:</b> %s<br>\n",
 						date, escaped_from, msg_fixed);
 		}
 	}
@@ -1477,7 +1477,7 @@ static void html_logger_finalize(PurpleLog *log)
 	PurpleLogCommonLoggerData *data = log->logger_data;
 	if (data) {
 		if(data->file) {
-			fprintf(data->file, "</body></html>\n");
+			fprintf(data->file, "</p>\n</body>\n</html>\n");
 			fclose(data->file);
 		}
 		g_free(data->path);
