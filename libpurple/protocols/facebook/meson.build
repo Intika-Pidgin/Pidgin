@@ -20,7 +20,7 @@ FACEBOOKSOURCES = [
 
 if DYNAMIC_FACEBOOK
 	facebook_prpl = shared_library('facebook', FACEBOOKSOURCES,
-	    dependencies : [json, libpurple_dep, glib],
+	    dependencies : [json, libpurple_dep, libsoup, glib],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
 
 	# Used to produce docs.

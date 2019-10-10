@@ -32,6 +32,7 @@
  */
 
 #include <glib.h>
+#include <libsoup/soup.h>
 
 #include <libpurple/http.h>
 
@@ -153,16 +154,15 @@ fb_http_conns_reset(FbHttpConns *cons);
 
 /**
  * fb_http_error_chk:
- * @res: The #PurpleHttpResponse.
+ * @res: The #SoupMessage.
  * @error: The return location for the #GError or #NULL.
  *
- * Checks a #PurpleHttpResponse for success. This optionally assigns an
+ * Checks a #SoupMessage for success. This optionally assigns an
  * appropriate #GError upon failure.
  *
  * Returns: #TRUE if the request was successful, otherwise #FALSE.
  */
-gboolean
-fb_http_error_chk(PurpleHttpResponse *res, GError **error);
+gboolean fb_http_error_chk(SoupMessage *res, GError **error);
 
 /**
  * fb_http_params_new:

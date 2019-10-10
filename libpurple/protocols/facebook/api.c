@@ -20,6 +20,7 @@
  */
 
 #include <json-glib/json-glib.h>
+#include <libsoup/soup.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -50,7 +51,7 @@ enum
 typedef struct
 {
 	FbMqtt *mqtt;
-	FbHttpConns *cons;
+	SoupSession *cons;
 	PurpleConnection *gc;
 	GHashTable *data;
 	gboolean retrying;
@@ -182,7 +183,7 @@ fb_api_dispose(GObject *obj)
 	FbApiPrivate *priv = FB_API(obj)->priv;
 	GHashTableIter iter;
 
-	fb_http_conns_cancel_all(priv->cons);
+	soup_session_abort(priv->cons);
 	g_hash_table_iter_init(&iter, priv->data);
 
 	while (g_hash_table_iter_next(&iter, NULL, (gpointer) &fata)) {
@@ -194,7 +195,7 @@ fb_api_dispose(GObject *obj)
 		g_object_unref(priv->mqtt);
 	}
 
-	fb_http_conns_free(priv->cons);
+	g_object_unref(priv->cons);
 	g_hash_table_destroy(priv->data);
 	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
 
@@ -524,7 +525,7 @@ fb_api_init(FbApi *api)
 
 	api->priv = priv;
 
-	priv->cons = fb_http_conns_new();
+	priv->cons = soup_session_new();
 	priv->msgs = g_queue_new();
 	priv->data = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 	                                   NULL, NULL);
@@ -686,35 +687,26 @@ fb_api_json_chk(FbApi *api, gconstpointer data, gssize size, JsonNode **node)
 }
 
 static gboolean
-fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
-                JsonNode **root)
+fb_api_http_chk(FbApi *api, SoupMessage *res, JsonNode **root)
 {
 	const gchar *data;
 	const gchar *msg;
-	FbApiPrivate *priv = api->priv;
-	gchar *emsg;
 	GError *err = NULL;
 	gint code;
 	gsize size;
 
-	if (fb_http_conns_is_canceled(priv->cons)) {
-		return FALSE;
-	}
+	msg = res->reason_phrase;
+	code = res->status_code;
+	data = res->response_body->data;
+	size = res->response_body->length;
 
-	msg = purple_http_response_get_error(res);
-	code = purple_http_response_get_code(res);
-	data = purple_http_response_get_data(res, &size);
-	fb_http_conns_remove(priv->cons, con);
-
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Response (%p):", res);
 	if (msg != NULL) {
-		emsg = g_strdup_printf("%s (%d)", msg, code);
+		fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Error: %s (%d)", msg,
+		              code);
 	} else {
-		emsg = g_strdup_printf("%d", code);
+		fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Error: %d", code);
 	}
-
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Response (%p):", con);
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Error: %s", emsg);
-	g_free(emsg);
 
 	if (G_LIKELY(size > 0)) {
 		fb_util_debug(FB_UTIL_DEBUG_INFO, "  Response Data: %.*s",
@@ -742,10 +734,10 @@ fb_api_http_chk(FbApi *api, PurpleHttpConnection *con, PurpleHttpResponse *res,
 	return TRUE;
 }
 
-static PurpleHttpConnection *
+static SoupMessage *
 fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
                 const gchar *method, FbHttpParams *params,
-		PurpleHttpCallback callback)
+                SoupSessionCallback callback)
 {
 	FbApiPrivate *priv = api->priv;
 	gchar *data;
@@ -754,8 +746,7 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	GList *keys;
 	GList *l;
 	GString *gstr;
-	PurpleHttpConnection *ret;
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 
 	fb_http_params_set_str(params, "api_key", FB_API_KEY);
 	fb_http_params_set_str(params, "device_id", priv->did);
@@ -767,9 +758,7 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	fb_http_params_set_str(params, "locale", val);
 	g_free(val);
 
-	req = purple_http_request_new(url);
-	purple_http_request_set_max_len(req, -1);
-	purple_http_request_set_method(req, "POST");
+	msg = soup_message_new("POST", url);
 
 	/* Ensure an old signature is not computed */
 	g_hash_table_remove(params, "sig");
@@ -794,30 +783,30 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 
 	if (priv->token != NULL) {
 		data = g_strdup_printf("OAuth %s", priv->token);
-		purple_http_request_header_set(req, "Authorization", data);
+		soup_message_headers_replace(msg->request_headers, "Authorization",
+		                             data);
 		g_free(data);
 	}
 
-	purple_http_request_header_set(req, "User-Agent", FB_API_AGENT);
-	purple_http_request_header_set(req, "Content-Type", "application/x-www-form-urlencoded; charset=utf-8");
+	soup_message_headers_replace(msg->request_headers, "User-Agent",
+	                             FB_API_AGENT);
 
 	data = fb_http_params_close(params, NULL);
-	purple_http_request_set_contents(req, data, -1);
-	ret = purple_http_request(priv->gc, req, callback, api);
-	fb_http_conns_add(priv->cons, ret);
-	purple_http_request_unref(req);
+	soup_message_set_request(msg,
+	                         "application/x-www-form-urlencoded; charset=utf-8",
+	                         SOUP_MEMORY_TAKE, data, -1);
+	soup_session_queue_message(priv->cons, msg, callback, api);
 
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", ret);
+	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", msg);
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request URL: %s", url);
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request Data: %s", data);
 
-	g_free(data);
-	return ret;
+	return msg;
 }
 
-static PurpleHttpConnection *
+static SoupMessage *
 fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
-                  PurpleHttpCallback hcb)
+                  SoupSessionCallback hcb)
 {
 	const gchar *name;
 	FbHttpParams *prms;
@@ -865,19 +854,16 @@ fb_api_http_query(FbApi *api, gint64 query, JsonBuilder *builder,
 }
 
 static void
-fb_api_cb_http_bool(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_http_bool(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                     gpointer data)
 {
-	const gchar *hata;
 	FbApi *api = data;
 
-	if (!fb_api_http_chk(api, con, res, NULL)) {
+	if (!fb_api_http_chk(api, res, NULL)) {
 		return;
 	}
 
-	hata = purple_http_response_get_data(res, NULL);
-
-	if (!purple_strequal(hata, "true")) {
+	if (!purple_strequal(res->response_body->data, "true")) {
 		fb_api_error_literal(api, FB_API_ERROR,
 		                     _("Failed generic API operation"));
 	}
@@ -1057,7 +1043,7 @@ fb_api_connect_queue(FbApi *api)
 }
 
 static void
-fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_seqid(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                 gpointer data)
 {
 	const gchar *str;
@@ -1067,7 +1053,7 @@ fb_api_cb_seqid(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	GError *err = NULL;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2068,7 +2054,7 @@ fb_api_error_emit(FbApi *api, GError *error)
 }
 
 static void
-fb_api_cb_attach(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_attach(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                  gpointer data)
 {
 	const gchar *str;
@@ -2083,7 +2069,7 @@ fb_api_cb_attach(PurpleHttpConnection *con, PurpleHttpResponse *res,
 
 	static const gchar *imgexts[] = {".jpg", ".png", ".gif"};
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2098,7 +2084,7 @@ fb_api_cb_attach(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	);
 
-	msg = fb_api_data_take(api, con);
+	msg = fb_api_data_take(api, res);
 	str = fb_json_values_next_str(values, NULL);
 	name = g_ascii_strdown(str, -1);
 
@@ -2124,7 +2110,7 @@ static void
 fb_api_attach(FbApi *api, FbId aid, const gchar *msgid, FbApiMessage *msg)
 {
 	FbHttpParams *prms;
-	PurpleHttpConnection *http;
+	SoupMessage *http;
 
 	prms = fb_http_params_new();
 	fb_http_params_set_str(prms, "mid", msgid);
@@ -2137,7 +2123,7 @@ fb_api_attach(FbApi *api, FbId aid, const gchar *msgid, FbApiMessage *msg)
 }
 
 static void
-fb_api_cb_auth(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_auth(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                gpointer data)
 {
 	FbApi *api = data;
@@ -2146,7 +2132,7 @@ fb_api_cb_auth(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	GError *err = NULL;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2205,7 +2191,7 @@ fb_api_user_icon_checksum(gchar *icon)
 }
 
 static void
-fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_contact(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                   gpointer data)
 {
 	const gchar *str;
@@ -2216,7 +2202,7 @@ fb_api_cb_contact(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonNode *node;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2358,7 +2344,7 @@ fb_api_cb_contacts_parse_removed(FbApi *api, JsonNode *node, GSList *users)
 }
 
 static void
-fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_contacts(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                    gpointer data)
 {
 	const gchar *cursor;
@@ -2375,7 +2361,7 @@ fb_api_cb_contacts(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonNode *croot;
 	JsonNode *node;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2686,7 +2672,7 @@ fb_api_cb_unread_parse_attach(FbApi *api, const gchar *mid, FbApiMessage *msg,
 }
 
 static void
-fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_unread_msgs(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                       gpointer data)
 {
 	const gchar *body;
@@ -2704,7 +2690,7 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonNode *root;
 	JsonNode *xode;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2818,7 +2804,7 @@ fb_api_cb_unread_msgs(PurpleHttpConnection *con, PurpleHttpResponse *res,
 }
 
 static void
-fb_api_cb_unread(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_unread(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                  gpointer data)
 {
 	const gchar *id;
@@ -2829,7 +2815,7 @@ fb_api_cb_unread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonBuilder *bldr;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2899,7 +2885,7 @@ fb_api_unread(FbApi *api)
 }
 
 static void
-fb_api_cb_sticker(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_sticker(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                   gpointer data)
 {
 	FbApi *api = data;
@@ -2910,7 +2896,7 @@ fb_api_cb_sticker(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonNode *node;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -2926,7 +2912,7 @@ fb_api_cb_sticker(PurpleHttpConnection *con, PurpleHttpResponse *res,
 		return;
 	);
 
-	msg = fb_api_data_take(api, con);
+	msg = fb_api_data_take(api, res);
 	msg->flags |= FB_API_MESSAGE_FLAG_IMAGE;
 	msg->text = fb_json_values_next_str_dup(values, NULL);
 	msgs = g_slist_prepend(msgs, msg);
@@ -2941,7 +2927,7 @@ static void
 fb_api_sticker(FbApi *api, FbId sid, FbApiMessage *msg)
 {
 	JsonBuilder *bldr;
-	PurpleHttpConnection *http;
+	SoupMessage *http;
 
 	bldr = fb_json_bldr_new(JSON_NODE_OBJECT);
 	fb_json_bldr_arr_begin(bldr, "0");
@@ -3028,8 +3014,8 @@ fb_api_thread_parse(FbApi *api, FbApiThread *thrd, JsonNode *root,
 }
 
 static void
-fb_api_cb_thread(PurpleHttpConnection *con, PurpleHttpResponse *res,
-                      gpointer data)
+fb_api_cb_thread(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
+                 gpointer data)
 {
 	FbApi *api = data;
 	FbApiThread thrd;
@@ -3037,7 +3023,7 @@ fb_api_cb_thread(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonNode *node;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -3088,7 +3074,7 @@ fb_api_thread(FbApi *api, FbId tid)
 }
 
 static void
-fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_thread_create(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                         gpointer data)
 {
 	const gchar *str;
@@ -3098,7 +3084,7 @@ fb_api_cb_thread_create(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	GError *err = NULL;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
@@ -3222,7 +3208,7 @@ fb_api_thread_topic(FbApi *api, FbId tid, const gchar *topic)
 }
 
 static void
-fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_api_cb_threads(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                   gpointer data)
 {
 	FbApi *api = data;
@@ -3235,7 +3221,7 @@ fb_api_cb_threads(PurpleHttpConnection *con, PurpleHttpResponse *res,
 	JsonArray *arr;
 	JsonNode *root;
 
-	if (!fb_api_http_chk(api, con, res, &root)) {
+	if (!fb_api_http_chk(api, res, &root)) {
 		return;
 	}
 
