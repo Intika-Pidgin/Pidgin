@@ -50,7 +50,7 @@ typedef struct
 	time_t timestamp;
 
 	PurpleConnection *gc;
-	PurpleHttpConnection *request;
+	SoupMessage *request;
 } ggp_avatar_buddy_update_req;
 
 static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc);
@@ -115,6 +115,7 @@ void ggp_avatar_setup(PurpleConnection *gc)
 
 void ggp_avatar_cleanup(PurpleConnection *gc)
 {
+	GGPInfo *info = purple_connection_get_protocol_data(gc);
 	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
 
 	g_source_remove(avdata->timer);
@@ -123,7 +124,8 @@ void ggp_avatar_cleanup(PurpleConnection *gc)
 		ggp_avatar_buddy_update_req *current_update =
 			avdata->current_update;
 
-		purple_http_conn_cancel(current_update->request);
+		soup_session_cancel_message(info->http, current_update->request,
+		                            SOUP_STATUS_CANCELLED);
 		g_free(current_update);
 	}
 	avdata->current_update = NULL;
@@ -167,9 +169,8 @@ void ggp_avatar_buddy_remove(PurpleConnection *gc, uin_t uin)
 }
 
 static void
-ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
-                                 PurpleHttpResponse *response,
-                                 gpointer _pending_update)
+ggp_avatar_buddy_update_received(G_GNUC_UNUSED SoupSession *session,
+                                 SoupMessage *msg, gpointer _pending_update)
 {
 	ggp_avatar_buddy_update_req *pending_update = _pending_update;
 	PurpleBuddy *buddy;
@@ -185,13 +186,13 @@ ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 	avdata = ggp_avatar_get_avdata(gc);
 	g_assert(pending_update == avdata->current_update);
 	avdata->current_update = NULL;
+	pending_update->request = NULL;
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		purple_debug_error("gg",
 		                   "ggp_avatar_buddy_update_received: bad response "
 		                   "while getting avatar for %u: %s",
-		                   pending_update->uin,
-		                   purple_http_response_get_error(response));
+		                   pending_update->uin, msg->reason_phrase);
 		g_free(pending_update);
 		return;
 	}
@@ -210,7 +211,8 @@ ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
 
 	g_snprintf(timestamp_str, sizeof(timestamp_str), "%lu",
 	           pending_update->timestamp);
-	got_data = purple_http_response_get_data(response, &got_len);
+	got_data = msg->response_body->data;
+	got_len = msg->response_body->length;
 	purple_buddy_icons_set_for_user(account, purple_buddy_get_name(buddy),
 	                                g_memdup(got_data, got_len), got_len,
 	                                timestamp_str);
@@ -226,7 +228,9 @@ ggp_avatar_buddy_update_received(PurpleHttpConnection *http_conn,
    FALSE if we can request another one immediately */
 static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
 {
-	PurpleHttpRequest *req;
+	GGPInfo *info = purple_connection_get_protocol_data(gc);
+	gchar *url;
+	SoupMessage *req;
 	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
 	GList *pending_update_it;
 	ggp_avatar_buddy_update_req *pending_update;
@@ -289,14 +293,15 @@ static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
 	pending_update->gc = gc;
 	avdata->current_update = pending_update;
 
-	req = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(req, GGP_AVATAR_BUDDY_URL,
-		pending_update->uin);
-	purple_http_request_header_set(req, "User-Agent", GGP_AVATAR_USERAGENT);
-	purple_http_request_set_max_len(req, GGP_AVATAR_SIZE_MAX);
-	pending_update->request = purple_http_request(gc, req,
-		ggp_avatar_buddy_update_received, pending_update);
-	purple_http_request_unref(req);
+	url = g_strdup_printf(GGP_AVATAR_BUDDY_URL, pending_update->uin);
+	req = soup_message_new("GET", url);
+	g_free(url);
+	soup_message_headers_replace(req->request_headers, "User-Agent",
+	                             GGP_AVATAR_USERAGENT);
+	// purple_http_request_set_max_len(req, GGP_AVATAR_SIZE_MAX);
+	soup_session_queue_message(
+	        info->http, req, ggp_avatar_buddy_update_received, pending_update);
+	pending_update->request = req;
 
 	return TRUE;
 }
@@ -314,30 +319,31 @@ static gboolean ggp_avatar_buddy_update_next(PurpleConnection *gc)
  */
 
 static void
-ggp_avatar_own_sent(PurpleHttpConnection *http_conn,
-                    PurpleHttpResponse *response, gpointer user_data)
+ggp_avatar_own_sent(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                    gpointer user_data)
 {
-	PurpleConnection *gc = purple_http_conn_get_purple_connection(http_conn);
+	PurpleConnection *gc = user_data;
 
 	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
 
-	if (!purple_http_response_is_successful(response)) {
-		purple_debug_error("gg", "ggp_avatar_own_sent: avatar not sent. %s",
-		                   purple_http_response_get_error(response));
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		purple_debug_error("gg", "ggp_avatar_own_sent: avatar not sent. %s\n",
+		                   msg->reason_phrase);
 		return;
 	}
 	purple_debug_info("gg", "ggp_avatar_own_sent: %s\n",
-	                  purple_http_response_get_data(response, NULL));
+	                  msg->response_body->data);
 }
 
 static void
 ggp_avatar_own_got_token(PurpleConnection *gc, const gchar *token,
 	gpointer _img)
 {
-	PurpleHttpRequest *req;
+	GGPInfo *info = purple_connection_get_protocol_data(gc);
+	SoupMessage *req;
 	PurpleImage *img = _img;
 	ggp_avatar_own_data *own_data = ggp_avatar_get_avdata(gc)->own_data;
-	gchar *img_data, *img_data_e, *request_data;
+	gchar *img_data, *uin_str;
 	PurpleAccount *account = purple_connection_get_account(gc);
 	uin_t uin = ggp_str_to_uin(purple_account_get_username(account));
 
@@ -350,26 +356,20 @@ ggp_avatar_own_got_token(PurpleConnection *gc, const gchar *token,
 
 	img_data = g_base64_encode(purple_image_get_data(img),
 		purple_image_get_data_size(img));
-	img_data_e = g_uri_escape_string(img_data, NULL, FALSE);
-	g_free(img_data);
-	request_data = g_strdup_printf("uin=%d&photo=%s", uin, img_data_e);
-	g_free(img_data_e);
+	uin_str = g_strdup_printf("%d", uin);
 
 	purple_debug_misc("gg", "ggp_avatar_own_got_token: "
 		"uploading new avatar...\n");
 
-	req = purple_http_request_new("http://avatars.nowe.gg/upload");
-	purple_http_request_set_max_len(req, GGP_AVATAR_RESPONSE_MAX);
-	purple_http_request_set_method(req, "POST");
-	purple_http_request_header_set(req, "Authorization", token);
-	purple_http_request_header_set(req, "From", "avatars to avatars");
-	purple_http_request_header_set(req, "Content-Type",
-		"application/x-www-form-urlencoded");
-	purple_http_request_set_contents(req, request_data, -1);
-	purple_http_request(gc, req, ggp_avatar_own_sent, NULL);
-	purple_http_request_unref(req);
-
-	g_free(request_data);
+	req = soup_form_request_new("POST", "http://avatars.nowe.gg/upload", "uin",
+	                            uin_str, "photo", img_data, NULL);
+	// purple_http_request_set_max_len(req, GGP_AVATAR_RESPONSE_MAX);
+	soup_message_headers_replace(req->request_headers, "Authorization", token);
+	soup_message_headers_replace(req->request_headers, "From",
+	                             "avatars to avatars");
+	soup_session_queue_message(info->http, req, ggp_avatar_own_sent, gc);
+	g_free(img_data);
+	g_free(uin_str);
 }
 
 void
