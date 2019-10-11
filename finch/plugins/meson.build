@@ -23,7 +23,7 @@ if PLUGINS
 	    install : true, install_dir : FINCH_PLUGINDIR)
 
 	gnttinyurl = library('gnttinyurl', 'gnttinyurl.c',
-	    dependencies : [libpurple_dep, libfinch_dep, glib],
+	    dependencies : [libpurple_dep, libfinch_dep, libsoup, glib],
 	    name_prefix : '',
 	    install : true, install_dir : FINCH_PLUGINDIR)
 
