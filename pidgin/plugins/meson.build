@@ -51,7 +51,7 @@ if PLUGINS
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 
 	imgupload = library('imgupload', 'imgupload.c',
-	    dependencies : [json, libpurple_dep, libpidgin_dep, glib],
+	    dependencies : [json, libpurple_dep, libpidgin_dep, libsoup, glib],
 	    name_prefix : '',
 	    build_by_default: false,
 	    install : false, install_dir : PIDGIN_PLUGINDIR)
@@ -63,7 +63,7 @@ if PLUGINS
 	    install : false, install_dir : PIDGIN_PLUGINDIR)
 
 	relnot = library('relnot', 'relnot.c',
-	    dependencies : [libpurple_dep, libpidgin_dep, glib],
+	    dependencies : [libpurple_dep, libpidgin_dep, libsoup, glib],
 	    name_prefix : '',
 	    install : true, install_dir : PIDGIN_PLUGINDIR)
 

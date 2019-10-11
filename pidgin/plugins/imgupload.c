@@ -33,11 +33,13 @@
 #include "gtkwebviewtoolbar.h"
 
 #include <json-glib/json-glib.h>
+#include <libsoup/soup.h>
 
 #define IMGUP_IMGUR_CLIENT_ID "b6d33c6bb80e1b6"
 #define IMGUP_PREF_PREFIX "/plugins/gtk/imgupload/"
 
 static PurplePlugin *plugin_handle = NULL;
+static SoupSession *session = NULL;
 
 static void
 imgup_upload_done(PidginWebView *webview, const gchar *url, const gchar *title);
@@ -61,24 +63,22 @@ imgup_conn_is_hooked(PurpleConnection *gc)
  ******************************************************************************/
 
 static void
-imgup_imgur_uploaded(PurpleHttpConnection *hc, PurpleHttpResponse *resp,
-	gpointer _webview)
+imgup_imgur_uploaded(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                     gpointer _webview)
 {
 	JsonParser *parser;
 	JsonObject *result;
-	const gchar *data;
-	gsize data_len;
 	PidginWebView *webview = PIDGIN_WEBVIEW(_webview);
 	const gchar *url, *title;
 
-	if (!purple_http_response_is_successful(resp)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		imgup_upload_failed(webview);
 		return;
 	}
 
-	data = purple_http_response_get_data(resp, &data_len);
 	parser = json_parser_new();
-	if (!json_parser_load_from_data(parser, data, data_len, NULL)) {
+	if (!json_parser_load_from_data(parser, msg->response_body->data,
+	                                msg->response_body->length, NULL)) {
 		purple_debug_warning("imgupload", "Invalid json got from imgur");
 
 		imgup_upload_failed(webview);
@@ -99,25 +99,23 @@ imgup_imgur_uploaded(PurpleHttpConnection *hc, PurpleHttpResponse *resp,
 	result = json_object_get_object_member(result, "data");
 	url = json_object_get_string_member(result, "link");
 
-	title = g_object_get_data(G_OBJECT(webview), "imgupload-imgur-name");
+	title = g_object_get_data(G_OBJECT(msg), "imgupload-imgur-name");
 
 	imgup_upload_done(webview, url, title);
 
 	g_object_unref(parser);
-	g_object_set_data(G_OBJECT(webview), "imgupload-imgur-name", NULL);
+	g_object_set_data(G_OBJECT(msg), "imgupload-imgur-name", NULL);
 }
 
 static PurpleHttpConnection *
 imgup_imgur_upload(PidginWebView *webview, PurpleImage *image)
 {
-	PurpleHttpRequest *req;
-	PurpleHttpConnection *hc;
+	SoupMessage *msg;
 	gchar *req_data, *img_data, *img_data_e;
 
-	req = purple_http_request_new("https://api.imgur.com/3/image");
-	purple_http_request_set_method(req, "POST");
-	purple_http_request_header_set(req, "Authorization",
-		"Client-ID " IMGUP_IMGUR_CLIENT_ID);
+	msg = soup_message_new("POST", "https://api.imgur.com/3/image");
+	soup_message_headers_replace(msg, "Authorization",
+	                             "Client-ID " IMGUP_IMGUR_CLIENT_ID);
 
 	/* TODO: make it a plain, multipart/form-data request */
 	img_data = g_base64_encode(purple_image_get_data(image),
@@ -127,19 +125,16 @@ imgup_imgur_upload(PidginWebView *webview, PurpleImage *image)
 	req_data = g_strdup_printf("type=base64&image=%s", img_data_e);
 	g_free(img_data_e);
 
-	purple_http_request_header_set(req, "Content-Type",
-		"application/x-www-form-urlencoded");
-	purple_http_request_set_contents(req, req_data, -1);
-	g_free(req_data);
+	soup_message_set_request(msg, "application/x-www-form-urlencoded",
+	                         SOUP_MESSAGE_TAKE, req_data, -1);
 
-	/* TODO: set it to hc, not webview (after gobjectifying it) */
-	g_object_set_data_full(G_OBJECT(webview), "imgupload-imgur-name",
-		g_strdup(purple_image_get_friendly_filename(image)), g_free);
+	g_object_set_data_full(G_OBJECT(msg), "imgupload-imgur-name",
+	                       g_strdup(purple_image_get_friendly_filename(image)),
+	                       g_free);
 
-	hc = purple_http_request(NULL, req, imgup_imgur_uploaded, webview);
-	purple_http_request_unref(req);
+	soup_session_queue_message(session, msg, imgup_imgur_uploaded, webview);
 
-	return hc;
+	return msg;
 }
 
 /******************************************************************************
@@ -151,7 +146,7 @@ imgup_upload_finish(PidginWebView *webview)
 {
 	gpointer plswait;
 
-	g_object_steal_data(G_OBJECT(webview), "imgupload-hc");
+	g_object_steal_data(G_OBJECT(webview), "imgupload-msg");
 	plswait = g_object_get_data(G_OBJECT(webview), "imgupload-plswait");
 	g_object_set_data(G_OBJECT(webview), "imgupload-plswait", NULL);
 
@@ -194,17 +189,24 @@ imgup_upload_failed(PidginWebView *webview)
 }
 
 static void
+imgup_upload_cancel_message(SoupMessage *msg)
+{
+	soup_session_cancel_message(session, msg, SOUP_STATUS_CANCELLED);
+}
+
+static void
 imgup_upload_cancel(gpointer _webview)
 {
-	PurpleHttpConnection *hc;
+	SoupMessage *msg;
 	PidginWebView *webview = PIDGIN_WEBVIEW(_webview);
 
 	g_object_set_data(G_OBJECT(webview), "imgupload-plswait", NULL);
 	g_object_set_data(G_OBJECT(webview), "imgupload-cancelled",
 		GINT_TO_POINTER(TRUE));
-	hc = g_object_get_data(G_OBJECT(webview), "imgupload-hc");
-	if (hc)
-		purple_http_conn_cancel(hc);
+	msg = g_object_steal_data(G_OBJECT(webview), "imgupload-msg");
+	if (msg) {
+		soup_session_cancel_message(session, msg, SOUP_STATUS_CANCELLED);
+	}
 }
 
 static gboolean
@@ -212,15 +214,15 @@ imgup_upload_start(PidginWebView *webview, PurpleImage *image, gpointer _gtkconv
 {
 	PidginConversation *gtkconv = _gtkconv;
 	PurpleConversation *conv = gtkconv->active_conv;
-	PurpleHttpConnection *hc;
+	SoupMessage *msg;
 	gpointer plswait;
 
 	if (!imgup_conn_is_hooked(purple_conversation_get_connection(conv)))
 		return FALSE;
 
-	hc = imgup_imgur_upload(webview, image);
-	g_object_set_data_full(G_OBJECT(webview), "imgupload-hc",
-		hc, (GDestroyNotify)purple_http_conn_cancel);
+	msg = imgup_imgur_upload(webview, image);
+	g_object_set_data_full(G_OBJECT(webview), "imgupload-msg", msg,
+	                       (GDestroyNotify)imgup_upload_cancel_message);
 
 	plswait = purple_request_wait(plugin_handle, _("Uploading image"),
 		_("Please wait for image URL being retrieved..."),
@@ -411,6 +413,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	purple_prefs_add_bool(IMGUP_PREF_PREFIX "use_url_desc", TRUE);
 
 	plugin_handle = plugin;
+	session = soup_session_new();
 
 	it = purple_connections_get_all();
 	for (; it; it = g_list_next(it)) {
@@ -444,6 +447,8 @@ plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	GList *it;
 
+	soup_session_abort(session);
+
 	it = purple_conversations_get_all();
 	for (; it; it = g_list_next(it)) {
 		PurpleConversation *conv = it->data;
@@ -458,6 +463,7 @@ plugin_unload(PurplePlugin *plugin, GError **error)
 		imgup_conn_uninit(gc);
 	}
 
+	g_clear_object(&session);
 	plugin_handle = NULL;
 
 	return TRUE;
