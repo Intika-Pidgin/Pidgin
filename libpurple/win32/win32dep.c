@@ -479,8 +479,8 @@ int wpurple_input_pipe(int pipefd[2])
 
 	sock_server = sock_client = sock_server_established = INVALID_SOCKET;
 
-	purple_debug_misc("wpurple", "wpurple_input_pipe(0x%x[%d,%d])\n",
-		(unsigned int)pipefd, pipefd[0], pipefd[1]);
+	purple_debug_misc("wpurple", "wpurple_input_pipe(%p[%d,%d])\n", pipefd,
+	                  pipefd[0], pipefd[1]);
 
 	/* create client and passive server sockets */
 	sock_server = socket(AF_INET, SOCK_STREAM, 0);
@@ -554,8 +554,9 @@ int wpurple_input_pipe(int pipefd[2])
 	if (succ)
 	{
 		purple_debug_misc("wpurple",
-			"wpurple_input_pipe created pipe [%d,%d]\n",
-			sock_client, sock_server_established);
+		                  "wpurple_input_pipe created pipe [%" G_GUINTPTR_FORMAT
+		                  ",%" G_GUINTPTR_FORMAT "]\n",
+		                  sock_client, sock_server_established);
 		pipefd[0] = sock_client; /* for reading */
 		pipefd[1] = sock_server_established; /* for writing */
 		return 0;

@@ -264,12 +264,11 @@ purple_circular_buffer_get_property(GObject *obj, guint param_id,
 
 	switch(param_id) {
 		case PROP_GROW_SIZE:
-			g_value_set_ulong(value,
-			                  purple_circular_buffer_get_grow_size(buffer));
+			g_value_set_uint64(value,
+			                   purple_circular_buffer_get_grow_size(buffer));
 			break;
 		case PROP_BUFFER_USED:
-			g_value_set_ulong(value,
-			                  purple_circular_buffer_get_used(buffer));
+			g_value_set_uint64(value, purple_circular_buffer_get_used(buffer));
 			break;
 		case PROP_INPUT:
 			g_value_set_pointer(value,
@@ -294,7 +293,7 @@ purple_circular_buffer_set_property(GObject *obj, guint param_id,
 	switch(param_id) {
 		case PROP_GROW_SIZE:
 			purple_circular_buffer_set_grow_size(buffer,
-			                                     g_value_get_ulong(value));
+			                                     g_value_get_uint64(value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -316,20 +315,14 @@ purple_circular_buffer_class_init(PurpleCircularBufferClass *klass) {
 	buffer_class->max_read_size = purple_circular_buffer_real_max_read_size;
 	buffer_class->mark_read = purple_circular_buffer_real_mark_read;
 
-	/* using a ulong for the gsize properties since there is no
-	 * g_param_spec_size, and the ulong should always work. --gk 3/21/11
-	 */
-	properties[PROP_GROW_SIZE] = g_param_spec_ulong("grow-size", "grow-size",
-		                   "The grow size of the buffer",
-		                   0, G_MAXSIZE, 0,
-		                   G_PARAM_READWRITE | G_PARAM_CONSTRUCT |
-		                   G_PARAM_STATIC_STRINGS);
+	properties[PROP_GROW_SIZE] = g_param_spec_uint64(
+	        "grow-size", "grow-size", "The grow size of the buffer", 0,
+	        G_MAXSIZE, 0,
+	        G_PARAM_READWRITE | G_PARAM_CONSTRUCT | G_PARAM_STATIC_STRINGS);
 
-	properties[PROP_BUFFER_USED] = g_param_spec_ulong("buffer-used",
-		                   "buffer-used",
-		                   "The amount of the buffer used",
-		                   0, G_MAXSIZE, 0,
-		                   G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+	properties[PROP_BUFFER_USED] = g_param_spec_uint64(
+	        "buffer-used", "buffer-used", "The amount of the buffer used", 0,
+	        G_MAXSIZE, 0, G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
 	properties[PROP_INPUT] = g_param_spec_pointer("input", "input",
 		                     "The input pointer of the buffer",
