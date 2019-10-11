@@ -67,6 +67,7 @@
 #include <gdk/gdkquartz.h>
 #endif
 #endif
+#include <libsoup/soup.h>
 
 #include "gtk3compat.h"
 
@@ -249,6 +250,7 @@ struct _PidginPrefsWindow {
 
 	/* Themes page */
 	struct {
+		SoupSession *session;
 		GtkWidget *blist;
 		GtkWidget *status;
 		GtkWidget *sound;
@@ -287,7 +289,6 @@ static GtkWidget *prefs_sound_themes_combo_box;
 static GtkWidget *prefs_blist_themes_combo_box;
 static GtkWidget *prefs_status_themes_combo_box;
 static GtkWidget *prefs_smiley_themes_combo_box;
-static PurpleHttpConnection *prefs_themes_running_request = NULL;
 
 /* Sound theme specific */
 static int sound_row_sel = 0;
@@ -899,6 +900,8 @@ delete_prefs(GtkWidget *asdf, void *gdsa)
 
 	purple_notify_close_with_handle(prefs);
 
+	g_clear_object(&prefs->theme.session);
+
 	/* Unregister callbacks. */
 	purple_prefs_disconnect_by_handle(prefs);
 
@@ -1388,28 +1391,21 @@ theme_install_theme(char *path, struct theme_info *info)
 }
 
 static void
-theme_got_url(PurpleHttpConnection *http_conn, PurpleHttpResponse *response,
-	gpointer _info)
+theme_got_url(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+              gpointer _info)
 {
 	struct theme_info *info = _info;
-	const gchar *themedata;
-	size_t len;
 	FILE *f;
 	gchar *path;
 	size_t wc;
 
-	g_assert(http_conn == prefs_themes_running_request);
-	prefs_themes_running_request = NULL;
-
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		free_theme_info(info);
 		return;
 	}
 
-	themedata = purple_http_response_get_data(response, &len);
-
 	f = purple_mkstemp(&path, TRUE);
-	wc = fwrite(themedata, len, 1, f);
+	wc = fwrite(msg->response_body->data, msg->response_body->length, 1, f);
 	if (wc != 1) {
 		purple_debug_warning("theme_got_url", "Unable to write theme data.\n");
 		fclose(f);
@@ -1461,15 +1457,18 @@ theme_dnd_recv(GtkWidget *widget, GdkDragContext *dc, guint x, guint y,
 			!g_ascii_strncasecmp(name, "https://", 8)) {
 			/* Oo, a web drag and drop. This is where things
 			 * will start to get interesting */
-			PurpleHttpRequest *hr;
-			purple_http_conn_cancel(prefs_themes_running_request);
+			SoupMessage *msg;
 
-			hr = purple_http_request_new(name);
-			purple_http_request_set_max_len(hr,
-				PREFS_MAX_DOWNLOADED_THEME_SIZE);
-			prefs_themes_running_request = purple_http_request(
-				NULL, hr, theme_got_url, info);
-			purple_http_request_unref(hr);
+			if (prefs->theme.session == NULL) {
+				prefs->theme.session = soup_session_new();
+			}
+
+			soup_session_abort(prefs->theme.session);
+
+			msg = soup_message_new("GET", name);
+			// purple_http_request_set_max_len(msg, PREFS_MAX_DOWNLOADED_THEME_SIZE);
+			soup_session_queue_message(prefs->theme.session, msg, theme_got_url,
+			                           info);
 		} else
 			free_theme_info(info);
 

@@ -33,6 +33,8 @@
 #include "gtkutils.h"
 #include "pidginstock.h"
 
+#include <libsoup/soup.h>
+
 #include "gtk3compat.h"
 
 typedef struct
@@ -53,7 +55,7 @@ typedef struct
 	GtkListStore *model;
 	GtkTreeView *tree;
 
-	PurpleHttpConnection *running_request;
+	SoupSession *session;
 } SmileyManager;
 
 enum
@@ -436,24 +438,21 @@ pidgin_smiley_manager_add(PurpleImage *image, const gchar *shortcut)
  ******************************************************************************/
 
 static void
-smiley_list_dnd_url_got(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _manager)
+smiley_list_dnd_url_got(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                        gpointer _manager)
 {
 	SmileyManager *manager = _manager;
 	SmileyEditDialog *edit_dialog;
 	PurpleImage *image;
-	const gchar *image_data;
-	size_t image_size;
 
 	g_return_if_fail(manager == smiley_manager);
-	g_return_if_fail(manager->running_request == http_conn);
-	manager->running_request = NULL;
 
-	if (!purple_http_response_is_successful(response))
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		return;
+	}
 
-	image_data = purple_http_response_get_data(response, &image_size);
-	image = purple_image_new_from_data((const guint8 *)image_data, image_size);
+	image = purple_image_new_from_data((const guint8 *)msg->response_body->data,
+	                                   msg->response_body->length);
 	if (!image)
 		return;
 
@@ -526,10 +525,16 @@ smiley_list_dnd_recv(GtkWidget *widget, GdkDragContext *dc, gint x, gint y,
 	if (purple_str_has_caseprefix(content, "http://") ||
 		purple_str_has_caseprefix(content, "https://"))
 	{
-		purple_http_conn_cancel(smiley_manager->
-			running_request);
-		smiley_manager->running_request = purple_http_get(NULL,
-			smiley_list_dnd_url_got, manager, content);
+		SoupMessage *msg;
+
+		if (smiley_manager->session == NULL) {
+			smiley_manager->session = soup_session_new();
+		}
+
+		soup_session_abort(smiley_manager->session);
+		msg = soup_message_new("GET", content);
+		soup_session_queue_message(smiley_manager->session, msg,
+		                           smiley_list_dnd_url_got, manager);
 
 		gtk_drag_finish(dc, TRUE, FALSE, time);
 		return;
@@ -731,7 +736,8 @@ manager_select_cb(GtkWidget *widget, gint resp, SmileyManager *manager)
 		case GTK_RESPONSE_DELETE_EVENT:
 		case GTK_RESPONSE_CLOSE:
 			gtk_widget_destroy(GTK_WIDGET(manager->window));
-			purple_http_conn_cancel(manager->running_request);
+			soup_session_abort(manager->session);
+			g_clear_object(&manager->session);
 			g_free(manager);
 			smiley_manager = NULL;
 			break;
