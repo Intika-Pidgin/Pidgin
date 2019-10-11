@@ -185,7 +185,10 @@ kerberos_login_cb(PurpleHttpConnection *http_conn,
 	}
 
 	got_data = purple_http_response_get_data(response, &got_len);
-	purple_debug_info("oscar", "Received kerberos login HTTP response %lu : ", got_len);
+	purple_debug_info("oscar",
+	                  "Received kerberos login HTTP response %" G_GSIZE_FORMAT
+	                  " : ",
+	                  got_len);
 
 	byte_stream_init(&bs, (guint8 *)got_data, got_len);
 
@@ -250,8 +253,10 @@ kerberos_login_cb(PurpleHttpConnection *http_conn,
 		len = byte_stream_get16(&bs);
 		xsnac.tokens[i].tlvlist = aim_tlvlist_readnum(&bs, len);
 
-		purple_debug_info("oscar", "Token %lu has %d TLVs for service '%s'\n",
-			i, len, xsnac.tokens[i].service);
+		purple_debug_info("oscar",
+		                  "Token %" G_GSIZE_FORMAT
+		                  " has %d TLVs for service '%s'\n",
+		                  i, len, xsnac.tokens[i].service);
 	}
 	len = byte_stream_get16(&bs);
 	xsnac.tlvlist = aim_tlvlist_readnum(&bs, len);
