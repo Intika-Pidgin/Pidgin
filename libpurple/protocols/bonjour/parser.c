@@ -21,15 +21,12 @@
  *
  */
 #include "internal.h"
+#include <purple.h>
 
 #include <libxml/parser.h>
 
-#include "connection.h"
-#include "debug.h"
 #include "jabber.h"
 #include "parser.h"
-#include "util.h"
-#include "xmlnode.h"
 
 static gboolean
 parse_from_attrib_and_find_buddy(BonjourJabberConversation *bconv, int nb_attributes, const xmlChar **attributes) {

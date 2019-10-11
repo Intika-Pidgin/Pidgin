@@ -29,7 +29,6 @@
 	  <title>API Reference</title>
 
       <xi:include href="xml/account.xml" />
-      <xi:include href="xml/accountopt.xml" />
       <xi:include href="xml/accounts.xml" />
       <xi:include href="xml/blistnode.xml" />
       <xi:include href="xml/buddy.xml" />
@@ -65,6 +64,8 @@
       <xi:include href="xml/protocols.xml" />
       <xi:include href="xml/proxy.xml" />
       <xi:include href="xml/purple-gio.xml" />
+      <xi:include href="xml/purpleaccountoption.xml" />
+      <xi:include href="xml/purpleaccountusersplit.xml" />
       <xi:include href="xml/queuedoutputstream.xml" />
       <xi:include href="xml/signals.xml" />
       <xi:include href="xml/stringref.xml" />

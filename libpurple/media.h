@@ -185,8 +185,10 @@ void purple_media_stream_info(PurpleMedia *media, PurpleMediaInfoType type,
  *   - "sdes-note"     : The NOTE to put in SDES messages
  *   - "sdes-phone"    : The PHONE to put in SDES messages
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void purple_media_set_params(PurpleMedia *media,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * purple_media_get_available_params:
@@ -230,10 +232,12 @@ gboolean purple_media_param_is_supported(PurpleMedia *media, const gchar *param)
  *
  * Returns: %TRUE The stream was added successfully, %FALSE otherwise.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean purple_media_add_stream(PurpleMedia *media, const gchar *sess_id,
 		const gchar *who, PurpleMediaSessionType type,
 		gboolean initiator, const gchar *transmitter,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * purple_media_get_session_type:

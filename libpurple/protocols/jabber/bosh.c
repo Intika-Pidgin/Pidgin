@@ -121,10 +121,11 @@ jabber_bosh_connection_new(JabberStream *js, const gchar *url)
 	conn->rid = (((guint64)g_random_int() << 32) | g_random_int());
 	conn->rid &= 0xFFFFFFFFFFFFFLL;
 
-	if (purple_ip_address_is_valid(purple_http_url_get_host(url_p)))
+	if (g_hostname_is_ip_address(purple_http_url_get_host(url_p))) {
 		js->serverFQDN = g_strdup(js->user->domain);
-	else
+	} else {
 		js->serverFQDN = g_strdup(purple_http_url_get_host(url_p));
+	}
 
 	purple_http_url_free(url_p);
 

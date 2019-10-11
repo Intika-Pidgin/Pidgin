@@ -37,10 +37,10 @@
 #include "finch.h"
 
 #include <account.h>
-#include <accountopt.h>
 #include <connection.h>
 #include <notify.h>
 #include <plugins.h>
+#include <purpleaccountoption.h>
 #include <request.h>
 #include <savedstatuses.h>
 

@@ -571,7 +571,7 @@ static gboolean create_database_connection() {
 		return TRUE;
 
 	/* build the path */
-	path = g_build_filename(purple_user_dir(), "cap.db", (gchar *)NULL);
+	path = g_build_filename(purple_data_dir(), "cap.db", (gchar *)NULL);
 
 	/* make database connection here */
 	rc = sqlite3_open(path, &_db);

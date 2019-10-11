@@ -17,7 +17,7 @@
 #include <string.h>
 
 #include "internal.h"
-#include "debug.h"
+#include <purple.h>
 
 #include "mdns_common.h"
 #include "mdns_interface.h"

@@ -7161,11 +7161,13 @@ notebook_init_grab(PidginConvWindow *gtkwin, GtkWidget *widget, GdkEvent *event)
 	/* Grab the pointer */
 	gtk_grab_add(gtkwin->notebook);
 	device = gdk_event_get_device(event);
-	if (!gdk_display_device_is_grabbed(gdk_device_get_display(device), device))
-		gdk_device_grab(device, gtk_widget_get_window(gtkwin->notebook),
-		                GDK_OWNERSHIP_WINDOW, FALSE,
-		                GDK_BUTTON1_MOTION_MASK | GDK_BUTTON_RELEASE_MASK,
-		                cursor, gdk_event_get_time(event));
+	if (!gdk_display_device_is_grabbed(gdk_device_get_display(device),
+	                                   device)) {
+		gdk_seat_grab(gdk_event_get_seat(event),
+		              gtk_widget_get_window(gtkwin->notebook),
+		              GDK_SEAT_CAPABILITY_ALL_POINTING, FALSE, cursor, event,
+		              NULL, NULL);
+	}
 }
 
 static gboolean
@@ -7443,7 +7445,7 @@ notebook_release_cb(GtkWidget *widget, GdkEventButton *e, PidginConvWindow *win)
 
 	device = gdk_event_get_device((GdkEvent *)e);
 	if (gdk_display_device_is_grabbed(gdk_device_get_display(device), device)) {
-		gdk_device_ungrab(device, gdk_event_get_time((GdkEvent *)e));
+		gdk_seat_ungrab(gdk_event_get_seat((GdkEvent *)e));
 		gtk_grab_remove(widget);
 	}
 

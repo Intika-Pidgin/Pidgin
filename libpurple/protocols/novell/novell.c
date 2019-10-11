@@ -20,7 +20,6 @@
 
 #include "internal.h"
 
-#include "accountopt.h"
 #include "action.h"
 #include "debug.h"
 #include "plugins.h"
@@ -28,6 +27,7 @@
 #include "nmuser.h"
 #include "notify.h"
 #include "novell.h"
+#include "purpleaccountoption.h"
 #include "util.h"
 #include "sslconn.h"
 #include "request.h"

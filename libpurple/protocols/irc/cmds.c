@@ -1,6 +1,4 @@
 /**
- * @file cmds.c
- *
  * purple
  *
  * Copyright (C) 2003, Ethan Blanton <eblanton@cs.purdue.edu>
@@ -21,11 +19,7 @@
  */
 
 #include "internal.h"
-
-#include "conversation.h"
-#include "debug.h"
-#include "notify.h"
-#include "util.h"
+#include <purple.h>
 
 #include "irc.h"
 

@@ -1,6 +1,4 @@
 /**
- * @file simple.h
- *
  * purple
  *
  * Copyright (C) 2005, Thomas Butter <butter@uni-mannheim.de>
@@ -28,10 +26,7 @@
 #include <gio/gio.h>
 #include <time.h>
 
-#include "circularbuffer.h"
-#include "network.h"
-#include "proxy.h"
-#include "protocol.h"
+#include <purple.h>
 
 #include "sipmsg.h"
 

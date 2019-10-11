@@ -20,7 +20,8 @@
  */
 #include "internal.h"
 
-#include "accountopt.h"
+#include "purpleaccountoption.h"
+#include "prefs.h"
 #include "util.h"
 #include "glibcompat.h"
 
@@ -32,16 +33,16 @@
  */
 struct _PurpleAccountOption
 {
-	PurplePrefType type;      /* The type of value.                     */
+	PurplePrefType type;    /* The type of value.                     */
 
-	char *text;             /* The text that will appear to the user. */
-	char *pref_name;        /* The name of the associated preference. */
+	gchar *text;            /* The text that will appear to the user. */
+	gchar *pref_name;       /* The name of the associated preference. */
 
 	union
 	{
 		gboolean boolean;   /* The default boolean value.             */
-		int integer;        /* The default integer value.             */
-		char *string;       /* The default string value.              */
+		gint integer;       /* The default integer value.             */
+		gchar *string;      /* The default string value.              */
 		GList *list;        /* The default list value.                */
 
 	} default_value;
@@ -59,23 +60,12 @@ struct _PurpleAccountOption
 	} params;
 };
 
-/*
- * A username split.
- *
- * This is used by some protocols to separate the fields of the username
- * into more human-readable components.
- */
-struct _PurpleAccountUserSplit
-{
-	char *text;             /* The text that will appear to the user. */
-	char *default_value;    /* The default value.                     */
-	char  field_sep;        /* The field separator.                   */
-	gboolean reverse;       /* TRUE if the separator should be found
-							   starting a the end of the string, FALSE
-							   otherwise                                 */
-	gboolean constant;
-};
-
+G_DEFINE_BOXED_TYPE(
+	PurpleAccountOption,
+	purple_account_option,
+	purple_account_option_copy,
+	purple_account_option_destroy
+);
 
 PurpleAccountOption *
 purple_account_option_new(PurplePrefType type, const char *text,
@@ -94,6 +84,26 @@ purple_account_option_new(PurplePrefType type, const char *text,
 	option->pref_name = g_strdup(pref_name);
 
 	return option;
+}
+
+PurpleAccountOption *
+purple_account_option_copy(PurpleAccountOption *option) {
+	PurpleAccountOption *opt = NULL;
+
+	g_return_val_if_fail(option, NULL);
+
+	opt = g_new0(PurpleAccountOption, 1);
+	*opt = *option;
+
+	opt->text = g_strdup(option->text);
+	opt->pref_name = g_strdup(option->pref_name);
+
+	if(opt->type == PURPLE_PREF_STRING) {
+		opt->default_value.string = g_strdup(option->default_value.string);
+		opt->params.string.hints = g_slist_copy(option->params.string.hints);
+	}
+
+	return opt;
 }
 
 PurpleAccountOption *
@@ -351,8 +361,8 @@ purple_account_option_string_get_masked(const PurpleAccountOption *option)
 const GSList *
 purple_account_option_string_get_hints(const PurpleAccountOption *option)
 {
-	g_return_val_if_fail(option != NULL, FALSE);
-	g_return_val_if_fail(option->type == PURPLE_PREF_STRING, FALSE);
+	g_return_val_if_fail(option != NULL, NULL);
+	g_return_val_if_fail(option->type == PURPLE_PREF_STRING, NULL);
 
 	return option->params.string.hints;
 }
@@ -364,93 +374,4 @@ purple_account_option_get_list(const PurpleAccountOption *option)
 	g_return_val_if_fail(option->type == PURPLE_PREF_STRING_LIST, NULL);
 
 	return option->default_value.list;
-}
-
-/**************************************************************************
- * Account User Split API
- **************************************************************************/
-PurpleAccountUserSplit *
-purple_account_user_split_new(const char *text, const char *default_value,
-							char sep)
-{
-	PurpleAccountUserSplit *split;
-
-	g_return_val_if_fail(text != NULL, NULL);
-	g_return_val_if_fail(sep != 0, NULL);
-
-	split = g_new0(PurpleAccountUserSplit, 1);
-
-	split->text = g_strdup(text);
-	split->field_sep = sep;
-	split->default_value = g_strdup(default_value);
-	split->reverse = TRUE;
-
-	return split;
-}
-
-void
-purple_account_user_split_destroy(PurpleAccountUserSplit *split)
-{
-	g_return_if_fail(split != NULL);
-
-	g_free(split->text);
-	g_free(split->default_value);
-	g_free(split);
-}
-
-const char *
-purple_account_user_split_get_text(const PurpleAccountUserSplit *split)
-{
-	g_return_val_if_fail(split != NULL, NULL);
-
-	return split->text;
-}
-
-const char *
-purple_account_user_split_get_default_value(const PurpleAccountUserSplit *split)
-{
-	g_return_val_if_fail(split != NULL, NULL);
-
-	return split->default_value;
-}
-
-char
-purple_account_user_split_get_separator(const PurpleAccountUserSplit *split)
-{
-	g_return_val_if_fail(split != NULL, 0);
-
-	return split->field_sep;
-}
-
-gboolean
-purple_account_user_split_get_reverse(const PurpleAccountUserSplit *split)
-{
-	g_return_val_if_fail(split != NULL, FALSE);
-
-	return split->reverse;
-}
-
-void
-purple_account_user_split_set_reverse(PurpleAccountUserSplit *split, gboolean reverse)
-{
-	g_return_if_fail(split != NULL);
-
-	split->reverse = reverse;
-}
-
-gboolean
-purple_account_user_split_is_constant(const PurpleAccountUserSplit *split)
-{
-	g_return_val_if_fail(split != NULL, FALSE);
-
-	return split->constant;
-}
-
-void
-purple_account_user_split_set_constant(PurpleAccountUserSplit *split,
-	gboolean constant)
-{
-	g_return_if_fail(split != NULL);
-
-	split->constant = constant;
 }

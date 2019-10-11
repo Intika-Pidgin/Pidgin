@@ -33,7 +33,7 @@
 #include "version.h"
 #include "notify.h"
 #include "buddylist.h"
-#include "accountopt.h"
+#include "purpleaccountoption.h"
 #include "core.h"
 #include "debug.h"
 #include "util.h"

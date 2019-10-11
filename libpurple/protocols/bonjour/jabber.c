@@ -21,6 +21,7 @@
  */
 
 #include "internal.h"
+#include <purple.h>
 
 #ifndef _WIN32
 #include <net/if.h>
@@ -45,16 +46,6 @@
 #ifdef HAVE_GETIFADDRS
 #include <ifaddrs.h>
 #endif
-
-#include "buddylist.h"
-#include "connection.h"
-#include "debug.h"
-#include "eventloop.h"
-#include "network.h"
-#include "notify.h"
-#include "purple-gio.h"
-#include "util.h"
-#include "xmlnode.h"
 
 #include "jabber.h"
 #include "parser.h"

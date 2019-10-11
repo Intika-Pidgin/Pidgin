@@ -1,8 +1,10 @@
 PROGS = [
+    'account_option',
     'attention_type',
+    'circular_buffer',
     'image',
-    'protocol_attention',
     'protocol_action',
+    'protocol_attention',
     'protocol_xfer',
     'queued_output_stream',
     'smiley',

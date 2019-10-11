@@ -1,5 +1,4 @@
 /*
- *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
  * source distribution.
@@ -20,7 +19,7 @@
  */
 
 #include "internal.h"
-#include "debug.h"
+#include <purple.h>
 
 #include "buddy.h"
 #include "mdns_interface.h"

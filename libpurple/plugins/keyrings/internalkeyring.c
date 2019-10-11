@@ -25,11 +25,7 @@
  */
 
 #include "internal.h"
-#include "account.h"
-#include "debug.h"
-#include "keyring.h"
-#include "plugins.h"
-#include "version.h"
+#include <purple.h>
 
 #include <nettle/aes.h>
 #include <nettle/cbc.h>

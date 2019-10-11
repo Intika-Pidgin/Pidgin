@@ -25,6 +25,7 @@
 
 #include "internal.h"
 
+#include <libsoup/soup.h>
 #include <string.h>
 
 #include "connection.h"
@@ -42,6 +43,8 @@
 
 #include "pidgin.h"
 
+static SoupSession *session = NULL;
+
 /* 1 day */
 #define MIN_CHECK_INTERVAL 60 * 60 * 24
 
@@ -58,8 +61,9 @@ release_show()
 	purple_notify_uri(NULL, PURPLE_WEBSITE);
 }
 
-static void version_fetch_cb(PurpleHttpConnection *hc,
-	PurpleHttpResponse *response, gpointer user_data)
+static void
+version_fetch_cb(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                 gpointer user_data)
 {
 	gchar *cur_ver;
 	const char *changelog;
@@ -68,10 +72,11 @@ static void version_fetch_cb(PurpleHttpConnection *hc,
 	GString *message;
 	int i = 0;
 
-	if(!purple_http_response_is_successful(response))
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		return;
+	}
 
-	changelog = purple_http_response_get_data(response, NULL);
+	changelog = msg->response_body->data;
 
 	while(changelog[i] && changelog[i] != '\n') i++;
 
@@ -107,25 +112,23 @@ do_check(void)
 {
 	int last_check = purple_prefs_get_int("/plugins/gtk/relnot/last_check");
 	if(!last_check || time(NULL) - last_check > MIN_CHECK_INTERVAL) {
-		gchar *url;
-		const char *host = "pidgin.im";
+		SoupMessage *msg;
 
-		url = g_strdup_printf("https://%s/version.php?version=%s&build=%s",
-				host,
-				purple_core_get_version(),
+		purple_debug_info("relnot", "Checking for new version.");
+
+		msg = soup_form_request_new("GET", "https://pidgin.im/version.php",
+		                            "version", purple_core_get_version(),
+		                            "build",
 #ifdef _WIN32
-				"purple-win32"
+		                            "purple-win32",
 #else
-				"purple"
+		                            "purple",
 #endif
-		);
+		                            NULL);
 
-		purple_http_get(NULL, version_fetch_cb, NULL, url);
-
-		g_free(url);
+		soup_session_queue_message(session, msg, version_fetch_cb, NULL);
 
 		purple_prefs_set_int("/plugins/gtk/relnot/last_check", time(NULL));
-
 	}
 }
 
@@ -169,6 +172,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	purple_signal_connect(purple_connections_get_handle(), "signed-on",
 						plugin, PURPLE_CALLBACK(signed_on_cb), NULL);
 
+	session = soup_session_new();
+
 	/* we don't check if we're offline */
 	if(purple_connections_get_all())
 		do_check();
@@ -179,6 +184,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
+	soup_session_abort(session);
+	g_clear_object(&session);
 	return TRUE;
 }
 
