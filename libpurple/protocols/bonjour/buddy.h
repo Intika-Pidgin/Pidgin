@@ -19,7 +19,8 @@
 
 #include <glib.h>
 
-#include "account.h"
+#include <purple.h>
+
 #include "jabber.h"
 
 typedef struct

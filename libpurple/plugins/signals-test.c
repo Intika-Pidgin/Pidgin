@@ -21,18 +21,9 @@
 #define SIGNAL_TEST_PLUGIN_ID "core-signals-test"
 
 #include "internal.h"
+#include <purple.h>
 
 #include <stdio.h>
-
-#include "connection.h"
-#include "conversation.h"
-#include "core.h"
-#include "debug.h"
-#include "xfer.h"
-#include "signals.h"
-#include "version.h"
-#include "status.h"
-#include "sound.h"
 
 /**************************************************************************
  * Account subsystem signal callbacks

@@ -829,6 +829,7 @@ pidgin_debug_ui_init(PidginDebugUi *self)
 	REGISTER_G_LOG_HANDLER("GThread");
 	REGISTER_G_LOG_HANDLER("Gtk");
 	REGISTER_G_LOG_HANDLER("Json");
+	REGISTER_G_LOG_HANDLER("libsoup");
 	REGISTER_G_LOG_HANDLER("Talkatu");
 #ifdef USE_GSTREAMER
 	REGISTER_G_LOG_HANDLER("GStreamer");

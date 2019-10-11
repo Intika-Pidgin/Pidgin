@@ -28,10 +28,7 @@
 
 #include <libxml/parser.h>
 
-#include "xmlnode.h"
-
-#include "account.h"
-#include "circularbuffer.h"
+#include <purple.h>
 
 typedef struct
 {

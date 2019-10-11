@@ -1244,30 +1244,6 @@ const char *purple_url_encode(const char *str);
 gboolean purple_email_is_valid(const char *address);
 
 /**
- * purple_ip_address_is_valid:
- * @ip: The IP address to validate.
- *
- * Checks if the given IP address is a syntactically valid IPv4 or
- * IPv6 address.
- * If you specifically want to check for an IPv4 address use
- * purple_ipv4_address_is_valid(), or for an IPv6 address use
- * purple_ipv6_address_is_valid().
- *
- * Returns: True if the IP address is syntactically correct.
- */
-gboolean purple_ip_address_is_valid(const char *ip);
-
-/**
- * purple_ipv4_address_is_valid:
- * @ip: The IP address to validate.
- *
- * Checks if the given IP address is a syntactically valid IPv4 address.
- *
- * Returns: True if the IP address is syntactically correct.
- */
-gboolean purple_ipv4_address_is_valid(const char *ip);
-
-/**
  * purple_ipv6_address_is_valid:
  * @ip: The IP address to validate.
  *
@@ -1519,51 +1495,6 @@ GValue *purple_value_dup(GValue *value);
  * Frees a GValue.
  */
 void purple_value_free(GValue *value);
-
-/**
- * purple_http_digest_calculate_session_key:
- * @algorithm:    The hash algorithm to use
- * @username:     The username provided by the user
- * @realm:        The authentication realm provided by the server
- * @password:     The password provided by the user
- * @nonce:        The nonce provided by the server
- * @client_nonce: The nonce provided by the client
- *
- * Calculates a session key for HTTP Digest authentation
- *
- * See RFC 2617 for more information.
- *
- * Returns: The session key, or %NULL if an error occurred.
- */
-gchar *purple_http_digest_calculate_session_key(
-		const gchar *algorithm, const gchar *username,
-		const gchar *realm, const gchar *password,
-		const gchar *nonce, const gchar *client_nonce);
-
-/**
- * purple_http_digest_calculate_response:
- * @algorithm:         The hash algorithm to use
- * @method:            The HTTP method in use
- * @digest_uri:        The URI from the initial request
- * @qop:               The "quality of protection"
- * @entity:            The entity body
- * @nonce:             The nonce provided by the server
- * @nonce_count:       The nonce count
- * @client_nonce:      The nonce provided by the client
- * @session_key:       The session key from purple_http_digest_calculate_session_key()
- *
- * Calculate a response for HTTP Digest authentication
- *
- * See RFC 2617 for more information.
- *
- * Returns: The hashed response, or %NULL if an error occurred.
- */
-gchar *purple_http_digest_calculate_response(
-		const gchar *algorithm, const gchar *method,
-		const gchar *digest_uri, const gchar *qop,
-		const gchar *entity, const gchar *nonce,
-		const gchar *nonce_count, const gchar *client_nonce,
-		const gchar *session_key);
 
 G_END_DECLS
 

@@ -1,6 +1,4 @@
 /**
- * @file dcc_send.c Functions used in sending files with DCC SEND
- *
  * purple
  *
  * Copyright (C) 2004, Timothy T Ringenbach <omarvo@hotmail.com>
@@ -22,11 +20,9 @@
  */
 
 #include "internal.h"
+#include <purple.h>
+
 #include "irc.h"
-#include "debug.h"
-#include "xfer.h"
-#include "notify.h"
-#include "network.h"
 
 struct _IrcXfer {
 	PurpleXfer parent;

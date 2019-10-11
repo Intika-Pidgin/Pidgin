@@ -23,7 +23,6 @@
 #include "internal.h"
 
 #include "account.h"
-#include "accountopt.h"
 #include "buddylist.h"
 #include "core.h"
 #include "cmds.h"
@@ -36,6 +35,7 @@
 #include "pluginpref.h"
 #include "proxy.h"
 #include "protocol.h"
+#include "purpleaccountoption.h"
 #include "request.h"
 #include "server.h"
 #include "status.h"
@@ -889,10 +889,11 @@ static gboolean jabber_login_connect(JabberStream *js, const char *domain, const
 	 * but we use domain as fallback for when users enter IP address
 	 * in connect server */
 	g_free(js->serverFQDN);
-	if (purple_ip_address_is_valid(host))
+	if (g_hostname_is_ip_address(host)) {
 		js->serverFQDN = g_strdup(domain);
-	else
+	} else {
 		js->serverFQDN = g_strdup(host);
+	}
 
 	if (purple_proxy_connect(js->gc, purple_connection_get_account(js->gc),
 			host, port, jabber_login_callback, js->gc) == NULL) {

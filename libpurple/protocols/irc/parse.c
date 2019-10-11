@@ -1,6 +1,4 @@
 /**
- * @file parse.c
- *
  * purple
  *
  * Copyright (C) 2003, Ethan Blanton <eblanton@cs.purdue.edu>
@@ -21,13 +19,8 @@
  */
 
 #include "internal.h"
+#include <purple.h>
 
-#include "accountopt.h"
-#include "conversation.h"
-#include "notify.h"
-#include "debug.h"
-#include "util.h"
-#include "cmds.h"
 #include "irc.h"
 
 #include <stdio.h>

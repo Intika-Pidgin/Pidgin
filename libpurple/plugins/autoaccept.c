@@ -31,16 +31,7 @@
 #include <glib.h>
 #include <glib/gstdio.h>
 
-/* Purple headers */
-#include <plugins.h>
-#include <version.h>
-
-#include <action.h>
-#include <buddylist.h>
-#include <conversation.h>
-#include <xfer.h>
-#include <request.h>
-#include <notify.h>
+#include <purple.h>
 
 #define PREF_PREFIX		"/plugins/core/" PLUGIN_ID
 #define PREF_PATH		PREF_PREFIX "/path"

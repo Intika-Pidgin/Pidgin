@@ -24,15 +24,7 @@
 
 #include "internal.h"
 
-#include "connection.h"
-#include "debug.h"
-#include "notify.h"
-#include "plugins.h"
-#include "presence.h"
-#include "request.h"
-#include "server.h"
-#include "status.h"
-#include "version.h"
+#include <purple.h>
 
 /* This plugin no longer depends on gtk */
 #define IDLE_PLUGIN_ID "core-idle"

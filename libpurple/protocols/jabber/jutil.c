@@ -115,9 +115,15 @@ jabber_idn_validate(const char *str, const char *at, const char *slash,
 	if (domain[0] == '[') { /* IPv6 address */
 		gboolean valid = FALSE;
 
-		if (idn_buffer[domain_len - 1] == ']') {
+		if (domain_len > 2 && idn_buffer[domain_len - 1] == ']') {
+			GInetAddress *addr;
 			idn_buffer[domain_len - 1] = '\0';
-			valid = purple_ipv6_address_is_valid(idn_buffer + 1);
+			addr = g_inet_address_new_from_string(idn_buffer + 1);
+			if (addr != NULL) {
+				valid = (g_inet_address_get_family(addr) ==
+				         G_SOCKET_FAMILY_IPV6);
+				g_object_unref(addr);
+			}
 		}
 
 		if (!valid) {
@@ -215,14 +221,20 @@ gboolean jabber_domain_validate(const char *str)
 
 	if (*c == '[') {
 		/* Check if str is a valid IPv6 identifier */
+		GInetAddress *addr;
 		gboolean valid = FALSE;
 
-		if (*(c + len - 1) != ']')
+		if (len <= 2 || *(c + len - 1) != ']') {
 			return FALSE;
+		}
 
 		/* Ugly, but in-place */
 		*(gchar *)(c + len - 1) = '\0';
-		valid = purple_ipv6_address_is_valid(c + 1);
+		addr = g_inet_address_new_from_string(c + 1);
+		if (addr != NULL) {
+			valid = (g_inet_address_get_family(addr) == G_SOCKET_FAMILY_IPV6);
+			g_object_unref(addr);
+		}
 		*(gchar *)(c + len - 1) = ']';
 
 		return valid;

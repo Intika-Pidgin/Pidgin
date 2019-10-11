@@ -31,7 +31,6 @@
 #include "internal.h"
 
 #include "account.h"
-#include "accountopt.h"
 #include "buddyicon.h"
 #include "conversation.h"
 #include "core.h"
@@ -42,6 +41,7 @@
 #include "notify.h"
 #include "protocol.h"
 #include "proxy.h"
+#include "purpleaccountoption.h"
 #include "request.h"
 #include "util.h"
 #include "version.h"

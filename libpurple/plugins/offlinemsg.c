@@ -27,15 +27,7 @@
 #define PLUGIN_DESCRIPTION	N_("Save messages sent to an offline user as pounce.")
 #define PLUGIN_AUTHORS		{"Sadrul H Chowdhury <sadrul@users.sourceforge.net>", NULL}
 
-/* Purple headers */
-#include <version.h>
-
-#include <buddylist.h>
-#include <conversation.h>
-#include <core.h>
-#include <debug.h>
-#include <pounce.h>
-#include <request.h>
+#include <purple.h>
 
 #define	PREF_PREFIX		"/plugins/core/" PLUGIN_ID
 #define	PREF_ALWAYS		PREF_PREFIX "/always"

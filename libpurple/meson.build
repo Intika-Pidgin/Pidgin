@@ -1,7 +1,6 @@
 purple_coresources = [
 	'account.c',
 	'accounts.c',
-	'accountopt.c',
 	'action.c',
 	'attention.c',
 	'blistnode.c',
@@ -49,6 +48,8 @@ purple_coresources = [
 	'protocol.c',
 	'protocols.c',
 	'purple-gio.c',
+	'purpleaccountoption.c',
+	'purpleaccountusersplit.c',
 	'queuedoutputstream.c',
 	'request.c',
 	'request-datasheet.c',
@@ -83,7 +84,6 @@ purple_coresources = [
 purple_coreheaders = [
 	'account.h',
 	'accounts.h',
-	'accountopt.h',
 	'action.h',
 	'attention.h',
 	'blistnode.h',
@@ -127,6 +127,8 @@ purple_coreheaders = [
 	'protocol.h',
 	'protocols.h',
 	'purple-gio.h',
+	'purpleaccountoption.h',
+	'purpleaccountusersplit.h',
 	'queuedoutputstream.h',
 	'request.h',
 	'request-datasheet.h',
@@ -161,7 +163,7 @@ purple_coreheaders = [
 purple_filebase = 'purple-@0@'.format(purple_major_version)
 purple_include_base = join_paths(purple_filebase, 'libpurple')
 
-if enable_gst
+if gstreamer.found()
 	purple_coresources += 'media/backend-fs2.c'
 endif
 if enable_vv
@@ -262,8 +264,8 @@ libpurple = library('purple',
                     install : true,
                     version : PURPLE_LIB_VERSION,
                     dependencies : # static_link_libs
-                        [dnsapi, ws2_32, glib, gio, gplugin_dep, libxml,
-                         farstream, gstreamer, gstreamer_video,
+                        [dnsapi, ws2_32, glib, gio, gplugin_dep, libsoup,
+                         libxml, farstream, gstreamer, gstreamer_video,
                          gstreamer_app, json, math])
 
 libpurple_dep = declare_dependency(
@@ -295,7 +297,7 @@ if enable_introspection
 	                         purple_mediaheaders)
 
 	Purple_gir_includes = ['GObject-2.0', 'Gio-2.0', gplugin_gir]
-	if enable_gst
+	if gstreamer.found()
 		Purple_gir_includes += ['Gst-1.0']
 	endif
 
