@@ -25,6 +25,8 @@
 #include "debug.h"
 #include "http.h"
 
+#include <libsoup/soup.h>
+
 #include "bosh.h"
 
 /*
@@ -40,11 +42,10 @@ static gchar *jabber_bosh_useragent = NULL;
 
 struct _PurpleJabberBOSHConnection {
 	JabberStream *js;
-	PurpleHttpKeepalivePool *kapool;
-	PurpleHttpConnection *sc_req; /* Session Creation Request */
-	PurpleHttpConnectionSet *payload_reqs;
+	SoupSession *payload_reqs;
 
 	gchar *url;
+	gboolean is_creating;
 	gboolean is_ssl;
 	gboolean is_terminating;
 
@@ -55,9 +56,8 @@ struct _PurpleJabberBOSHConnection {
 	guint send_timer;
 };
 
-static PurpleHttpRequest *
-jabber_bosh_connection_http_request_new(PurpleJabberBOSHConnection *conn,
-	const GString *data);
+static SoupMessage *jabber_bosh_connection_http_request_new(
+        PurpleJabberBOSHConnection *conn, const GString *data);
 static void
 jabber_bosh_connection_session_create(PurpleJabberBOSHConnection *conn);
 static void
@@ -93,22 +93,37 @@ PurpleJabberBOSHConnection*
 jabber_bosh_connection_new(JabberStream *js, const gchar *url)
 {
 	PurpleJabberBOSHConnection *conn;
-	PurpleHttpURL *url_p;
+	PurpleAccount *account;
+	GProxyResolver *resolver;
+	GError *error = NULL;
+	SoupURI *url_p;
 
-	url_p = purple_http_url_parse(url);
-	if (!url_p) {
-		purple_debug_error("jabber-bosh", "Unable to parse given URL.\n");
+	account = purple_connection_get_account(js->gc);
+	resolver = purple_proxy_get_proxy_resolver(account, &error);
+	if (resolver == NULL) {
+		purple_debug_error("jabber-bosh",
+		                   "Unable to get account proxy resolver: %s",
+		                   error->message);
+		g_error_free(error);
+		return NULL;
+	}
+
+	url_p = soup_uri_new(url);
+	if (!SOUP_URI_VALID_FOR_HTTP(url_p)) {
+		purple_debug_error("jabber-bosh", "Unable to parse given BOSH URL: %s",
+		                   url);
+		g_object_unref(resolver);
 		return NULL;
 	}
 
 	conn = g_new0(PurpleJabberBOSHConnection, 1);
-	conn->kapool = purple_http_keepalive_pool_new();
-	conn->payload_reqs = purple_http_connection_set_new();
-	purple_http_keepalive_pool_set_limit_per_host(conn->kapool, 2);
+	conn->payload_reqs = soup_session_new_with_options(
+	        SOUP_SESSION_PROXY_RESOLVER, resolver, SOUP_SESSION_TIMEOUT,
+	        JABBER_BOSH_TIMEOUT + 2, SOUP_SESSION_USER_AGENT,
+	        jabber_bosh_useragent, NULL);
 	conn->url = g_strdup(url);
 	conn->js = js;
-	conn->is_ssl = (g_ascii_strcasecmp("https",
-		purple_http_url_get_protocol(url_p)) == 0);
+	conn->is_ssl = (url_p->scheme == SOUP_URI_SCHEME_HTTPS);
 	conn->send_buff = g_string_new(NULL);
 
 	/*
@@ -121,13 +136,14 @@ jabber_bosh_connection_new(JabberStream *js, const gchar *url)
 	conn->rid = (((guint64)g_random_int() << 32) | g_random_int());
 	conn->rid &= 0xFFFFFFFFFFFFFLL;
 
-	if (g_hostname_is_ip_address(purple_http_url_get_host(url_p))) {
+	if (g_hostname_is_ip_address(url_p->host)) {
 		js->serverFQDN = g_strdup(js->user->domain);
 	} else {
-		js->serverFQDN = g_strdup(purple_http_url_get_host(url_p));
+		js->serverFQDN = g_strdup(url_p->host);
 	}
 
-	purple_http_url_free(url_p);
+	soup_uri_free(url_p);
+	g_object_unref(resolver);
 
 	jabber_bosh_connection_session_create(conn);
 
@@ -147,17 +163,13 @@ jabber_bosh_connection_destroy(PurpleJabberBOSHConnection *conn)
 		jabber_bosh_connection_send_now(conn);
 	}
 
-	purple_http_connection_set_destroy(conn->payload_reqs);
-	conn->payload_reqs = NULL;
-
 	if (conn->send_timer)
 		g_source_remove(conn->send_timer);
 
-	purple_http_conn_cancel(conn->sc_req);
-	conn->sc_req = NULL;
+	soup_session_abort(conn->payload_reqs);
+	conn->is_creating = FALSE;
 
-	purple_http_keepalive_pool_unref(conn->kapool);
-	conn->kapool = NULL;
+	g_clear_object(&conn->payload_reqs);
 	g_string_free(conn->send_buff, TRUE);
 	conn->send_buff = NULL;
 
@@ -177,11 +189,9 @@ jabber_bosh_connection_is_ssl(const PurpleJabberBOSHConnection *conn)
 
 static PurpleXmlNode *
 jabber_bosh_connection_parse(PurpleJabberBOSHConnection *conn,
-	PurpleHttpResponse *response)
+                             SoupMessage *response)
 {
 	PurpleXmlNode *root;
-	const gchar *data;
-	size_t data_len;
 	const gchar *type;
 
 	g_return_val_if_fail(conn != NULL, NULL);
@@ -193,15 +203,17 @@ jabber_bosh_connection_parse(PurpleJabberBOSHConnection *conn,
 		return NULL;
 	}
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(response->status_code)) {
+		gchar *tmp = g_strdup_printf(_("Unable to connect: %s"),
+		                             response->reason_phrase);
 		purple_connection_error(conn->js->gc,
-			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-			_("Unable to connect"));
+		                        PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
+		g_free(tmp);
 		return NULL;
 	}
 
-	data = purple_http_response_get_data(response, &data_len);
-	root = purple_xmlnode_from_str(data, data_len);
+	root = purple_xmlnode_from_str(response->response_body->data,
+	                               response->response_body->length);
 
 	type = purple_xmlnode_get_attrib(root, "type");
 	if (purple_strequal(type, "terminate")) {
@@ -216,18 +228,18 @@ jabber_bosh_connection_parse(PurpleJabberBOSHConnection *conn,
 }
 
 static void
-jabber_bosh_connection_recv(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _bosh_conn)
+jabber_bosh_connection_recv(SoupSession *session, SoupMessage *msg,
+                            gpointer user_data)
 {
-	PurpleJabberBOSHConnection *bosh_conn = _bosh_conn;
+	PurpleJabberBOSHConnection *bosh_conn = user_data;
 	PurpleXmlNode *node, *child;
 
 	if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
 		purple_debug_misc("jabber-bosh", "received: %s\n",
-			purple_http_response_get_data(response, NULL));
+		                  msg->response_body->data);
 	}
 
-	node = jabber_bosh_connection_parse(bosh_conn, response);
+	node = jabber_bosh_connection_parse(bosh_conn, msg);
 	if (node == NULL)
 		return;
 
@@ -265,7 +277,7 @@ jabber_bosh_connection_recv(PurpleHttpConnection *http_conn,
 static void
 jabber_bosh_connection_send_now(PurpleJabberBOSHConnection *conn)
 {
-	PurpleHttpRequest *req;
+	SoupMessage *req;
 	GString *data;
 
 	g_return_if_fail(conn != NULL);
@@ -305,19 +317,16 @@ jabber_bosh_connection_send_now(PurpleJabberBOSHConnection *conn)
 		purple_debug_misc("jabber-bosh", "sending: %s\n", data->str);
 
 	req = jabber_bosh_connection_http_request_new(conn, data);
-	g_string_free(data, TRUE);
+	g_string_free(data, FALSE);
 
 	if (conn->is_terminating) {
-		purple_http_request(NULL, req, NULL, NULL);
+		soup_session_send_async(conn->payload_reqs, req, NULL, NULL, NULL);
 		g_free(conn->sid);
 		conn->sid = NULL;
 	} else {
-		purple_http_connection_set_add(conn->payload_reqs,
-			purple_http_request(conn->js->gc, req,
-				jabber_bosh_connection_recv, conn));
+		soup_session_queue_message(conn->payload_reqs, req,
+		                           jabber_bosh_connection_recv, conn);
 	}
-
-	purple_http_request_unref(req);
 }
 
 static gboolean
@@ -377,23 +386,22 @@ jabber_bosh_version_check(const gchar *version, int major_req, int minor_min)
 }
 
 static void
-jabber_bosh_connection_session_created(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _bosh_conn)
+jabber_bosh_connection_session_created(SoupSession *session, SoupMessage *msg,
+                                       gpointer user_data)
 {
-	PurpleJabberBOSHConnection *bosh_conn = _bosh_conn;
+	PurpleJabberBOSHConnection *bosh_conn = user_data;
 	PurpleXmlNode *node, *features;
 	const gchar *sid, *ver, *inactivity_str;
 	int inactivity = 0;
 
-	bosh_conn->sc_req = NULL;
+	bosh_conn->is_creating = FALSE;
 
 	if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
-		purple_debug_misc("jabber-bosh",
-			"received (session creation): %s\n",
-			purple_http_response_get_data(response, NULL));
+		purple_debug_misc("jabber-bosh", "received (session creation): %s\n",
+		                  msg->response_body->data);
 	}
 
-	node = jabber_bosh_connection_parse(bosh_conn, response);
+	node = jabber_bosh_connection_parse(bosh_conn, msg);
 	if (node == NULL)
 		return;
 
@@ -460,13 +468,14 @@ jabber_bosh_connection_session_created(PurpleHttpConnection *http_conn,
 static void
 jabber_bosh_connection_session_create(PurpleJabberBOSHConnection *conn)
 {
-	PurpleHttpRequest *req;
+	SoupMessage *req;
 	GString *data;
 
 	g_return_if_fail(conn != NULL);
 
-	if (conn->sid || conn->sc_req)
+	if (conn->sid || conn->is_creating) {
 		return;
+	}
 
 	purple_debug_misc("jabber-bosh", "Requesting Session Create for %p\n",
 		conn);
@@ -488,31 +497,24 @@ jabber_bosh_connection_session_create(PurpleJabberBOSHConnection *conn)
 		++conn->rid, conn->js->user->domain, JABBER_BOSH_TIMEOUT);
 
 	req = jabber_bosh_connection_http_request_new(conn, data);
-	g_string_free(data, TRUE);
+	g_string_free(data, FALSE);
 
-	conn->sc_req = purple_http_request(conn->js->gc, req,
-		jabber_bosh_connection_session_created, conn);
-
-	purple_http_request_unref(req);
+	conn->is_creating = TRUE;
+	soup_session_queue_message(conn->payload_reqs, req,
+	                           jabber_bosh_connection_session_created, conn);
 }
 
-static PurpleHttpRequest *
+static SoupMessage *
 jabber_bosh_connection_http_request_new(PurpleJabberBOSHConnection *conn,
-	const GString *data)
+                                        const GString *data)
 {
-	PurpleHttpRequest *req;
+	SoupMessage *req;
 
 	jabber_stream_restart_inactivity_timer(conn->js);
 
-	req = purple_http_request_new(conn->url);
-	purple_http_request_set_keepalive_pool(req, conn->kapool);
-	purple_http_request_set_method(req, "POST");
-	purple_http_request_set_timeout(req, JABBER_BOSH_TIMEOUT + 2);
-	purple_http_request_header_set(req, "User-Agent",
-		jabber_bosh_useragent);
-	purple_http_request_header_set(req, "Content-Encoding",
-		"text/xml; charset=utf-8");
-	purple_http_request_set_contents(req, data->str, data->len);
+	req = soup_message_new("POST", conn->url);
+	soup_message_set_request(req, "text/xml; charset=utf-8", SOUP_MEMORY_TAKE,
+	                         data->str, data->len);
 
 	return req;
 }

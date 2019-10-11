@@ -23,6 +23,8 @@
 
 #include "internal.h"
 
+#include <libsoup/soup.h>
+
 #include "http.h"
 #include "useravatar.h"
 #include "pep.h"
@@ -242,24 +244,23 @@ typedef struct {
 } JabberBuddyAvatarUpdateURLInfo;
 
 static void
-do_buddy_avatar_update_fromurl(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _info)
+do_buddy_avatar_update_fromurl(G_GNUC_UNUSED SoupSession *session,
+                               SoupMessage *msg, gpointer data)
 {
-	JabberBuddyAvatarUpdateURLInfo *info = _info;
+	JabberBuddyAvatarUpdateURLInfo *info = data;
 	gpointer icon_data;
-	const gchar *got_data;
-	size_t got_len;
 
-	if (!purple_http_response_is_successful(response)) {
-		purple_debug_error("jabber", "do_buddy_avatar_update_fromurl "
-			"got error \"%s\"",
-			purple_http_response_get_error(response));
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		purple_debug_error("jabber",
+		                   "do_buddy_avatar_update_fromurl got error \"%s\"",
+		                   msg->reason_phrase);
 		goto out;
 	}
 
-	got_data = purple_http_response_get_data(response, &got_len);
-	icon_data = g_memdup(got_data, got_len);
-	purple_buddy_icons_set_for_user(purple_connection_get_account(info->js->gc), info->from, icon_data, got_len, info->id);
+	icon_data = g_memdup(msg->response_body->data, msg->response_body->length);
+	purple_buddy_icons_set_for_user(purple_connection_get_account(info->js->gc),
+	                                info->from, icon_data,
+	                                msg->response_body->length, info->id);
 
 out:
 	g_free(info->from);
@@ -362,19 +363,16 @@ update_buddy_metadata(JabberStream *js, const char *from, PurpleXmlNode *items)
 				jabber_pep_request_item(js, from, NS_AVATAR_1_1_DATA, id,
 				                        do_buddy_avatar_update_data);
 			} else {
-				PurpleHttpRequest *req;
+				SoupMessage *msg;
 				JabberBuddyAvatarUpdateURLInfo *info = g_new0(JabberBuddyAvatarUpdateURLInfo, 1);
 				info->js = js;
-
-				req = purple_http_request_new(url);
-				purple_http_request_set_max_len(req, MAX_HTTP_BUDDYICON_BYTES);
-				purple_http_connection_set_add(js->http_conns,
-					purple_http_request(js->gc, req,
-					do_buddy_avatar_update_fromurl, info));
-				purple_http_request_unref(req);
-
 				info->from = g_strdup(from);
 				info->id = g_strdup(id);
+
+				msg = soup_message_new("GET", url);
+				soup_session_queue_message(js->http_conns, msg,
+				                           do_buddy_avatar_update_fromurl,
+				                           info);
 			}
 		}
 	}
