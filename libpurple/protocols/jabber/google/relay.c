@@ -62,8 +62,8 @@ jabber_google_relay_parse_response(const gchar *response, gchar **ip,
 }
 
 static void
-jabber_google_relay_fetch_cb(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer user_data)
+jabber_google_relay_fetch_cb(G_GNUC_UNUSED SoupSession *soup, SoupMessage *msg,
+                             gpointer user_data)
 {
 	JabberGoogleRelayCallbackData *data =
 		(JabberGoogleRelayCallbackData *) user_data;
@@ -80,9 +80,8 @@ jabber_google_relay_fetch_cb(PurpleHttpConnection *http_conn,
 
 	purple_debug_info("jabber", "got response on HTTP request to relay server\n");
 
-	if (purple_http_response_is_successful(response)) {
-		const gchar *got_data =
-			purple_http_response_get_data(response, NULL);
+	if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		const gchar *got_data = msg->response_body->data;
 		purple_debug_info("jabber", "got Google relay request response:\n%s\n",
 			got_data);
 		jabber_google_relay_parse_response(got_data, &relay_ip, &relay_udp,
@@ -102,20 +101,28 @@ void
 jabber_google_do_relay_request(JabberStream *js, GoogleSession *session,
 	JabberGoogleRelayCallback cb)
 {
-	PurpleHttpRequest *req;
+	SoupURI *uri;
+	SoupMessage *msg;
 	JabberGoogleRelayCallbackData *data = g_new0(JabberGoogleRelayCallbackData, 1);
 
 	data->session = session;
 	data->cb = cb;
 	purple_debug_info("jabber", "sending Google relay request\n");
 
-	req = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(req, "http://%s/create_session",
-		js->google_relay_host);
+	uri = soup_uri_new(NULL);
+	soup_uri_set_scheme(uri, SOUP_URI_SCHEME_HTTP);
+	soup_uri_set_host(uri, js->google_relay_host);
+	soup_uri_set_path(uri, "/create_session");
+	msg = soup_message_new_from_uri("GET", uri);
+	g_object_unref(uri);
+
 	/* yes, the relay token is included twice as different request headers,
 	   this is apparently needed to make Google's relay servers work... */
-	purple_http_request_header_set(req, "X-Talk-Google-Relay-Auth", js->google_relay_token);
-	purple_http_request_header_set(req, "X-Google-Relay-Auth", js->google_relay_token);
-	purple_http_request(js->gc, req, jabber_google_relay_fetch_cb, data);
-	purple_http_request_unref(req);
+	soup_message_headers_replace(msg->request_headers,
+	                             "X-Talk-Google-Relay-Auth",
+	                             js->google_relay_token);
+	soup_message_headers_replace(msg->request_headers, "X-Google-Relay-Auth",
+	                             js->google_relay_token);
+	soup_session_queue_message(js->http_conns, msg,
+	                           jabber_google_relay_fetch_cb, data);
 }
