@@ -126,7 +126,7 @@ imgup_imgur_upload(PidginWebView *webview, PurpleImage *image)
 	g_free(img_data_e);
 
 	soup_message_set_request(msg, "application/x-www-form-urlencoded",
-	                         SOUP_MESSAGE_TAKE, req_data, -1);
+	                         SOUP_MESSAGE_TAKE, req_data, strlen(req_data));
 
 	g_object_set_data_full(G_OBJECT(msg), "imgupload-imgur-name",
 	                       g_strdup(purple_image_get_friendly_filename(image)),
