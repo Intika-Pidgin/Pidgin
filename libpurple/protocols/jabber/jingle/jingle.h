@@ -77,11 +77,13 @@ void jingle_terminate_sessions(JabberStream *js);
 #ifdef USE_VV
 /* create a GParam array given autoconfigured STUN (and later perhaps TURN).
 	if google_talk is TRUE, set compatability mode to GOOGLE_TALK */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 GParameter *jingle_get_params(JabberStream *js, const gchar *relay_ip,
 	guint relay_udp, guint relay_tcp, guint relay_ssltcp,
     const gchar *relay_username, const gchar *relay_password, guint *num_params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 #endif
 
 G_END_DECLS
 
-#endif /* PURPLE_JABBER_JINGLE_H */
+#endif /ENDPLE_JABBER_JINGLE_H */

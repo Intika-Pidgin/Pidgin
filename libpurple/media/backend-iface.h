@@ -61,11 +61,14 @@ struct _PurpleMediaBackendInterface
 
 	/*< public >*/
 	/* Implementable functions called with purple_media_backend_* */
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	gboolean (*add_stream) (PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *who,
 		PurpleMediaSessionType type, gboolean initiator,
 		const gchar *transmitter,
 		guint num_params, GParameter *params);
+	G_GNUC_END_IGNORE_DEPRECATIONS
+
 	void (*add_remote_candidates) (PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *participant,
 		GList *remote_candidates);
@@ -87,8 +90,10 @@ struct _PurpleMediaBackendInterface
 		const gchar *sess_id, const gchar *participant,
 		const gchar *cipher, const gchar *auth,
 		const gchar *key, gsize key_len);
+	G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	void (*set_params) (PurpleMediaBackend *self,
 		guint num_params, GParameter *params);
+	G_GNUC_END_IGNORE_DEPRECATIONS
 	const gchar **(*get_available_params) (void);
 	gboolean (*send_dtmf) (PurpleMediaBackend *self,
 		const gchar *sess_id, gchar dtmf, guint8 volume,
@@ -121,11 +126,13 @@ GType purple_media_backend_get_type(void);
  *
  * Returns: True if the stream was successfully created, othewise False.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 gboolean purple_media_backend_add_stream(PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *who,
 		PurpleMediaSessionType type, gboolean initiator,
 		const gchar *transmitter,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * purple_media_backend_add_remote_candidates:
@@ -254,8 +261,10 @@ gboolean purple_media_backend_set_decryption_parameters(PurpleMediaBackend *self
  *
  * Sets various optional parameters of the media backend.
  */
+G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 void purple_media_backend_set_params(PurpleMediaBackend *self,
 		guint num_params, GParameter *params);
+G_GNUC_END_IGNORE_DEPRECATIONS
 
 /**
  * purple_media_backend_get_available_params:
