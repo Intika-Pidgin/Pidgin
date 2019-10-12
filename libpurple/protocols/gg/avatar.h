@@ -33,10 +33,7 @@
 #include <internal.h>
 #include <libgadu.h>
 
-typedef struct
-{
-	gpointer own_data;
-} ggp_avatar_session_data;
+typedef struct _ggp_avatar_session_data ggp_avatar_session_data;
 
 void ggp_avatar_setup(PurpleConnection *gc);
 void ggp_avatar_cleanup(PurpleConnection *gc);

@@ -55,10 +55,9 @@ typedef struct
 
 /* Own avatar setting */
 
-typedef struct
-{
-	PurpleImage *img;
-} ggp_avatar_own_data;
+struct _ggp_avatar_session_data {
+	PurpleImage *own_img;
+};
 
 #define GGP_AVATAR_RESPONSE_MAX 10240
 
@@ -70,21 +69,21 @@ static inline ggp_avatar_session_data *
 ggp_avatar_get_avdata(PurpleConnection *gc)
 {
 	GGPInfo *accdata = purple_connection_get_protocol_data(gc);
-	return &accdata->avatar_data;
+	return accdata->avatar_data;
 }
 
 void ggp_avatar_setup(PurpleConnection *gc)
 {
-	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
+	GGPInfo *info = purple_connection_get_protocol_data(gc);
 
-	avdata->own_data = g_new0(ggp_avatar_own_data, 1);
+	info->avatar_data = g_new0(ggp_avatar_session_data, 1);
 }
 
 void ggp_avatar_cleanup(PurpleConnection *gc)
 {
-	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
+	GGPInfo *info = purple_connection_get_protocol_data(gc);
 
-	g_free(avdata->own_data);
+	g_free(info->avatar_data);
 }
 
 /*******************************************************************************
@@ -258,19 +257,19 @@ ggp_avatar_own_got_token(PurpleConnection *gc, const gchar *token,
 	gpointer _img)
 {
 	GGPInfo *info = purple_connection_get_protocol_data(gc);
+	ggp_avatar_session_data *avdata = ggp_avatar_get_avdata(gc);
 	SoupMessage *req;
 	PurpleImage *img = _img;
-	ggp_avatar_own_data *own_data = ggp_avatar_get_avdata(gc)->own_data;
 	gchar *img_data, *uin_str;
 	PurpleAccount *account = purple_connection_get_account(gc);
 	uin_t uin = ggp_str_to_uin(purple_account_get_username(account));
 
-	if (img != own_data->img) {
+	if (img != avdata->own_img) {
 		purple_debug_warning("gg", "ggp_avatar_own_got_token: "
 			"avatar was changed in meantime\n");
 		return;
 	}
-	own_data->img = NULL;
+	avdata->own_img = NULL;
 
 	img_data = g_base64_encode(purple_image_get_data(img),
 		purple_image_get_data_size(img));
@@ -293,13 +292,13 @@ ggp_avatar_own_got_token(PurpleConnection *gc, const gchar *token,
 void
 ggp_avatar_own_set(PurpleConnection *gc, PurpleImage *img)
 {
-	ggp_avatar_own_data *own_data;
+	ggp_avatar_session_data *avdata;
 
 	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
 
 	purple_debug_info("gg", "ggp_avatar_own_set(%p, %p)", gc, img);
 
-	own_data = ggp_avatar_get_avdata(gc)->own_data;
+	avdata = ggp_avatar_get_avdata(gc);
 
 	if (img == NULL) {
 		purple_debug_warning("gg", "ggp_avatar_own_set: avatar removing is "
@@ -307,7 +306,7 @@ ggp_avatar_own_set(PurpleConnection *gc, PurpleImage *img)
 		return;
 	}
 
-	own_data->img = img;
+	avdata->own_img = img;
 
 	ggp_oauth_request(gc, ggp_avatar_own_got_token, img, NULL, NULL);
 }
