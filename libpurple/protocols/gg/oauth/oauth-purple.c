@@ -151,7 +151,7 @@ ggp_oauth_authorization_done(PurpleHttpConnection *http_conn,
 	purple_http_request(data->gc, req, ggp_oauth_access_token_got, data);
 	purple_http_request_unref(req);
 
-	free(auth);
+	g_free(auth);
 }
 
 static void ggp_oauth_request_token_got(PurpleHttpConnection *http_conn,
@@ -250,5 +250,5 @@ ggp_oauth_request(PurpleConnection *gc, ggp_oauth_request_cb callback,
 	purple_http_request(gc, req, ggp_oauth_request_token_got, data);
 	purple_http_request_unref(req);
 
-	free(auth);
+	g_free(auth);
 }
