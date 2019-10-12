@@ -730,7 +730,6 @@ static void ggp_login(PurpleAccount *account)
 
 	info->http = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
 	                                           resolver, NULL);
-	g_object_unref(resolver);
 
 	ggp_tcpsocket_setup(gc, glp);
 	ggp_image_setup(gc);
@@ -740,7 +739,8 @@ static void ggp_login(PurpleAccount *account)
 	ggp_status_setup(gc);
 	ggp_chat_setup(gc);
 	ggp_message_setup(gc);
-	ggp_edisc_setup(gc);
+	ggp_edisc_setup(gc, resolver);
+	g_object_unref(resolver);
 
 	glp->uin = ggp_str_to_uin(purple_account_get_username(account));
 	glp->password =
