@@ -68,7 +68,7 @@ typedef struct {
 	gboolean imtoken_warned;
 
 	ggp_image_session_data *image_data;
-	ggp_avatar_session_data avatar_data;
+	ggp_avatar_session_data *avatar_data;
 	ggp_roster_session_data roster_data;
 	ggp_multilogon_session_data *multilogon_data;
 	ggp_status_session_data *status_data;
