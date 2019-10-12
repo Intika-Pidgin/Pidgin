@@ -35,10 +35,6 @@
 
 typedef struct
 {
-	guint timer;
-	GList *pending_updates;
-
-	gpointer current_update;
 	gpointer own_data;
 } ggp_avatar_session_data;
 
