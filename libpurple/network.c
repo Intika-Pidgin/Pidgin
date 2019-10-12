@@ -779,4 +779,6 @@ purple_network_uninit(void)
 
 	/* TODO: clean up remaining port mappings, note calling
 	 purple_upnp_remove_port_mapping from here doesn't quite work... */
+
+	purple_upnp_uninit();
 }
