@@ -58,7 +58,7 @@ struct _ggp_edisc_session_data
 
 	SoupMessage *auth_request;
 	gboolean auth_done;
-	GList *auth_pending;
+	GSList *auth_pending;
 };
 
 struct _GGPXfer
@@ -123,7 +123,7 @@ void ggp_edisc_cleanup(PurpleConnection *gc)
 	g_return_if_fail(sdata != NULL);
 
 	soup_session_abort(sdata->session);
-	g_list_free_full(sdata->auth_pending, g_free);
+	g_slist_free_full(sdata->auth_pending, g_free);
 	g_free(sdata->security_token);
 
 	g_object_unref(sdata->session);
@@ -245,21 +245,18 @@ static void
 ggp_ggdrive_auth_results(PurpleConnection *gc, gboolean success)
 {
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
-	GList *it;
+	GSList *it;
 
 	purple_debug_info("gg", "ggp_ggdrive_auth_results(gc=%p): %d", gc, success);
 
 	g_return_if_fail(sdata != NULL);
 
-	it = g_list_first(sdata->auth_pending);
-	while (it) {
+	for (it = sdata->auth_pending; it; it = g_slist_delete_link(it, it)) {
 		ggp_edisc_auth_data *auth = it->data;
-		it = g_list_next(it);
 
 		auth->cb(gc, success, auth->user_data);
 		g_free(auth);
 	}
-	g_list_free(sdata->auth_pending);
 	sdata->auth_pending = NULL;
 	sdata->auth_done = TRUE;
 }
@@ -351,7 +348,7 @@ ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 	auth = g_new0(ggp_edisc_auth_data, 1);
 	auth->cb = cb;
 	auth->user_data = user_data;
-	sdata->auth_pending = g_list_prepend(sdata->auth_pending, auth);
+	sdata->auth_pending = g_slist_prepend(sdata->auth_pending, auth);
 
 	if (sdata->auth_request) {
 		return;
