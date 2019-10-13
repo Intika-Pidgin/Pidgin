@@ -707,16 +707,29 @@ static void ggp_login(PurpleAccount *account)
 	GGPInfo *info;
 	const char *address;
 	const gchar *encryption_type, *protocol_version;
+	GProxyResolver *resolver;
+	GError *error;
 
 	purple_connection_set_flags(gc,
 		PURPLE_CONNECTION_FLAG_HTML |
 		PURPLE_CONNECTION_FLAG_NO_URLDESC);
+
+	resolver = purple_proxy_get_proxy_resolver(account, &error);
+	if (resolver == NULL) {
+		purple_debug_error("gg", "Unable to get account proxy resolver: %s",
+		                   error->message);
+		purple_connection_g_error(gc, error);
+		return;
+	}
 
 	glp = g_new0(struct gg_login_params, 1);
 	glp->struct_size = sizeof(struct gg_login_params);
 	info = g_new0(GGPInfo, 1);
 
 	purple_connection_set_protocol_data(gc, info);
+
+	info->http = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
+	                                           resolver, NULL);
 
 	ggp_tcpsocket_setup(gc, glp);
 	ggp_image_setup(gc);
@@ -726,7 +739,8 @@ static void ggp_login(PurpleAccount *account)
 	ggp_status_setup(gc);
 	ggp_chat_setup(gc);
 	ggp_message_setup(gc);
-	ggp_edisc_setup(gc);
+	ggp_edisc_setup(gc, resolver);
+	g_object_unref(resolver);
 
 	glp->uin = ggp_str_to_uin(purple_account_get_username(account));
 	glp->password =
@@ -842,6 +856,11 @@ static void ggp_close(PurpleConnection *gc)
 		if (info->inpa > 0)
 			purple_input_remove(info->inpa);
 		g_free(info->imtoken);
+
+		if (info->http) {
+			soup_session_abort(info->http);
+			g_object_unref(info->http);
+		}
 
 		purple_connection_set_protocol_data(gc, NULL);
 		g_free(info);
