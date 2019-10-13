@@ -914,7 +914,11 @@ void finch_accounts_init()
 
 	iter = purple_accounts_get_all();
 	if (iter) {
-		if (!g_list_find_custom(iter, FINCH_UI, (GCompareFunc)purple_account_get_enabled))
+		for (; iter; iter = iter->next) {
+			if (purple_account_get_enabled(iter->data, FINCH_UI))
+				break;
+		}
+		if (!iter)
 			finch_accounts_show_all();
 	} else {
 		edit_account(NULL);
