@@ -48,6 +48,12 @@ typedef void (*PurpleUPnPCallback) (gboolean success, gpointer data);
  */
 void purple_upnp_init(void);
 
+/**
+ * purple_upnp_uninit:
+ *
+ * Shuts down UPnP
+ */
+void purple_upnp_uninit(void);
 
 /**
  * purple_upnp_discover:
