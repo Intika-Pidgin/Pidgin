@@ -189,8 +189,7 @@ purple_e2ee_provider_unregister(PurpleE2eeProvider *provider)
 
 	main_provider = NULL;
 
-	for (it = clear_states; it; it = g_list_next(it))
-		purple_conversation_set_e2ee_state(it->data, NULL);
+	g_list_foreach(clear_states, (GFunc)purple_conversation_set_e2ee_state, NULL);
 	g_list_free(clear_states);
 }
 

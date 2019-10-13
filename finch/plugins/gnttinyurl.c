@@ -221,17 +221,15 @@ url_fetched(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
 	}
 
 	/* ensure the conversation still exists */
-	for (; convs; convs = convs->next) {
-		if ((PurpleConversation *)(convs->data) == conv) {
-			FinchConv *fconv = FINCH_CONV(conv);
-			gchar *str = g_strdup_printf("[%d] %s", data->num, url);
-			GntTextView *tv = GNT_TEXT_VIEW(fconv->tv);
-			gnt_text_view_tag_change(tv, data->tag, str, FALSE);
-			g_free(str);
-			g_free(data->tag);
-			g_free(data);
-			return;
-		}
+	if (g_list_find(convs, conv)) {
+		FinchConv *fconv = FINCH_CONV(conv);
+		gchar *str = g_strdup_printf("[%d] %s", data->num, url);
+		GntTextView *tv = GNT_TEXT_VIEW(fconv->tv);
+		gnt_text_view_tag_change(tv, data->tag, str, FALSE);
+		g_free(str);
+		g_free(data->tag);
+		g_free(data);
+		return;
 	}
 	g_free(data->tag);
 	g_free(data);

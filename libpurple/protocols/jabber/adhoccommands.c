@@ -113,7 +113,6 @@ static void jabber_adhoc_parse(JabberStream *js, const char *from,
 
 static void do_adhoc_action_cb(JabberStream *js, PurpleXmlNode *result, const char *actionhandle, gpointer user_data) {
 	PurpleXmlNode *command;
-	GList *action;
 	JabberAdHocActionInfo *actionInfo = user_data;
 	JabberIq *iq = jabber_iq_new(js, JABBER_IQ_SET);
 	jabber_iq_set_callback(iq, jabber_adhoc_parse, NULL);
@@ -134,11 +133,7 @@ static void do_adhoc_action_cb(JabberStream *js, PurpleXmlNode *result, const ch
 		purple_xmlnode_insert_child(command,result);
 	}
 
-	for(action = actionInfo->actionslist; action; action = g_list_next(action)) {
-		char *handle = action->data;
-		g_free(handle);
-	}
-	g_list_free(actionInfo->actionslist);
+	g_list_free_full(actionInfo->actionslist, g_free);
 	g_free(actionInfo->sessionid);
 	g_free(actionInfo->who);
 	g_free(actionInfo->node);

@@ -699,14 +699,9 @@ void irc_msg_names(struct irc_conn *irc, const char *name, const char *from, cha
 			}
 
 			if (users != NULL) {
-				GList *l;
-
 				purple_chat_conversation_add_users(PURPLE_CHAT_CONVERSATION(convo), users, NULL, flags, FALSE);
 
-				for (l = users; l != NULL; l = l->next)
-					g_free(l->data);
-
-				g_list_free(users);
+				g_list_free_full(users, g_free);
 				g_list_free(flags);
 			}
 

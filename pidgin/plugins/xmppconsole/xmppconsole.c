@@ -514,22 +514,13 @@ signing_on_cb(PurpleConnection *gc)
 static void
 signed_off_cb(PurpleConnection *gc)
 {
-	int i = 0;
-	GList *l;
+	int i;
 
 	if (!console)
 		return;
 
-	l = console->accounts;
-	while (l) {
-		PurpleConnection *g = l->data;
-		if (gc == g)
-			break;
-		i++;
-		l = l->next;
-	}
-
-	if (l == NULL)
+	i = g_list_index(console->accounts, gc);
+	if (i == -1)
 		return;
 
 	gtk_combo_box_text_remove(GTK_COMBO_BOX_TEXT(console->dropdown), i);
