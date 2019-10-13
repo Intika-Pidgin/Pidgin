@@ -2208,7 +2208,6 @@ static gboolean
 populate_accounts_list(AccountsWindow *dialog)
 {
 	GList *l;
-	gboolean ret = FALSE;
 	GdkPixbuf *global_buddyicon = NULL;
 	const char *path;
 
@@ -2223,13 +2222,12 @@ populate_accounts_list(AccountsWindow *dialog)
 	}
 
 	l = purple_accounts_get_all();
-	ret = l != NULL;
 	g_list_foreach(l, (GFunc)add_account_to_liststore, global_buddyicon);
 
 	if (global_buddyicon != NULL)
 		g_object_unref(G_OBJECT(global_buddyicon));
 
-	return ret;
+	return l != NULL;
 }
 
 static void
