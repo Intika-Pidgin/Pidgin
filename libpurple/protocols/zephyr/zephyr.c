@@ -743,6 +743,7 @@ static gboolean pending_zloc(zephyr_account *zephyr, const char *who)
 	char* normalized_who = local_zephyr_normalize(zephyr,who);
 
 	curr = g_list_find_custom(zephyr->pending_zloc_names, normalized_who, (GCompareFunc)g_ascii_strcasecmp);
+	g_free(normalized_who);
 	if (curr == NULL)
 		return FALSE;
 
