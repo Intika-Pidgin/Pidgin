@@ -274,7 +274,6 @@ pounce_response_edit_cb(GtkTreeModel *model, GtkTreePath *path,
 {
 	PidginNotifyPounceData *pounce_data;
 	PidginNotifyDialog *dialog = (PidginNotifyDialog*)data;
-	PurplePounce *pounce;
 	GList *list;
 
 	list = purple_pounces_get_all();
@@ -283,12 +282,9 @@ pounce_response_edit_cb(GtkTreeModel *model, GtkTreePath *path,
 			PIDGIN_POUNCE_DATA, &pounce_data,
 			-1);
 
-	for (; list != NULL; list = list->next) {
-		pounce = list->data;
-		if (pounce == pounce_data->pounce) {
-			pidgin_pounce_editor_show(pounce_data->account, NULL, pounce_data->pounce);
-			return;
-		}
+	if (g_list_find(list, pounce_data->pounce) != NULL) {
+		pidgin_pounce_editor_show(pounce_data->account, NULL, pounce_data->pounce);
+		return;
 	}
 
 	purple_debug_warning("gtknotify", "Pounce was destroyed.\n");
@@ -348,13 +344,8 @@ pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 		g_list_free_full(list, (GDestroyNotify)gtk_tree_path_free);
 
 		pounces = purple_pounces_get_all();
-		for (; pounces != NULL; pounces = pounces->next) {
-			PurplePounce *pounce = pounces->data;
-			if (pounce == pounce_data->pounce) {
-				gtk_widget_set_sensitive(pounce_dialog->edit_button, TRUE);
-				break;
-			}
-		}
+		if (g_list_find(pounces, pounce_data->pounce) != NULL)
+			gtk_widget_set_sensitive(pounce_dialog->edit_button, TRUE);
 
 		gtk_widget_set_sensitive(pounce_dialog->open_button, TRUE);
 		gtk_widget_set_sensitive(pounce_dialog->dismiss_button, TRUE);

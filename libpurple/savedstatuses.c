@@ -683,16 +683,9 @@ static void
 purple_savedstatus_unset_all_substatuses(const PurpleAccount *account,
 		gpointer user_data)
 {
-	GList *iter;
-	PurpleSavedStatus *status;
-
 	g_return_if_fail(account != NULL);
 
-	for (iter = saved_statuses; iter != NULL; iter = iter->next)
-	{
-		status = (PurpleSavedStatus *)iter->data;
-		purple_savedstatus_unset_substatus(status, account);
-	}
+	g_list_foreach(saved_statuses, (GFunc)purple_savedstatus_unset_substatus, account);
 }
 
 void

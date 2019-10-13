@@ -221,16 +221,9 @@ idle_all_action(PurplePluginAction *action)
 static void
 unidle_all_action(PurplePluginAction *action)
 {
-	GList *l;
-
 	/* freeing the list here will cause segfaults if the user idles an account
 	 * after the list is freed */
-	for (l = idled_accts; l; l = l->next)
-	{
-		PurpleAccount *account = l->data;
-		set_idle_time(account, 0);
-	}
-
+	g_list_foreach(idled_accts, (GFunc)set_idle_time, GINT_TO_POINTER(0));
 	g_list_free(idled_accts);
 	idled_accts = NULL;
 }
