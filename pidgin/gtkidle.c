@@ -24,9 +24,16 @@
 #include "gtkidle.h"
 
 #ifdef HAVE_IOKIT
-# ifndef HAVE_UNISTD_H
-#  define HAVE_UNISTD_H
+/* HAVE_UNISTD_H must have a value, see
+ * https://forums.developer.apple.com/thread/86887
+ */
+# ifdef HAVE_UNISTD_H
+#  undef HAVE_UNISTD_H
+#  define HAVE_UNISTD_H 1
+# else
+#  define HAVE_UNISTD_H 0
 # endif
+
 # include <CoreFoundation/CoreFoundation.h>
 # include <IOKit/IOKitLib.h>
 #elif defined (_WIN32)
