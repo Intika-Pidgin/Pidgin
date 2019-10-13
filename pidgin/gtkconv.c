@@ -23,7 +23,7 @@
 #include "internal.h"
 #include "pidgin.h"
 
-#ifndef _WIN32
+#ifdef HAVE_X11
 # include <X11/Xlib.h>
 #endif
 
