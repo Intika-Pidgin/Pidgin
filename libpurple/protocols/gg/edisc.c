@@ -53,12 +53,12 @@ struct _ggp_edisc_session_data
 	GHashTable *xfers_initialized;
 	GHashTable *xfers_history;
 
-	PurpleHttpCookieJar *cookies;
+	SoupSession *session;
 	gchar *security_token;
 
-	PurpleHttpConnection *auth_request;
+	SoupMessage *auth_request;
 	gboolean auth_done;
-	GList *auth_pending;
+	GSList *auth_pending;
 };
 
 struct _GGPXfer
@@ -71,9 +71,7 @@ struct _GGPXfer
 	gboolean allowed, ready;
 
 	PurpleConnection *gc;
-	PurpleHttpConnection *hc;
-
-	gsize already_read;
+	SoupMessage *msg;
 };
 
 typedef enum
@@ -103,14 +101,17 @@ ggp_edisc_get_sdata(PurpleConnection *gc)
 	return accdata->edisc_data;
 }
 
-void ggp_edisc_setup(PurpleConnection *gc)
+void
+ggp_edisc_setup(PurpleConnection *gc, GProxyResolver *resolver)
 {
 	GGPInfo *accdata = purple_connection_get_protocol_data(gc);
 	ggp_edisc_session_data *sdata = g_new0(ggp_edisc_session_data, 1);
 
 	accdata->edisc_data = sdata;
 
-	sdata->cookies = purple_http_cookie_jar_new();
+	sdata->session = soup_session_new_with_options(
+	        SOUP_SESSION_PROXY_RESOLVER, resolver,
+	        SOUP_SESSION_ADD_FEATURE_BY_TYPE, SOUP_TYPE_COOKIE_JAR, NULL);
 	sdata->xfers_initialized = g_hash_table_new(g_str_hash, g_str_equal);
 	sdata->xfers_history = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 }
@@ -121,11 +122,11 @@ void ggp_edisc_cleanup(PurpleConnection *gc)
 
 	g_return_if_fail(sdata != NULL);
 
-	purple_http_conn_cancel(sdata->auth_request);
-	g_list_free_full(sdata->auth_pending, g_free);
+	soup_session_abort(sdata->session);
+	g_slist_free_full(sdata->auth_pending, g_free);
 	g_free(sdata->security_token);
 
-	purple_http_cookie_jar_unref(sdata->cookies);
+	g_object_unref(sdata->session);
 	g_hash_table_destroy(sdata->xfers_initialized);
 	g_hash_table_destroy(sdata->xfers_history);
 
@@ -136,27 +137,32 @@ void ggp_edisc_cleanup(PurpleConnection *gc)
  * Misc.
  ******************************************************************************/
 
-static void ggp_edisc_set_defaults(PurpleHttpRequest *req)
+static void
+ggp_edisc_set_defaults(SoupMessage *msg)
 {
-	purple_http_request_set_max_len(req, GGP_EDISC_RESPONSE_MAX);
-	purple_http_request_header_set(req, "X-gged-api-version",
-		GGP_EDISC_API);
+	// purple_http_request_set_max_len(msg, GGP_EDISC_RESPONSE_MAX);
+	soup_message_headers_replace(msg->request_headers, "X-gged-api-version",
+	                             GGP_EDISC_API);
 
 	/* optional fields */
-	purple_http_request_header_set(req, "User-Agent", "Mozilla/5.0 (Windows"
-		" NT 6.1; rv:11.0) Gecko/20120613 GG/11.0.0.8169 (WINNT_x86-msv"
-		"c; pl; beta; standard)");
-	purple_http_request_header_set(req, "Accept", "text/html,application/xh"
-		"tml+xml,application/xml;q=0.9,*/*;q=0.8");
-	purple_http_request_header_set(req, "Accept-Language",
-		"pl,en-us;q=0.7,en;q=0.3");
-	/* purple_http_request_header_set(req, "Accept-Encoding",
-	 * "gzip, deflate"); */
-	purple_http_request_header_set(req, "Accept-Charset",
-		"ISO-8859-2,utf-8;q=0.7,*;q=0.7");
-	purple_http_request_header_set(req, "Connection", "keep-alive");
-	purple_http_request_header_set(req, "Content-Type",
-		"application/x-www-form-urlencoded; charset=UTF-8");
+	soup_message_headers_replace(
+	        msg->request_headers, "User-Agent",
+	        "Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20120613 "
+	        "GG/11.0.0.8169 (WINNT_x86-msvc; pl; beta; standard)");
+	soup_message_headers_replace(
+	        msg->request_headers, "Accept",
+	        "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8");
+	soup_message_headers_replace(msg->request_headers, "Accept-Language",
+	                             "pl,en-us;q=0.7,en;q=0.3");
+	/* soup_message_headers_replace(msg->request_headers, "Accept-Encoding",
+	 *                              "gzip, deflate"); */
+	soup_message_headers_replace(msg->request_headers, "Accept-Charset",
+	                             "ISO-8859-2,utf-8;q=0.7,*;q=0.7");
+	soup_message_headers_replace(msg->request_headers, "Connection",
+	                             "keep-alive");
+	soup_message_headers_replace(
+	        msg->request_headers, "Content-Type",
+	        "application/x-www-form-urlencoded; charset=UTF-8");
 }
 
 static int ggp_edisc_parse_error(const gchar *data)
@@ -226,30 +232,6 @@ static void ggp_edisc_xfer_error(PurpleXfer *xfer, const gchar *msg)
 	purple_xfer_end(xfer);
 }
 
-static void ggp_edisc_xfer_progress_watcher(PurpleHttpConnection *hc,
-	gboolean reading_state, int processed, int total, gpointer _xfer)
-{
-	PurpleXfer *xfer = _xfer;
-	gboolean eof;
-	int total_real;
-
-	if (purple_xfer_get_xfer_type(xfer) == PURPLE_XFER_TYPE_RECEIVE) {
-		if (!reading_state)
-			return;
-	} else {
-		if (reading_state)
-			return;
-	}
-
-	eof = (processed >= total);
-	total_real = purple_xfer_get_size(xfer);
-	if (eof || processed > total_real)
-		processed = total_real; /* just to be sure */
-
-	purple_xfer_set_bytes_sent(xfer, processed);
-	purple_xfer_update_progress(xfer);
-}
-
 /*******************************************************************************
  * Authentication.
  ******************************************************************************/
@@ -263,30 +245,27 @@ static void
 ggp_ggdrive_auth_results(PurpleConnection *gc, gboolean success)
 {
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
-	GList *it;
+	GSList *it;
 
 	purple_debug_info("gg", "ggp_ggdrive_auth_results(gc=%p): %d", gc, success);
 
 	g_return_if_fail(sdata != NULL);
 
-	it = g_list_first(sdata->auth_pending);
-	while (it) {
+	for (it = sdata->auth_pending; it; it = g_slist_delete_link(it, it)) {
 		ggp_edisc_auth_data *auth = it->data;
-		it = g_list_next(it);
 
 		auth->cb(gc, success, auth->user_data);
 		g_free(auth);
 	}
-	g_list_free(sdata->auth_pending);
 	sdata->auth_pending = NULL;
 	sdata->auth_done = TRUE;
 }
 
 static void
-ggp_ggdrive_auth_done(PurpleHttpConnection *hc, PurpleHttpResponse *response,
+ggp_ggdrive_auth_done(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
                       gpointer user_data)
 {
-	PurpleConnection *gc = purple_http_conn_get_purple_connection(hc);
+	PurpleConnection *gc = user_data;
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
 	JsonParser *parser;
 	JsonObject *result;
@@ -296,16 +275,16 @@ ggp_ggdrive_auth_done(PurpleHttpConnection *hc, PurpleHttpResponse *response,
 
 	sdata->auth_request = NULL;
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		purple_debug_misc("gg",
 		                  "ggp_ggdrive_auth_done: authentication failed due to "
 		                  "unsuccessful request (code = %d)",
-		                  purple_http_response_get_code(response));
+		                  msg->status_code);
 		ggp_ggdrive_auth_results(gc, FALSE);
 		return;
 	}
 
-	parser = ggp_json_parse(purple_http_response_get_data(response, NULL));
+	parser = ggp_json_parse(msg->response_body->data);
 	result = json_node_get_object(json_parser_get_root(parser));
 	result = json_object_get_object_member(result, "result");
 	if (json_object_has_member(result, "status"))
@@ -319,14 +298,14 @@ ggp_ggdrive_auth_done(PurpleHttpConnection *hc, PurpleHttpResponse *response,
 		                  status);
 		if (purple_debug_is_verbose()) {
 			purple_debug_misc("gg", "ggp_ggdrive_auth_done: result = %s",
-			                  purple_http_response_get_data(response, NULL));
+			                  msg->response_body->data);
 		}
 		ggp_ggdrive_auth_results(gc, FALSE);
 		return;
 	}
 
-	sdata->security_token = g_strdup(
-	        purple_http_response_get_header(response, "X-gged-security-token"));
+	sdata->security_token = g_strdup(soup_message_headers_get_one(
+	        msg->response_headers, "X-gged-security-token"));
 	if (!sdata->security_token) {
 		purple_debug_misc("gg", "ggp_ggdrive_auth_done: authentication failed "
 		                        "due to missing security token header");
@@ -350,7 +329,8 @@ ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 	ggp_edisc_auth_data *auth;
 	const gchar *imtoken;
 	gchar *metadata;
-	PurpleHttpRequest *req;
+	gchar *tmp;
+	SoupMessage *msg;
 
 	g_return_if_fail(sdata != NULL);
 
@@ -368,7 +348,7 @@ ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 	auth = g_new0(ggp_edisc_auth_data, 1);
 	auth->cb = cb;
 	auth->user_data = user_data;
-	sdata->auth_pending = g_list_prepend(sdata->auth_pending, auth);
+	sdata->auth_pending = g_slist_prepend(sdata->auth_pending, auth);
 
 	if (sdata->auth_request) {
 		return;
@@ -376,11 +356,8 @@ ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 
 	purple_debug_info("gg", "ggp_ggdrive_auth(gc=%p)", gc);
 
-	req = purple_http_request_new("https://drive.mpa.gg.pl/signin");
-	purple_http_request_set_method(req, "PUT");
-
-	ggp_edisc_set_defaults(req);
-	purple_http_request_set_cookie_jar(req, sdata->cookies);
+	msg = soup_message_new("PUT", "https://drive.mpa.gg.pl/signin");
+	ggp_edisc_set_defaults(msg);
 
 	metadata =
 	        g_strdup_printf("{"
@@ -392,16 +369,18 @@ ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 	                        g_random_int_range(1, 1 << 16),
 	                        purple_get_host_name(), ggp_libgaduw_version(gc));
 
-	purple_http_request_header_set_printf(req, "Authorization", "IMToken %s",
-	                                      imtoken);
-	purple_http_request_header_set_printf(req, "X-gged-user", "gg/pl:%u",
-	                                      accdata->session->uin);
-	purple_http_request_header_set(req, "X-gged-client-metadata", metadata);
+	tmp = g_strdup_printf("IMToken %s", imtoken);
+	soup_message_headers_replace(msg->request_headers, "Authorization", tmp);
+	g_free(tmp);
+	tmp = g_strdup_printf("gg/pl:%u", accdata->session->uin);
+	soup_message_headers_replace(msg->request_headers, "X-gged-user", tmp);
+	g_free(tmp);
+	soup_message_headers_replace(msg->request_headers, "X-gged-client-metadata",
+	                             metadata);
 	g_free(metadata);
 
-	sdata->auth_request =
-	        purple_http_request(gc, req, ggp_ggdrive_auth_done, NULL);
-	purple_http_request_unref(req);
+	soup_session_queue_message(sdata->session, msg, ggp_ggdrive_auth_done, gc);
+	sdata->auth_request = msg;
 }
 
 static void
@@ -460,14 +439,13 @@ ggp_edisc_xfer_can_receive_file(PurpleProtocolXfer *prplxfer,
 	return PURPLE_BUDDY_IS_ONLINE(buddy);
 }
 
-static void ggp_edisc_xfer_send_init_ticket_created(PurpleHttpConnection *hc,
-	PurpleHttpResponse *response, gpointer _xfer)
+static void
+ggp_edisc_xfer_send_init_ticket_created(G_GNUC_UNUSED SoupSession *session,
+                                        SoupMessage *msg, gpointer _xfer)
 {
-	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(
-		purple_http_conn_get_purple_connection(hc));
 	PurpleXfer *xfer = _xfer;
 	GGPXfer *edisc_xfer = GGP_XFER(xfer);
-	const gchar *data = purple_http_response_get_data(response, NULL);
+	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
 	ggp_edisc_xfer_ack_status ack_status;
 	JsonParser *parser;
 	JsonObject *ticket;
@@ -477,10 +455,10 @@ static void ggp_edisc_xfer_send_init_ticket_created(PurpleHttpConnection *hc,
 
 	g_return_if_fail(sdata != NULL);
 
-	edisc_xfer->hc = NULL;
+	edisc_xfer->msg = NULL;
 
-	if (!purple_http_response_is_successful(response)) {
-		int error_id = ggp_edisc_parse_error(data);
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		int error_id = ggp_edisc_parse_error(msg->response_body->data);
 		if (error_id == 206) /* recipient not logged in */
 			ggp_edisc_xfer_error(xfer,
 				_("Recipient not logged in"));
@@ -493,7 +471,7 @@ static void ggp_edisc_xfer_send_init_ticket_created(PurpleHttpConnection *hc,
 		return;
 	}
 
-	parser = ggp_json_parse(data);
+	parser = ggp_json_parse(msg->response_body->data);
 	ticket = json_node_get_object(json_parser_get_root(parser));
 	ticket = json_object_get_object_member(ticket, "result");
 	ticket = json_object_get_object_member(ticket, "send_ticket");
@@ -530,7 +508,7 @@ ggp_edisc_xfer_send_init_authenticated(PurpleConnection *gc, gboolean success,
                                        gpointer _xfer)
 {
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 	PurpleXfer *xfer = _xfer;
 	GGPXfer *edisc_xfer = GGP_XFER(xfer);
 	gchar *data;
@@ -546,14 +524,11 @@ ggp_edisc_xfer_send_init_authenticated(PurpleConnection *gc, gboolean success,
 
 	g_return_if_fail(sdata != NULL);
 
-	req = purple_http_request_new("https://drive.mpa.gg.pl/send_ticket");
-	purple_http_request_set_method(req, "PUT");
+	msg = soup_message_new("PUT", "https://drive.mpa.gg.pl/send_ticket");
+	ggp_edisc_set_defaults(msg);
 
-	ggp_edisc_set_defaults(req);
-	purple_http_request_set_cookie_jar(req, sdata->cookies);
-
-	purple_http_request_header_set(req, "X-gged-security-token",
-	                               sdata->security_token);
+	soup_message_headers_replace(msg->request_headers, "X-gged-security-token",
+	                             sdata->security_token);
 
 	data = g_strdup_printf("{\"send_ticket\":{"
 	                       "\"recipient\":\"%s\","
@@ -563,12 +538,13 @@ ggp_edisc_xfer_send_init_authenticated(PurpleConnection *gc, gboolean success,
 	                       purple_xfer_get_remote_user(xfer),
 	                       edisc_xfer->filename,
 	                       (int)purple_xfer_get_size(xfer));
-	purple_http_request_set_contents(req, data, -1);
-	g_free(data);
+	soup_message_set_request(msg,
+	                         "application/x-www-form-urlencoded; charset=UTF-8",
+	                         SOUP_MEMORY_TAKE, data, -1);
 
-	edisc_xfer->hc = purple_http_request(
-	        gc, req, ggp_edisc_xfer_send_init_ticket_created, xfer);
-	purple_http_request_unref(req);
+	soup_session_queue_message(sdata->session, msg,
+	                           ggp_edisc_xfer_send_init_ticket_created, xfer);
+	edisc_xfer->msg = msg;
 }
 
 static void
@@ -585,47 +561,38 @@ ggp_edisc_xfer_send_init(PurpleXfer *xfer)
 	                 xfer);
 }
 
-static void ggp_edisc_xfer_send_reader(PurpleHttpConnection *hc,
-	gchar *buffer, size_t offset, size_t length, gpointer _xfer,
-	PurpleHttpContentReaderCb cb)
+static void
+ggp_edisc_xfer_send_reader(SoupMessage *msg, gpointer _xfer)
 {
 	PurpleXfer *xfer = _xfer;
-	GGPXfer *edisc_xfer;
-	int stored;
-	gboolean success, eof = FALSE;
+	guchar *buffer;
+	/* FIXME: The read/write xfer implementation sizes this dynamically. */
+	gsize length = 4096;
+	gssize stored;
 
-	g_return_if_fail(xfer != NULL);
-	edisc_xfer = GGP_XFER(xfer);
-	g_return_if_fail(edisc_xfer != NULL);
+	buffer = g_new(guchar, length);
+	stored = purple_xfer_read_file(xfer, buffer, length);
 
-	if (edisc_xfer->already_read != offset) {
-		purple_debug_error("gg", "ggp_edisc_xfer_send_reader: "
-			"Invalid offset (%" G_GSIZE_FORMAT " != %" G_GSIZE_FORMAT ")\n",
-			edisc_xfer->already_read, offset);
-		ggp_edisc_xfer_error(xfer, _("Error while reading a file"));
+	if (stored < 0) {
+		GGPXfer *edisc_xfer = GGP_XFER(xfer);
+		ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
+		soup_session_cancel_message(sdata->session, msg, SOUP_STATUS_IO_ERROR);
 		return;
 	}
 
-	stored = purple_xfer_read_file(xfer, (guchar *)buffer, length);
-
-	if (stored < 0)
-		success = FALSE;
-	else {
-		success = TRUE;
-		edisc_xfer->already_read += stored;
-		eof = ((goffset)edisc_xfer->already_read >= purple_xfer_get_size(xfer));
+	soup_message_body_append(msg->request_body, SOUP_MEMORY_TAKE, buffer,
+	                         stored);
+	if (purple_xfer_get_bytes_sent(xfer) >= purple_xfer_get_size(xfer)) {
+		soup_message_body_complete(msg->request_body);
 	}
-
-	cb(hc, success, eof, stored);
 }
 
 static void
-ggp_edisc_xfer_send_done(PurpleHttpConnection *hc, PurpleHttpResponse *response,
+ggp_edisc_xfer_send_done(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
                          gpointer _xfer)
 {
 	PurpleXfer *xfer = _xfer;
 	GGPXfer *edisc_xfer = GGP_XFER(xfer);
-	const gchar *data = purple_http_response_get_data(response, NULL);
 	JsonParser *parser;
 	JsonObject *result;
 	int result_status = -1;
@@ -636,14 +603,14 @@ ggp_edisc_xfer_send_done(PurpleHttpConnection *hc, PurpleHttpResponse *response,
 
 	g_return_if_fail(edisc_xfer != NULL);
 
-	edisc_xfer->hc = NULL;
+	edisc_xfer->msg = NULL;
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		ggp_edisc_xfer_error(xfer, _("Error while sending a file"));
 		return;
 	}
 
-	parser = ggp_json_parse(data);
+	parser = ggp_json_parse(msg->response_body->data);
 	result = json_node_get_object(json_parser_get_root(parser));
 	result = json_object_get_object_member(result, "result");
 	if (json_object_has_member(result, "status")) {
@@ -664,7 +631,7 @@ static void ggp_edisc_xfer_send_start(PurpleXfer *xfer)
 	ggp_edisc_session_data *sdata;
 	GGPXfer *edisc_xfer;
 	gchar *upload_url, *filename_e;
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 
 	g_return_if_fail(xfer != NULL);
 	edisc_xfer = GGP_XFER(xfer);
@@ -676,30 +643,30 @@ static void ggp_edisc_xfer_send_start(PurpleXfer *xfer)
 	upload_url = g_strdup_printf("https://drive.mpa.gg.pl/me/file/outbox/"
 		"%s%%2C%s", edisc_xfer->ticket_id, filename_e);
 	g_free(filename_e);
-	req = purple_http_request_new(upload_url);
+	msg = soup_message_new("PUT", upload_url);
 	g_free(upload_url);
 
-	purple_http_request_set_method(req, "PUT");
-	purple_http_request_set_timeout(req, -1);
+	ggp_edisc_set_defaults(msg);
 
-	ggp_edisc_set_defaults(req);
-	purple_http_request_set_cookie_jar(req, sdata->cookies);
+	soup_message_headers_replace(msg->request_headers, "X-gged-local-revision",
+	                             "0");
+	soup_message_headers_replace(msg->request_headers, "X-gged-security-token",
+	                             sdata->security_token);
+	soup_message_headers_replace(msg->request_headers, "X-gged-metadata",
+	                             "{\"node_type\": \"file\"}");
 
-	purple_http_request_header_set(req, "X-gged-local-revision", "0");
-	purple_http_request_header_set(req, "X-gged-security-token",
-		sdata->security_token);
-	purple_http_request_header_set(req, "X-gged-metadata",
-		"{\"node_type\": \"file\"}");
+	soup_message_set_flags(msg, SOUP_MESSAGE_CAN_REBUILD);
+	soup_message_body_set_accumulate(msg->request_body, FALSE);
+	soup_message_headers_set_content_length(msg->request_headers,
+	                                        purple_xfer_get_size(xfer));
+	g_signal_connect(msg, "wrote-headers",
+	                 G_CALLBACK(ggp_edisc_xfer_send_reader), xfer);
+	g_signal_connect(msg, "wrote-chunk", G_CALLBACK(ggp_edisc_xfer_send_reader),
+	                 xfer);
 
-	purple_http_request_set_contents_reader(req, ggp_edisc_xfer_send_reader,
-		purple_xfer_get_size(xfer), xfer);
-
-	edisc_xfer->hc = purple_http_request(edisc_xfer->gc, req,
-		ggp_edisc_xfer_send_done, xfer);
-	purple_http_request_unref(req);
-
-	purple_http_conn_set_progress_watcher(edisc_xfer->hc,
-		ggp_edisc_xfer_progress_watcher, xfer, 250000);
+	soup_session_queue_message(sdata->session, msg, ggp_edisc_xfer_send_done,
+	                           xfer);
+	edisc_xfer->msg = msg;
 }
 
 PurpleXfer * ggp_edisc_xfer_send_new(PurpleProtocolXfer *prplxfer, PurpleConnection *gc, const char *who)
@@ -762,8 +729,8 @@ ggp_edisc_xfer_recv_new(PurpleConnection *gc, const char *who)
 }
 
 static void
-ggp_edisc_xfer_recv_ack_done(PurpleHttpConnection *hc,
-                             PurpleHttpResponse *response, gpointer _xfer)
+ggp_edisc_xfer_recv_ack_done(G_GNUC_UNUSED SoupSession *session,
+                             SoupMessage *msg, gpointer _xfer)
 {
 	PurpleXfer *xfer = _xfer;
 	GGPXfer *edisc_xfer;
@@ -773,45 +740,43 @@ ggp_edisc_xfer_recv_ack_done(PurpleHttpConnection *hc,
 	}
 
 	edisc_xfer = GGP_XFER(xfer);
-	edisc_xfer->hc = NULL;
+	edisc_xfer->msg = NULL;
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		ggp_edisc_xfer_error(xfer, _("Cannot confirm file transfer."));
 		return;
 	}
 
 	purple_debug_info("gg", "ggp_edisc_xfer_recv_ack_done: [%s]\n",
-	                  purple_http_response_get_data(response, NULL));
+	                  msg->response_body->data);
 }
 
 static void ggp_edisc_xfer_recv_ack(PurpleXfer *xfer, gboolean accept)
 {
 	GGPXfer *edisc_xfer = GGP_XFER(xfer);
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 
 	g_return_if_fail(sdata != NULL);
 
 	edisc_xfer->allowed = accept;
 
-	req = purple_http_request_new(ggp_edisc_xfer_ticket_url(
-		edisc_xfer->ticket_id));
-	purple_http_request_set_method(req, "PUT");
+	msg = soup_message_new("PUT",
+	                       ggp_edisc_xfer_ticket_url(edisc_xfer->ticket_id));
+	ggp_edisc_set_defaults(msg);
 
-	ggp_edisc_set_defaults(req);
-	purple_http_request_set_cookie_jar(req, sdata->cookies);
-	purple_http_request_header_set(req, "X-gged-security-token",
-		sdata->security_token);
+	soup_message_headers_replace(msg->request_headers, "X-gged-security-token",
+	                             sdata->security_token);
+	soup_message_headers_replace(msg->request_headers, "X-gged-ack-status",
+	                             accept ? "allow" : "reject");
 
-	purple_http_request_header_set(req, "X-gged-ack-status",
-		accept ? "allow" : "reject");
-
-	edisc_xfer->hc = purple_http_request(edisc_xfer->gc, req,
-		accept ? ggp_edisc_xfer_recv_ack_done : NULL, xfer);
-	purple_http_request_unref(req);
+	soup_session_queue_message(sdata->session, msg,
+	                           accept ? ggp_edisc_xfer_recv_ack_done : NULL,
+	                           xfer);
+	edisc_xfer->msg = msg;
 
 	if (!accept) {
-		edisc_xfer->hc = NULL;
+		edisc_xfer->msg = NULL;
 	}
 }
 
@@ -838,42 +803,37 @@ static void ggp_edisc_xfer_recv_ticket_completed(PurpleXfer *xfer)
 	purple_xfer_start(xfer, -1, NULL, 0);
 }
 
-static gboolean ggp_edisc_xfer_recv_writer(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, const gchar *buffer, size_t offset,
-	size_t length, gpointer _xfer)
+static void
+ggp_edisc_xfer_recv_writer(SoupMessage *msg, SoupBuffer *chunk, gpointer _xfer)
 {
 	PurpleXfer *xfer = _xfer;
-	gssize stored;
+	GGPXfer *edisc_xfer = GGP_XFER(xfer);
+	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
+	gboolean stored;
 
-	g_return_val_if_fail(xfer != NULL, FALSE);
-
-	stored = purple_xfer_write_file(xfer, (guchar *)buffer, length) ?
-			(gssize)length : -1;
-
-	if (stored < 0 || (gsize)stored != length) {
-		purple_debug_error("gg", "ggp_edisc_xfer_recv_writer: "
-			"saved too less\n");
-		return FALSE;
+	if (chunk->length > purple_xfer_get_bytes_remaining(xfer)) {
+		purple_debug_error(
+		        "gg",
+		        "ggp_edisc_xfer_recv_writer: saved too much (%" G_GSIZE_FORMAT
+		        " > %" G_GOFFSET_FORMAT ")",
+		        chunk->length, purple_xfer_get_bytes_remaining(xfer));
+		soup_session_cancel_message(sdata->session, msg, SOUP_STATUS_IO_ERROR);
+		return;
 	}
 
-	if (stored > purple_xfer_get_bytes_remaining(xfer)) {
-		purple_debug_error("gg", "ggp_edisc_xfer_recv_writer: "
-			"saved too much (%" G_GSSIZE_FORMAT " > %" G_GOFFSET_FORMAT ")\n",
-			stored, purple_xfer_get_bytes_remaining(xfer));
-		return FALSE;
+	stored = purple_xfer_write_file(xfer, (const guchar *)chunk->data,
+	                                chunk->length);
+
+	if (!stored) {
+		purple_debug_error("gg", "ggp_edisc_xfer_recv_writer: saved too less");
+		soup_session_cancel_message(sdata->session, msg, SOUP_STATUS_IO_ERROR);
+		return;
 	}
-
-	/* May look redundant with ggp_edisc_xfer_progress_watcher,
-	 * but it isn't!
-	 */
-	purple_xfer_set_bytes_sent(xfer,
-		purple_xfer_get_bytes_sent(xfer) + stored);
-
-	return TRUE;
 }
 
-static void ggp_edisc_xfer_recv_done(PurpleHttpConnection *hc,
-	PurpleHttpResponse *response, gpointer _xfer)
+static void
+ggp_edisc_xfer_recv_done(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                         gpointer _xfer)
 {
 	PurpleXfer *xfer = _xfer;
 	GGPXfer *edisc_xfer = GGP_XFER(xfer);
@@ -881,9 +841,9 @@ static void ggp_edisc_xfer_recv_done(PurpleHttpConnection *hc,
 	if (purple_xfer_is_cancelled(xfer))
 		return;
 
-	edisc_xfer->hc = NULL;
+	edisc_xfer->msg = NULL;
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		ggp_edisc_xfer_error(xfer, _("Error while receiving a file"));
 		return;
 	}
@@ -904,7 +864,7 @@ ggp_edisc_xfer_recv_start(PurpleXfer *xfer)
 	ggp_edisc_session_data *sdata;
 	GGPXfer *edisc_xfer;
 	gchar *upload_url;
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 
 	g_return_if_fail(xfer != NULL);
 	edisc_xfer = GGP_XFER(xfer);
@@ -918,32 +878,26 @@ ggp_edisc_xfer_recv_start(PurpleXfer *xfer)
 	                        edisc_xfer->ticket_id,
 	                        purple_url_encode(purple_xfer_get_filename(xfer)),
 	                        GGP_EDISC_API, sdata->security_token);
-	req = purple_http_request_new(upload_url);
+	msg = soup_message_new("GET", upload_url);
 	g_free(upload_url);
 
-	purple_http_request_set_timeout(req, -1);
+	ggp_edisc_set_defaults(msg);
+	// purple_http_request_set_max_len(msg, purple_xfer_get_size(xfer) + 1);
 
-	ggp_edisc_set_defaults(req);
-	purple_http_request_set_max_len(req, purple_xfer_get_size(xfer) + 1);
-	purple_http_request_set_cookie_jar(req, sdata->cookies);
+	soup_message_body_set_accumulate(msg->response_body, FALSE);
+	g_signal_connect(msg, "got-chunk", G_CALLBACK(ggp_edisc_xfer_recv_writer),
+	                 xfer);
 
-	purple_http_request_set_response_writer(req, ggp_edisc_xfer_recv_writer,
-	                                        xfer);
-
-	edisc_xfer->hc = purple_http_request(edisc_xfer->gc, req,
-	                                     ggp_edisc_xfer_recv_done, xfer);
-	purple_http_request_unref(req);
-
-	purple_http_conn_set_progress_watcher(
-	        edisc_xfer->hc, ggp_edisc_xfer_progress_watcher, xfer, 250000);
+	soup_session_queue_message(sdata->session, msg, ggp_edisc_xfer_recv_done,
+	                           xfer);
+	edisc_xfer->msg = msg;
 }
 
 static void
-ggp_edisc_xfer_recv_ticket_update_got(PurpleHttpConnection *hc,
-                                      PurpleHttpResponse *response,
-                                      gpointer user_data)
+ggp_edisc_xfer_recv_ticket_update_got(G_GNUC_UNUSED SoupSession *session,
+                                      SoupMessage *msg, gpointer user_data)
 {
-	PurpleConnection *gc = purple_http_conn_get_purple_connection(hc);
+	PurpleConnection *gc = user_data;
 	PurpleXfer *xfer;
 	GGPXfer *edisc_xfer;
 	JsonParser *parser;
@@ -955,18 +909,18 @@ ggp_edisc_xfer_recv_ticket_update_got(PurpleHttpConnection *hc,
 	uin_t sender, recipient;
 	int file_size;
 
-	if (!purple_http_response_is_successful(response)) {
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		purple_debug_error("gg",
 		                   "ggp_edisc_xfer_recv_ticket_update_got: cannot "
 		                   "fetch update for ticket (code=%d)",
-		                   purple_http_response_get_code(response));
+		                   msg->status_code);
 		return;
 	}
 
 	sdata = ggp_edisc_get_sdata(gc);
 	g_return_if_fail(sdata != NULL);
 
-	parser = ggp_json_parse(purple_http_response_get_data(response, NULL));
+	parser = ggp_json_parse(msg->response_body->data);
 	result = json_node_get_object(json_parser_get_root(parser));
 	result = json_object_get_object_member(result, "result");
 	if (json_object_has_member(result, "status"))
@@ -1046,7 +1000,7 @@ ggp_edisc_xfer_recv_ticket_update_authenticated(PurpleConnection *gc,
                                                 gpointer _ticket)
 {
 	ggp_edisc_session_data *sdata = ggp_edisc_get_sdata(gc);
-	PurpleHttpRequest *req;
+	SoupMessage *msg;
 	gchar *ticket = _ticket;
 
 	g_return_if_fail(sdata != NULL);
@@ -1061,17 +1015,16 @@ ggp_edisc_xfer_recv_ticket_update_authenticated(PurpleConnection *gc,
 		return;
 	}
 
-	req = purple_http_request_new(ggp_edisc_xfer_ticket_url(ticket));
+	msg = soup_message_new("GET", ggp_edisc_xfer_ticket_url(ticket));
 	g_free(ticket);
 
-	ggp_edisc_set_defaults(req);
-	purple_http_request_set_cookie_jar(req, sdata->cookies);
+	ggp_edisc_set_defaults(msg);
 
-	purple_http_request_header_set(req, "X-gged-security-token",
-	                               sdata->security_token);
+	soup_message_headers_replace(msg->request_headers, "X-gged-security-token",
+	                             sdata->security_token);
 
-	purple_http_request(gc, req, ggp_edisc_xfer_recv_ticket_update_got, NULL);
-	purple_http_request_unref(req);
+	soup_session_queue_message(sdata->session, msg,
+	                           ggp_edisc_xfer_recv_ticket_update_got, gc);
 }
 
 static void
@@ -1190,10 +1143,11 @@ ggp_xfer_finalize(GObject *obj) {
 	GGPXfer *edisc_xfer = GGP_XFER(obj);
 	ggp_edisc_session_data *sdata;
 
-	g_free(edisc_xfer->filename);
-	purple_http_conn_cancel(edisc_xfer->hc);
-
 	sdata = ggp_edisc_get_sdata(edisc_xfer->gc);
+
+	g_free(edisc_xfer->filename);
+	soup_session_cancel_message(sdata->session, edisc_xfer->msg,
+	                            SOUP_STATUS_CANCELLED);
 
 	if (edisc_xfer->ticket_id != NULL) {
 		g_hash_table_remove(sdata->xfers_initialized,

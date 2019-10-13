@@ -53,6 +53,6 @@ GGSOURCES = [
 
 if DYNAMIC_GG
 	gg_prpl = shared_library('gg', GGSOURCES,
-	    dependencies : [libgadu, json, libpurple_dep, glib],
+	    dependencies : [libgadu, json, libpurple_dep, libsoup, glib],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
 endif

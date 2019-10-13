@@ -27,6 +27,7 @@
 
 #include <gmodule.h>
 #include <libgadu.h>
+#include <libsoup/soup.h>
 
 #include "internal.h"
 #include "search.h"
@@ -60,13 +61,14 @@ typedef struct
 
 typedef struct {
 	struct gg_session *session;
+	SoupSession *http;
 	guint inpa;
 
 	gchar *imtoken;
 	gboolean imtoken_warned;
 
 	ggp_image_session_data *image_data;
-	ggp_avatar_session_data avatar_data;
+	ggp_avatar_session_data *avatar_data;
 	ggp_roster_session_data roster_data;
 	ggp_multilogon_session_data *multilogon_data;
 	ggp_status_session_data *status_data;

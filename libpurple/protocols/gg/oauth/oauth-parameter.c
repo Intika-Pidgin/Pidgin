@@ -104,7 +104,7 @@ char *gg_oauth_parameter_join(gg_oauth_parameter_t *list, int header)
 			len += 1;
 	}
 
-	res = malloc(len + 1);
+	res = g_malloc(len + 1);
 
 	if (res == NULL)
 		return NULL;
