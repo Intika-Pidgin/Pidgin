@@ -124,21 +124,6 @@ void
 fb_http_params_free(FbHttpParams *params);
 
 /**
- * fb_http_params_close:
- * @params: The #FbHttpParams.
- * @url: The URL or #NULL.
- *
- * Closes the #FbHttpParams by returning a string representing the HTTP
- * parameters. If @url is non-#NULL, then the parameters are appended
- * to the value of @url. This frees the #FbHttpParams. The returned
- * string should be freed with #g_free() when no longer needed.
- *
- * Returns: The string representation of the HTTP parameters.
- */
-gchar *
-fb_http_params_close(FbHttpParams *params, const gchar *url);
-
-/**
  * fb_http_params_get_bool:
  * @params: The #FbHttpParams.
  * @name: The parameter name.

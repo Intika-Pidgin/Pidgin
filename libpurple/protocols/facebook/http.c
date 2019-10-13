@@ -58,56 +58,29 @@ fb_http_params_new(void)
 FbHttpParams *
 fb_http_params_new_parse(const gchar *data, gboolean isurl)
 {
-	const gchar *tail;
-	gchar *key;
-	gchar **ps;
-	gchar *val;
-	guint i;
+	SoupURI *uri = NULL;
 	FbHttpParams *params;
 
-	params = fb_http_params_new();
-
 	if (data == NULL) {
-		return params;
+		return fb_http_params_new();
 	}
 
 	if (isurl) {
-		data = strchr(data, '?');
+		uri = soup_uri_new(data);
 
-		if (data == NULL) {
-			return params;
+		if (uri == NULL) {
+			return fb_http_params_new();
 		}
 
-		tail = strchr(++data, '#');
-
-		if (tail != NULL) {
-			data = g_strndup(data, tail - data);
-		} else {
-			data = g_strdup(data);
-		}
+		data = uri->query;
 	}
 
-	ps = g_strsplit(data, "&", 0);
-
-	for (i = 0; ps[i] != NULL; i++) {
-		key = ps[i];
-		val = strchr(ps[i], '=');
-
-		if (val == NULL) {
-			continue;
-		}
-
-		*(val++) = 0;
-		key = g_uri_unescape_string(key, NULL);
-		val = g_uri_unescape_string(val, NULL);
-		g_hash_table_replace(params, key, val);
-	}
+	params = soup_form_decode(data);
 
 	if (isurl) {
-		g_free((gchar *) data);
+		soup_uri_free(uri);
 	}
 
-	g_strfreev(ps);
 	return params;
 }
 
@@ -115,41 +88,6 @@ void
 fb_http_params_free(FbHttpParams *params)
 {
 	g_hash_table_destroy(params);
-}
-
-gchar *
-fb_http_params_close(FbHttpParams *params, const gchar *url)
-{
-	GHashTableIter iter;
-	gpointer key;
-	gpointer val;
-	GString *ret;
-
-	g_hash_table_iter_init(&iter, params);
-	ret = g_string_new(NULL);
-
-	while (g_hash_table_iter_next(&iter, &key, &val)) {
-		if (val == NULL) {
-			g_hash_table_iter_remove(&iter);
-			continue;
-		}
-
-		if (ret->len > 0) {
-			g_string_append_c(ret, '&');
-		}
-
-		g_string_append_uri_escaped(ret, key, NULL, TRUE);
-		g_string_append_c(ret, '=');
-		g_string_append_uri_escaped(ret, val, NULL, TRUE);
-	}
-
-	if (url != NULL) {
-		g_string_prepend_c(ret, '?');
-		g_string_prepend(ret, url);
-	}
-
-	fb_http_params_free(params);
-	return g_string_free(ret, FALSE);
 }
 
 static const gchar *

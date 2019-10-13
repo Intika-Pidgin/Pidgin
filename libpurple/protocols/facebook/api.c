@@ -704,8 +704,6 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	fb_http_params_set_str(params, "locale", val);
 	g_free(val);
 
-	msg = soup_message_new("POST", url);
-
 	/* Ensure an old signature is not computed */
 	g_hash_table_remove(params, "sig");
 
@@ -727,6 +725,9 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 	g_list_free(keys);
 	g_free(data);
 
+	msg = soup_form_request_new_from_hash("POST", url, params);
+	fb_http_params_free(params);
+
 	if (priv->token != NULL) {
 		data = g_strdup_printf("OAuth %s", priv->token);
 		soup_message_headers_replace(msg->request_headers, "Authorization",
@@ -734,10 +735,6 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 		g_free(data);
 	}
 
-	data = fb_http_params_close(params, NULL);
-	soup_message_set_request(msg,
-	                         "application/x-www-form-urlencoded; charset=utf-8",
-	                         SOUP_MEMORY_TAKE, data, -1);
 	soup_session_queue_message(priv->cons, msg, callback, api);
 
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", msg);
