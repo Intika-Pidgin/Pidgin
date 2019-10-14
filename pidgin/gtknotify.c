@@ -344,8 +344,9 @@ pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 		g_list_free_full(list, (GDestroyNotify)gtk_tree_path_free);
 
 		pounces = purple_pounces_get_all();
-		if (g_list_find(pounces, pounce_data->pounce) != NULL)
+		if (g_list_find(pounces, pounce_data->pounce) != NULL) {
 			gtk_widget_set_sensitive(pounce_dialog->edit_button, TRUE);
+		}
 
 		gtk_widget_set_sensitive(pounce_dialog->open_button, TRUE);
 		gtk_widget_set_sensitive(pounce_dialog->dismiss_button, TRUE);
