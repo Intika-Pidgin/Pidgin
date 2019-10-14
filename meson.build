@@ -307,8 +307,8 @@ if get_option('gtkui')
 
 	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
 	if talkatu_dep.found()
-		talkatu_gir = 'Talkatu-0.0'
-		if get_option('introspection')
+		if enable_introspection
+			talkatu_gir = 'Talkatu-0.0'
 			talkatu_include_directories = include_directories(
 			    join_paths(talkatu_dep.get_pkgconfig_variable('prefix'),
 			               'share/gir-1.0'))
@@ -324,7 +324,9 @@ if get_option('gtkui')
 		    ]
 		)
 		talkatu_dep = talkatu_proj.get_variable('talkatu_dep')
-		talkatu_gir = talkatu_proj.get_variable('talkatu_gir')[0]
+		if enable_introspection
+			talkatu_gir = talkatu_proj.get_variable('talkatu_gir')[0]
+		endif
 		talkatu_include_directories = []
 	endif
 endif	# GTK
@@ -629,8 +631,8 @@ endif
 #######################################################################
 gplugin_dep = dependency('gplugin', version : '>= 0.28.0', required : false)
 if gplugin_dep.found()
-	gplugin_gir = 'GPlugin-0.0'
-	if get_option('introspection')
+	if enable_introspection
+		gplugin_gir = 'GPlugin-0.0'
 		gplugin_include_directories = include_directories(
 		    join_paths(gplugin_dep.get_pkgconfig_variable('prefix'),
 		               'share/gir-1.0'))
@@ -646,7 +648,9 @@ else
 	    ]
 	)
 	gplugin_dep = gplugin_proj.get_variable('gplugin_dep')
-	gplugin_gir = gplugin_proj.get_variable('gplugin_gir')[0]
+	if enable_introspection
+		gplugin_gir = gplugin_proj.get_variable('gplugin_gir')[0]
+	endif
 	gplugin_include_directories = []
 endif
 
