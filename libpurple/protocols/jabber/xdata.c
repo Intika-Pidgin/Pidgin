@@ -145,9 +145,7 @@ static void jabber_x_data_ok_cb(struct jabber_x_data_data *data, PurpleRequestFi
 		g_free(data->values->data);
 		data->values = g_slist_delete_link(data->values, data->values);
 	}
-	if (data->actions) {
-		g_list_free_full(data->actions, g_free);
-	}
+	g_list_free_full(data->actions, g_free);
 	g_free(data);
 
 	if (hasActions)
