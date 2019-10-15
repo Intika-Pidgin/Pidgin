@@ -603,11 +603,7 @@ void _mdns_delete_buddy(BonjourBuddy *buddy) {
 	if (idata->buddy_icon_rec_browser != NULL)
 		avahi_record_browser_free(idata->buddy_icon_rec_browser);
 
-	while(idata->resolvers != NULL) {
-		AvahiSvcResolverData *rd = idata->resolvers->data;
-		_cleanup_resolver_data(rd);
-		idata->resolvers = g_slist_delete_link(idata->resolvers, idata->resolvers);
-	}
+	g_slist_free_full(idata->resolvers, (GDestroyNotify)_cleanup_resolver_data);
 
 	g_free(idata);
 

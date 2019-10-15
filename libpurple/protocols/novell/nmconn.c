@@ -182,12 +182,7 @@ nm_create_conn(const char *addr, int port)
 void nm_release_conn(NMConn *conn)
 {
 	if (conn) {
-		GSList *node;
-		for (node = conn->requests; node; node = node->next) {
-			if (node->data)
-				nm_release_request(node->data);
-		}
-		g_slist_free(conn->requests);
+		g_slist_free_full(conn->requests, (GDestroyNotify)nm_release_request);
 		conn->requests = NULL;
 		g_free(conn->ssl_conn);
 		conn->ssl_conn = NULL;

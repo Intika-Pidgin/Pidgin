@@ -1982,7 +1982,6 @@ static void write_anyone(zephyr_account *zephyr)
 
 static void zephyr_close(PurpleConnection * gc)
 {
-	GSList *s;
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	pid_t tzc_pid = zephyr->tzc_pid;
 
@@ -1994,12 +1993,7 @@ static void zephyr_close(PurpleConnection * gc)
 	if (purple_account_get_bool(purple_connection_get_account(gc), "write_zsubs", FALSE))
 		write_zsubs(zephyr);
 
-	s = zephyr->subscrips;
-	while (s) {
-		free_triple((zephyr_triple *) s->data);
-		s = s->next;
-	}
-	g_slist_free(zephyr->subscrips);
+	g_slist_free_full(zephyr->subscrips, (GDestroyNotify)free_triple);
 
 	if (zephyr->nottimer)
 		g_source_remove(zephyr->nottimer);
@@ -2813,11 +2807,7 @@ static void zephyr_register_slash_commands(void)
 
 static void zephyr_unregister_slash_commands(void)
 {
-	while (cmds) {
-		PurpleCmdId id = GPOINTER_TO_UINT(cmds->data);
-		purple_cmd_unregister(id);
-		cmds = g_slist_delete_link(cmds, cmds);
-	}
+	g_slist_free_full(cmds, (GDestroyNotify)purple_cmd_unregister);
 }
 
 

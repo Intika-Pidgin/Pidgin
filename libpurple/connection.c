@@ -855,13 +855,7 @@ purple_connection_finalize(GObject *object)
 
 	purple_signal_emit(purple_connections_get_handle(), "signing-off", gc);
 
-	while (priv->active_chats)
-	{
-		PurpleChatConversation *b = priv->active_chats->data;
-
-		priv->active_chats = g_slist_remove(priv->active_chats, b);
-		purple_chat_conversation_leave(b);
-	}
+	g_slist_free_full(priv->active_chats, (GDestroyNotify)purple_chat_conversation_leave);
 
 	update_keepalive(gc, FALSE);
 
