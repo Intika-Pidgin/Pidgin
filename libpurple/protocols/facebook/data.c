@@ -19,6 +19,7 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 
+#include <libsoup/soup.h>
 #include <string.h>
 
 #include "account.h"
@@ -30,7 +31,7 @@
 typedef struct
 {
 	FbApi *api;
-	FbHttpConns *cons;
+	SoupSession *cons;
 	PurpleConnection *gc;
 	PurpleRoomlist *roomlist;
 	GQueue *msgs;
@@ -91,7 +92,7 @@ fb_data_dispose(GObject *obj)
 	GHashTableIter iter;
 	gpointer ptr;
 
-	fb_http_conns_cancel_all(priv->cons);
+	soup_session_abort(priv->cons);
 	g_hash_table_iter_init(&iter, priv->evs);
 
 	while (g_hash_table_iter_next(&iter, NULL, &ptr)) {
@@ -102,7 +103,7 @@ fb_data_dispose(GObject *obj)
 		g_object_unref(priv->api);
 	}
 
-	fb_http_conns_free(priv->cons);
+	g_object_unref(priv->cons);
 	g_queue_free_full(priv->msgs, (GDestroyNotify) fb_api_message_free);
 
 	g_hash_table_destroy(priv->imgs);
@@ -124,7 +125,6 @@ fb_data_init(FbData *fata)
 	FbDataPrivate *priv = fb_data_get_instance_private(fata);
 	fata->priv = priv;
 
-	priv->cons = fb_http_conns_new();
 	priv->msgs = g_queue_new();
 
 	priv->imgs = g_hash_table_new_full(g_direct_hash, g_direct_equal,
@@ -166,7 +166,7 @@ fb_data_image_init(FbDataImage *img)
 }
 
 FbData *
-fb_data_new(PurpleConnection *gc)
+fb_data_new(PurpleConnection *gc, GProxyResolver *resolver)
 {
 	FbData *fata;
 	FbDataPrivate *priv;
@@ -174,7 +174,9 @@ fb_data_new(PurpleConnection *gc)
 	fata = g_object_new(FB_TYPE_DATA, NULL);
 	priv = fata->priv;
 
-	priv->api = fb_api_new(gc);
+	priv->cons = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
+	                                           resolver, NULL);
+	priv->api = fb_api_new(gc, resolver);
 	priv->gc = gc;
 
 	return fata;
@@ -553,22 +555,17 @@ fb_data_image_get_url(FbDataImage *img)
 }
 
 static void
-fb_data_image_cb(PurpleHttpConnection *con, PurpleHttpResponse *res,
+fb_data_image_cb(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
                  gpointer data)
 {
 	FbDataImage *img = data;
 	FbDataImagePrivate *priv = img->priv;
-	FbDataPrivate *driv = priv->fata->priv;
 	GError *err = NULL;
 
-	if (fb_http_conns_is_canceled(driv->cons)) {
-		return;
-	}
-
-	fb_http_conns_remove(driv->cons, con);
 	fb_http_error_chk(res, &err);
 
-	priv->image = (guint8 *) purple_http_response_get_data(res, &priv->size);
+	priv->image = (guint8 *)res->response_body->data;
+	priv->size = res->response_body->length;
 	priv->func(img, err);
 
 	if (G_LIKELY(err == NULL)) {
@@ -588,7 +585,6 @@ fb_data_image_queue(FbData *fata)
 	FbDataPrivate *priv;
 	GHashTableIter iter;
 	guint active = 0;
-	PurpleHttpConnection *con;
 
 	g_return_if_fail(FB_IS_DATA(fata));
 	priv = fata->priv;
@@ -607,7 +603,7 @@ fb_data_image_queue(FbData *fata)
 	g_hash_table_iter_init(&iter, priv->imgs);
 
 	while (g_hash_table_iter_next(&iter, (gpointer *) &img, NULL)) {
-		PurpleHttpRequest *req;
+		SoupMessage *msg;
 
 		if (fb_data_image_get_active(img)) {
 			continue;
@@ -616,12 +612,9 @@ fb_data_image_queue(FbData *fata)
 		img->priv->active = TRUE;
 		url = fb_data_image_get_url(img);
 
-		req = purple_http_request_new(url);
-		purple_http_request_set_max_len(req, FB_DATA_ICON_SIZE_MAX);
-		con = purple_http_request(priv->gc, req,
-				fb_data_image_cb, img);
-		fb_http_conns_add(priv->cons, con);
-		purple_http_request_unref(req);
+		msg = soup_message_new("GET", url);
+		// purple_http_request_set_max_len(req, FB_DATA_ICON_SIZE_MAX);
+		soup_session_queue_message(priv->cons, msg, fb_data_image_cb, img);
 
 		if (++active >= FB_DATA_ICON_MAX) {
 			break;

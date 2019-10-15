@@ -32,6 +32,7 @@
  */
 
 #include <glib.h>
+#include <libsoup/soup.h>
 
 #include <libpurple/http.h>
 
@@ -41,13 +42,6 @@
  * The #GQuark of the domain of HTTP errors.
  */
 #define FB_HTTP_ERROR  fb_http_error_quark()
-
-/**
- * FbHttpConns:
- *
- * Represents a set of #PurpleHttpConnection.
- */
-typedef struct _FbHttpConns FbHttpConns;
 
 /**
  * FbHttpParams:
@@ -80,89 +74,16 @@ GQuark
 fb_http_error_quark(void);
 
 /**
- * fb_http_conns_new:
- *
- * Creates a new #FbHttpConns. The returned #FbHttpConns should be
- * freed with #fb_http_conns_free() when no longer needed.
- *
- * Returns: The new #FbHttpConns.
- */
-FbHttpConns *
-fb_http_conns_new(void);
-
-/**
- * fb_http_conns_free:
- * @cons: The #FbHttpConns.
- *
- * Frees all memory used by the #FbHttpConns. This will *not* cancel
- * the any of the added #PurpleHttpConnection.
- */
-void
-fb_http_conns_free(FbHttpConns *cons);
-
-/**
- * fb_http_conns_cancel_all:
- * @cons: The #FbHttpConns.
- *
- * Cancels each #PurpleHttpConnection in the #FbHttpConns.
- */
-void
-fb_http_conns_cancel_all(FbHttpConns *cons);
-
-/**
- * fb_http_conns_is_canceled:
- * @cons: The #FbHttpConns.
- *
- * Determines if the #FbHttpConns has been canceled.
- *
- * Returns: #TRUE if it has been canceled, otherwise #FALSE.
- */
-gboolean
-fb_http_conns_is_canceled(FbHttpConns *cons);
-
-/**
- * fb_http_conns_add:
- * @cons: The #FbHttpConns.
- * @con: The #PurpleHttpConnection.
- *
- * Adds a #PurpleHttpConnection to the #FbHttpConns.
- */
-void
-fb_http_conns_add(FbHttpConns *cons, PurpleHttpConnection *con);
-
-/**
- * fb_http_conns_remove:
- * @cons: The #FbHttpConns.
- * @con: The #PurpleHttpConnection.
- *
- * Removes a #PurpleHttpConnection from the #FbHttpConns.
- */
-void
-fb_http_conns_remove(FbHttpConns *cons, PurpleHttpConnection *con);
-
-/**
- * fb_http_conns_reset:
- * @cons: The #FbHttpConns.
- *
- * Resets the #FbHttpConns. This removes each #PurpleHttpConnection
- * from the #FbHttpConns *without* canceling it. This allows the the
- * #FbHttpConns to be reused.
- */
-void
-fb_http_conns_reset(FbHttpConns *cons);
-
-/**
  * fb_http_error_chk:
- * @res: The #PurpleHttpResponse.
+ * @res: The #SoupMessage.
  * @error: The return location for the #GError or #NULL.
  *
- * Checks a #PurpleHttpResponse for success. This optionally assigns an
+ * Checks a #SoupMessage for success. This optionally assigns an
  * appropriate #GError upon failure.
  *
  * Returns: #TRUE if the request was successful, otherwise #FALSE.
  */
-gboolean
-fb_http_error_chk(PurpleHttpResponse *res, GError **error);
+gboolean fb_http_error_chk(SoupMessage *res, GError **error);
 
 /**
  * fb_http_params_new:
@@ -201,21 +122,6 @@ fb_http_params_new_parse(const gchar *data, gboolean isurl);
  */
 void
 fb_http_params_free(FbHttpParams *params);
-
-/**
- * fb_http_params_close:
- * @params: The #FbHttpParams.
- * @url: The URL or #NULL.
- *
- * Closes the #FbHttpParams by returning a string representing the HTTP
- * parameters. If @url is non-#NULL, then the parameters are appended
- * to the value of @url. This frees the #FbHttpParams. The returned
- * string should be freed with #g_free() when no longer needed.
- *
- * Returns: The string representation of the HTTP parameters.
- */
-gchar *
-fb_http_params_close(FbHttpParams *params, const gchar *url);
 
 /**
  * fb_http_params_get_bool:
