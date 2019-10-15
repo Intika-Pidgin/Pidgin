@@ -444,17 +444,11 @@ bonjour_group_buddy(PurpleConnection *connection, const char *who, const char *o
 static void
 bonjour_rename_group(PurpleConnection *connection, const char *old_name, PurpleGroup *group, GList *moved_buddies)
 {
-	GList *cur;
 	const char *new_group;
-	PurpleBuddy *buddy;
 
 	new_group = purple_group_get_name(group);
 
-	for (cur = moved_buddies; cur; cur = cur->next) {
-		buddy = cur->data;
-		bonjour_do_group_change(buddy, new_group);
-	}
-
+	g_list_foreach(moved_buddies, (GFunc)bonjour_do_group_change, new_group);
 }
 
 static gboolean

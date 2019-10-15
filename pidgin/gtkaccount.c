@@ -2208,7 +2208,6 @@ static gboolean
 populate_accounts_list(AccountsWindow *dialog)
 {
 	GList *l;
-	gboolean ret = FALSE;
 	GdkPixbuf *global_buddyicon = NULL;
 	const char *path;
 
@@ -2222,15 +2221,13 @@ populate_accounts_list(AccountsWindow *dialog)
 		}
 	}
 
-	for (l = purple_accounts_get_all(); l != NULL; l = l->next) {
-		ret = TRUE;
-		add_account_to_liststore((PurpleAccount *)l->data, global_buddyicon);
-	}
+	l = purple_accounts_get_all();
+	g_list_foreach(l, (GFunc)add_account_to_liststore, global_buddyicon);
 
 	if (global_buddyicon != NULL)
 		g_object_unref(G_OBJECT(global_buddyicon));
 
-	return ret;
+	return l != NULL;
 }
 
 static void
@@ -2388,10 +2385,8 @@ static void
 global_buddyicon_changed(const char *name, PurplePrefType type,
 			gconstpointer value, gpointer window)
 {
-	GList *list;
-	for (list = purple_accounts_get_all(); list; list = list->next) {
-		account_modified_cb(list->data, window);
-	}
+	GList *list = purple_accounts_get_all();
+	g_list_foreach(list, (GFunc)account_modified_cb, window);
 }
 
 void
