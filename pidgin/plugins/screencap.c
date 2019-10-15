@@ -720,14 +720,10 @@ scrncap_convwin_init(PidginConvWindow *win)
 	g_return_if_fail(conv_insert_image != NULL);
 	conv_submenu = gtk_widget_get_parent(conv_insert_image);
 
-	pos = -1;
 	children = gtk_container_get_children(GTK_CONTAINER(conv_submenu));
-	for (it = children, i = 0; it; it = g_list_next(it), i++) {
-		if (it->data == conv_insert_image) {
-			pos = i + 1;
-			break;
-		}
-	}
+	pos = g_list_index(children, conv_insert_image);
+	if (pos != -1)
+		++pos;
 	g_list_free(children);
 	g_warn_if_fail(pos >= 0);
 

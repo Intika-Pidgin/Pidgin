@@ -498,10 +498,7 @@ purple_media_backend_fs2_class_init(PurpleMediaBackendFs2Class *klass)
 	/* VA-API elements aren't well supported in Farstream. Ignore them. */
 	features = gst_registry_get_feature_list_by_plugin(gst_registry_get(),
 			"vaapi");
-	for (it = features; it; it = it->next) {
-		gst_plugin_feature_set_rank((GstPluginFeature *)it->data,
-				GST_RANK_NONE);
-	}
+	g_list_foreach(features, (GFunc)gst_plugin_feature_set_rank, GINT_TO_POINTER(GST_RANK_NONE));
 	gst_plugin_feature_list_free(features);
 }
 

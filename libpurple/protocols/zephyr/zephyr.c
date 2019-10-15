@@ -740,16 +740,16 @@ static char *zephyr_to_html(const char *message)
 static gboolean pending_zloc(zephyr_account *zephyr, const char *who)
 {
 	GList *curr;
+	char* normalized_who = local_zephyr_normalize(zephyr,who);
 
-	for (curr = zephyr->pending_zloc_names; curr != NULL; curr = curr->next) {
-		char* normalized_who = local_zephyr_normalize(zephyr,who);
-		if (!g_ascii_strcasecmp(normalized_who, (char *)curr->data)) {
-			g_free((char *)curr->data);
-			zephyr->pending_zloc_names = g_list_delete_link(zephyr->pending_zloc_names, curr);
-			return TRUE;
-		}
-	}
-	return FALSE;
+	curr = g_list_find_custom(zephyr->pending_zloc_names, normalized_who, (GCompareFunc)g_ascii_strcasecmp);
+	g_free(normalized_who);
+	if (curr == NULL)
+		return FALSE;
+
+	g_free((char *)curr->data);
+	zephyr->pending_zloc_names = g_list_delete_link(zephyr->pending_zloc_names, curr);
+	return TRUE;
 }
 
 /* Called when the server notifies us a message couldn't get sent */
@@ -1982,17 +1982,11 @@ static void write_anyone(zephyr_account *zephyr)
 
 static void zephyr_close(PurpleConnection * gc)
 {
-	GList *l;
 	GSList *s;
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
 	pid_t tzc_pid = zephyr->tzc_pid;
 
-	l = zephyr->pending_zloc_names;
-	while (l) {
-		g_free((char *)l->data);
-		l = l->next;
-	}
-	g_list_free(zephyr->pending_zloc_names);
+	g_list_free_full(zephyr->pending_zloc_names, g_free);
 
 	if (purple_account_get_bool(purple_connection_get_account(gc), "write_anyone", FALSE))
 		write_anyone(zephyr);
