@@ -122,7 +122,7 @@ gg_oauth_generate_header(const char *method, const char *url,
 
 	signature = gg_oauth_generate_signature(method, url, request, consumer_secret, token_secret);
 
-	free(request);
+	g_free(request);
 
 	gg_oauth_parameter_free(params);
 	params = NULL;
@@ -138,7 +138,7 @@ gg_oauth_generate_header(const char *method, const char *url,
 	gg_oauth_parameter_set(&params, "oauth_signature_method", "HMAC-SHA1");
 	gg_oauth_parameter_set(&params, "oauth_signature", signature);
 
-	free(signature);
+	g_free(signature);
 
 	res = gg_oauth_parameter_join(params, 1);
 

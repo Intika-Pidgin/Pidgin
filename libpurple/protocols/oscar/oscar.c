@@ -750,6 +750,26 @@ oscar_login(PurpleAccount *account)
 	purple_prefs_connect_callback(purple_connection_get_protocol(gc), "/purple/away/idle_reporting", idle_reporting_pref_cb, gc);
 	purple_prefs_connect_callback(purple_connection_get_protocol(gc), "/plugins/prpl/oscar/recent_buddies", recent_buddies_pref_cb, gc);
 
+	if (purple_strequal(login_type, OSCAR_CLIENT_LOGIN) ||
+	    purple_strequal(login_type, OSCAR_KERBEROS_LOGIN)) {
+		/* Create a SoupSession to be used for HTTP login requests. */
+		GProxyResolver *resolver;
+		GError *error;
+
+		resolver = purple_proxy_get_proxy_resolver(account, &error);
+		if (resolver == NULL) {
+			purple_debug_error("oscar",
+			                   "Unable to get account proxy resolver: %s",
+			                   error->message);
+			purple_connection_g_error(gc, error);
+			return;
+		}
+
+		od->http_conns = soup_session_new_with_options(
+		        SOUP_SESSION_PROXY_RESOLVER, resolver, NULL);
+		g_object_unref(resolver);
+	}
+
 	/*
 	 * On 2008-03-05 AOL released some documentation on the OSCAR protocol
 	 * which includes a new login method called clientLogin.  It is similar

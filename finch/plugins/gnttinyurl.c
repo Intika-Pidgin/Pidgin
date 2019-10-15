@@ -18,6 +18,7 @@
 
 #include "internal.h"
 #include <glib.h>
+#include <libsoup/soup.h>
 
 #define PLUGIN_STATIC_NAME	TinyURL
 #define PREFS_BASE          "/plugins/gnt/tinyurl"
@@ -44,6 +45,7 @@
 #include <gntwindow.h>
 
 static int tag_num = 0;
+static SoupSession *session = NULL;
 static GHashTable *tinyurl_cache = NULL;
 
 typedef struct
@@ -201,18 +203,17 @@ static GList *extract_urls(const char *text)
 	return ret;
 }
 
-
-
-static void url_fetched(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _data)
+static void
+url_fetched(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+            gpointer _data)
 {
 	CbInfo *data = (CbInfo *)_data;
 	PurpleConversation *conv = data->conv;
 	GList *convs = purple_conversations_get_all();
 	const gchar *url;
 
-	if (purple_http_response_is_successful(response)) {
-		url = purple_http_response_get_data(response, NULL);
+	if (SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		url = msg->response_body->data;
 		g_hash_table_insert(tinyurl_cache, data->original_url, g_strdup(url));
 	} else {
 		url = _("Error while querying TinyURL");
@@ -310,6 +311,7 @@ process_urls(PurpleConversation *conv, GList *urls)
 
 	for (iter = urls, c = 1; iter; iter = iter->next, c++) {
 		int i;
+		SoupMessage *msg;
 		CbInfo *cbdata;
 		gchar *url;
 		gchar *original_url;
@@ -339,7 +341,8 @@ process_urls(PurpleConversation *conv, GList *urls)
 		} else {
 			url = g_strdup_printf("%s%s", purple_prefs_get_string(PREF_URL), purple_url_encode(original_url));
 		}
-		purple_http_get(NULL, url_fetched, cbdata, url);
+		msg = soup_message_new("GET", url);
+		soup_session_queue_message(session, msg, url_fetched, cbdata);
 		gnt_text_view_append_text_with_tag((tv), _("\nFetching TinyURL..."),
 		                                   GNT_TEXT_FLAG_DIM, cbdata->tag);
 		if (i == 0)
@@ -369,26 +372,33 @@ tinyurl_notify_tinyuri(GntWidget *win, const gchar *url)
 }
 
 static void
-tinyurl_notify_fetch_cb(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _win)
+cancel_notify_fetch(GntWidget *win, SoupMessage *msg)
+{
+	soup_session_cancel_message(session, msg, SOUP_STATUS_CANCELLED);
+}
+
+static void
+tinyurl_notify_fetch_cb(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                        gpointer _win)
 {
 	GntWidget *win = _win;
 	const gchar *url;
 	const gchar *original_url;
 
-	if (!purple_http_response_is_successful(response))
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
 		return;
+	}
 
 	original_url = g_object_get_data(G_OBJECT(win), "gnttinyurl-original");
-	url = purple_http_response_get_data(response, NULL);
+	url = msg->response_body->data;
 	g_hash_table_insert(tinyurl_cache,
 		g_strdup(original_url), g_strdup(url));
 
 	tinyurl_notify_tinyuri(win, url);
 
-	g_signal_handlers_disconnect_matched(G_OBJECT(win), G_SIGNAL_MATCH_FUNC,
-			0, 0, NULL,
-			G_CALLBACK(purple_http_conn_cancel), NULL);
+	g_signal_handlers_disconnect_matched(G_OBJECT(win), G_SIGNAL_MATCH_FUNC, 0,
+	                                     0, NULL,
+	                                     G_CALLBACK(cancel_notify_fetch), NULL);
 }
 
 static void *
@@ -396,7 +406,7 @@ tinyurl_notify_uri(const char *uri)
 {
 	char *fullurl = NULL;
 	GntWidget *win;
-	PurpleHttpConnection *hc;
+	SoupMessage *msg;
 	const gchar *tiny_url;
 
 	/* XXX: The following expects that finch_notify_message gets called. This
@@ -423,14 +433,14 @@ tinyurl_notify_uri(const char *uri)
 
 	g_object_set_data_full(G_OBJECT(win), "gnttinyurl-original", g_strdup(uri), g_free);
 
-	/* Store the return value of purple_http_get and destroy that when win
-	 * is destroyed, so that the callback for purple_http_get does not try
-	 * to molest a non-existent window
+	/* Store the SoupMessage and cancel that when the window is destroyed,
+	 * so that the callback does not try to use a non-existent window.
 	 */
-	hc = purple_http_get(NULL, tinyurl_notify_fetch_cb, win, fullurl);
+	msg = soup_message_new("GET", fullurl);
+	soup_session_queue_message(session, msg, tinyurl_notify_fetch_cb, win);
 	g_free(fullurl);
-	g_signal_connect_swapped(G_OBJECT(win), "destroy",
-			G_CALLBACK(purple_http_conn_cancel), hc);
+	g_signal_connect(G_OBJECT(win), "destroy", G_CALLBACK(cancel_notify_fetch),
+	                 msg);
 
 	return win;
 }
@@ -483,6 +493,8 @@ plugin_load(PurplePlugin *plugin, GError **error)
 {
 	PurpleNotifyUiOps *ops = purple_notify_get_ui_ops();
 
+	session = soup_session_new();
+
 	purple_prefs_add_none(PREFS_BASE);
 	purple_prefs_add_int(PREF_LENGTH, 30);
 	purple_prefs_add_string(PREF_URL, "http://tinyurl.com/api-create.php?url=");
@@ -518,6 +530,9 @@ plugin_unload(PurplePlugin *plugin, GError **error)
 	PurpleNotifyUiOps *ops = purple_notify_get_ui_ops();
 	if (ops->notify_uri == tinyurl_notify_uri)
 		ops->notify_uri = g_object_get_data(G_OBJECT(plugin), "notify-uri");
+
+	soup_session_abort(session);
+	g_clear_object(&session);
 
 	g_hash_table_destroy(tinyurl_cache);
 	tinyurl_cache = NULL;

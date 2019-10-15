@@ -556,7 +556,6 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 	PurpleConnection *gc;
 	const char *cur = msg + 1;
 	char *buf, *ctcp;
-	time_t timestamp;
 
 	/* Note that this is NOT correct w.r.t. multiple CTCPs in one
 	 * message and low-level quoting ... but if you want that crap,
@@ -572,12 +571,14 @@ char *irc_parse_ctcp(struct irc_conn *irc, const char *from, const char *to, con
 		return buf;
 	} else if (!strncmp(cur, "PING ", 5)) {
 		if (notice) { /* reply */
+			gint64 timestamp;
 			gc = purple_account_get_connection(irc->account);
 			if (!gc)
 				return NULL;
-			/* TODO: Should this read in the timestamp as a double? */
-			if (sscanf(cur, "PING %lu", &timestamp) == 1) {
-				buf = g_strdup_printf(_("Reply time from %s: %lu seconds"), from, time(NULL) - timestamp);
+			if (sscanf(cur, "PING %" G_GINT64_FORMAT, &timestamp) == 1) {
+				buf = g_strdup_printf(_("Reply time from %s: %f seconds"), from,
+				                      (g_get_monotonic_time() - timestamp) /
+				                              (gdouble)G_USEC_PER_SEC);
 				purple_notify_info(gc, _("PONG"),
 					_("CTCP PING reply"), buf,
 					purple_request_cpar_from_connection(gc));

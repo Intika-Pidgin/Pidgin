@@ -144,8 +144,7 @@ finch_SOURCES = [
 ]
 
 if IS_WIN32
-#	libfinch_la_LIBADD += \
-#		-lwinmm
+	winmm = compiler.find_library('winmm')
 
 	finch_winres = configure_file(
 	    input : 'finch_winres.rc.in',
@@ -157,6 +156,8 @@ if IS_WIN32
 	    output : 'libfinch_winres.rc',
 	    configuration : version_conf)
 	libfinch_SOURCES += windows.compile_resources(libfinch_winres)
+else
+	winmm = []
 endif
 
 if enable_consoleui
@@ -168,7 +169,7 @@ if enable_consoleui
 	    c_args : ['-DSTANDALONE', '-DGNTSEAL_ENABLE', ncurses_header],
 	    include_directories : [toplevel_inc],
 	    version : PURPLE_LIB_VERSION,
-	    dependencies : [libpurple_dep, libgnt_dep, ncurses, glib],
+	    dependencies : [libpurple_dep, libgnt_dep, ncurses, glib, winmm],
 	    install : true)
 	libfinch_dep = declare_dependency(
 	    include_directories : [toplevel_inc, libfinch_inc],

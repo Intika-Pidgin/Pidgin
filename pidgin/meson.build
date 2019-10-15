@@ -169,6 +169,7 @@ if ENABLE_GTK
 	    	IOKIT,
 	    	json,
 	    	math,
+		libsoup,
 	        talkatu_dep,
 	    	x11,
 	    	libpurple_dep,
