@@ -303,11 +303,10 @@ selection_changed(GntWidget *widget, gpointer old, gpointer current, gpointer nu
 	                     "%s\nWebsite: %s\nFilename: %s\n")
 	                 : _("Name: %s\nVersion: %s\nDescription: %s\nAuthor: "
 	                     "%s\nWebsite: %s\nFilename: %s\n")),
-	        SAFE(_(gplugin_plugin_info_get_name(info))),
-	        SAFE(_(gplugin_plugin_info_get_version(info))),
-	        SAFE(_(gplugin_plugin_info_get_description(info))),
-	        SAFE(authors), SAFE(_(gplugin_plugin_info_get_website(info))),
-	        SAFE(filename));
+	        _(gplugin_plugin_info_get_name(info)),
+	        _(gplugin_plugin_info_get_version(info)),
+	        _(gplugin_plugin_info_get_description(info)), authors,
+	        _(gplugin_plugin_info_get_website(info)), filename);
 
 	gnt_text_view_append_text_with_flags(GNT_TEXT_VIEW(plugins.aboot),
 			text, GNT_TEXT_FLAG_NORMAL);

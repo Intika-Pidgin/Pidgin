@@ -59,6 +59,7 @@ typedef struct _JabberStream JabberStream;
 #include <glib.h>
 #include <gmodule.h>
 #include <gio/gio.h>
+#include <libsoup/soup.h>
 
 #include "attention.h"
 #include "circularbuffer.h"
@@ -278,7 +279,7 @@ struct _JabberStream
 
 	PurpleJabberBOSHConnection *bosh;
 
-	PurpleHttpConnectionSet *http_conns;
+	SoupSession *http_conns;
 
 	/* keep a hash table of JingleSessions */
 	GHashTable *sessions;

@@ -977,7 +977,7 @@ _get_details_resp_send_invite(NMUser *user, NMERR_T ret_code,
 	GSList *cnode;
 	NMConference *conference;
 	gpointer chat;
-	long id = (long) user_data;
+	int id = GPOINTER_TO_INT(user_data);
 
 	if (user == NULL)
 		return;

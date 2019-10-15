@@ -56,7 +56,7 @@ endif
 if DYNAMIC_OSCAR
 	oscar_prpl = shared_library('oscar', OSCARSOURCES,
 	    link_args : oscar_link_args,
-	    dependencies : [libpurple_dep, glib, ws2_32],
+	    dependencies : [libpurple_dep, glib, libsoup, ws2_32],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
 
 	subdir('tests')

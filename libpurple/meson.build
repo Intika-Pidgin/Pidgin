@@ -264,8 +264,8 @@ libpurple = library('purple',
                     install : true,
                     version : PURPLE_LIB_VERSION,
                     dependencies : # static_link_libs
-                        [dnsapi, ws2_32, glib, gio, gplugin_dep, libxml,
-                         farstream, gstreamer, gstreamer_video,
+                        [dnsapi, ws2_32, glib, gio, gplugin_dep, libsoup,
+                         libxml, farstream, gstreamer, gstreamer_video,
                          gstreamer_app, json, math])
 
 libpurple_dep = declare_dependency(

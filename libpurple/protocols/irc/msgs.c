@@ -1244,7 +1244,7 @@ void irc_msg_pong(struct irc_conn *irc, const char *name, const char *from, char
 	PurpleConversation *convo;
 	PurpleConnection *gc;
 	char **parts, *msg;
-	time_t oldstamp;
+	gint64 oldstamp;
 
 	parts = g_strsplit(args[1], " ", 2);
 
@@ -1253,10 +1253,12 @@ void irc_msg_pong(struct irc_conn *irc, const char *name, const char *from, char
 		return;
 	}
 
-	if (sscanf(parts[1], "%lu", &oldstamp) != 1) {
+	if (sscanf(parts[1], "%" G_GINT64_FORMAT, &oldstamp) != 1) {
 		msg = g_strdup(_("Error: invalid PONG from server"));
 	} else {
-		msg = g_strdup_printf(_("PING reply -- Lag: %lu seconds"), time(NULL) - oldstamp);
+		msg = g_strdup_printf(_("PING reply -- Lag: %f seconds"),
+		                      (g_get_monotonic_time() - oldstamp) /
+		                              (gdouble)G_USEC_PER_SEC);
 	}
 
 	convo = purple_conversations_find_with_account(parts[0], irc->account);

@@ -308,9 +308,13 @@ if get_option('gtkui')
 	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
 	if talkatu_dep.found()
 		talkatu_gir = 'Talkatu-0.0'
-		talkatu_include_directories = include_directories(
-		    join_paths(talkatu_dep.get_pkgconfig_variable('prefix'),
-		               'share/gir-1.0'))
+		if get_option('introspection')
+			talkatu_include_directories = include_directories(
+			    join_paths(talkatu_dep.get_pkgconfig_variable('prefix'),
+			               'share/gir-1.0'))
+		else
+			talkatu_include_directories = []
+		endif
 	else
 		talkatu_proj = subproject('talkatu',
 		    default_options : [
@@ -626,9 +630,13 @@ endif
 gplugin_dep = dependency('gplugin', version : '>= 0.28.0', required : false)
 if gplugin_dep.found()
 	gplugin_gir = 'GPlugin-0.0'
-	gplugin_include_directories = include_directories(
-	    join_paths(gplugin_dep.get_pkgconfig_variable('prefix'),
-	               'share/gir-1.0'))
+	if get_option('introspection')
+		gplugin_include_directories = include_directories(
+		    join_paths(gplugin_dep.get_pkgconfig_variable('prefix'),
+		               'share/gir-1.0'))
+	else
+		gplugin_include_directories = []
+	endif
 else
 	gplugin_proj = subproject('gplugin',
 	    default_options : [

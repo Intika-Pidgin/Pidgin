@@ -396,11 +396,13 @@ int irc_cmd_ping(struct irc_conn *irc, const char *cmd, const char *target, cons
 	if (args && args[0]) {
 		if (irc_ischannel(args[0]))
 			return 0;
-		stamp = g_strdup_printf("\001PING %lu\001", time(NULL));
+		stamp = g_strdup_printf("\001PING %" G_GINT64_FORMAT "\001",
+		                        g_get_monotonic_time());
 		buf = irc_format(irc, "vn:", "PRIVMSG", args[0], stamp);
 		g_free(stamp);
 	} else if (target) {
-		stamp = g_strdup_printf("%s %lu", target, time(NULL));
+		stamp = g_strdup_printf("%s %" G_GINT64_FORMAT, target,
+		                        g_get_monotonic_time());
 		buf = irc_format(irc, "v:", "PING", stamp);
 		g_free(stamp);
 	} else {

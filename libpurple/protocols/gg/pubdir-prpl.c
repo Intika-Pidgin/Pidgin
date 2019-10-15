@@ -28,6 +28,7 @@
  */
 
 #include "pubdir-prpl.h"
+#include "gg.h"
 
 #include <debug.h>
 #include <http.h>
@@ -58,22 +59,6 @@ typedef struct
 	} params;
 } ggp_pubdir_request;
 
-void ggp_pubdir_request_free(ggp_pubdir_request *request);
-void ggp_pubdir_record_free(ggp_pubdir_record *records, int count);
-
-static void ggp_pubdir_get_info_got_token(PurpleConnection *gc,
-	const gchar *token, gpointer _request);
-static void ggp_pubdir_got_data(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer user_data);
-
-static void ggp_pubdir_get_info_protocol_got(PurpleConnection *gc,
-	int records_count, const ggp_pubdir_record *records, int next_offset,
-	void *_uin_p);
-
-static void ggp_pubdir_request_buddy_alias_got(PurpleConnection *gc,
-	int records_count, const ggp_pubdir_record *records, int next_offset,
-	void *user_data);
-
 /* Searching for buddies. */
 
 #define GGP_PUBDIR_SEARCH_TITLE _("Gadu-Gadu Public Directory")
@@ -89,44 +74,10 @@ struct _ggp_pubdir_search_form
 	void *display_handle;
 };
 
-void ggp_pubdir_search_form_free(ggp_pubdir_search_form *form);
-ggp_pubdir_search_form * ggp_pubdir_search_form_clone(
-	const ggp_pubdir_search_form *form);
-
-static void ggp_pubdir_search_request(PurpleConnection *gc,
-	PurpleRequestFields *fields);
-static gchar * ggp_pubdir_search_make_query(const ggp_pubdir_search_form *form);
-static void ggp_pubdir_search_execute(PurpleConnection *gc,
-	const ggp_pubdir_search_form *form,
-	ggp_pubdir_request_cb cb, void *user_data);
-static void ggp_pubdir_search_got_token(PurpleConnection *gc,
-	const gchar *token, gpointer _request);
+/* For ggp_pubdir_search_results_next, which is called by this. */
 static void ggp_pubdir_search_results_display(PurpleConnection *gc,
 	int records_count, const ggp_pubdir_record *records, int next_offset,
 	void *user_data);
-static void ggp_pubdir_search_results_close(gpointer _form);
-static void ggp_pubdir_search_results_next(PurpleConnection *gc, GList *row,
-	gpointer _form);
-static void ggp_pubdir_search_results_add(PurpleConnection *gc, GList *row,
-	gpointer _form);
-static void ggp_pubdir_search_results_im(PurpleConnection *gc, GList *row,
-	gpointer _form);
-static void ggp_pubdir_search_results_info(PurpleConnection *gc, GList *row,
-	gpointer _form);
-static void ggp_pubdir_search_results_new(PurpleConnection *gc, GList *row,
-	gpointer _form);
-
-/* Own profile. */
-
-static void ggp_pubdir_set_info_dialog(PurpleConnection *gc, int records_count,
-	const ggp_pubdir_record *records, int next_offset, void *user_data);
-static void ggp_pubdir_set_info_request(PurpleConnection *gc,
-	PurpleRequestFields *fields);
-static void ggp_pubdir_set_info_got_token(PurpleConnection *gc,
-	const gchar *token, gpointer _record);
-
-static void ggp_pubdir_set_info_got_response(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer user_data);
 
 /******************************************************************************/
 
@@ -155,7 +106,8 @@ static gsize ggp_pubdir_provinces_count = sizeof(ggp_pubdir_provinces)/sizeof(gc
 
 /******************************************************************************/
 
-void ggp_pubdir_record_free(ggp_pubdir_record *records, int count)
+static void
+ggp_pubdir_record_free(ggp_pubdir_record *records, int count)
 {
 	int i;
 	for (i = 0; i < count; i++) {
@@ -168,56 +120,25 @@ void ggp_pubdir_record_free(ggp_pubdir_record *records, int count)
 	g_free(records);
 }
 
-void ggp_pubdir_request_free(ggp_pubdir_request *request)
+static void
+ggp_pubdir_search_form_free(ggp_pubdir_search_form *form)
+{
+	g_free(form->nick);
+	g_free(form->city);
+	g_free(form);
+}
+
+static void
+ggp_pubdir_request_free(ggp_pubdir_request *request)
 {
 	if (request->type == GGP_PUBDIR_REQUEST_TYPE_SEARCH)
 		ggp_pubdir_search_form_free(request->params.search_form);
 	g_free(request);
 }
 
-void ggp_pubdir_get_info(PurpleConnection *gc, uin_t uin,
-	ggp_pubdir_request_cb cb, void *user_data)
-{
-	ggp_pubdir_request *request = g_new0(ggp_pubdir_request, 1);
-	gchar *url;
-
-	request->type = GGP_PUBDIR_REQUEST_TYPE_INFO;
-	request->gc = gc;
-	request->cb = cb;
-	request->user_data = user_data;
-	request->params.user_info.uin = uin;
-
-	url = g_strdup_printf("http://api.gadu-gadu.pl/users/%u", uin);
-	ggp_oauth_request(gc, ggp_pubdir_get_info_got_token, request,
-		"GET", url);
-	g_free(url);
-}
-
-static void ggp_pubdir_get_info_got_token(PurpleConnection *gc,
-	const gchar *token, gpointer _request)
-{
-	PurpleHttpRequest *req;
-	ggp_pubdir_request *request = _request;
-
-	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
-
-	if (!token) {
-		request->cb(gc, -1, NULL, 0, request->user_data);
-		ggp_pubdir_request_free(request);
-		return;
-	}
-
-	req = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(req,
-		"http://api.gadu-gadu.pl/users/%u",
-		request->params.user_info.uin);
-	purple_http_request_header_set(req, "Authorization", token);
-	purple_http_request(gc, req, ggp_pubdir_got_data, request);
-	purple_http_request_unref(req);
-}
-
-static void ggp_pubdir_got_data(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer _request)
+static void
+ggp_pubdir_got_data(G_GNUC_UNUSED SoupSession *session, SoupMessage *msg,
+                    gpointer _request)
 {
 	ggp_pubdir_request *request = _request;
 	PurpleConnection *gc = request->gc;
@@ -228,7 +149,7 @@ static void ggp_pubdir_got_data(PurpleHttpConnection *http_conn,
 	int record_count, i;
 	ggp_pubdir_record *records;
 
-	xml_raw = purple_http_response_get_data(response, NULL);
+	xml_raw = msg->response_body->data;
 
 	if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
 		purple_debug_misc("gg", "ggp_pubdir_got_data: xml=[%s]\n",
@@ -349,16 +270,49 @@ static void ggp_pubdir_got_data(PurpleHttpConnection *http_conn,
 	ggp_pubdir_record_free(records, record_count);
 }
 
-void ggp_pubdir_get_info_protocol(PurpleConnection *gc, const char *name)
+static void
+ggp_pubdir_get_info_got_token(PurpleConnection *gc, const gchar *token,
+                              gpointer _request)
 {
-	uin_t uin = ggp_str_to_uin(name);
-	uin_t *uin_p = g_new0(uin_t, 1);
+	GGPInfo *info = NULL;
+	gchar *url;
+	SoupMessage *msg;
+	ggp_pubdir_request *request = _request;
 
-	*uin_p = uin;
+	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
 
-	purple_debug_info("gg", "ggp_pubdir_get_info_protocol: %u\n", uin);
+	if (!token) {
+		request->cb(gc, -1, NULL, 0, request->user_data);
+		ggp_pubdir_request_free(request);
+		return;
+	}
 
-	ggp_pubdir_get_info(gc, uin, ggp_pubdir_get_info_protocol_got, uin_p);
+	info = purple_connection_get_protocol_data(gc);
+
+	url = g_strdup_printf("http://api.gadu-gadu.pl/users/%u",
+	                      request->params.user_info.uin);
+	msg = soup_message_new("GET", url);
+	g_free(url);
+	soup_message_headers_replace(msg->request_headers, "Authorization", token);
+	soup_session_queue_message(info->http, msg, ggp_pubdir_got_data, request);
+}
+
+void
+ggp_pubdir_get_info(PurpleConnection *gc, uin_t uin, ggp_pubdir_request_cb cb,
+                    void *user_data)
+{
+	ggp_pubdir_request *request = g_new0(ggp_pubdir_request, 1);
+	gchar *url;
+
+	request->type = GGP_PUBDIR_REQUEST_TYPE_INFO;
+	request->gc = gc;
+	request->cb = cb;
+	request->user_data = user_data;
+	request->params.user_info.uin = uin;
+
+	url = g_strdup_printf("http://api.gadu-gadu.pl/users/%u", uin);
+	ggp_oauth_request(gc, ggp_pubdir_get_info_got_token, request, "GET", url);
+	g_free(url);
 }
 
 static void ggp_pubdir_get_info_protocol_got(PurpleConnection *gc,
@@ -445,13 +399,17 @@ static void ggp_pubdir_get_info_protocol_got(PurpleConnection *gc,
 	purple_notify_user_info_destroy(info);
 }
 
-void ggp_pubdir_request_buddy_alias(PurpleConnection *gc, PurpleBuddy *buddy)
+void
+ggp_pubdir_get_info_protocol(PurpleConnection *gc, const char *name)
 {
-	uin_t uin = ggp_str_to_uin(purple_buddy_get_name(buddy));
+	uin_t uin = ggp_str_to_uin(name);
+	uin_t *uin_p = g_new0(uin_t, 1);
 
-	purple_debug_info("gg", "ggp_pubdir_request_buddy_alias: %u\n", uin);
+	*uin_p = uin;
 
-	ggp_pubdir_get_info(gc, uin, ggp_pubdir_request_buddy_alias_got, NULL);
+	purple_debug_info("gg", "ggp_pubdir_get_info_protocol: %u", uin);
+
+	ggp_pubdir_get_info(gc, uin, ggp_pubdir_get_info_protocol_got, uin_p);
 }
 
 static void ggp_pubdir_request_buddy_alias_got(PurpleConnection *gc,
@@ -481,19 +439,22 @@ static void ggp_pubdir_request_buddy_alias_got(PurpleConnection *gc,
 	purple_serv_got_alias(gc, ggp_uin_to_str(uin), alias);
 }
 
+void
+ggp_pubdir_request_buddy_alias(PurpleConnection *gc, PurpleBuddy *buddy)
+{
+	uin_t uin = ggp_str_to_uin(purple_buddy_get_name(buddy));
+
+	purple_debug_info("gg", "ggp_pubdir_request_buddy_alias: %u", uin);
+
+	ggp_pubdir_get_info(gc, uin, ggp_pubdir_request_buddy_alias_got, NULL);
+}
+
 /*******************************************************************************
  * Searching for buddies.
  ******************************************************************************/
 
-void ggp_pubdir_search_form_free(ggp_pubdir_search_form *form)
-{
-	g_free(form->nick);
-	g_free(form->city);
-	g_free(form);
-}
-
-ggp_pubdir_search_form * ggp_pubdir_search_form_clone(
-	const ggp_pubdir_search_form *form)
+static ggp_pubdir_search_form *
+ggp_pubdir_search_form_clone(const ggp_pubdir_search_form *form)
 {
 	ggp_pubdir_search_form *dup = g_new(ggp_pubdir_search_form, 1);
 
@@ -506,61 +467,6 @@ ggp_pubdir_search_form * ggp_pubdir_search_form_clone(
 	dup->display_handle = form->display_handle;
 
 	return dup;
-}
-
-void ggp_pubdir_search(PurpleConnection *gc,
-	const ggp_pubdir_search_form *form)
-{
-	PurpleRequestFields *fields;
-	PurpleRequestFieldGroup *group;
-	PurpleRequestField *field;
-
-	purple_debug_info("gg", "ggp_pubdir_search\n");
-
-	fields = purple_request_fields_new();
-	group = purple_request_field_group_new(NULL);
-	purple_request_fields_add_group(fields, group);
-
-	field = purple_request_field_string_new("name", _("Name"),
-		form ? form->nick : NULL, FALSE);
-	purple_request_field_group_add_field(group, field);
-
-	field = purple_request_field_string_new("city", _("City"),
-		form ? form->city : NULL, FALSE);
-	purple_request_field_group_add_field(group, field);
-
-	field = purple_request_field_choice_new("gender", _("Gender"),
-		form ? GINT_TO_POINTER(form->gender) : NULL);
-	purple_request_field_choice_add(field, _("Male or female"), NULL);
-	purple_request_field_choice_add(field, _("Male"),
-		GINT_TO_POINTER(GGP_PUBDIR_GENDER_MALE));
-	purple_request_field_choice_add(field, _("Female"),
-		GINT_TO_POINTER(GGP_PUBDIR_GENDER_FEMALE));
-	purple_request_field_group_add_field(group, field);
-
-	purple_request_fields(gc, _("Find buddies"), _("Find buddies"),
-		_("Please, enter your search criteria below"), fields,
-		_("OK"), G_CALLBACK(ggp_pubdir_search_request),
-		_("Cancel"), NULL,
-		purple_request_cpar_from_connection(gc), gc);
-}
-
-static void ggp_pubdir_search_request(PurpleConnection *gc,
-	PurpleRequestFields *fields)
-{
-	ggp_pubdir_search_form *form = g_new0(ggp_pubdir_search_form, 1);
-
-	purple_debug_info("gg", "ggp_pubdir_search_request\n");
-
-	form->nick = g_strdup(purple_request_fields_get_string(fields, "name"));
-	form->city = g_strdup(purple_request_fields_get_string(fields, "city"));
-	form->gender = GPOINTER_TO_INT(purple_request_fields_get_choice(fields,
-		"gender"));
-	form->offset = 0;
-	form->limit = GGP_PUBDIR_SEARCH_PER_PAGE;
-
-	ggp_pubdir_search_execute(gc, form, ggp_pubdir_search_results_display,
-		form);
 }
 
 static gchar * ggp_pubdir_search_make_query(const ggp_pubdir_search_form *form)
@@ -598,34 +504,12 @@ static gchar * ggp_pubdir_search_make_query(const ggp_pubdir_search_form *form)
 	return query;
 }
 
-static void ggp_pubdir_search_execute(PurpleConnection *gc,
-	const ggp_pubdir_search_form *form,
-	ggp_pubdir_request_cb cb, void *user_data)
-{
-	ggp_pubdir_request *request = g_new0(ggp_pubdir_request, 1);
-	gchar *url;
-	ggp_pubdir_search_form *local_form = ggp_pubdir_search_form_clone(form);
-	gchar *query;
-
-	request->type = GGP_PUBDIR_REQUEST_TYPE_SEARCH;
-	request->gc = gc;
-	request->cb = cb;
-	request->user_data = user_data;
-	request->params.search_form = local_form;
-
-	query = ggp_pubdir_search_make_query(form);
-	purple_debug_misc("gg", "ggp_pubdir_search_execute: %s\n", query);
-	url = g_strdup_printf("http://api.gadu-gadu.pl%s", query);
-	ggp_oauth_request(gc, ggp_pubdir_search_got_token, request,
-		"GET", url);
-	g_free(query);
-	g_free(url);
-}
-
 static void ggp_pubdir_search_got_token(PurpleConnection *gc,
 	const gchar *token, gpointer _request)
 {
-	PurpleHttpRequest *req;
+	GGPInfo *info = NULL;
+	gchar *url;
+	SoupMessage *msg;
 	ggp_pubdir_request *request = _request;
 	gchar *query;
 
@@ -641,19 +525,88 @@ static void ggp_pubdir_search_got_token(PurpleConnection *gc,
 
 	query = ggp_pubdir_search_make_query(request->params.search_form);
 
-	req = purple_http_request_new(NULL);
-	purple_http_request_set_url_printf(req, "http://api.gadu-gadu.pl%s", query);
-	purple_http_request_header_set(req, "Authorization", token);
-	purple_http_request(gc, req, ggp_pubdir_got_data, request);
-	purple_http_request_unref(req);
+	info = purple_connection_get_protocol_data(gc);
 
+	url = g_strdup_printf("http://api.gadu-gadu.pl%s", query);
+	msg = soup_message_new("GET", url);
+	soup_message_headers_replace(msg->request_headers, "Authorization", token);
+	soup_session_queue_message(info->http, msg, ggp_pubdir_got_data, request);
+
+	g_free(url);
 	g_free(query);
 }
 
+static void
+ggp_pubdir_search_execute(PurpleConnection *gc,
+                          const ggp_pubdir_search_form *form,
+                          ggp_pubdir_request_cb cb, void *user_data)
+{
+	ggp_pubdir_request *request = g_new0(ggp_pubdir_request, 1);
+	gchar *url;
+	ggp_pubdir_search_form *local_form = ggp_pubdir_search_form_clone(form);
+	gchar *query;
 
-static void ggp_pubdir_search_results_display(PurpleConnection *gc,
-	int records_count, const ggp_pubdir_record *records, int next_offset,
-	void *_form)
+	request->type = GGP_PUBDIR_REQUEST_TYPE_SEARCH;
+	request->gc = gc;
+	request->cb = cb;
+	request->user_data = user_data;
+	request->params.search_form = local_form;
+
+	query = ggp_pubdir_search_make_query(form);
+	purple_debug_misc("gg", "ggp_pubdir_search_execute: %s", query);
+	url = g_strdup_printf("http://api.gadu-gadu.pl%s", query);
+	ggp_oauth_request(gc, ggp_pubdir_search_got_token, request, "GET", url);
+	g_free(query);
+	g_free(url);
+}
+
+static void
+ggp_pubdir_search_results_new(PurpleConnection *gc, GList *row, gpointer _form)
+{
+	ggp_pubdir_search_form *form = _form;
+	ggp_pubdir_search(gc, form);
+}
+
+static void
+ggp_pubdir_search_results_close(gpointer _form)
+{
+	ggp_pubdir_search_form *form = _form;
+	ggp_pubdir_search_form_free(form);
+}
+
+static void
+ggp_pubdir_search_results_next(PurpleConnection *gc, GList *row, gpointer _form)
+{
+	ggp_pubdir_search_form *form = _form;
+	ggp_pubdir_search_execute(gc, form, ggp_pubdir_search_results_display,
+	                          form);
+}
+
+static void
+ggp_pubdir_search_results_add(PurpleConnection *gc, GList *row, gpointer _form)
+{
+	purple_blist_request_add_buddy(purple_connection_get_account(gc),
+	                               g_list_nth_data(row, 0), NULL,
+	                               g_list_nth_data(row, 1));
+}
+
+static void
+ggp_pubdir_search_results_im(PurpleConnection *gc, GList *row, gpointer _form)
+{
+	purple_conversation_present(PURPLE_CONVERSATION(purple_im_conversation_new(
+	        purple_connection_get_account(gc), g_list_nth_data(row, 0))));
+}
+
+static void
+ggp_pubdir_search_results_info(PurpleConnection *gc, GList *row, gpointer _form)
+{
+	ggp_pubdir_get_info_protocol(gc, g_list_nth_data(row, 0));
+}
+
+static void
+ggp_pubdir_search_results_display(PurpleConnection *gc, int records_count,
+                                  const ggp_pubdir_record *records,
+                                  int next_offset, void *_form)
 {
 	ggp_pubdir_search_form *form = _form;
 	PurpleNotifySearchResults *results;
@@ -741,170 +694,88 @@ static void ggp_pubdir_search_results_display(PurpleConnection *gc,
 	g_assert(form->display_handle);
 }
 
-static void ggp_pubdir_search_results_close(gpointer _form)
+static void
+ggp_pubdir_search_request(PurpleConnection *gc, PurpleRequestFields *fields)
 {
-	ggp_pubdir_search_form *form = _form;
-	ggp_pubdir_search_form_free(form);
-}
+	ggp_pubdir_search_form *form = g_new0(ggp_pubdir_search_form, 1);
 
-static void ggp_pubdir_search_results_next(PurpleConnection *gc, GList *row,
-	gpointer _form)
-{
-	ggp_pubdir_search_form *form = _form;
+	purple_debug_info("gg", "ggp_pubdir_search_request");
+
+	form->nick = g_strdup(purple_request_fields_get_string(fields, "name"));
+	form->city = g_strdup(purple_request_fields_get_string(fields, "city"));
+	form->gender =
+	        GPOINTER_TO_INT(purple_request_fields_get_choice(fields, "gender"));
+	form->offset = 0;
+	form->limit = GGP_PUBDIR_SEARCH_PER_PAGE;
+
 	ggp_pubdir_search_execute(gc, form, ggp_pubdir_search_results_display,
-		form);
+	                          form);
 }
 
-static void ggp_pubdir_search_results_add(PurpleConnection *gc, GList *row,
-	gpointer _form)
-{
-	purple_blist_request_add_buddy(purple_connection_get_account(gc),
-		g_list_nth_data(row, 0), NULL, g_list_nth_data(row, 1));
-}
-
-static void ggp_pubdir_search_results_im(PurpleConnection *gc, GList *row,
-	gpointer _form)
-{
-	purple_conversation_present(PURPLE_CONVERSATION(purple_im_conversation_new(
-		purple_connection_get_account(gc), g_list_nth_data(row, 0))));
-}
-
-static void ggp_pubdir_search_results_info(PurpleConnection *gc, GList *row,
-	gpointer _form)
-{
-	ggp_pubdir_get_info_protocol(gc, g_list_nth_data(row, 0));
-}
-
-static void ggp_pubdir_search_results_new(PurpleConnection *gc, GList *row,
-	gpointer _form)
-{
-	ggp_pubdir_search_form *form = _form;
-	ggp_pubdir_search(gc, form);
-}
-
-/*******************************************************************************
- * Own profile.
- ******************************************************************************/
-
-void ggp_pubdir_set_info(PurpleConnection *gc)
-{
-	ggp_pubdir_get_info(gc, ggp_str_to_uin(purple_account_get_username(
-		purple_connection_get_account(gc))),
-		ggp_pubdir_set_info_dialog, NULL);
-}
-
-static void ggp_pubdir_set_info_dialog(PurpleConnection *gc, int records_count,
-	const ggp_pubdir_record *records, int next_offset, void *user_data)
+void
+ggp_pubdir_search(PurpleConnection *gc, const ggp_pubdir_search_form *form)
 {
 	PurpleRequestFields *fields;
 	PurpleRequestFieldGroup *group;
 	PurpleRequestField *field;
-	gsize i;
-	const ggp_pubdir_record *record;
 
-	purple_debug_info("gg", "ggp_pubdir_set_info_dialog (record: %d)\n",
-		records_count);
-
-	record = (records_count == 1 ? &records[0] : NULL);
+	purple_debug_info("gg", "ggp_pubdir_search");
 
 	fields = purple_request_fields_new();
 	group = purple_request_field_group_new(NULL);
 	purple_request_fields_add_group(fields, group);
 
-	field = purple_request_field_string_new("first_name", _("First name"),
-		record ? record->first_name : NULL, FALSE);
+	field = purple_request_field_string_new("name", _("Name"),
+	                                        form ? form->nick : NULL, FALSE);
 	purple_request_field_group_add_field(group, field);
 
-	field = purple_request_field_string_new("last_name", _("Last name"),
-		record ? record->last_name : NULL, FALSE);
+	field = purple_request_field_string_new("city", _("City"),
+	                                        form ? form->city : NULL, FALSE);
 	purple_request_field_group_add_field(group, field);
 
-	field = purple_request_field_choice_new("gender", _("Gender"),
-		record ? GINT_TO_POINTER(record->gender) :
-			GGP_PUBDIR_GENDER_UNSPECIFIED);
-	purple_request_field_set_required(field, TRUE);
+	field = purple_request_field_choice_new(
+	        "gender", _("Gender"), form ? GINT_TO_POINTER(form->gender) : NULL);
+	purple_request_field_choice_add(field, _("Male or female"), NULL);
 	purple_request_field_choice_add(field, _("Male"),
 		GINT_TO_POINTER(GGP_PUBDIR_GENDER_MALE));
 	purple_request_field_choice_add(field, _("Female"),
 		GINT_TO_POINTER(GGP_PUBDIR_GENDER_FEMALE));
 	purple_request_field_group_add_field(group, field);
 
-	field = purple_request_field_string_new("birth_date", _("Birth Day"),
-		(record && record->birth) ?
-		ggp_date_strftime("%Y-%m-%d", record->birth) : NULL, FALSE);
-	purple_request_field_set_required(field, TRUE);
-	purple_request_field_group_add_field(group, field);
-
-	field = purple_request_field_string_new("city", _("City"),
-		record ? record->city : NULL, FALSE);
-	purple_request_field_group_add_field(group, field);
-
-	/* Translators: This word is basically used to describe a Polish
-	   province. Gadu-Gadu users outside of Poland might choose to enter some
-	   equivalent value for themselves. For example, users in the USA might
-	   use their state (e.g. New York). If there is an equivalent term for
-	   your language, feel free to use it. Otherwise it's probably acceptable
-	   to leave it changed or transliterate it into your alphabet. */
-	field = purple_request_field_choice_new("province", _("Voivodeship"), 0);
-	purple_request_field_group_add_field(group, field);
-	for (i = 0; i < ggp_pubdir_provinces_count; i++) {
-		purple_request_field_choice_add(field, ggp_pubdir_provinces[i],
-			GINT_TO_POINTER(i));
-		if (record && i == record->province) {
-			purple_request_field_choice_set_value(field, GINT_TO_POINTER(i));
-			purple_request_field_choice_set_default_value(field, GINT_TO_POINTER(i));
-		}
-	}
-
-	purple_request_fields(gc, _("Set User Info"), _("Set User Info"),
-		NULL, fields,
-		_("OK"), G_CALLBACK(ggp_pubdir_set_info_request),
-		_("Cancel"), NULL,
-		purple_request_cpar_from_connection(gc), gc);
+	purple_request_fields(gc, _("Find buddies"), _("Find buddies"),
+	                      _("Please, enter your search criteria below"), fields,
+	                      _("OK"), G_CALLBACK(ggp_pubdir_search_request),
+	                      _("Cancel"), NULL,
+	                      purple_request_cpar_from_connection(gc), gc);
 }
 
-static void ggp_pubdir_set_info_request(PurpleConnection *gc,
-	PurpleRequestFields *fields)
+/*******************************************************************************
+ * Own profile.
+ ******************************************************************************/
+
+static void
+ggp_pubdir_set_info_got_response(G_GNUC_UNUSED SoupSession *session,
+                                 SoupMessage *msg, gpointer user_data)
 {
-	gchar *url;
-	uin_t uin = ggp_str_to_uin(purple_account_get_username(
-		purple_connection_get_account(gc)));
-	ggp_pubdir_record *record = g_new0(ggp_pubdir_record, 1);
-	gchar *birth_s;
+	if (!SOUP_STATUS_IS_SUCCESSFUL(msg->status_code)) {
+		purple_debug_error("gg", "ggp_pubdir_set_info_got_response: failed");
+		return;
+	}
 
-	purple_debug_info("gg", "ggp_pubdir_set_info_request\n");
+	purple_debug_info("gg", "ggp_pubdir_set_info_got_response: [%s]",
+	                  msg->response_body->data);
+	/* <result><status>0</status></result> */
 
-	record->uin = uin;
-	record->first_name = g_strdup(purple_request_fields_get_string(fields,
-		"first_name"));
-	record->last_name = g_strdup(purple_request_fields_get_string(fields,
-		"last_name"));
-	record->gender = GPOINTER_TO_INT(
-		purple_request_fields_get_choice(fields, "gender"));
-	record->city = g_strdup(purple_request_fields_get_string(fields,
-		"city"));
-	record->province = GPOINTER_TO_INT(
-		purple_request_fields_get_choice(fields, "province"));
-
-	birth_s = g_strdup_printf("%sT10:00:00+00:00",
-		purple_request_fields_get_string(fields, "birth_date"));
-	record->birth = ggp_date_from_iso8601(birth_s);
-	g_free(birth_s);
-	purple_debug_info("gg", "ggp_pubdir_set_info_request: birth [%lu][%s]\n",
-		record->birth, purple_request_fields_get_string(
-		fields, "birth_date"));
-
-	url = g_strdup_printf("http://api.gadu-gadu.pl/users/%u.xml", uin);
-	ggp_oauth_request(gc, ggp_pubdir_set_info_got_token, record,
-		"PUT", url);
-	g_free(url);
+	/* TODO: notify about failure */
 }
 
 static void ggp_pubdir_set_info_got_token(PurpleConnection *gc,
 	const gchar *token, gpointer _record)
 {
-	PurpleHttpRequest *req;
 	ggp_pubdir_record *record = _record;
+	GGPInfo *info = NULL;
+	SoupMessage *msg;
+	gchar *url;
 	gchar *request_data;
 	gchar *name, *surname, *city;
 	uin_t uin = record->uin;
@@ -916,6 +787,8 @@ static void ggp_pubdir_set_info_got_token(PurpleConnection *gc,
 		ggp_pubdir_record_free(record, 1);
 		return;
 	}
+
+	info = purple_connection_get_protocol_data(gc);
 
 	name = g_uri_escape_string(record->first_name, NULL, FALSE);
 	surname = g_uri_escape_string(record->last_name, NULL, FALSE);
@@ -941,33 +814,137 @@ static void ggp_pubdir_set_info_got_token(PurpleConnection *gc,
 			"query [%s]\n", request_data);
 	}
 
-	req = purple_http_request_new(NULL);
-	purple_http_request_set_method(req, "PUT");
-	purple_http_request_set_url_printf(req,
-		"http://api.gadu-gadu.pl/users/%u.xml", uin);
-	purple_http_request_header_set(req, "Authorization", token);
-	purple_http_request_header_set(req, "Content-Type",
-		"application/x-www-form-urlencoded");
-	purple_http_request_set_contents(req, request_data, -1);
-	purple_http_request(gc, req, ggp_pubdir_set_info_got_response, NULL);
-	purple_http_request_unref(req);
+	url = g_strdup_printf("http://api.gadu-gadu.pl/users/%u.xml", uin);
+	msg = soup_message_new("PUT", url);
+	soup_message_headers_replace(msg->request_headers, "Authorization", token);
+	soup_message_set_request(msg, "application/x-www-form-urlencoded",
+	                         SOUP_MEMORY_TAKE, request_data, -1);
+	soup_session_queue_message(info->http, msg,
+	                           ggp_pubdir_set_info_got_response, NULL);
 
-	g_free(request_data);
+	g_free(url);
 	ggp_pubdir_record_free(record, 1);
 }
 
-static void ggp_pubdir_set_info_got_response(PurpleHttpConnection *http_conn,
-	PurpleHttpResponse *response, gpointer user_data)
+static void
+ggp_pubdir_set_info_request(PurpleConnection *gc, PurpleRequestFields *fields)
 {
-	if (!purple_http_response_is_successful(response)) {
-		purple_debug_error("gg", "ggp_pubdir_set_info_got_response: "
-			"failed\n");
-		return;
+	gchar *url;
+	uin_t uin = ggp_str_to_uin(
+	        purple_account_get_username(purple_connection_get_account(gc)));
+	ggp_pubdir_record *record = g_new0(ggp_pubdir_record, 1);
+	gchar *birth_s;
+
+	purple_debug_info("gg", "ggp_pubdir_set_info_request");
+
+	record->uin = uin;
+	record->first_name =
+	        g_strdup(purple_request_fields_get_string(fields, "first_name"));
+	record->last_name =
+	        g_strdup(purple_request_fields_get_string(fields, "last_name"));
+	record->gender =
+	        GPOINTER_TO_INT(purple_request_fields_get_choice(fields, "gender"));
+	record->city = g_strdup(purple_request_fields_get_string(fields, "city"));
+	record->province = GPOINTER_TO_INT(
+	        purple_request_fields_get_choice(fields, "province"));
+
+	birth_s = g_strdup_printf(
+	        "%sT10:00:00+00:00",
+	        purple_request_fields_get_string(fields, "birth_date"));
+	record->birth = ggp_date_from_iso8601(birth_s);
+	g_free(birth_s);
+	purple_debug_info("gg", "ggp_pubdir_set_info_request: birth [%lu][%s]",
+	                  record->birth,
+	                  purple_request_fields_get_string(fields, "birth_date"));
+
+	url = g_strdup_printf("http://api.gadu-gadu.pl/users/%u.xml", uin);
+	ggp_oauth_request(gc, ggp_pubdir_set_info_got_token, record, "PUT", url);
+	g_free(url);
+}
+
+static void
+ggp_pubdir_set_info_dialog(PurpleConnection *gc, int records_count,
+                           const ggp_pubdir_record *records, int next_offset,
+                           void *user_data)
+{
+	PurpleRequestFields *fields;
+	PurpleRequestFieldGroup *group;
+	PurpleRequestField *field;
+	gsize i;
+	const ggp_pubdir_record *record;
+
+	purple_debug_info("gg", "ggp_pubdir_set_info_dialog (record: %d)",
+	                  records_count);
+
+	record = (records_count == 1 ? &records[0] : NULL);
+
+	fields = purple_request_fields_new();
+	group = purple_request_field_group_new(NULL);
+	purple_request_fields_add_group(fields, group);
+
+	field = purple_request_field_string_new("first_name", _("First name"),
+	                                        record ? record->first_name : NULL,
+	                                        FALSE);
+	purple_request_field_group_add_field(group, field);
+
+	field = purple_request_field_string_new("last_name", _("Last name"),
+	                                        record ? record->last_name : NULL,
+	                                        FALSE);
+	purple_request_field_group_add_field(group, field);
+
+	field = purple_request_field_choice_new(
+	        "gender", _("Gender"),
+	        record ? GINT_TO_POINTER(record->gender)
+	               : GGP_PUBDIR_GENDER_UNSPECIFIED);
+	purple_request_field_set_required(field, TRUE);
+	purple_request_field_choice_add(field, _("Male"),
+	                                GINT_TO_POINTER(GGP_PUBDIR_GENDER_MALE));
+	purple_request_field_choice_add(field, _("Female"),
+	                                GINT_TO_POINTER(GGP_PUBDIR_GENDER_FEMALE));
+	purple_request_field_group_add_field(group, field);
+
+	field = purple_request_field_string_new(
+	        "birth_date", _("Birth Day"),
+	        (record && record->birth)
+	                ? ggp_date_strftime("%Y-%m-%d", record->birth)
+	                : NULL,
+	        FALSE);
+	purple_request_field_set_required(field, TRUE);
+	purple_request_field_group_add_field(group, field);
+
+	field = purple_request_field_string_new(
+	        "city", _("City"), record ? record->city : NULL, FALSE);
+	purple_request_field_group_add_field(group, field);
+
+	/* Translators: This word is basically used to describe a Polish
+	   province. Gadu-Gadu users outside of Poland might choose to enter some
+	   equivalent value for themselves. For example, users in the USA might
+	   use their state (e.g. New York). If there is an equivalent term for
+	   your language, feel free to use it. Otherwise it's probably acceptable
+	   to leave it changed or transliterate it into your alphabet. */
+	field = purple_request_field_choice_new("province", _("Voivodeship"), 0);
+	purple_request_field_group_add_field(group, field);
+	for (i = 0; i < ggp_pubdir_provinces_count; i++) {
+		purple_request_field_choice_add(field, ggp_pubdir_provinces[i],
+		                                GINT_TO_POINTER(i));
+		if (record && i == record->province) {
+			purple_request_field_choice_set_value(field, GINT_TO_POINTER(i));
+			purple_request_field_choice_set_default_value(field,
+			                                              GINT_TO_POINTER(i));
+		}
 	}
 
-	purple_debug_info("gg", "ggp_pubdir_set_info_got_response: [%s]\n",
-		purple_http_response_get_data(response, NULL));
-	/* <result><status>0</status></result> */
+	purple_request_fields(gc, _("Set User Info"), _("Set User Info"), NULL,
+	                      fields, _("OK"),
+	                      G_CALLBACK(ggp_pubdir_set_info_request), _("Cancel"),
+	                      NULL, purple_request_cpar_from_connection(gc), gc);
+}
 
-	/* TODO: notify about failure */
+void
+ggp_pubdir_set_info(PurpleConnection *gc)
+{
+	ggp_pubdir_get_info(gc,
+	                    ggp_str_to_uin(purple_account_get_username(
+	                            purple_connection_get_account(gc))),
+	                    ggp_pubdir_set_info_dialog, NULL);
 }

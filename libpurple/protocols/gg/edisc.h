@@ -41,7 +41,7 @@ G_DECLARE_FINAL_TYPE(GGPXfer, ggp_xfer, GGP, XFER, PurpleXfer);
 void ggp_xfer_register(GTypeModule *module);
 
 /* Setting up. */
-void ggp_edisc_setup(PurpleConnection *gc);
+void ggp_edisc_setup(PurpleConnection *gc, GProxyResolver *resolver);
 void ggp_edisc_cleanup(PurpleConnection *gc);
 
 /* General xfer functions. */

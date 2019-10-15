@@ -490,12 +490,10 @@ static DwmGetWindowAttributeFunction DwmGetWindowAttribute = NULL;
 #	define DWMWA_EXTENDED_FRAME_BOUNDS 9
 #endif
 
-static RECT
-get_actualWindowRect(HWND hwnd)
+static void
+get_actualWindowRect(HWND hwnd, RECT *winR)
 {
-	RECT winR;
-
-	GetWindowRect(hwnd, &winR);
+	GetWindowRect(hwnd, winR);
 
 	if (dwmapi_module == NULL) {
 		dwmapi_module = GetModuleHandleW(L"dwmapi.dll");
@@ -510,12 +508,10 @@ get_actualWindowRect(HWND hwnd)
 		if (SUCCEEDED(DwmIsCompositionEnabled(&pfEnabled))) {
 			RECT tempR;
 			if (SUCCEEDED(DwmGetWindowAttribute(hwnd, DWMWA_EXTENDED_FRAME_BOUNDS, &tempR, sizeof(tempR)))) {
-				winR = tempR;
+				*winR = tempR;
 			}
 		}
 	}
-
-	return winR;
 }
 
 void winpidgin_ensure_onscreen(GtkWidget *win) {
@@ -523,7 +519,7 @@ void winpidgin_ensure_onscreen(GtkWidget *win) {
 	HWND hwnd = GDK_WINDOW_HWND(gtk_widget_get_window(win));
 
 	g_return_if_fail(hwnd != NULL);
-	winR = get_actualWindowRect(hwnd);
+	get_actualWindowRect(hwnd, &winR);
 
 	purple_debug_info("win32placement",
 			"Window RECT: L:%ld R:%ld T:%ld B:%ld\n",
