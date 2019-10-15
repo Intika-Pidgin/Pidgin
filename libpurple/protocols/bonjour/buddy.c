@@ -243,10 +243,7 @@ void
 bonjour_buddy_delete(BonjourBuddy *buddy)
 {
 	g_free(buddy->name);
-	while (buddy->ips != NULL) {
-		g_free(buddy->ips->data);
-		buddy->ips = g_slist_delete_link(buddy->ips, buddy->ips);
-	}
+	g_slist_free_full(buddy->ips, g_free);
 	g_free(buddy->first);
 	g_free(buddy->phsh);
 	g_free(buddy->status);

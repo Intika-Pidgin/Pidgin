@@ -244,7 +244,6 @@ nm_rtf_deinit(NMRtfContext *ctx)
 {
 	GSList *node;
 	NMRtfFont *font;
-	NMRtfStateSave *save;
 
 	if (ctx) {
 		for (node = ctx->font_table; node; node = node->next) {
@@ -254,12 +253,7 @@ nm_rtf_deinit(NMRtfContext *ctx)
 			node->data = NULL;
 		}
 		g_slist_free(ctx->font_table);
-		for (node = ctx->saved; node; node = node->next) {
-			save = node->data;
-			g_free(save);
-			node->data = NULL;
-		}
-		g_slist_free(ctx->saved);
+		g_slist_free_full(ctx->saved, g_free);
 		g_string_free(ctx->ansi, TRUE);
 		g_string_free(ctx->output, TRUE);
 		g_free(ctx);
@@ -489,8 +483,7 @@ rtf_pop_state(NMRtfContext *ctx)
 
     g_free(save_old);
     link_old = ctx->saved;
-    ctx->saved = g_slist_remove_link(ctx->saved, link_old);
-    g_slist_free_1(link_old);
+    ctx->saved = g_slist_delete_link(ctx->saved, link_old);
     return NMRTF_OK;
 }
 

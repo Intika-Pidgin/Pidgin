@@ -94,14 +94,11 @@ void jabber_roster_request(JabberStream *js)
 
 static void remove_purple_buddies(JabberStream *js, const char *jid)
 {
-	GSList *buddies, *l;
+	GSList *buddies;
 
 	buddies = purple_blist_find_buddies(purple_connection_get_account(js->gc), jid);
 
-	for(l = buddies; l; l = l->next)
-		purple_blist_remove_buddy(l->data);
-
-	g_slist_free(buddies);
+	g_slist_free_full(buddies, (GDestroyNotify)purple_blist_remove_buddy);
 }
 
 static void add_purple_buddy_to_groups(JabberStream *js, const char *jid,

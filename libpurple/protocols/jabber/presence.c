@@ -1055,11 +1055,7 @@ void jabber_presence_parse(JabberStream *js, PurpleXmlNode *packet)
 	}
 
 out:
-	while (presence.chat_info.codes)
-		presence.chat_info.codes =
-			g_slist_delete_link(presence.chat_info.codes,
-			                    presence.chat_info.codes);
-
+	g_slist_free(presence.chat_info.codes);
 	g_free(presence.status);
 	g_free(presence.vcard_avatar_hash);
 	g_free(presence.nickname);

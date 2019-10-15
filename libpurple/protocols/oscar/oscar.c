@@ -878,12 +878,7 @@ oscar_close(PurpleConnection *gc)
 
 	od = purple_connection_get_protocol_data(gc);
 
-	while (od->oscar_chats)
-	{
-		struct chat_connection *cc = od->oscar_chats->data;
-		od->oscar_chats = g_slist_remove(od->oscar_chats, cc);
-		oscar_chat_destroy(cc);
-	}
+	g_slist_free_full(od->oscar_chats, (GDestroyNotify)oscar_chat_destroy);
 	while (od->create_rooms)
 	{
 		struct create_room *cr = od->create_rooms->data;
@@ -2980,10 +2975,9 @@ oscar_send_typing(PurpleConnection *gc, const char *name, PurpleIMTypingState st
 	else {
 		/* Don't send if this turkey is in our deny list */
 		PurpleAccount *account = purple_connection_get_account(gc);
-		GSList *list;
+		GSList *list = purple_account_privacy_get_denied(account);
 
-		for (list=purple_account_privacy_get_denied(account); (list && oscar_util_name_compare(name, list->data)); list=list->next);
-		if (!list) {
+		if (!g_slist_find_custom(list, name, (GCompareFunc)oscar_util_name_compare)) {
 			struct buddyinfo *bi = g_hash_table_lookup(od->buddyinfo, purple_normalize(account, name));
 			if (bi && bi->typingnot) {
 				if (state == PURPLE_IM_TYPING)
@@ -3775,10 +3769,7 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 			cur = g_slist_prepend(cur, b);
 		}
 	}
-	while (cur != NULL) {
-		purple_blist_remove_buddy(cur->data);
-		cur = g_slist_delete_link(cur, cur);
-	}
+	g_slist_free_full(cur, (GDestroyNotify)purple_blist_remove_buddy);
 
 	/* Permit list (ICQ doesn't have one) */
 	if (!od->icq) {
@@ -3889,8 +3880,8 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 
 			case AIM_SSI_TYPE_PERMIT: { /* Permit buddy (unless we're on ICQ) */
 				if (!od->icq && curitem->name) {
-					for (cur = purple_account_privacy_get_permitted(account); (cur && oscar_util_name_compare(curitem->name, cur->data)); cur = cur->next);
-					if (!cur) {
+					cur = purple_account_privacy_get_permitted(account);
+					if (!g_slist_find_custom(cur, curitem->name, (GCompareFunc)oscar_util_name_compare)) {
 						purple_debug_info("oscar",
 								   "ssi: adding permit buddy %s to local list\n", curitem->name);
 						purple_account_privacy_permit_add(account, curitem->name, TRUE);
@@ -3901,8 +3892,8 @@ static int purple_ssi_parselist(OscarData *od, FlapConnection *conn, FlapFrame *
 			case AIM_SSI_TYPE_ICQDENY:
 			case AIM_SSI_TYPE_DENY: { /* Deny buddy */
 				if (curitem->type == deny_entry_type && curitem->name) {
-					for (cur = purple_account_privacy_get_denied(account); (cur && oscar_util_name_compare(curitem->name, cur->data)); cur = cur->next);
-					if (!cur) {
+					cur = purple_account_privacy_get_denied(account);
+					if (!g_slist_find_custom(cur, curitem->name, (GCompareFunc)oscar_util_name_compare)) {
 						purple_debug_info("oscar",
 								   "ssi: adding deny buddy %s to local list\n", curitem->name);
 						purple_account_privacy_deny_add(account, curitem->name, TRUE);

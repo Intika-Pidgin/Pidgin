@@ -863,35 +863,17 @@ nm_folder_find_contact(NMFolder * folder, const char *dn)
 static void
 _release_folder_contacts(NMFolder * folder)
 {
-	GSList *cnode;
-	NMContact *contact;
-
-	for (cnode = folder->contacts; cnode; cnode = cnode->next) {
-		contact = cnode->data;
-		cnode->data = NULL;
-		nm_release_contact(contact);
-	}
-
-	g_slist_free(folder->contacts);
+	g_slist_free_full(folder->contacts, (GDestroyNotify)nm_release_contact);
 	folder->contacts = NULL;
 }
 
 static void
 _release_folder_folders(NMFolder * folder)
 {
-	GSList *fnode;
-	NMFolder *subfolder;
-
 	if (folder == NULL)
 		return;
 
-	for (fnode = folder->folders; fnode; fnode = fnode->next) {
-		subfolder = fnode->data;
-		fnode->data = NULL;
-		nm_release_folder(subfolder);
-	}
-
-	g_slist_free(folder->folders);
+	g_slist_free_full(folder->folders, (GDestroyNotify)nm_release_folder);
 	folder->folders = NULL;
 }
 

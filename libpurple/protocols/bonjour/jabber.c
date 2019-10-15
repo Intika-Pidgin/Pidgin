@@ -801,7 +801,7 @@ _connected_to_buddy(GObject *source, GAsyncResult *res, gpointer user_data)
 	if (conn == NULL) {
 		PurpleConversation *conv = NULL;
 		PurpleAccount *account = NULL;
-		GSList *tmp = bb->ips;
+		GSList *tmp;
 
 		if (error && error->code == G_IO_ERROR_CANCELLED) {
 			/* This conversation was closed before it started. */
@@ -821,8 +821,7 @@ _connected_to_buddy(GObject *source, GAsyncResult *res, gpointer user_data)
 		 * presence recieved (e.g. multiple interfaces).
 		 * We need to make sure that we find the previously used entry.
 		 */
-		while (tmp && bb->conversation->ip_link != tmp->data)
-			tmp = g_slist_next(tmp);
+		tmp = g_slist_find(bb->ips, bb->conversation->ip_link);
 		if (tmp)
 			tmp = g_slist_next(tmp);
 
@@ -1254,10 +1253,7 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 		g_slist_free(buddies);
 	}
 
-	while (jdata->pending_conversations != NULL) {
-		bonjour_jabber_close_conversation(jdata->pending_conversations->data);
-		jdata->pending_conversations = g_slist_delete_link(jdata->pending_conversations, jdata->pending_conversations);
-	}
+	g_slist_free_full(jdata->pending_conversations, (GDestroyNotify)bonjour_jabber_close_conversation);
 }
 
 XepIq *
@@ -1309,21 +1305,19 @@ check_if_blocked(PurpleBuddy *pb)
 	gboolean blocked = FALSE;
 	GSList *l = NULL;
 	PurpleAccount *acc = purple_buddy_get_account(pb);
+	const gchar *name;
 
 	if(acc == NULL)
 		return FALSE;
 
-	acc = purple_buddy_get_account(pb);
+	l = purple_account_privacy_get_denied(acc);
+	name = purple_buddy_get_name(pb);
 
-	for(l = purple_account_privacy_get_denied(acc); l != NULL; l = l->next) {
-		const gchar *name = purple_buddy_get_name(pb);
+	if(g_slist_find_custom(l, name, (GCompareFunc)purple_utf8_strcasecmp) != NULL) {
 		const gchar *username = bonjour_get_jid(acc);
 
-		if(!purple_utf8_strcasecmp(name, (char *)l->data)) {
-			purple_debug_info("bonjour", "%s has been blocked by %s.\n", name, username);
-			blocked = TRUE;
-			break;
-		}
+		purple_debug_info("bonjour", "%s has been blocked by %s.\n", name, username);
+		blocked = TRUE;
 	}
 	return blocked;
 }
