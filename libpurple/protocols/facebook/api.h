@@ -551,14 +551,14 @@ fb_api_error_quark(void);
 /**
  * fb_api_new:
  * @gc: The #PurpleConnection.
+ * @resolver: The proxy resolver to use from the account.
  *
  * Creates a new #FbApi. The returned #FbApi should be freed with
  * #g_object_unref() when no longer needed.
  *
  * Returns: The new #FbApi.
  */
-FbApi *
-fb_api_new(PurpleConnection *gc);
+FbApi *fb_api_new(PurpleConnection *gc, GProxyResolver *resolver);
 
 /**
  * fb_api_rehash:
