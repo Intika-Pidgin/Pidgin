@@ -900,7 +900,6 @@ static void jabber_buddy_info_remove_id(JabberBuddyInfo *jbi, const char *id)
 		comp_id = l->data;
 		jbi->ids = g_slist_delete_link(jbi->ids, l);
 		g_free(comp_id);
-		return;
 	}
 }
 

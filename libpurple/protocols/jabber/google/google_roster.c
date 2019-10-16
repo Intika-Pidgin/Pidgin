@@ -37,7 +37,6 @@ void jabber_google_roster_outgoing(JabberStream *js, PurpleXmlNode *query, Purpl
 		purple_xmlnode_set_attrib(query, "xmlns:gr", NS_GOOGLE_ROSTER);
 		purple_xmlnode_set_attrib(query, "gr:ext", "2");
 		purple_xmlnode_set_attrib(item, "gr:t", "B");
-		return;
 	}
 }
 
