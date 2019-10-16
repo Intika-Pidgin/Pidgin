@@ -196,7 +196,7 @@ void sipmsg_remove_header(struct sipmsg *msg, const gchar *name) {
 	GSList *tmp = g_slist_find_custom(msg->headers, name, (GCompareFunc)g_ascii_strcasecmp);
 	if(tmp) {
 		struct siphdrelement *elem = tmp->data;
-		msg->headers = g_slist_remove(msg->headers, elem);
+		msg->headers = g_slist_delete_link(msg->headers, tmp);
 		g_free(elem->name);
 		g_free(elem->value);
 		g_free(elem);
