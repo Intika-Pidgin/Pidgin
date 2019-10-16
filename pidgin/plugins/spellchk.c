@@ -2012,13 +2012,12 @@ static void add_selected_row_to_list(GtkTreeModel *model, GtkTreePath *path,
 	*list = g_slist_prepend(*list, row_reference);
 }
 
-static void remove_row(void *data)
+static void remove_row(gpointer data)
 {
-	GtkTreeRowReference *row_reference;
+	GtkTreeRowReference *row_reference = (GtkTreeRowReference *)data;
 	GtkTreePath *path;
 	GtkTreeIter iter;
 
-	row_reference = (GtkTreeRowReference *)data;
 	path = gtk_tree_row_reference_get_path(row_reference);
 
 	if (gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path))
