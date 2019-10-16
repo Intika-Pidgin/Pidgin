@@ -898,7 +898,7 @@ static void jabber_buddy_info_remove_id(JabberBuddyInfo *jbi, const char *id)
 	l = g_slist_find_custom(jbi->ids, id, (GCompareFunc)g_strcmp0);
 	if(l) {
 		comp_id = l->data;
-		jbi->ids = g_slist_remove(jbi->ids, comp_id);
+		jbi->ids = g_slist_delete_link(jbi->ids, l);
 		g_free(comp_id);
 		return;
 	}
