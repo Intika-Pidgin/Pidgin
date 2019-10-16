@@ -650,8 +650,9 @@ flap_connection_findbygroup(OscarData *od, guint16 group)
 
 		conn = cur->data;
 
-		if (g_slist_find(conn->groups, GUINT_TO_POINTER(group)) != NULL)
+		if (g_slist_find(conn->groups, GUINT_TO_POINTER(group)) != NULL) {
 			return conn;
+		}
 	}
 
 	return NULL;
