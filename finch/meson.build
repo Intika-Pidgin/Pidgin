@@ -8,6 +8,7 @@ if get_option('consoleui')
 	else
 		libgnt_proj = subproject('libgnt',
 		    default_options : [
+		        'doc=' + get_option('doc').to_string(),
 		        'introspection=' + enable_introspection.to_string(),
 		    ]
 		)
