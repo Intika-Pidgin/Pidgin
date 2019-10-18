@@ -2012,13 +2012,12 @@ static void add_selected_row_to_list(GtkTreeModel *model, GtkTreePath *path,
 	*list = g_slist_prepend(*list, row_reference);
 }
 
-static void remove_row(void *data1, gpointer data2)
+static void remove_row(gpointer data)
 {
-	GtkTreeRowReference *row_reference;
+	GtkTreeRowReference *row_reference = (GtkTreeRowReference *)data;
 	GtkTreePath *path;
 	GtkTreeIter iter;
 
-	row_reference = (GtkTreeRowReference *)data1;
 	path = gtk_tree_row_reference_get_path(row_reference);
 
 	if (gtk_tree_model_get_iter(GTK_TREE_MODEL(model), &iter, path))
@@ -2036,8 +2035,7 @@ static void list_delete(void)
 	sel = gtk_tree_view_get_selection(GTK_TREE_VIEW(tree));
 	gtk_tree_selection_selected_foreach(sel, add_selected_row_to_list, &list);
 
-	g_slist_foreach(list, remove_row, NULL);
-	g_slist_free(list);
+	g_slist_free_full(list, remove_row);
 
 	save_list();
 }

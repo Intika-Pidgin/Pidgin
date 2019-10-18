@@ -111,11 +111,7 @@ oscar_data_destroy(OscarData *od)
 		g_object_unref(od->http_conns);
 	}
 
-	while (od->requesticon)
-	{
-		g_free(od->requesticon->data);
-		od->requesticon = g_slist_delete_link(od->requesticon, od->requesticon);
-	}
+	g_slist_free_full(od->requesticon, g_free);
 	g_free(od->email);
 	g_free(od->newp);
 	g_free(od->oldp);
