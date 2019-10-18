@@ -26,7 +26,6 @@
 #include "debug.h"
 #include "xfer.h"
 #include "glibcompat.h"
-#include "http.h"
 #include "idle.h"
 #include "image-store.h"
 #include "keyring.h"
@@ -177,7 +176,6 @@ purple_core_init(const char *ui)
 	purple_stun_init();
 	purple_xfers_init();
 	purple_idle_init();
-	purple_http_init();
 	_purple_smiley_custom_init();
 	_purple_smiley_parser_init();
 
@@ -219,7 +217,6 @@ purple_core_quit(void)
 	_purple_smiley_theme_uninit();
 	_purple_smiley_custom_uninit();
 	_purple_smiley_parser_uninit();
-	purple_http_uninit();
 	purple_idle_uninit();
 	purple_pounces_uninit();
 	purple_conversations_uninit();

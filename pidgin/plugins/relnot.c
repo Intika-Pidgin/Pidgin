@@ -34,7 +34,6 @@
 #include "gtkblist.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
-#include "http.h"
 #include "notify.h"
 #include "pidginicon.h"
 #include "prefs.h"

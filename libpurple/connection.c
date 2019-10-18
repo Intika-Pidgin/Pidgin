@@ -27,7 +27,6 @@
 #include "connection.h"
 #include "debug.h"
 #include "enums.h"
-#include "http.h"
 #include "log.h"
 #include "notify.h"
 #include "prefs.h"
@@ -875,7 +874,6 @@ purple_connection_finalize(GObject *object)
 		buddies = g_slist_delete_link(buddies, buddies);
 	}
 
-	purple_http_conn_cancel_all(gc);
 	purple_proxy_connect_cancel_with_handle(gc);
 
 	connections = g_list_remove(connections, gc);

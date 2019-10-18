@@ -26,7 +26,6 @@
 #include "pidgin.h"
 
 #include "debug.h"
-#include "http.h"
 #include "nat-pmp.h"
 #include "notify.h"
 #include "prefs.h"

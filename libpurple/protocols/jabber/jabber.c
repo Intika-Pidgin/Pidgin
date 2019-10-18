@@ -29,7 +29,6 @@
 #include "connection.h"
 #include "conversation.h"
 #include "debug.h"
-#include "http.h"
 #include "message.h"
 #include "notify.h"
 #include "pluginpref.h"

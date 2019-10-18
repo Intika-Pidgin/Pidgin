@@ -20,7 +20,6 @@
 
 #include "internal.h"
 #include "debug.h"
-#include "http.h"
 
 #include "relay.h"
 

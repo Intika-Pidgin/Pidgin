@@ -27,7 +27,6 @@
 
 #include "debug.h"
 #include "eventloop.h"
-#include "http.h"
 #include "network.h"
 #include "proxy.h"
 #include "signals.h"

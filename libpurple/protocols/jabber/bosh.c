@@ -23,7 +23,6 @@
 #include "internal.h"
 #include "core.h"
 #include "debug.h"
-#include "http.h"
 
 #include <libsoup/soup.h>
 

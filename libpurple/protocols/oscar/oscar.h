@@ -33,7 +33,6 @@
 #include "circularbuffer.h"
 #include "debug.h"
 #include "eventloop.h"
-#include "http.h"
 #include "proxy.h"
 #include "sslconn.h"
 

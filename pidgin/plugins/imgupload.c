@@ -23,7 +23,6 @@
 
 #include "debug.h"
 #include "glibcompat.h"
-#include "http.h"
 #include "version.h"
 
 #include "gtk3compat.h"
