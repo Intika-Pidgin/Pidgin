@@ -369,10 +369,7 @@ purple_media_codec_list_copy(GList *codecs)
 void
 purple_media_codec_list_free(GList *codecs)
 {
-	for (; codecs; codecs =
-			g_list_delete_link(codecs, codecs)) {
-		g_object_unref(codecs->data);
-	}
+	g_list_free_full(codecs, g_object_unref);
 }
 
 gchar *

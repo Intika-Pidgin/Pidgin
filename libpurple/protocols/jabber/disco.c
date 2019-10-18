@@ -564,10 +564,7 @@ jabber_disco_server_items_result_cb(JabberStream *js, const char *from,
 	if (type == JABBER_IQ_ERROR)
 		return;
 
-	while(js->chat_servers) {
-		g_free(js->chat_servers->data);
-		js->chat_servers = g_list_delete_link(js->chat_servers, js->chat_servers);
-	}
+	g_list_free_full(js->chat_servers, g_free);
 
 	query = purple_xmlnode_get_child(packet, "query");
 

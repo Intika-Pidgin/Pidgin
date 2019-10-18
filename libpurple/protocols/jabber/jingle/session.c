@@ -238,14 +238,8 @@ jingle_session_finalize (GObject *session)
 	g_free(priv->remote_jid);
 	g_free(priv->local_jid);
 
-	for (; priv->contents; priv->contents =
-			g_list_delete_link(priv->contents, priv->contents)) {
-		g_object_unref(priv->contents->data);
-	}
-	for (; priv->pending_contents; priv->pending_contents =
-			g_list_delete_link(priv->pending_contents, priv->pending_contents)) {
-		g_object_unref(priv->pending_contents->data);
-	}
+	g_list_free_full(priv->contents, g_object_unref);
+	g_list_free_full(priv->pending_contents, g_object_unref);
 
 	G_OBJECT_CLASS(jingle_session_parent_class)->finalize(session);
 }

@@ -117,13 +117,7 @@ free_saved_status(PurpleSavedStatus *status)
 
 	g_free(status->title);
 	g_free(status->message);
-
-	while (status->substatuses != NULL)
-	{
-		PurpleSavedStatusSub *substatus = status->substatuses->data;
-		status->substatuses = g_list_remove(status->substatuses, substatus);
-		free_saved_status_sub(substatus);
-	}
+	g_list_free_full(status->substatuses, (GDestroyNotify)free_saved_status_sub);
 	purple_request_close_with_handle(status);
 	g_free(status);
 }
@@ -1251,11 +1245,7 @@ purple_savedstatuses_uninit(void)
 		sync_statuses();
 	}
 
-	while (saved_statuses != NULL) {
-		PurpleSavedStatus *saved_status = saved_statuses->data;
-		saved_statuses = g_list_remove(saved_statuses, saved_status);
-		free_saved_status(saved_status);
-	}
+	g_list_free_full(saved_statuses, (GDestroyNotify)free_saved_status);
 
 	g_hash_table_destroy(creation_times);
 	creation_times = NULL;

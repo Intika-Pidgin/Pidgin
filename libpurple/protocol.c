@@ -88,12 +88,7 @@ user_splits_free(PurpleProtocol *protocol)
 {
 	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
 
-	while (protocol->user_splits) {
-		PurpleAccountUserSplit *split = protocol->user_splits->data;
-		purple_account_user_split_destroy(split);
-		protocol->user_splits = g_list_delete_link(protocol->user_splits,
-				protocol->user_splits);
-	}
+	g_list_free_full(protocol->user_splits, (GDestroyNotify)purple_account_user_split_destroy);
 }
 
 static void
@@ -101,13 +96,7 @@ account_options_free(PurpleProtocol *protocol)
 {
 	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
 
-	while (protocol->account_options) {
-		PurpleAccountOption *option = protocol->account_options->data;
-		purple_account_option_destroy(option);
-		protocol->account_options =
-				g_list_delete_link(protocol->account_options,
-				                   protocol->account_options);
-	}
+	g_list_free_full(protocol->account_options, (GDestroyNotify)purple_account_option_destroy);
 }
 
 static void

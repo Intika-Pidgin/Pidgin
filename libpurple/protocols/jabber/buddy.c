@@ -74,11 +74,7 @@ jabber_buddy_resource_free(JabberBuddyResource *jbr)
 		jbr->commands = g_list_delete_link(jbr->commands, jbr->commands);
 	}
 
-	while (jbr->caps.exts) {
-		g_free(jbr->caps.exts->data);
-		jbr->caps.exts = g_list_delete_link(jbr->caps.exts, jbr->caps.exts);
-	}
-
+	g_list_free_full(jbr->caps.exts, g_free);
 	g_free(jbr->name);
 	g_free(jbr->status);
 	g_free(jbr->thread_id);

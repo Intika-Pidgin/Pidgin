@@ -394,23 +394,12 @@ purple_media_backend_fs2_finalize(GObject *obj)
 	purple_debug_info("backend-fs2", "purple_media_backend_fs2_finalize\n");
 
 	g_free(priv->conference_type);
-
-	for (; priv->streams; priv->streams =
-			g_list_delete_link(priv->streams, priv->streams)) {
-		PurpleMediaBackendFs2Stream *stream = priv->streams->data;
-		free_stream(stream);
-	}
+	g_list_free_full(priv->streams, (GDestroyNotify)free_stream);
 
 	if (priv->sessions) {
 		GList *sessions = g_hash_table_get_values(priv->sessions);
 
-		for (; sessions; sessions =
-				g_list_delete_link(sessions, sessions)) {
-			PurpleMediaBackendFs2Session *session =
-					sessions->data;
-			free_session(session);
-		}
-
+		g_list_free_full(sessions, (GDestroyNotify)free_session);
 		g_hash_table_destroy(priv->sessions);
 	}
 

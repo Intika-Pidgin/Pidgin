@@ -759,7 +759,7 @@ static void plugin_dialog_response_cb(GtkWidget *d, int response, GtkTreeSelecti
 	GtkTreeModel *model;
 	GValue val;
 	GtkTreeIter iter;
-	GList *list, *it;
+	GList *list;
 
 	g_return_if_fail(d != NULL);
 
@@ -769,9 +769,7 @@ static void plugin_dialog_response_cb(GtkWidget *d, int response, GtkTreeSelecti
 		purple_request_close_with_handle(plugin_dialog);
 		purple_signals_disconnect_by_handle(plugin_dialog);
 		list = purple_plugins_find_all();
-		for (it = list; it; it = g_list_next(it))
-			pref_dialog_close(it->data);
-		g_list_free(list);
+		g_list_free_full(list, (GDestroyNotify)pref_dialog_close);
 		gtk_widget_destroy(d);
 		plugin_dialog = NULL;
 		break;

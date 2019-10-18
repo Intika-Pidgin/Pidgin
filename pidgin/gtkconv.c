@@ -2900,12 +2900,8 @@ regenerate_options_items(PidginConvWindow *win)
 	menu = gtk_menu_item_get_submenu(GTK_MENU_ITEM(more_menu));
 
 	/* Remove the previous entries */
-	for (list = gtk_container_get_children(GTK_CONTAINER(menu)); list; )
-	{
-		GtkWidget *w = list->data;
-		list = g_list_delete_link(list, list);
-		gtk_widget_destroy(w);
-	}
+	list = gtk_container_get_children(GTK_CONTAINER(menu));
+	g_list_free_full(list, (GDestroyNotify)gtk_widget_destroy);
 
 	if (!populate_menu_with_options(menu, gtkconv, FALSE))
 	{

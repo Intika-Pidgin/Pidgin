@@ -58,10 +58,7 @@ struct _PidginGroupMergeObject {
 void
 pidgin_dialogs_destroy_all()
 {
-	while (dialogwindows) {
-		gtk_widget_destroy(dialogwindows->data);
-		dialogwindows = g_list_remove(dialogwindows, dialogwindows->data);
-	}
+	g_list_free_full(dialogwindows, (GDestroyNotify)gtk_widget_destroy);
 }
 
 static void destroy_win(GtkWidget *button, GtkWidget *win)

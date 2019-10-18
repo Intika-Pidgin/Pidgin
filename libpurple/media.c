@@ -299,18 +299,12 @@ purple_media_finalize(GObject *media)
 			purple_media_get_instance_private(PURPLE_MEDIA(media));
 	purple_debug_info("media","purple_media_finalize\n");
 
-	for (; priv->streams; priv->streams = g_list_delete_link(priv->streams, priv->streams))
-		purple_media_stream_free(priv->streams->data);
-
-	for (; priv->participants; priv->participants = g_list_delete_link(
-			priv->participants, priv->participants))
-		g_free(priv->participants->data);
+	g_list_free_full(priv->streams, (GDestroyNotify)purple_media_stream_free);
+	g_list_free_full(priv->participants, g_free);
 
 	if (priv->sessions) {
 		GList *sessions = g_hash_table_get_values(priv->sessions);
-		for (; sessions; sessions = g_list_delete_link(sessions, sessions)) {
-			purple_media_session_free(sessions->data);
-		}
+		g_list_free_full(sessions, (GDestroyNotify)purple_media_session_free);
 		g_hash_table_destroy(priv->sessions);
 	}
 

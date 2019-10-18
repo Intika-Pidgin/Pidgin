@@ -426,8 +426,7 @@ jingle_terminate_sessions(JabberStream *js)
 {
 	if (js->sessions) {
 		GList *list = g_hash_table_get_values(js->sessions);
-		for (; list; list = g_list_delete_link(list, list))
-			g_object_unref(list->data);
+		g_list_free_full(list, g_object_unref);
 	}
 }
 

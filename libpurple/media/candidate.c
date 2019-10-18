@@ -366,10 +366,7 @@ purple_media_candidate_list_copy(GList *candidates)
 void
 purple_media_candidate_list_free(GList *candidates)
 {
-	for (; candidates; candidates =
-			g_list_delete_link(candidates, candidates)) {
-		g_object_unref(candidates->data);
-	}
+	g_list_free_full(candidates, g_object_unref);
 }
 
 gchar *
