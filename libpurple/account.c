@@ -1072,15 +1072,8 @@ purple_account_finalize(GObject *object)
 	g_hash_table_destroy(priv->settings);
 	g_hash_table_destroy(priv->ui_settings);
 
-	while (priv->deny) {
-		g_free(priv->deny->data);
-		priv->deny = g_slist_delete_link(priv->deny, priv->deny);
-	}
-
-	while (priv->permit) {
-		g_free(priv->permit->data);
-		priv->permit = g_slist_delete_link(priv->permit, priv->permit);
-	}
+	g_slist_free_full(priv->deny, g_free);
+	g_slist_free_full(priv->permit, g_free);
 
 	G_OBJECT_CLASS(purple_account_parent_class)->finalize(object);
 }
@@ -2291,7 +2284,6 @@ gboolean
 purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 						gboolean local_only)
 {
-	GSList *l;
 	char *name;
 	PurpleBuddy *buddy;
 	PurpleAccountPrivate *priv;
@@ -2303,14 +2295,7 @@ purple_account_privacy_permit_add(PurpleAccount *account, const char *who,
 	priv = purple_account_get_instance_private(account);
 	name = g_strdup(purple_normalize(account, who));
 
-	for (l = priv->permit; l != NULL; l = l->next) {
-		if (g_str_equal(name, l->data))
-			/* This buddy already exists */
-			break;
-	}
-
-	if (l != NULL)
-	{
+	if (g_slist_find_custom(priv->permit, name, (GCompareFunc)g_strcmp0) != NULL) {
 		/* This buddy already exists, so bail out */
 		g_free(name);
 		return FALSE;
@@ -2352,12 +2337,7 @@ purple_account_privacy_permit_remove(PurpleAccount *account, const char *who,
 	priv = purple_account_get_instance_private(account);
 	name = purple_normalize(account, who);
 
-	for (l = priv->permit; l != NULL; l = l->next) {
-		if (g_str_equal(name, l->data))
-			/* We found the buddy we were looking for */
-			break;
-	}
-
+	l = g_slist_find_custom(priv->permit, name, (GCompareFunc)g_strcmp0);
 	if (l == NULL)
 		/* We didn't find the buddy we were looking for, so bail out */
 		return FALSE;
@@ -2389,7 +2369,6 @@ gboolean
 purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 					  gboolean local_only)
 {
-	GSList *l;
 	char *name;
 	PurpleBuddy *buddy;
 	PurpleAccountPrivate *priv;
@@ -2401,14 +2380,7 @@ purple_account_privacy_deny_add(PurpleAccount *account, const char *who,
 	priv = purple_account_get_instance_private(account);
 	name = g_strdup(purple_normalize(account, who));
 
-	for (l = priv->deny; l != NULL; l = l->next) {
-		if (g_str_equal(name, l->data))
-			/* This buddy already exists */
-			break;
-	}
-
-	if (l != NULL)
-	{
+	if (g_slist_find_custom(priv->deny, name, (GCompareFunc)g_strcmp0) != NULL) {
 		/* This buddy already exists, so bail out */
 		g_free(name);
 		return FALSE;
@@ -2449,12 +2421,7 @@ purple_account_privacy_deny_remove(PurpleAccount *account, const char *who,
 	priv = purple_account_get_instance_private(account);
 	normalized = purple_normalize(account, who);
 
-	for (l = priv->deny; l != NULL; l = l->next) {
-		if (g_str_equal(normalized, l->data))
-			/* We found the buddy we were looking for */
-			break;
-	}
-
+	l = g_slist_find_custom(priv->deny, normalized, (GCompareFunc)g_strcmp0);
 	if (l == NULL)
 		/* We didn't find the buddy we were looking for, so bail out */
 		return FALSE;
@@ -2599,7 +2566,6 @@ purple_account_privacy_get_denied(PurpleAccount *account)
 gboolean
 purple_account_privacy_check(PurpleAccount *account, const char *who)
 {
-	GSList *list;
 	PurpleAccountPrivate *priv = purple_account_get_instance_private(account);
 
 	switch (purple_account_get_privacy_type(account)) {
@@ -2611,19 +2577,11 @@ purple_account_privacy_check(PurpleAccount *account, const char *who)
 
 		case PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS:
 			who = purple_normalize(account, who);
-			for (list=priv->permit; list!=NULL; list=list->next) {
-				if (g_str_equal(who, list->data))
-					return TRUE;
-			}
-			return FALSE;
+			return (g_slist_find_custom(priv->permit, who, (GCompareFunc)g_strcmp0) != NULL);
 
 		case PURPLE_ACCOUNT_PRIVACY_DENY_USERS:
 			who = purple_normalize(account, who);
-			for (list=priv->deny; list!=NULL; list=list->next) {
-				if (g_str_equal(who, list->data))
-					return FALSE;
-			}
-			return TRUE;
+			return (g_slist_find_custom(priv->deny, who, (GCompareFunc)g_strcmp0) == NULL);
 
 		case PURPLE_ACCOUNT_PRIVACY_ALLOW_BUDDYLIST:
 			return (purple_blist_find_buddy(account, who) != NULL);

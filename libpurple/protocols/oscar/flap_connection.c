@@ -500,11 +500,7 @@ flap_connection_destroy_cb(gpointer data)
 		flap_connection_destroy_chat(od, conn);
 
 	g_slist_free(conn->groups);
-	while (conn->rateclasses != NULL)
-	{
-		g_free(conn->rateclasses->data);
-		conn->rateclasses = g_slist_delete_link(conn->rateclasses, conn->rateclasses);
-	}
+	g_slist_free_full(conn->rateclasses, g_free);
 
 	g_hash_table_destroy(conn->rateclass_members);
 
@@ -651,14 +647,11 @@ flap_connection_findbygroup(OscarData *od, guint16 group)
 	for (cur = od->oscar_connections; cur != NULL; cur = cur->next)
 	{
 		FlapConnection *conn;
-		GSList *l;
 
 		conn = cur->data;
 
-		for (l = conn->groups; l != NULL; l = l->next)
-		{
-			if (GPOINTER_TO_UINT(l->data) == group)
-				return conn;
+		if (g_slist_find(conn->groups, GUINT_TO_POINTER(group)) != NULL) {
+			return conn;
 		}
 	}
 

@@ -942,11 +942,10 @@ nm_send_remove_privacy_item(NMUser *user, const char *dn, gboolean allow_list,
 
 	/* Remove item from the cached list */
 	if ((node = g_slist_find_custom(*list_ptr, dn, (GCompareFunc)purple_utf8_strcasecmp))) {
-		*list_ptr = g_slist_remove_link(*list_ptr, node);
-		g_slist_free_1(node);
+		*list_ptr = g_slist_delete_link(*list_ptr, node);
 	}
 
-    fields = nm_field_add_pointer(fields, tag, 0, NMFIELD_METHOD_DELETE, 0,
+	fields = nm_field_add_pointer(fields, tag, 0, NMFIELD_METHOD_DELETE, 0,
 								  g_strdup(dn), NMFIELD_TYPE_DN);
 
 	rc = nm_send_request(user->conn, "updateblocks", fields, callback, data, NULL);
@@ -1070,22 +1069,11 @@ nm_conference_list_remove(NMUser * user, NMConference * conf)
 void
 nm_conference_list_free(NMUser * user)
 {
-	GSList *cnode;
-	NMConference *conference;
-
 	if (user == NULL)
 		return;
 
-	if (user->conferences) {
-		for (cnode = user->conferences; cnode; cnode = cnode->next) {
-			conference = cnode->data;
-			cnode->data = NULL;
-			nm_release_conference(conference);
-		}
-
-		g_slist_free(user->conferences);
-		user->conferences = NULL;
-	}
+	g_slist_free_full(user->conferences, (GDestroyNotify)nm_release_conference);
+	user->conferences = NULL;
 }
 
 NMConference *
@@ -1520,14 +1508,11 @@ _handle_multiple_get_details_joinconf_cb(NMUser * user, NMERR_T ret_code,
 		nm_conference_add_participant(conference, user_record);
 
 		/* Find the user in the list and remove it */
-		for (node = list; node; node = node->next) {
-			if (nm_utf8_str_equal(nm_user_record_get_dn(user_record),
-								  (const char *) node->data)) {
-				g_free(node->data);
-				list = g_slist_delete_link(list, node);
-				nm_request_set_user_define(request, list);
-				break;
-			}
+		node = g_slist_find_custom(list, nm_user_record_get_dn(user_record), (GCompareFunc)purple_utf8_strcasecmp);
+		if (node) {
+			g_free(node->data);
+			list = g_slist_delete_link(list, node);
+			nm_request_set_user_define(request, list);
 		}
 
 		/* Time to callback? */

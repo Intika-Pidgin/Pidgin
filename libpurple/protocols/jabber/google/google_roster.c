@@ -33,14 +33,10 @@ void jabber_google_roster_outgoing(JabberStream *js, PurpleXmlNode *query, Purpl
 	const char *jid = purple_xmlnode_get_attrib(item, "jid");
 	char *jid_norm = (char *)jabber_normalize(account, jid);
 
-	while (list) {
-		if (purple_strequal(jid_norm, (char*)list->data)) {
-			purple_xmlnode_set_attrib(query, "xmlns:gr", NS_GOOGLE_ROSTER);
-			purple_xmlnode_set_attrib(query, "gr:ext", "2");
-			purple_xmlnode_set_attrib(item, "gr:t", "B");
-			return;
-		}
-		list = list->next;
+	if (g_slist_find_custom(list, jid_norm, (GCompareFunc)g_strcmp0)) {
+		purple_xmlnode_set_attrib(query, "xmlns:gr", NS_GOOGLE_ROSTER);
+		purple_xmlnode_set_attrib(query, "gr:ext", "2");
+		purple_xmlnode_set_attrib(item, "gr:t", "B");
 	}
 }
 
@@ -75,10 +71,7 @@ gboolean jabber_google_roster_incoming(JabberStream *js, PurpleXmlNode *item)
 			purple_debug_info("jabber", "Removing %s from local buddy list\n",
 			                  jid_norm);
 
-			do {
-				purple_blist_remove_buddy(buddies->data);
-				buddies = g_slist_delete_link(buddies, buddies);
-			} while (buddies);
+			g_slist_free_full(buddies, (GDestroyNotify)purple_blist_remove_buddy);
 		}
 
 		g_free(jid_norm);
