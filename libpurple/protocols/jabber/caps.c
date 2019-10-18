@@ -45,10 +45,7 @@ static guint       save_timer = 0;
 static void
 free_string_glist(GList *list)
 {
-	while (list) {
-		g_free(list->data);
-		list = g_list_delete_link(list, list);
-	}
+	g_list_free_full(list, g_free);
 }
 
 static JabberCapsNodeExts*
@@ -115,10 +112,7 @@ jabber_caps_client_info_destroy(JabberCapsClientInfo *info)
 
 	free_string_glist(info->features);
 
-	while (info->forms) {
-		purple_xmlnode_free(info->forms->data);
-		info->forms = g_list_delete_link(info->forms, info->forms);
-	}
+	g_list_free_full(info->forms, (GDestroyNotify)purple_xmlnode_free);
 
 	jabber_caps_node_exts_unref(info->exts);
 

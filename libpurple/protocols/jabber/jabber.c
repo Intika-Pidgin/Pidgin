@@ -1673,15 +1673,8 @@ void jabber_close(PurpleConnection *gc)
 	if(js->chats)
 		g_hash_table_destroy(js->chats);
 
-	while(js->chat_servers) {
-		g_free(js->chat_servers->data);
-		js->chat_servers = g_list_delete_link(js->chat_servers, js->chat_servers);
-	}
-
-	while(js->user_directories) {
-		g_free(js->user_directories->data);
-		js->user_directories = g_list_delete_link(js->user_directories, js->user_directories);
-	}
+	g_list_free_full(js->chat_servers, g_free);
+	g_list_free_full(js->user_directories, g_free);
 
 	while(js->bs_proxies) {
 		JabberBytestreamsStreamhost *sh = js->bs_proxies->data;

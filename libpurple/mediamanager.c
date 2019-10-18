@@ -233,18 +233,9 @@ purple_media_manager_finalize (GObject *media)
 			purple_media_manager_get_instance_private(
 					PURPLE_MEDIA_MANAGER(media));
 
-	for (; priv->medias; priv->medias =
-			g_list_delete_link(priv->medias, priv->medias)) {
-		g_object_unref(priv->medias->data);
-	}
-	for (; priv->private_medias; priv->private_medias =
-			g_list_delete_link(priv->private_medias, priv->private_medias)) {
-		g_object_unref(priv->private_medias->data);
-	}
-	for (; priv->elements; priv->elements =
-			g_list_delete_link(priv->elements, priv->elements)) {
-		g_object_unref(priv->elements->data);
-	}
+	g_list_free_full(priv->medias, g_object_unref);
+	g_list_free_full(priv->private_medias, g_object_unref);
+	g_list_free_full(priv->elements, g_object_unref);
 	if (priv->video_caps)
 		gst_caps_unref(priv->video_caps);
 #ifdef HAVE_MEDIA_APPLICATION

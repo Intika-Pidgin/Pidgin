@@ -291,11 +291,7 @@ void *jabber_x_data_request_with_actions(JabberStream *js, PurpleXmlNode *packet
 			}
 			purple_request_field_group_add_field(group, field);
 
-			while(selected) {
-				g_free(selected->data);
-				selected = g_list_delete_link(selected, selected);
-			}
-
+			g_list_free_full(selected, g_free);
 		} else if(purple_strequal(type, "boolean")) {
 			gboolean def = FALSE;
 

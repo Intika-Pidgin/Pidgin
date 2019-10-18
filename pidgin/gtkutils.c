@@ -2228,11 +2228,7 @@ static void
 old_mini_dialog_destroy_cb(GtkWidget *dialog,
                            GList *cb_datas)
 {
-	while (cb_datas != NULL)
-	{
-		g_free(cb_datas->data);
-		cb_datas = g_list_delete_link(cb_datas, cb_datas);
-	}
+	g_list_free_full(cb_datas, g_free);
 }
 
 static void
