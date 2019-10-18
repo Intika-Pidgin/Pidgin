@@ -654,12 +654,10 @@ purple_chat_conversation_unignore(PurpleChatConversation *chat, const char *name
 
 	item = g_list_find(purple_chat_conversation_get_ignored(chat),
 					   purple_chat_conversation_get_ignored_user(chat, name));
+	g_free(item->data);
 
 	purple_chat_conversation_set_ignored(chat,
-		g_list_remove_link(priv->ignored, item));
-
-	g_free(item->data);
-	g_list_free_1(item);
+		g_list_delete_link(priv->ignored, item));
 }
 
 GList *
