@@ -629,19 +629,43 @@ if gplugin_dep.found()
 	else
 		gplugin_include_directories = []
 	endif
+
+	if get_option('gtkui')
+		gplugin_gtk_dep = dependency('gplugin-gtk', required : true)
+
+		if enable_introspection
+			gplugin_gtk_gir = 'GPluginGtk-0.0'
+			gplugin_gtk_include_directories = include_directories(
+				join_paths(gplugin_gtk_dep.get_pkgconfig_variable('prefix'),
+				           'share/gir-1.0'))
+		else
+			gplugin_gtk_include_directories = []
+		endif
+	endif
 else
 	gplugin_proj = subproject('gplugin',
 	    default_options : [
 	        'doc=' + get_option('doc').to_string(),
 	        'gobject-introspection=' + enable_introspection.to_string(),
 	        'nls=' + get_option('nls').to_string(),
+	        'gtk3=' + get_option('gtkui').to_string(),
 	    ]
 	)
+
 	gplugin_dep = gplugin_proj.get_variable('gplugin_dep')
 	if enable_introspection
 		gplugin_gir = gplugin_proj.get_variable('gplugin_gir')[0]
 	endif
 	gplugin_include_directories = []
+
+	if get_option('gtkui')
+		gplugin_gtk_dep = gplugin_proj.get_variable('gplugin_gtk_dep')
+
+		if enable_introspection
+			gplugin_gtk_gir = gplugin_proj.get_variable('gplugin_gtk_gir')[0]
+		endif
+		gplugin_gtk_include_directories = []
+	endif
 endif
 
 PLUGINS = get_option('plugins')

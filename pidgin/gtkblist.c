@@ -63,6 +63,7 @@
 #include "pidgin/pidgindebugplugininfo.h"
 #include "pidgin/pidgingdkpixbuf.h"
 #include "pidgin/pidginlog.h"
+#include "pidgin/pidginpluginsdialog.h"
 #include "pidgin/pidgintooltip.h"
 #include "pidginmenutray.h"
 
@@ -3617,6 +3618,15 @@ set_mood_show(void)
  *            Crap                                 *
  ***************************************************/
 static void
+pidgin_plugins_dialog_cb(GtkAction *action, GtkWidget *window) {
+	GtkWidget *dialog = pidgin_plugins_dialog_new();
+
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(window));
+
+	gtk_widget_show_all(dialog);
+}
+
+static void
 _pidgin_about_cb(GtkAction *action, GtkWidget *window) {
 	GtkWidget *about = pidgin_about_dialog_new();
 
@@ -3651,6 +3661,7 @@ static const GtkActionEntry blist_menu_entries[] = {
 	{ "BuddyPounces", NULL, N_("Buddy _Pounces"), NULL, NULL, pidgin_pounces_manager_show },
 	{ "CustomSmileys", PIDGIN_STOCK_TOOLBAR_SMILEY, N_("Custom Smile_ys"), "<control>Y", NULL, pidgin_smiley_manager_show },
 	{ "Plugins", PIDGIN_STOCK_TOOLBAR_PLUGINS, N_("Plu_gins"), "<control>U", NULL, pidgin_plugin_dialog_show },
+	{ "Plugins-NG", PIDGIN_STOCK_TOOLBAR_PLUGINS, N_("Plugins-ng"), NULL, NULL, pidgin_plugins_dialog_cb },
 	{ "Preferences", GTK_STOCK_PREFERENCES, N_("Pr_eferences"), "<control>P", NULL, pidgin_prefs_show },
 	{ "Privacy", NULL, N_("Pr_ivacy"), NULL, NULL, pidgin_privacy_dialog_show },
 	{ "SetMood", NULL, N_("Set _Mood"), "<control>D", NULL, set_mood_show },
@@ -3710,6 +3721,7 @@ static const char *blist_menu =
 			"<menuitem action='BuddyPounces'/>"
 			"<menuitem action='CustomSmileys'/>"
 			"<menuitem action='Plugins'/>"
+			"<menuitem action='Plugins-NG'/>"
 			"<menuitem action='Preferences'/>"
 			"<menuitem action='Privacy'/>"
 			"<menuitem action='SetMood'/>"
