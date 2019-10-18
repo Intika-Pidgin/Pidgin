@@ -25,7 +25,6 @@
 
 #include <libsoup/soup.h>
 
-#include "http.h"
 #include "useravatar.h"
 #include "pep.h"
 #include "debug.h"

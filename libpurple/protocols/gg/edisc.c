@@ -33,7 +33,6 @@
 #include "gg.h"
 #include "libgaduw.h"
 #include "utils.h"
-#include <http.h>
 
 #include <json-glib/json-glib.h>
 

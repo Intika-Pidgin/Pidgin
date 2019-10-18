@@ -64,7 +64,6 @@ typedef struct _JabberStream JabberStream;
 #include "attention.h"
 #include "circularbuffer.h"
 #include "connection.h"
-#include "http.h"
 #include "media.h"
 #include "mediamanager.h"
 #include "protocol.h"

@@ -23,7 +23,6 @@
 #include "internal.h"
 
 #include "debug.h"
-#include "http.h"
 #include "notify.h"
 #include "smiley.h"
 #include "smiley-custom.h"

@@ -26,7 +26,6 @@
 #define PREF_URL  PREFS_BASE "/url"
 
 #include <conversation.h>
-#include <http.h>
 #include <signals.h>
 
 #include <glib.h>

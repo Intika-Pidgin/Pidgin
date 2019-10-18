@@ -31,7 +31,6 @@
 
 #include <debug.h>
 #include <glibcompat.h>
-#include <http.h>
 
 #include "gg.h"
 #include "utils.h"

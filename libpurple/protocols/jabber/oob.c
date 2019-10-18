@@ -23,7 +23,6 @@
 #include "internal.h"
 #include "debug.h"
 #include "xfer.h"
-#include "http.h"
 #include "util.h"
 
 #include "jabber.h"

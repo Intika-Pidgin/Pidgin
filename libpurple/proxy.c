@@ -27,7 +27,6 @@
 
 #include "internal.h"
 #include "debug.h"
-#include "http.h"
 #include "notify.h"
 #include "prefs.h"
 #include "proxy.h"

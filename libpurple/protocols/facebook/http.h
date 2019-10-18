@@ -34,8 +34,6 @@
 #include <glib.h>
 #include <libsoup/soup.h>
 
-#include <libpurple/http.h>
-
 /**
  * FB_HTTP_ERROR:
  *
