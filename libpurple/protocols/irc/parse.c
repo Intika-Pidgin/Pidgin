@@ -239,11 +239,7 @@ void irc_register_commands(void)
 
 void irc_unregister_commands(void)
 {
-	while (cmds) {
-		PurpleCmdId id = GPOINTER_TO_UINT(cmds->data);
-		purple_cmd_unregister(id);
-		cmds = g_slist_delete_link(cmds, cmds);
-	}
+	g_slist_free_full(cmds, (GDestroyNotify)purple_cmd_unregister);
 }
 
 static char *irc_send_convert(struct irc_conn *irc, const char *string)

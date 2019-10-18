@@ -141,10 +141,7 @@ static void jabber_x_data_ok_cb(struct jabber_x_data_data *data, PurpleRequestFi
 	}
 
 	g_hash_table_destroy(data->fields);
-	while(data->values) {
-		g_free(data->values->data);
-		data->values = g_slist_delete_link(data->values, data->values);
-	}
+	g_slist_free_full(data->values, g_free);
 	g_list_free_full(data->actions, g_free);
 	g_free(data);
 
@@ -163,10 +160,7 @@ static void jabber_x_data_cancel_cb(struct jabber_x_data_data *data, PurpleReque
 	JabberStream *js = data->js;
 	gboolean hasActions = (data->actions != NULL);
 	g_hash_table_destroy(data->fields);
-	while(data->values) {
-		g_free(data->values->data);
-		data->values = g_slist_delete_link(data->values, data->values);
-	}
+	g_slist_free_full(data->values, g_free);
 	g_list_free_full(data->actions, g_free);
 	g_free(data);
 

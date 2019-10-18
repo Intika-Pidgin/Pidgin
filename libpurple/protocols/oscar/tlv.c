@@ -233,11 +233,7 @@ int aim_tlvlist_cmp(GSList *one, GSList *two)
  */
 void aim_tlvlist_free(GSList *list)
 {
-	while (list != NULL)
-	{
-		freetlv(list->data);
-		list = g_slist_delete_link(list, list);
-	}
+	g_slist_free_full(list, (GDestroyNotify)freetlv);
 }
 
 /**
@@ -248,16 +244,7 @@ void aim_tlvlist_free(GSList *list)
  */
 int aim_tlvlist_count(GSList *list)
 {
-	GSList *cur;
-	int count;
-
-	if (list == NULL)
-		return 0;
-
-	for (cur = list, count = 0; cur; cur = cur->next)
-		count++;
-
-	return count;
+	return (int)g_slist_length(list);
 }
 
 /**

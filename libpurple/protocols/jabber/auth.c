@@ -178,10 +178,7 @@ jabber_auth_start(JabberStream *js, PurpleXmlNode *packet)
 		}
 	}
 
-	while (mechanisms) {
-		g_free(mechanisms->data);
-		mechanisms = g_slist_delete_link(mechanisms, mechanisms);
-	}
+	g_slist_free_full(mechanisms, g_free);
 
 	if (js->auth_mech == NULL) {
 		/* Found no good mechanisms... */

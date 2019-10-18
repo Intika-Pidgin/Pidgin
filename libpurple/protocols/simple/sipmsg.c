@@ -193,32 +193,21 @@ void sipmsg_free(struct sipmsg *msg) {
 }
 
 void sipmsg_remove_header(struct sipmsg *msg, const gchar *name) {
-	struct siphdrelement *elem;
-	GSList *tmp = msg->headers;
-	while(tmp) {
-		elem = tmp->data;
-		if(g_ascii_strcasecmp(elem->name, name)==0) {
-			msg->headers = g_slist_remove(msg->headers, elem);
-			g_free(elem->name);
-			g_free(elem->value);
-			g_free(elem);
-			return;
-		}
-		tmp = g_slist_next(tmp);
+	GSList *tmp = g_slist_find_custom(msg->headers, name, (GCompareFunc)g_ascii_strcasecmp);
+	if(tmp) {
+		struct siphdrelement *elem = tmp->data;
+		msg->headers = g_slist_delete_link(msg->headers, tmp);
+		g_free(elem->name);
+		g_free(elem->value);
+		g_free(elem);
 	}
-	return;
 }
 
 const gchar *sipmsg_find_header(struct sipmsg *msg, const gchar *name) {
-	GSList *tmp;
-	struct siphdrelement *elem;
-	tmp = msg->headers;
-	while(tmp) {
-		elem = tmp->data;
-		if(g_ascii_strcasecmp(elem->name, name)==0) {
-			return elem->value;
-		}
-		tmp = g_slist_next(tmp);
+	GSList *tmp = g_slist_find_custom(msg->headers, name, (GCompareFunc)g_ascii_strcasecmp);
+	if(tmp) {
+		struct siphdrelement *elem = tmp->data;
+		return elem->value;
 	}
 	return NULL;
 }

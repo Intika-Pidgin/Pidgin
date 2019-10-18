@@ -880,10 +880,7 @@ static void jabber_buddy_info_show_if_ready(JabberBuddyInfo *jbi)
 
 	purple_notify_userinfo(jbi->js->gc, jbi->jid, user_info, NULL, NULL);
 
-	while (jbi->vcard_images) {
-		g_object_unref(jbi->vcard_images->data);
-		jbi->vcard_images = g_slist_delete_link(jbi->vcard_images, jbi->vcard_images);
-	}
+	g_slist_free_full(jbi->vcard_images, g_object_unref);
 
 	jbi->js->pending_buddy_info_requests = g_slist_remove(jbi->js->pending_buddy_info_requests, jbi);
 
@@ -892,20 +889,17 @@ static void jabber_buddy_info_show_if_ready(JabberBuddyInfo *jbi)
 
 static void jabber_buddy_info_remove_id(JabberBuddyInfo *jbi, const char *id)
 {
-	GSList *l = jbi->ids;
+	GSList *l;
 	char *comp_id;
 
 	if(!id)
 		return;
 
-	while(l) {
+	l = g_slist_find_custom(jbi->ids, id, (GCompareFunc)g_strcmp0);
+	if(l) {
 		comp_id = l->data;
-		if(purple_strequal(id, comp_id)) {
-			jbi->ids = g_slist_remove(jbi->ids, comp_id);
-			g_free(comp_id);
-			return;
-		}
-		l = l->next;
+		jbi->ids = g_slist_delete_link(jbi->ids, l);
+		g_free(comp_id);
 	}
 }
 

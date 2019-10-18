@@ -1242,7 +1242,6 @@ _remove_purple_buddies(NMUser *user)
 	PurpleGroup *group;
 	PurpleBuddy *buddy;
 	GSList *rem_list = NULL;
-	GSList *l;
 	NMFolder *folder = NULL;
 	const char *gname = NULL;
 
@@ -1276,12 +1275,7 @@ _remove_purple_buddies(NMUser *user)
 		}
 	}
 
-	if (rem_list) {
-		for (l = rem_list; l; l = l->next) {
-			purple_blist_remove_buddy(l->data);
-		}
-		g_slist_free(rem_list);
-	}
+	g_slist_free_full(rem_list, (GDestroyNotify)purple_blist_remove_buddy);
 }
 
 /* Add all of the contacts in the given folder to the Purple buddy list */
