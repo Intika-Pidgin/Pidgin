@@ -3767,10 +3767,7 @@ jabber_register_commands(PurpleProtocol *protocol)
 static void cmds_free_func(gpointer value)
 {
 	GSList *commands = value;
-	while (commands) {
-		purple_cmd_unregister(GPOINTER_TO_UINT(commands->data));
-		commands = g_slist_delete_link(commands, commands);
-	}
+	g_slist_free_full(commands, (GDestroyNotify)purple_cmd_unregister);
 }
 
 static void jabber_unregister_commands(PurpleProtocol *protocol)

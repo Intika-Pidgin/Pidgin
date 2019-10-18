@@ -165,8 +165,7 @@ nm_conference_remove_participant(NMConference * conference, const char *dn)
 		nm_release_user_record((NMUserRecord *) element->data);
 		element->data = NULL;
 		conference->participants =
-			g_slist_remove_link(conference->participants, element);
-		g_slist_free_1(element);
+			g_slist_delete_link(conference->participants, element);
 	}
 }
 
