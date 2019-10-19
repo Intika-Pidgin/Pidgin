@@ -1246,6 +1246,7 @@ purple_savedstatuses_uninit(void)
 	}
 
 	g_list_free_full(saved_statuses, (GDestroyNotify)free_saved_status);
+	saved_statuses = NULL;
 
 	g_hash_table_destroy(creation_times);
 	creation_times = NULL;
