@@ -83,22 +83,6 @@ purple_protocol_get_whiteboard_ops(const PurpleProtocol *protocol)
 	return protocol->whiteboard_ops;
 }
 
-static inline void
-user_splits_free(PurpleProtocol *protocol)
-{
-	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
-
-	g_list_free_full(protocol->user_splits, (GDestroyNotify)purple_account_user_split_destroy);
-}
-
-static inline void
-account_options_free(PurpleProtocol *protocol)
-{
-	g_return_if_fail(PURPLE_IS_PROTOCOL(protocol));
-
-	g_list_free_full(protocol->account_options, (GDestroyNotify)purple_account_option_destroy);
-}
-
 static void
 icon_spec_free(PurpleProtocol *protocol)
 {
@@ -143,8 +127,8 @@ purple_protocol_finalize(GObject *object)
 
 	purple_prefs_disconnect_by_handle(protocol);
 
-	user_splits_free(protocol);
-	account_options_free(protocol);
+	g_list_free_full(protocol->user_splits, (GDestroyNotify)purple_account_user_split_destroy);
+	g_list_free_full(protocol->account_options, (GDestroyNotify)purple_account_option_destroy);
 	icon_spec_free(protocol);
 
 	parent_class->finalize(object);
