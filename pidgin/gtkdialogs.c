@@ -59,6 +59,7 @@ void
 pidgin_dialogs_destroy_all()
 {
 	g_list_free_full(dialogwindows, (GDestroyNotify)gtk_widget_destroy);
+	dialogwindows = NULL;
 }
 
 static void destroy_win(GtkWidget *button, GtkWidget *win)

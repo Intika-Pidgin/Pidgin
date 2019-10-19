@@ -565,6 +565,7 @@ jabber_disco_server_items_result_cb(JabberStream *js, const char *from,
 		return;
 
 	g_list_free_full(js->chat_servers, g_free);
+	js->chat_servers = NULL;
 
 	query = purple_xmlnode_get_child(packet, "query");
 
