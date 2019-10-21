@@ -496,6 +496,7 @@ pidgin_status_box_dispose(GObject *obj)
 	PidginStatusBox *statusbox = PIDGIN_STATUS_BOX(obj);
 
 	destroy_icon_box(statusbox);
+	G_OBJECT_CLASS(parent_class)->dispose(obj);
 }
 
 static void

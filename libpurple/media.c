@@ -289,6 +289,11 @@ purple_media_dispose(GObject *media)
 		priv->manager = NULL;
 	}
 
+	if (priv->conference_type) {
+		g_free(priv->conference_type);
+		priv->conference_type = NULL;
+	}
+
 	G_OBJECT_CLASS(purple_media_parent_class)->dispose(media);
 }
 

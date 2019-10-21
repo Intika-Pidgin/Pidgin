@@ -1441,6 +1441,7 @@ init_conference(PurpleMediaBackendFs2 *self)
 	GstBus *bus;
 	gchar *name;
 	GKeyFile *default_props;
+	PurpleAccount *account;
 
 	priv->conference = FS_CONFERENCE(
 			gst_element_factory_make(priv->conference_type, NULL));
@@ -1450,12 +1451,13 @@ init_conference(PurpleMediaBackendFs2 *self)
 		return FALSE;
 	}
 
-	if (purple_account_get_silence_suppression(
-				purple_media_get_account(priv->media)))
+	account = purple_media_get_account(priv->media);
+	if (purple_account_get_silence_suppression(account))
 		priv->silence_threshold = purple_prefs_get_int(
 				"/purple/media/audio/silence_threshold") / 100.0;
 	else
 		priv->silence_threshold = 0;
+	g_object_unref(account);
 
 	pipeline = purple_media_manager_get_pipeline(
 			purple_media_get_manager(priv->media));
@@ -1616,6 +1618,7 @@ create_src(PurpleMediaBackendFs2 *self, const gchar *sess_id,
 	gst_element_set_locked_state(session->src, FALSE);
 	gst_object_unref(session->src);
 	gst_object_unref(sinkpad);
+	gst_object_unref(srcpad);
 
 	purple_media_manager_create_output_window(purple_media_get_manager(
 			priv->media), priv->media, sess_id, NULL);

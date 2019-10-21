@@ -2485,13 +2485,13 @@ pidgin_request_folder(const char *title, const char *dirname, GCallback ok_cb,
 static void
 pidgin_window_detach_children(GtkWindow* win)
 {
-	GList *it;
+	GList *it, *l;
 	GtkWindow *par;
 
 	g_return_if_fail(win != NULL);
 
 	par = gtk_window_get_transient_for(win);
-	it = gtk_window_list_toplevels();
+	l = it = gtk_window_list_toplevels();
 	for (it = g_list_first(it); it != NULL; it = g_list_next(it)) {
 		GtkWindow *child = GTK_WINDOW(it->data);
 		if (gtk_window_get_transient_for(child) != win)
@@ -2506,6 +2506,7 @@ pidgin_window_detach_children(GtkWindow* win)
 		}
 		gtk_window_set_transient_for(child, par);
 	}
+	g_list_free(l);
 }
 
 static void

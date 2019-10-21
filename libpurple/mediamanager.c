@@ -429,6 +429,7 @@ get_media_by_account(PurpleMediaManager *manager,
 #ifdef USE_VV
 	GList *media = NULL;
 	GList *iter;
+	PurpleAccount *media_account;
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_MANAGER(manager), NULL);
 
@@ -437,9 +438,11 @@ get_media_by_account(PurpleMediaManager *manager,
 	else
 		iter = manager->priv->medias;
 	for (; iter; iter = g_list_next(iter)) {
-		if (purple_media_get_account(iter->data) == account) {
+		media_account = purple_media_get_account(iter->data);
+		if (media_account == account) {
 			media = g_list_prepend(media, iter->data);
 		}
+		g_object_unref (media_account);
 	}
 
 	return media;

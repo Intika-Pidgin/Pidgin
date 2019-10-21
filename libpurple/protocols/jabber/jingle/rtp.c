@@ -121,7 +121,7 @@ jingle_rtp_candidates_prepared_cb(PurpleMedia *media,
 			session, jingle_transport_get_transport_type(oldtransport),
 			0, candidates);
 
-	g_list_free(candidates);
+	purple_media_candidate_list_free(candidates);
 	g_object_unref(oldtransport);
 
 	jingle_content_set_pending_transport(content, transport);
@@ -578,6 +578,9 @@ jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlNode *xmlcont
 			g_free(remote_jid);
 			g_free(name);
 			g_object_unref(session);
+			g_object_unref(transport);
+			purple_media_candidate_list_free(candidates);
+			purple_media_codec_list_free(codecs);
 			break;
 		}
 		case JINGLE_SESSION_TERMINATE: {
@@ -607,6 +610,8 @@ jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlNode *xmlcont
 			g_free(remote_jid);
 			g_free(name);
 			g_object_unref(session);
+			g_object_unref(transport);
+			purple_media_candidate_list_free(candidates);
 			break;
 		}
 		case JINGLE_DESCRIPTION_INFO: {

@@ -1686,6 +1686,12 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->google_relay_token);
 	g_free(js->google_relay_host);
 
+	if (js->sessions) {
+		g_hash_table_remove_all(js->sessions);
+		g_hash_table_unref(js->sessions);
+		js->sessions = NULL;
+	}
+
 	g_free(js);
 
 	purple_connection_set_protocol_data(gc, NULL);

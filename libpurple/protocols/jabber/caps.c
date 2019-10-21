@@ -902,6 +902,7 @@ gchar *jabber_caps_calculate_hash(JabberCapsClientInfo *info,
 
 	ret = g_base64_encode(checksum, checksum_size);
 	g_free(checksum);
+	g_checksum_free(hash);
 
 	return ret;
 }
