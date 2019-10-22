@@ -26,7 +26,6 @@ finch/plugins/gnttinyurl.c
 finch/plugins/grouping.c
 finch/plugins/lastlog.c
 libpurple/account.c
-libpurple/accountopt.c
 libpurple/accounts.c
 libpurple/action.c
 libpurple/attention.c
