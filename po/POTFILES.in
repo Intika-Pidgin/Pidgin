@@ -435,7 +435,7 @@ pidgin/plugins/transparency.c
 pidgin/plugins/unity.c
 pidgin/plugins/win32/winprefs/gtkappbar.c
 pidgin/plugins/win32/winprefs/winprefs.c
-pidgin/plugins/xmppconsole.c
+pidgin/plugins/xmppconsole/xmppconsole.c
 pidgin/resources/About/about.ui
 pidgin/resources/Conversations/invite_dialog.ui
 pidgin/resources/Debug/debug.ui
