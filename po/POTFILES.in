@@ -48,7 +48,6 @@ libpurple/e2ee.c
 libpurple/eventloop.c
 libpurple/example/nullclient.c
 libpurple/group.c
-libpurple/http.c
 libpurple/idle.c
 libpurple/image.c
 libpurple/image-store.c
@@ -78,7 +77,7 @@ libpurple/plugins/helloworld.c
 libpurple/plugins/idle.c
 libpurple/plugins/joinpart.c
 libpurple/plugins/keyrings/internalkeyring.c
-libpurple/plugins/keyrings/kwallet.cpp
+libpurple/plugins/keyrings/kwallet/purplekwallet.cpp
 libpurple/plugins/keyrings/secretservice.c
 libpurple/plugins/keyrings/wincred.c
 libpurple/plugins/log_reader.c
