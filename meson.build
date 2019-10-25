@@ -384,7 +384,7 @@ if gstreamer.found()
 	                             required : get_option('gstreamer-video'))
 	conf.set('USE_GSTVIDEO', gstreamer_video.found())
 else
-	gstreamer_video = disabler()
+	gstreamer_video = []
 endif
 
 #######################################################################
