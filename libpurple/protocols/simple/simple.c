@@ -2131,6 +2131,7 @@ static void simple_close(PurpleConnection *gc)
 	g_hash_table_destroy(sip->buddies);
 	g_free(sip->regcallid);
 	g_slist_free_full(sip->transactions, (GDestroyNotify)transactions_destroy);
+	g_slist_free_full(sip->watcher, (GDestroyNotify)watcher_destroy);
 	g_free(sip->publish_etag);
 	if (sip->txbuf)
 		g_object_unref(G_OBJECT(sip->txbuf));
