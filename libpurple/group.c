@@ -188,7 +188,8 @@ void purple_group_set_name(PurpleGroup *source, const char *name) {
 	/* Notify all protocols */
 	/* TODO: Is this condition needed?  Seems like it would always be TRUE */
 	if(old_name && !purple_strequal(priv->name, old_name)) {
-		for (accts = purple_group_get_accounts(source); accts; accts = g_slist_remove(accts, accts->data)) {
+		for (accts = purple_group_get_accounts(source); accts;
+		     accts = g_slist_delete_link(accts, accts)) {
 			PurpleAccount *account = accts->data;
 			PurpleConnection *gc = NULL;
 			PurpleProtocol *protocol = NULL;

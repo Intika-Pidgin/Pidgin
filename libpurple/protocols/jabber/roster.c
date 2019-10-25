@@ -320,7 +320,7 @@ static void jabber_roster_update(JabberStream *js, const char *name,
 			g = purple_buddy_get_group(b);
 			groups = g_slist_append(groups,
 				(char *)jabber_roster_group_get_global_name(g));
-			buddies = g_slist_remove(buddies, b);
+			buddies = g_slist_delete_link(buddies, buddies);
 		}
 
 		tmp = roster_groups_join(groups);
@@ -445,7 +445,7 @@ void jabber_roster_group_change(PurpleConnection *gc, const char *name,
 	while(buddies) {
 		b = buddies->data;
 		groups = g_slist_append(groups, (char*)new_group);
-		buddies = g_slist_remove(buddies, b);
+		buddies = g_slist_delete_link(buddies, buddies);
 	}
 
 	purple_debug_info("jabber", "jabber_roster_group_change(): Moving %s from %s to %s\n",
@@ -481,7 +481,7 @@ void jabber_roster_remove_buddy(PurpleConnection *gc, PurpleBuddy *buddy,
 			tmpgroup = purple_buddy_get_group(tmpbuddy);
 			groups = g_slist_append(groups,
 				(char *)jabber_roster_group_get_global_name(tmpgroup));
-			buddies = g_slist_remove(buddies, tmpbuddy);
+			buddies = g_slist_delete_link(buddies, buddies);
 		}
 
 		purple_debug_info("jabber", "jabber_roster_remove_buddy(): "

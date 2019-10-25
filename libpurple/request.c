@@ -2502,7 +2502,7 @@ purple_request_close(PurpleRequestType type, void *ui_handle)
 		PurpleRequestInfo *info = l->data;
 
 		if (info->ui_handle == ui_handle) {
-			handles = g_list_remove(handles, info);
+			handles = g_list_delete_link(handles, l);
 			purple_request_close_info(info);
 			break;
 		}
@@ -2522,7 +2522,7 @@ purple_request_close_with_handle(void *handle)
 		l_next = l->next;
 
 		if (info->handle == handle) {
-			handles = g_list_remove(handles, info);
+			handles = g_list_delete_link(handles, l);
 			purple_request_close_info(info);
 		}
 	}

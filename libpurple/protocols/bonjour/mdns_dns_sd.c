@@ -434,7 +434,7 @@ _mdns_service_browse_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint32
 				idata->resolvers = g_slist_delete_link(idata->resolvers, l);
 				/* This IP is no longer available */
 				if (rd->ip != NULL) {
-					bb->ips = g_slist_remove(bb->ips, rd->ip);
+					bb->ips = g_slist_delete_link(bb->ips, l);
 					g_free((gchar *) rd->ip);
 				}
 				_cleanup_resolver_data(rd);

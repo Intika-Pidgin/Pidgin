@@ -1145,7 +1145,7 @@ void silcpurple_chat_leave(PurpleConnection *gc, int id)
 		silc_client_del_channel_private_key(client, conn,
 						    channel, prv->key);
 		silc_free(prv);
-		sg->grps = g_list_remove(sg->grps, prv);
+		sg->grps = g_list_delete_link(sg->grps, l);
 		purple_serv_got_chat_left(gc, id);
 		return;
 	}
@@ -1177,7 +1177,7 @@ void silcpurple_chat_leave(PurpleConnection *gc, int id)
 							    prv->key);
 			purple_serv_got_chat_left(gc, prv->id);
 			silc_free(prv);
-			sg->grps = g_list_remove(sg->grps, prv);
+			sg->grps = g_list_delete_link(sg->grps, l);
 			if (!sg->grps)
 				break;
 		}

@@ -1523,7 +1523,7 @@ purple_markup_html_to_xhtml(const char *html, char **xhtml_out,
 						}
 						if(tags == tag)
 							break;
-						tags = g_list_remove(tags, pt);
+						tags = g_list_delete_link(tags, tags);
 						g_free(pt);
 					}
 					g_free(tag->data);

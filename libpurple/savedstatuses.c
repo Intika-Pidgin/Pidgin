@@ -203,7 +203,7 @@ remove_old_transient_statuses(void)
 			{
 				if (saved_status != current_status && saved_status != startup_status)
 				{
-					saved_statuses = g_list_remove(saved_statuses, saved_status);
+					saved_statuses = g_list_delete_link(saved_statuses, l);
 					creation_time = purple_savedstatus_get_creation_time(saved_status);
 					g_hash_table_remove(creation_times, (gconstpointer)creation_time);
 					free_saved_status(saved_status);

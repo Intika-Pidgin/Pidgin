@@ -292,7 +292,8 @@ _browser_callback(AvahiServiceBrowser *b, AvahiIfIndex interface,
 
 				if (l != NULL) {
 					AvahiSvcResolverData *rd = l->data;
-					b_impl->resolvers = g_slist_remove(b_impl->resolvers, rd);
+					b_impl->resolvers =
+					        g_slist_delete_link(b_impl->resolvers, l);
 					/* This IP is no longer available */
 					if (rd->ip != NULL) {
 						bb->ips = g_slist_remove(bb->ips, rd->ip);

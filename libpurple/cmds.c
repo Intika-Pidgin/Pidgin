@@ -107,7 +107,7 @@ void purple_cmd_unregister(PurpleCmdId id)
 			if (ops && ops->unregister_command)
 				ops->unregister_command(c->cmd, c->protocol_id);
 
-			cmds = g_list_remove(cmds, c);
+			cmds = g_list_delete_link(cmds, l);
 			purple_signal_emit(purple_cmds_get_handle(), "cmd-removed", c->cmd);
 			purple_cmd_free(c);
 			return;
