@@ -1,5 +1,5 @@
 /**
- * @file bonjour.h The Purple interface to mDNS and peer to peer Jabber.
+ * @file bonjour.h The Purple interface to mDNS and peer to peer XMPP.
  *
  * purple
  *
@@ -32,7 +32,7 @@
 #include <purple.h>
 
 #include "mdns_common.h"
-#include "jabber.h"
+#include "xmpp.h"
 
 #define BONJOUR_GROUP_NAME _("Bonjour")
 #define BONJOUR_PROTOCOL_NAME "bonjour"
@@ -64,7 +64,7 @@ typedef struct
 typedef struct
 {
 	BonjourDnsSd *dns_sd_data;
-	BonjourJabber *jabber_data;
+	BonjourXMPP *xmpp_data;
 	GSList *xfer_lists;
 	gchar *jid;
 } BonjourData;

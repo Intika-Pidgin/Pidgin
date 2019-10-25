@@ -80,7 +80,7 @@ xep_ft_si_reject(BonjourData *bd, const char *id, const char *to, const char *er
 		return;
 	}
 
-	iq = xep_iq_new(bd, XEP_IQ_ERROR, to, bonjour_get_jid(bd->jabber_data->account), id);
+	iq = xep_iq_new(bd, XEP_IQ_ERROR, to, bonjour_get_jid(bd->xmpp_data->account), id);
 	if(iq == NULL)
 		return;
 
@@ -213,29 +213,29 @@ xep_ft_si_offer(PurpleXfer *xfer, const gchar *to)
 	/* Assign stream id. */
 	g_free(xf->iq_id);
 	xf->iq_id = g_strdup_printf("%u", next_id++);
-	iq = xep_iq_new(xf->data, XEP_IQ_SET, to, bonjour_get_jid(bd->jabber_data->account), xf->iq_id);
+	iq = xep_iq_new(xf->data, XEP_IQ_SET, to, bonjour_get_jid(bd->xmpp_data->account), xf->iq_id);
 	if(iq == NULL)
 		return;
 
 	/*Construct Stream initialization offer message.*/
 	si_node = purple_xmlnode_new_child(iq->node, "si");
-	purple_xmlnode_set_namespace(si_node, "http://jabber.org/protocol/si");
-	purple_xmlnode_set_attrib(si_node, "profile", "http://jabber.org/protocol/si/profile/file-transfer");
+	purple_xmlnode_set_namespace(si_node, "http://xmpp.org/protocol/si");
+	purple_xmlnode_set_attrib(si_node, "profile", "http://xmpp.org/protocol/si/profile/file-transfer");
 	g_free(xf->sid);
 	xf->sid = g_strdup(xf->iq_id);
 	purple_xmlnode_set_attrib(si_node, "id", xf->sid);
 
 	file = purple_xmlnode_new_child(si_node, "file");
-	purple_xmlnode_set_namespace(file, "http://jabber.org/protocol/si/profile/file-transfer");
+	purple_xmlnode_set_namespace(file, "http://xmpp.org/protocol/si/profile/file-transfer");
 	purple_xmlnode_set_attrib(file, "name", purple_xfer_get_filename(xfer));
 	g_snprintf(buf, sizeof(buf), "%" G_GOFFSET_FORMAT, purple_xfer_get_size(xfer));
 	purple_xmlnode_set_attrib(file, "size", buf);
 
 	feature = purple_xmlnode_new_child(si_node, "feature");
-	purple_xmlnode_set_namespace(feature, "http://jabber.org/protocol/feature-neg");
+	purple_xmlnode_set_namespace(feature, "http://xmpp.org/protocol/feature-neg");
 
 	x = purple_xmlnode_new_child(feature, "x");
-	purple_xmlnode_set_namespace(x, "jabber:x:data");
+	purple_xmlnode_set_namespace(x, "xmpp:x:data");
 	purple_xmlnode_set_attrib(x, "type", "form");
 
 	field = purple_xmlnode_new_child(x, "field");
@@ -245,12 +245,12 @@ xep_ft_si_offer(PurpleXfer *xfer, const gchar *to)
 	if (xf->mode & XEP_BYTESTREAMS) {
 		PurpleXmlNode *option = purple_xmlnode_new_child(field, "option");
 		PurpleXmlNode *value = purple_xmlnode_new_child(option, "value");
-		purple_xmlnode_insert_data(value, "http://jabber.org/protocol/bytestreams", -1);
+		purple_xmlnode_insert_data(value, "http://xmpp.org/protocol/bytestreams", -1);
 	}
 	if (xf->mode & XEP_IBB) {
 		PurpleXmlNode *option = purple_xmlnode_new_child(field, "option");
 		PurpleXmlNode *value = purple_xmlnode_new_child(option, "value");
-		purple_xmlnode_insert_data(value, "http://jabber.org/protocol/ibb", -1);
+		purple_xmlnode_insert_data(value, "http://xmpp.org/protocol/ibb", -1);
 	}
 
 	xep_iq_send_and_free(iq);
@@ -271,26 +271,26 @@ xep_ft_si_result(PurpleXfer *xfer, const char *to)
 	bd = xf->data;
 
 	purple_debug_info("bonjour", "xep file transfer stream initialization result.\n");
-	iq = xep_iq_new(bd, XEP_IQ_RESULT, to, bonjour_get_jid(bd->jabber_data->account), xf->iq_id);
+	iq = xep_iq_new(bd, XEP_IQ_RESULT, to, bonjour_get_jid(bd->xmpp_data->account), xf->iq_id);
 	if(iq == NULL)
 		return;
 
 	si_node = purple_xmlnode_new_child(iq->node, "si");
-	purple_xmlnode_set_namespace(si_node, "http://jabber.org/protocol/si");
-	/*purple_xmlnode_set_attrib(si_node, "profile", "http://jabber.org/protocol/si/profile/file-transfer");*/
+	purple_xmlnode_set_namespace(si_node, "http://xmpp.org/protocol/si");
+	/*purple_xmlnode_set_attrib(si_node, "profile", "http://xmpp.org/protocol/si/profile/file-transfer");*/
 
 	feature = purple_xmlnode_new_child(si_node, "feature");
-	purple_xmlnode_set_namespace(feature, "http://jabber.org/protocol/feature-neg");
+	purple_xmlnode_set_namespace(feature, "http://xmpp.org/protocol/feature-neg");
 
 	x = purple_xmlnode_new_child(feature, "x");
-	purple_xmlnode_set_namespace(x, "jabber:x:data");
+	purple_xmlnode_set_namespace(x, "xmpp:x:data");
 	purple_xmlnode_set_attrib(x, "type", "submit");
 
 	field = purple_xmlnode_new_child(x, "field");
 	purple_xmlnode_set_attrib(field, "var", "stream-method");
 
 	value = purple_xmlnode_new_child(field, "value");
-	purple_xmlnode_insert_data(value, "http://jabber.org/protocol/bytestreams", -1);
+	purple_xmlnode_insert_data(value, "http://xmpp.org/protocol/bytestreams", -1);
 
 	xep_iq_send_and_free(iq);
 }
@@ -438,7 +438,7 @@ xep_si_parse(PurpleConnection *pc, PurpleXmlNode *packet, PurpleBuddy *pb)
 
 			profile = purple_xmlnode_get_attrib(si, "profile");
 
-			if (purple_strequal(profile, "http://jabber.org/protocol/si/profile/file-transfer")) {
+			if (purple_strequal(profile, "http://xmpp.org/protocol/si/profile/file-transfer")) {
 				const char *filename = NULL, *filesize_str = NULL;
 				goffset filesize = 0;
 				PurpleXmlNode *file;
@@ -904,16 +904,16 @@ bonjour_bytestreams_listen(int sock, gpointer data)
 
 	bd = xf->data;
 
-	iq = xep_iq_new(bd, XEP_IQ_SET, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->jabber_data->account), xf->sid);
+	iq = xep_iq_new(bd, XEP_IQ_SET, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->xmpp_data->account), xf->sid);
 
 	query = purple_xmlnode_new_child(iq->node, "query");
-	purple_xmlnode_set_namespace(query, "http://jabber.org/protocol/bytestreams");
+	purple_xmlnode_set_namespace(query, "http://xmpp.org/protocol/bytestreams");
 	purple_xmlnode_set_attrib(query, "sid", xf->sid);
 	purple_xmlnode_set_attrib(query, "mode", "tcp");
 
 	purple_xfer_set_local_port(xfer, purple_network_get_port_from_fd(sock));
 
-	local_ips = bonjour_jabber_get_local_ips(sock);
+	local_ips = bonjour_xmpp_get_local_ips(sock);
 
 	port = g_strdup_printf("%hu", purple_xfer_get_local_port(xfer));
 	while(local_ips) {
@@ -981,9 +981,9 @@ bonjour_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_me
 	/* Here, start the file transfer.*/
 
 	/* Notify Initiator of Connection */
-	iq = xep_iq_new(bd, XEP_IQ_RESULT, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->jabber_data->account), xf->iq_id);
+	iq = xep_iq_new(bd, XEP_IQ_RESULT, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->xmpp_data->account), xf->iq_id);
 	q_node = purple_xmlnode_new_child(iq->node, "query");
-	purple_xmlnode_set_namespace(q_node, "http://jabber.org/protocol/bytestreams");
+	purple_xmlnode_set_namespace(q_node, "http://xmpp.org/protocol/bytestreams");
 	tmp_node = purple_xmlnode_new_child(q_node, "streamhost-used");
 	purple_xmlnode_set_attrib(tmp_node, "jid", xf->jid);
 	xep_iq_send_and_free(iq);

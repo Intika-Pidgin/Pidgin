@@ -100,11 +100,11 @@ libpurple/protocols/bonjour/bonjour.c
 libpurple/protocols/bonjour/bonjour_ft.c
 libpurple/protocols/bonjour/buddy.c
 libpurple/protocols/bonjour/dns_sd_proxy.c
-libpurple/protocols/bonjour/jabber.c
 libpurple/protocols/bonjour/mdns_avahi.c
 libpurple/protocols/bonjour/mdns_common.c
 libpurple/protocols/bonjour/mdns_dns_sd.c
 libpurple/protocols/bonjour/parser.c
+libpurple/protocols/bonjour/xmpp.c
 libpurple/protocols.c
 libpurple/protocols/facebook/api.c
 libpurple/protocols/facebook/data.c
