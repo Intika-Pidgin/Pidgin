@@ -35,9 +35,9 @@
 
 #include "bonjour.h"
 #include "mdns_common.h"
-#include "jabber.h"
 #include "buddy.h"
 #include "bonjour_ft.h"
+#include "xmpp.h"
 
 static PurpleProtocol *my_protocol = NULL;
 
@@ -104,12 +104,12 @@ bonjour_login(PurpleAccount *account)
 	bd = g_new0(BonjourData, 1);
 	purple_connection_set_protocol_data(gc, bd);
 
-	/* Start waiting for jabber connections (iChat style) */
-	bd->jabber_data = g_new0(BonjourJabber, 1);
-	bd->jabber_data->port = purple_account_get_int(account, "port", BONJOUR_DEFAULT_PORT);
-	bd->jabber_data->account = account;
+	/* Start waiting for xmpp connections (iChat style) */
+	bd->xmpp_data = g_new0(BonjourXMPP, 1);
+	bd->xmpp_data->port = purple_account_get_int(account, "port", BONJOUR_DEFAULT_PORT);
+	bd->xmpp_data->account = account;
 
-	if (bonjour_jabber_start(bd->jabber_data) == -1) {
+	if (bonjour_xmpp_start(bd->xmpp_data) == -1) {
 		/* Send a message about the connection error */
 		purple_connection_error (gc,
 				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
@@ -121,7 +121,7 @@ bonjour_login(PurpleAccount *account)
 	bd->dns_sd_data = bonjour_dns_sd_new();
 	bd->dns_sd_data->first = g_strdup(purple_account_get_string(account, "first", default_firstname));
 	bd->dns_sd_data->last = g_strdup(purple_account_get_string(account, "last", default_lastname));
-	bd->dns_sd_data->port_p2pj = bd->jabber_data->port;
+	bd->dns_sd_data->port_p2pj = bd->xmpp_data->port;
 	/* Not engaged in AV conference */
 	bd->dns_sd_data->vc = g_strdup("!");
 
@@ -168,11 +168,11 @@ bonjour_close(PurpleConnection *connection)
 		bonjour_dns_sd_free(bd->dns_sd_data);
 	}
 
-	if (bd != NULL && bd->jabber_data != NULL)
+	if (bd != NULL && bd->xmpp_data != NULL)
 	{
 		/* Stop waiting for conversations */
-		bonjour_jabber_stop(bd->jabber_data);
-		g_free(bd->jabber_data);
+		bonjour_xmpp_stop(bd->xmpp_data);
+		g_free(bd->xmpp_data);
 	}
 
 	/* Delete the bonjour group
@@ -206,7 +206,7 @@ bonjour_send_im(PurpleConnection *connection, PurpleMessage *msg)
 	if (purple_message_is_empty(msg) || !purple_message_get_recipient(msg))
 		return 0;
 
-	return bonjour_jabber_send_message(bd->jabber_data,
+	return bonjour_xmpp_send_message(bd->xmpp_data,
 		purple_message_get_recipient(msg),
 		purple_message_get_contents(msg));
 }
@@ -319,7 +319,7 @@ bonjour_convo_closed(PurpleConnection *connection, const char *who)
 		return;
 	}
 
-	bonjour_jabber_close_conversation(bb->conversation);
+	bonjour_xmpp_close_conversation(bb->conversation);
 	bb->conversation = NULL;
 }
 
