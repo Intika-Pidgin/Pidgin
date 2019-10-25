@@ -201,9 +201,9 @@ static struct simple_watcher *watcher_create(struct simple_account_data *sip,
 	return watcher;
 }
 
-static void watcher_remove(struct simple_account_data *sip, const gchar *name) {
-	struct simple_watcher *watcher = watcher_find(sip, name);
-	sip->watcher = g_slist_remove(sip->watcher, watcher);
+static void
+watcher_destroy(struct simple_watcher *watcher)
+{
 	g_free(watcher->name);
 	g_free(watcher->dialog.callid);
 	g_free(watcher->dialog.ourtag);
@@ -218,22 +218,22 @@ static struct sip_connection *connection_create(struct simple_account_data *sip,
 	return ret;
 }
 
-static void connection_remove(struct simple_account_data *sip, int fd) {
-	struct sip_connection *conn = connection_find(sip, fd);
-	sip->openconns = g_slist_remove(sip->openconns, conn);
-	if(conn->inputhandler) purple_input_remove(conn->inputhandler);
-	g_free(conn->inbuf);
+static void
+connection_destroy(struct sip_connection *conn)
+{
+	if (conn->inputhandler) {
+		purple_input_remove(conn->inputhandler);
+	}
+	g_clear_pointer(&conn->inbuf, g_free);
 	g_free(conn);
 }
 
-static void connection_free_all(struct simple_account_data *sip) {
-	struct sip_connection *ret = NULL;
-	GSList *entry = sip->openconns;
-	while(entry) {
-		ret = entry->data;
-		connection_remove(sip, ret->fd);
-		entry = sip->openconns;
-	}
+static void
+connection_remove(struct simple_account_data *sip, int fd)
+{
+	struct sip_connection *conn = connection_find(sip, fd);
+	sip->openconns = g_slist_remove(sip->openconns, conn);
+	connection_destroy(conn);
 }
 
 static void simple_add_buddy(PurpleConnection *gc, PurpleBuddy *buddy, PurpleGroup *group, const char *message)
@@ -654,9 +654,12 @@ static void send_sip_response(PurpleConnection *gc, struct sipmsg *msg, int code
 	g_string_free(outstr, TRUE);
 }
 
-static void transactions_remove(struct simple_account_data *sip, struct transaction *trans) {
-	if(trans->msg) sipmsg_free(trans->msg);
-	sip->transactions = g_slist_remove(sip->transactions, trans);
+static void
+transactions_destroy(struct transaction *trans)
+{
+	if (trans->msg) {
+		sipmsg_free(trans->msg);
+	}
 	g_free(trans);
 }
 
@@ -1056,12 +1059,13 @@ static gboolean subscribe_timeout(struct simple_account_data *sip) {
 	/* remove a timed out suscriber */
 	tmp = sip->watcher;
 	while(tmp) {
+		GSList *next = tmp->next;
 		struct simple_watcher *watcher = tmp->data;
 		if(watcher->expire < curtime) {
-			watcher_remove(sip, watcher->name);
-			tmp = sip->watcher;
+			sip->watcher = g_slist_delete_link(sip->watcher, tmp);
+			watcher_destroy(watcher);
 		}
-		if(tmp) tmp = tmp->next;
+		tmp = next;
 	}
 
 	return TRUE;
@@ -1652,7 +1656,9 @@ static void process_input_message(struct simple_account_data *sip, struct sipmsg
 						/* call the callback to process response*/
 						(trans->callback)(sip, msg, trans);
 					}
-					transactions_remove(sip, trans);
+					sip->transactions =
+					        g_slist_remove(sip->transactions, trans);
+					transactions_destroy(trans);
 				}
 			}
 			found = TRUE;
@@ -2086,7 +2092,7 @@ static void simple_close(PurpleConnection *gc)
 
 		do_register_exp(sip, 0);
 	}
-	connection_free_all(sip);
+	g_slist_free_full(sip->openconns, (GDestroyNotify)connection_destroy);
 
 	if (sip->listenpa)
 		purple_input_remove(sip->listenpa);
@@ -2124,8 +2130,7 @@ static void simple_close(PurpleConnection *gc)
 	g_free(sip->status);
 	g_hash_table_destroy(sip->buddies);
 	g_free(sip->regcallid);
-	while (sip->transactions)
-		transactions_remove(sip, sip->transactions->data);
+	g_slist_free_full(sip->transactions, (GDestroyNotify)transactions_destroy);
 	g_free(sip->publish_etag);
 	if (sip->txbuf)
 		g_object_unref(G_OBJECT(sip->txbuf));

@@ -177,15 +177,16 @@ void sipmsg_add_header(struct sipmsg *msg, const gchar *name, const gchar *value
 	msg->headers = g_slist_append(msg->headers, element);
 }
 
+static void
+sipmsg_free_header(struct siphdrelement *elem)
+{
+	g_free(elem->name);
+	g_free(elem->value);
+	g_free(elem);
+}
+
 void sipmsg_free(struct sipmsg *msg) {
-	struct siphdrelement *elem;
-	while(msg->headers) {
-		elem = msg->headers->data;
-		msg->headers = g_slist_remove(msg->headers,elem);
-		g_free(elem->name);
-		g_free(elem->value);
-		g_free(elem);
-	}
+	g_slist_free_full(msg->headers, (GDestroyNotify)sipmsg_free_header);
 	g_free(msg->method);
 	g_free(msg->target);
 	g_free(msg->body);
@@ -197,9 +198,7 @@ void sipmsg_remove_header(struct sipmsg *msg, const gchar *name) {
 	if(tmp) {
 		struct siphdrelement *elem = tmp->data;
 		msg->headers = g_slist_delete_link(msg->headers, tmp);
-		g_free(elem->name);
-		g_free(elem->value);
-		g_free(elem);
+		sipmsg_free_header(elem);
 	}
 }
 
