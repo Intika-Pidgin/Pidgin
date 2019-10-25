@@ -62,7 +62,7 @@
 #define STREAM_END "</stream:stream>"
 /* TODO: specify version='1.0' and send stream features */
 #define DOCTYPE "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" \
-		"<stream:stream xmlns=\"xmpp:client\" xmlns:stream=\"http://etherx.xmpp.org/streams\" from=\"%s\" to=\"%s\">"
+		"<stream:stream xmlns=\"xmpp:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"%s\" to=\"%s\">"
 
 enum sent_stream_start_types {
 	NOT_SENT       = 0,
