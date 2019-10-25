@@ -683,7 +683,7 @@ nm_folder_remove_contact(NMFolder * folder, NMContact * contact)
 	node = folder->contacts;
 	while (node) {
 		if (contact->id == ((NMContact *) (node->data))->id) {
-			folder->contacts = g_slist_remove(folder->contacts, node->data);
+			folder->contacts = g_slist_delete_link(folder->contacts, node);
 			nm_release_contact(contact);
 			break;
 		}

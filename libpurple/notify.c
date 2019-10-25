@@ -783,7 +783,7 @@ purple_notify_close(PurpleNotifyType type, void *ui_handle)
 		PurpleNotifyInfo *info = l->data;
 
 		if (info->ui_handle == ui_handle) {
-			handles = g_list_remove(handles, info);
+			handles = g_list_delete_link(handles, l);
 
 			if (ops != NULL && ops->close_notify != NULL)
 				ops->close_notify(info->type, ui_handle);
@@ -812,7 +812,7 @@ purple_notify_close_with_handle(void *handle)
 		PurpleNotifyInfo *info = l->data;
 
 		if (info->handle == handle) {
-			handles = g_list_remove(handles, info);
+			handles = g_list_delete_link(handles, l);
 
 			if (ops != NULL && ops->close_notify != NULL)
 				ops->close_notify(info->type, info->ui_handle);

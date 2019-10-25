@@ -1485,7 +1485,7 @@ static gboolean jabber_buddy_get_info_timeout(gpointer data)
 	while(jbi->ids) {
 		char *id = jbi->ids->data;
 		jabber_iq_remove_callback_by_id(jbi->js, id);
-		jbi->ids = g_slist_remove(jbi->ids, id);
+		jbi->ids = g_slist_delete_link(jbi->ids, jbi->ids);
 		g_free(id);
 	}
 

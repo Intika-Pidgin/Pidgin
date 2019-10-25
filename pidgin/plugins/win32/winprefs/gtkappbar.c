@@ -692,8 +692,7 @@ void gtk_appbar_remove(GtkAppBar *ab) {
         }
         gtk_appbar_unregister(ab, hwnd);
 
-	while (ab->dock_cbs)
-		ab->dock_cbs = g_slist_remove(ab->dock_cbs, ab->dock_cbs->data);
+	g_slist_free(ab->dock_cbs);
 
 	g_free(ab);
 }

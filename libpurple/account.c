@@ -1397,7 +1397,7 @@ purple_account_request_close_with_account(PurpleAccount *account)
 		l_next = l->next;
 
 		if (info->account == account) {
-			handles = g_list_remove(handles, info);
+			handles = g_list_delete_link(handles, l);
 			purple_account_request_close_info(info);
 		}
 	}
@@ -1416,7 +1416,7 @@ purple_account_request_close(void *ui_handle)
 		l_next = l->next;
 
 		if (info->ui_handle == ui_handle) {
-			handles = g_list_remove(handles, info);
+			handles = g_list_delete_link(handles, l);
 			purple_account_request_close_info(info);
 		}
 	}

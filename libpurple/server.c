@@ -74,7 +74,7 @@ expire_last_auto_responses(gpointer data)
 		lar = (struct last_auto_response *)cur->data;
 
 		if ((time(NULL) - lar->sent) > SECS_BEFORE_RESENDING_AUTORESPONSE) {
-			last_auto_responses = g_slist_remove(last_auto_responses, lar);
+			last_auto_responses = g_slist_delete_link(last_auto_responses, cur);
 			g_free(lar);
 		}
 	}
