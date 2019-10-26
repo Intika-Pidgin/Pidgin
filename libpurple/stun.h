@@ -102,7 +102,7 @@ G_BEGIN_DECLS
  * is already done. Otherwise the callback is called when the discovery is over
  * and NULL is returned.
  *
- * Returns: a #PurpleStunNatDiscovery which includes the public IP and the type
+ * Returns: (skip) (transfer none): a #PurpleStunNatDiscovery which includes the public IP and the type
  *          of NAT or NULL if discovery would block
  */
 PurpleStunNatDiscovery *purple_stun_discover(PurpleStunCallback cb);

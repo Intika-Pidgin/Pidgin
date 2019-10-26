@@ -64,7 +64,7 @@ G_BEGIN_DECLS
  *
  * Creates new Datasheet.
  *
- * Returns: The new datasheet.
+ * Returns: (skip) (transfer full): The new datasheet.
  */
 PurpleRequestDatasheet *
 purple_request_datasheet_new(void);
@@ -176,7 +176,7 @@ purple_request_datasheet_get_actions(PurpleRequestDatasheet *sheet);
  *
  * Creates new datasheet action.
  *
- * Returns: The new action.
+ * Returns: (skip) (transfer full): The new action.
  */
 PurpleRequestDatasheetAction *
 purple_request_datasheet_action_new(void);
@@ -215,7 +215,7 @@ purple_request_datasheet_action_get_label(PurpleRequestDatasheetAction *act);
 /**
  * purple_request_datasheet_action_set_cb:
  * @act:       The action.
- * @cb:        The callback function.
+ * @cb: (scope notified):       The callback function.
  * @user_data: The data to be passed to the callback function.
  *
  * Sets the callback for the action.
@@ -238,7 +238,7 @@ purple_request_datasheet_action_call(PurpleRequestDatasheetAction *act,
 /**
  * purple_request_datasheet_action_set_sens_cb:
  * @act:       The action.
- * @cb:        The callback function, may be %NULL.
+ * @cb: (scope notified):       The callback function, may be %NULL.
  * @user_data: The data to be passed to the callback function.
  *
  * Sets the sensitivity checker for the action.
@@ -287,7 +287,7 @@ purple_request_datasheet_record_get_key(
  *
  * Returns the datasheet of a record.
  *
- * Returns: The datasheet.
+ * Returns: (skip) (transfer none): The datasheet.
  */
 PurpleRequestDatasheet *
 purple_request_datasheet_record_get_datasheet(
@@ -300,7 +300,7 @@ purple_request_datasheet_record_get_datasheet(
  *
  * Looks up for a record in datasheet.
  *
- * Returns: The record if found, %NULL otherwise.
+ * Returns: (skip) (transfer none): The record if found, %NULL otherwise.
  */
 PurpleRequestDatasheetRecord *
 purple_request_datasheet_record_find(PurpleRequestDatasheet *sheet,
@@ -315,7 +315,7 @@ purple_request_datasheet_record_find(PurpleRequestDatasheet *sheet,
  *
  * If the specified key already exists in datasheet, old record is returned.
  *
- * Returns: The record.
+ * Returns: (skip) (transfer full): The record.
  */
 PurpleRequestDatasheetRecord *
 purple_request_datasheet_record_add(PurpleRequestDatasheet *sheet,

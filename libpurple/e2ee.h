@@ -51,7 +51,7 @@ G_BEGIN_DECLS
  *
  * State objects are global (shared between multiple conversations).
  *
- * Returns: New E2EE state.
+ * Returns: (skip) (transfer full): New E2EE state.
  */
 PurpleE2eeState *
 purple_e2ee_state_new(PurpleE2eeProvider *provider);
@@ -73,7 +73,7 @@ purple_e2ee_state_ref(PurpleE2eeState *state);
  *
  * If the reference count reaches zero, the state will be freed.
  *
- * Returns: @state or %NULL if the reference count reached zero.
+ * Returns: (skip) (transfer full): @state or %NULL if the reference count reached zero.
  */
 PurpleE2eeState *
 purple_e2ee_state_unref(PurpleE2eeState *state);
@@ -84,7 +84,7 @@ purple_e2ee_state_unref(PurpleE2eeState *state);
  *
  * Gets the provider of specified E2EE state.
  *
- * Returns: The provider for this state.
+ * Returns: (skip) (transfer none): The provider for this state.
  */
 PurpleE2eeProvider *
 purple_e2ee_state_get_provider(PurpleE2eeState *state);
@@ -142,7 +142,7 @@ purple_e2ee_state_get_stock_icon(PurpleE2eeState *state);
  *
  * Creates new E2EE provider.
  *
- * Returns: New E2EE provider.
+ * Returns: (skip) (transfer full): New E2EE provider.
  */
 PurpleE2eeProvider *
 purple_e2ee_provider_new(void);
@@ -187,7 +187,7 @@ purple_e2ee_provider_unregister(PurpleE2eeProvider *provider);
  *
  * Gets main E2EE provider.
  *
- * Returns: The main E2EE provider.
+ * Returns: (skip) (transfer none): The main E2EE provider.
  */
 PurpleE2eeProvider *
 purple_e2ee_provider_get_main(void);
@@ -235,7 +235,7 @@ purple_e2ee_provider_set_conv_menu_cb(PurpleE2eeProvider *provider,
  *
  * Gets the conversation menu callback of the E2EE provider.
  *
- * Returns: The callback.
+ * Returns: (skip): The callback.
  */
 PurpleE2eeConvMenuCallback
 purple_e2ee_provider_get_conv_menu_cb(PurpleE2eeProvider *provider);

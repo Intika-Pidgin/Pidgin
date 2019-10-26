@@ -396,7 +396,7 @@ gboolean purple_savedstatus_has_substatuses(const PurpleSavedStatus *saved_statu
  *
  * Get the substatus for an account in a saved status.
  *
- * Returns: The PurpleSavedStatusSub for the account, or NULL if
+ * Returns: (skip) (transfer none): The PurpleSavedStatusSub for the account, or NULL if
  *         the given account does not have a substatus that
  *         differs from the default status of this PurpleSavedStatus.
  */

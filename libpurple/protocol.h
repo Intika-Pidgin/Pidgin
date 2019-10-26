@@ -728,7 +728,7 @@ PurpleBuddyIconSpec *purple_protocol_get_icon_spec(const PurpleProtocol *protoco
  *
  * Returns the whiteboard ops of a protocol.
  *
- * Returns: The whiteboard ops of the protocol.
+ * Returns: (skip) (transfer none): The whiteboard ops of the protocol.
  */
 PurpleWhiteboardOps *purple_protocol_get_whiteboard_ops(const PurpleProtocol *protocol);
 

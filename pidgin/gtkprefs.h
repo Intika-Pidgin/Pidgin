@@ -136,7 +136,7 @@ GtkWidget *pidgin_prefs_dropdown(GtkWidget *page, const gchar *title,
  * @title:     The text to be displayed as the dropdown label
  * @type:      The type of preference to be stored in the dropdown
  * @key:       The key of the pref that will be represented by the dropdown
- * @menuitems: The choices to be added to the dropdown, choices should
+ * @menuitems: (element-type void): The choices to be added to the dropdown, choices should
  *             be paired as label/value
  *
  * Add a new dropdown representing a preference of the specified type

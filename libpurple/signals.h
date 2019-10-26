@@ -79,7 +79,7 @@ G_BEGIN_DECLS
  * purple_signal_register:
  * @instance:   The instance to register the signal for.
  * @signal:     The signal name.
- * @marshal:    The marshal function.
+ * @marshal: (scope notified):    The marshal function.
  * @ret_type:   The return type, or G_TYPE_NONE for no return type.
  * @num_values: The number of values to be passed to the callbacks.
  * @...:        The types of the parameters for the callbacks.
@@ -130,7 +130,7 @@ void purple_signal_get_types(void *instance, const char *signal,
  * @instance: The instance to connect to.
  * @signal:   The name of the signal to connect.
  * @handle:   The handle of the receiver.
- * @func:     The callback function.
+ * @func: (scope notified):    The callback function.
  * @data:     The data to pass to the callback function.
  * @priority: The priority with which the handler should be called. Signal
  *                 handlers are called in ascending numerical order of
@@ -154,7 +154,7 @@ gulong purple_signal_connect_priority(void *instance, const char *signal,
  * @instance: The instance to connect to.
  * @signal:   The name of the signal to connect.
  * @handle:   The handle of the receiver.
- * @func:     The callback function.
+ * @func: (scope notified):    The callback function.
  * @data:     The data to pass to the callback function.
  *
  * Connects a signal handler to a signal for a particular object.
@@ -175,7 +175,7 @@ gulong purple_signal_connect(void *instance, const char *signal,
  * @instance: The instance to connect to.
  * @signal:   The name of the signal to connect.
  * @handle:   The handle of the receiver.
- * @func:     The callback function.
+ * @func: (scope notified):    The callback function.
  * @data:     The data to pass to the callback function.
  * @priority: The priority with which the handler should be called. Signal
  *                 handlers are called in ascending numerical order of
@@ -202,7 +202,7 @@ gulong purple_signal_connect_priority_vargs(void *instance, const char *signal,
  * @instance: The instance to connect to.
  * @signal:   The name of the signal to connect.
  * @handle:   The handle of the receiver.
- * @func:     The callback function.
+ * @func: (scope notified):    The callback function.
  * @data:     The data to pass to the callback function.
  *
  * Connects a signal handler to a signal for a particular object.
@@ -226,7 +226,7 @@ gulong purple_signal_connect_vargs(void *instance, const char *signal,
  * @instance: The instance to disconnect from.
  * @signal:   The name of the signal to disconnect.
  * @handle:   The handle of the receiver.
- * @func:     The registered function to disconnect.
+ * @func: (scope call):    The registered function to disconnect.
  *
  * Disconnects a signal handler from a signal on an object.
  *

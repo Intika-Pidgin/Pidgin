@@ -58,7 +58,7 @@ GtkWidget *pidgin_account_chooser_new(PurpleAccount *default_account,
 /**
  * pidgin_account_chooser_set_filter_func:
  * @chooser: The account chooser combo box.
- * @filter_func: A function for checking if an account should be shown. This
+ * @filter_func: (scope notified): A function for checking if an account should be shown. This
  *               can be %NULL to remove any filter.
  *
  * Set the filter function used to determine which accounts to show.

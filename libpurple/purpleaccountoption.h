@@ -69,7 +69,7 @@ PurpleAccountOption *purple_account_option_new(PurplePrefType type, const gchar 
  *
  * Creates a newly allocated copy of @option.
  *
- * Returns: (transfer: full): A new copy of @option.
+ * Returns: (transfer full): A new copy of @option.
  *
  * Since: 3.0.0
  */
