@@ -314,7 +314,7 @@ void purple_notify_searchresults_button_add_labeled(PurpleNotifySearchResults *r
  *
  * Returns a newly created search results object.
  *
- * Returns: The new search results object.
+ * Returns: (skip) (transfer full): The new search results object.
  */
 PurpleNotifySearchResults *purple_notify_searchresults_new(void);
 
@@ -325,7 +325,7 @@ PurpleNotifySearchResults *purple_notify_searchresults_new(void);
  * Returns a newly created search result column object.  The column defaults
  * to being visible.
  *
- * Returns: The new search column object.
+ * Returns: (skip) (transfer full): The new search column object.
  */
 PurpleNotifySearchColumn *purple_notify_searchresults_column_new(const char *title);
 
@@ -628,7 +628,7 @@ void purple_notify_user_info_remove_entry(PurpleNotifyUserInfo *user_info, Purpl
  * purple_notify_user_info_prepend_pair_plaintext() are convenience
  * methods for creating entries and adding them to a PurpleNotifyUserInfo.
  *
- * Returns: A new PurpleNotifyUserInfoEntry
+ * Returns: (skip) (transfer full): A new PurpleNotifyUserInfoEntry
  */
 PurpleNotifyUserInfoEntry *purple_notify_user_info_entry_new(const char *label, const char *value);
 

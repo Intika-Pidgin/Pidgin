@@ -495,7 +495,7 @@ void purple_status_set_active_with_attrs(PurpleStatus *status, gboolean active,
  * purple_status_set_active_with_attrs_list:
  * @status: The status.
  * @active: The active state.
- * @attrs:  A list of attributes to set on the status.  This list is
+ * @attrs: (element-type void): A list of attributes to set on the status.  This list is
  *               composed of key/value pairs, where each key is a valid
  *               attribute name for this PurpleStatusType.  The list is
  *               not modified or freed by this function.

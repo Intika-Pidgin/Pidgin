@@ -152,7 +152,7 @@ void pidgin_set_xfer_dialog(PidginXferDialog *dialog);
  *
  * Returns pirgin's main file transfer dialog.
  *
- * Returns: The main dialog.
+ * Returns: (transfer none): The main dialog.
  */
 PidginXferDialog *pidgin_get_xfer_dialog(void);
 

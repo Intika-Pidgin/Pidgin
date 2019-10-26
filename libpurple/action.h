@@ -67,7 +67,7 @@ G_BEGIN_DECLS
 /**
  * purple_action_menu_new:
  * @label:    The text label to display for this action.
- * @callback: The function to be called when the action is used on
+ * @callback: (scope notified): The function to be called when the action is used on
  *                 the selected item.
  * @data:     Additional data to be passed to the callback.
  * @children: (element-type PurpleActionMenu) (transfer full): Menu actions to
@@ -75,7 +75,7 @@ G_BEGIN_DECLS
  *
  * Creates a new PurpleActionMenu.
  *
- * Returns: The PurpleActionMenu.
+ * Returns: (skip) (transfer full): The PurpleActionMenu.
  */
 PurpleActionMenu *purple_action_menu_new(const gchar *label, GCallback callback, gpointer data, GList *children);
 
@@ -103,7 +103,7 @@ const gchar *purple_action_menu_get_label(const PurpleActionMenu *act);
  *
  * Returns the callback of the PurpleActionMenu.
  *
- * Returns: The callback function.
+ * Returns: (skip) (transfer none): The callback function.
  */
 GCallback purple_action_menu_get_callback(const PurpleActionMenu *act);
 
@@ -139,7 +139,7 @@ void purple_action_menu_set_label(PurpleActionMenu *act, const gchar *label);
 /**
  * purple_action_menu_set_callback:
  * @act:        The menu action.
- * @callback:   The callback.
+ * @callback: (scope notified):  The callback.
  *
  * Set the callback that will be used by the PurpleActionMenu.
  */

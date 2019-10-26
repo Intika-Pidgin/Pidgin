@@ -359,7 +359,7 @@ purple_keyring_set_password(PurpleAccount *account, const gchar *password,
  *
  * Reads settings from current keyring.
  *
- * Returns: New copy of current settings (must be free'd with
+ * Returns: (skip) (transfer full): New copy of current settings (must be free'd with
  *         purple_request_fields_destroy).
  */
 PurpleRequestFields *

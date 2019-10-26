@@ -116,7 +116,7 @@ G_DECLARE_FINAL_TYPE(PurpleMediaElementInfo, purple_media_element_info, PURPLE,
  *
  * Gets the source from a session
  *
- * Returns: The source retrieved.
+ * Returns: (transfer none): The source retrieved.
  */
 GstElement *purple_media_get_src(PurpleMedia *media, const gchar *sess_id);
 
@@ -128,7 +128,7 @@ GstElement *purple_media_get_src(PurpleMedia *media, const gchar *sess_id);
  *
  * Gets the tee from a given session/stream.
  *
- * Returns: The GstTee element from the chosen session/stream.
+ * Returns: (transfer none): The GstTee element from the chosen session/stream.
  */
 GstElement *purple_media_get_tee(PurpleMedia *media,
 		const gchar *session_id, const gchar *participant);

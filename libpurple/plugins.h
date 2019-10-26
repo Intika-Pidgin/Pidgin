@@ -415,7 +415,7 @@ PurplePluginInfo *purple_plugin_info_new(const char *first_property, ...)
  * Returns the callback that retrieves the list of actions a plugin can perform
  * at that moment.
  *
- * Returns: The callback that returns a list of #PurplePluginAction
+ * Returns: (skip): The callback that returns a list of #PurplePluginAction
  *          instances corresponding to the actions a plugin can perform.
  */
 PurplePluginActionsCb
@@ -428,7 +428,7 @@ purple_plugin_info_get_actions_cb(PurplePluginInfo *info);
  * Returns a callback that gives extra information about a plugin. You must
  * free the string returned by this callback.
  *
- * Returns: The callback that returns extra information about a plugin.
+ * Returns: (skip) (transfer none): The callback that returns extra information about a plugin.
  */
 PurplePluginExtraCb
 purple_plugin_info_get_extra_cb(PurplePluginInfo *info);
@@ -440,7 +440,7 @@ purple_plugin_info_get_extra_cb(PurplePluginInfo *info);
  * Returns the callback that retrieves the preferences frame for a plugin, set
  * via the "pref-frame-cb" property of the plugin info.
  *
- * Returns: The callback that returns the preferences frame.
+ * Returns: (skip): The callback that returns the preferences frame.
  */
 PurplePluginPrefFrameCb
 purple_plugin_info_get_pref_frame_cb(PurplePluginInfo *info);
@@ -452,7 +452,7 @@ purple_plugin_info_get_pref_frame_cb(PurplePluginInfo *info);
  * Returns the callback that retrieves the preferences request handle for a
  * plugin, set via the "pref-request-cb" property of the plugin info.
  *
- * Returns: The callback that returns the preferences request handle.
+ * Returns: (skip) (transfer none): The callback that returns the preferences request handle.
  */
 PurplePluginPrefRequestCb
 purple_plugin_info_get_pref_request_cb(PurplePluginInfo *info);

@@ -280,7 +280,7 @@ G_BEGIN_DECLS
  * Creates new parameters set for the request, which may or may not be used by
  * the UI to display the request.
  *
- * Returns: The new parameters set.
+ * Returns: (skip) (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_new(void);
@@ -291,7 +291,7 @@ purple_request_cpar_new(void);
  *
  * Creates new parameters set initially bound with the #PurpleConnection.
  *
- * Returns: The new parameters set.
+ * Returns: (skip) (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_from_connection(PurpleConnection *gc);
@@ -302,7 +302,7 @@ purple_request_cpar_from_connection(PurpleConnection *gc);
  *
  * Creates new parameters set initially bound with the #PurpleAccount.
  *
- * Returns: The new parameters set.
+ * Returns: (skip) (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_from_account(PurpleAccount *account);
@@ -313,7 +313,7 @@ purple_request_cpar_from_account(PurpleAccount *account);
  *
  * Creates new parameters set initially bound with the #PurpleConversation.
  *
- * Returns: The new parameters set.
+ * Returns: (skip) (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_from_conversation(PurpleConversation *conv);
@@ -335,7 +335,7 @@ purple_request_cpar_ref(PurpleRequestCommonParameters *cpar);
  *
  * The object will be destroyed when this reaches 0.
  *
- * Returns: The NULL, if object was destroyed, cpar otherwise.
+ * Returns: (skip) (transfer full): The NULL, if object was destroyed, cpar otherwise.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_unref(PurpleRequestCommonParameters *cpar);
@@ -484,7 +484,7 @@ purple_request_cpar_is_compact(PurpleRequestCommonParameters *cpar);
 /**
  * purple_request_cpar_set_help_cb:
  * @cpar:      The parameters set.
- * @cb:        The callback.
+ * @cb: (scope notified):       The callback.
  * @user_data: The data to be passed to the callback.
  *
  * Sets the callback for the Help button.
@@ -501,7 +501,7 @@ purple_request_cpar_set_help_cb(PurpleRequestCommonParameters *cpar,
  *
  * Gets the callback for the Help button.
  *
- * Returns: The callback.
+ * Returns: (skip) (transfer none): The callback.
  */
 PurpleRequestHelpCb
 purple_request_cpar_get_help_cb(PurpleRequestCommonParameters *cpar,
@@ -528,7 +528,7 @@ purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...);
  *
  * Gets extra actions for the PurpleRequestFields dialog.
  *
- * Returns: (transfer none): A list of actions (pairs of arguments, as in
+ * Returns: (element-type void) (transfer none): A list of actions (pairs of arguments, as in
  *          setter).
  */
 GSList *
@@ -566,7 +566,7 @@ purple_request_cpar_get_parent_from(PurpleRequestCommonParameters *cpar);
  *
  * Creates a list of fields to pass to purple_request_fields().
  *
- * Returns: A PurpleRequestFields structure.
+ * Returns: (skip) (transfer full): A PurpleRequestFields structure.
  */
 PurpleRequestFields *purple_request_fields_new(void);
 
@@ -707,7 +707,7 @@ gboolean purple_request_fields_all_valid(const PurpleRequestFields *fields);
  *
  * Return the field with the specified ID.
  *
- * Returns: The field, if found.
+ * Returns: (skip) (transfer none): The field, if found.
  */
 PurpleRequestField *purple_request_fields_get_field(
 		const PurpleRequestFields *fields, const char *id);
@@ -804,7 +804,7 @@ void purple_request_fields_set_ui_data(PurpleRequestFields *fields, gpointer ui_
  *
  * Creates a fields group with an optional title.
  *
- * Returns: A new fields group
+ * Returns: (skip) (transfer full): A new fields group
  */
 PurpleRequestFieldGroup *purple_request_field_group_new(const char *title);
 
@@ -895,7 +895,7 @@ PurpleRequestFields *purple_request_field_group_get_fields_list(
  *
  * Creates a field of the specified type.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_new(const char *id, const char *text,
 										 PurpleRequestFieldType type);
@@ -978,7 +978,7 @@ PurpleRequestFieldType purple_request_field_get_field_type(const PurpleRequestFi
  *
  * Returns the group for the field.
  *
- * Returns: The UI data.
+ * Returns: (skip) (transfer none): The UI data.
  */
 PurpleRequestFieldGroup *purple_request_field_get_group(const PurpleRequestField *field);
 
@@ -1055,7 +1055,7 @@ gboolean purple_request_field_is_filled(const PurpleRequestField *field);
 /**
  * purple_request_field_set_validator:
  * @field:     The field.
- * @validator: The validator callback, NULL to disable validation.
+ * @validator: (scope notified): The validator callback, NULL to disable validation.
  * @user_data: The data to pass to the callback.
  *
  * Sets validator for a single field.
@@ -1114,7 +1114,7 @@ gboolean purple_request_field_is_sensitive(PurpleRequestField *field);
 /**
  * purple_request_field_set_sensitivity_cb:
  * @field: The field.
- * @cb:    The callback.
+ * @cb: (scope notified):   The callback.
  *
  * Sets the callback, used to determine if the field should be editable.
  */
@@ -1154,7 +1154,7 @@ void purple_request_field_set_ui_data(PurpleRequestField *field,
  *
  * Creates a string request field.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_string_new(const char *id,
 												const char *text,
@@ -1247,7 +1247,7 @@ gboolean purple_request_field_string_is_masked(const PurpleRequestField *field);
  *
  * Creates an integer field.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_int_new(const char *id,
 	const char *text, int default_value, int lower_bound, int upper_bound);
@@ -1343,7 +1343,7 @@ int purple_request_field_int_get_value(const PurpleRequestField *field);
  *
  * This is often represented as a checkbox.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_bool_new(const char *id,
 											  const char *text,
@@ -1404,7 +1404,7 @@ gboolean purple_request_field_bool_get_value(const PurpleRequestField *field);
  *
  * This is often represented as a group of radio buttons.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *
 purple_request_field_choice_new(const char *id, const char *text,
@@ -1472,7 +1472,7 @@ purple_request_field_choice_get_value(const PurpleRequestField *field);
  *
  * Returns a list of elements in a choice field.
  *
- * Returns: (transfer none): The list of pairs of {label, value}.
+ * Returns: (element-type void) (transfer none): The list of pairs of {label, value}.
  */
 GList *
 purple_request_field_choice_get_elements(const PurpleRequestField *field);
@@ -1499,7 +1499,7 @@ purple_request_field_choice_set_data_destructor(PurpleRequestField *field,
  *
  * Creates a multiple list item field.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_list_new(const char *id, const char *text);
 
@@ -1637,7 +1637,7 @@ GList *purple_request_field_list_get_icons(const PurpleRequestField *field);
  *
  * Creates a label field.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_label_new(const char *id,
 											   const char *text);
@@ -1655,7 +1655,7 @@ PurpleRequestField *purple_request_field_label_new(const char *id,
  *
  * Creates an image field.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_image_new(const char *id, const char *text,
 											   const char *buf, gsize size);
@@ -1724,7 +1724,7 @@ unsigned int purple_request_field_image_get_scale_y(PurpleRequestField *field);
  *
  * By default, this field will not show offline accounts.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_account_new(const char *id,
 												 const char *text,
@@ -1766,7 +1766,7 @@ void purple_request_field_account_set_show_all(PurpleRequestField *field,
 /**
  * purple_request_field_account_set_filter:
  * @field:       The account field.
- * @filter_func: The account filter function.
+ * @filter_func: (scope notified): The account filter function.
  *
  * Sets the account filter function in an account field.
  *
@@ -1821,7 +1821,7 @@ gboolean purple_request_field_account_get_show_all(
  * This function will determine which accounts get displayed and which
  * don't.
  *
- * Returns: The account filter function.
+ * Returns: (skip) (transfer none): The account filter function.
  */
 PurpleFilterAccountFunc purple_request_field_account_get_filter(
 		const PurpleRequestField *field);
@@ -1838,7 +1838,7 @@ PurpleFilterAccountFunc purple_request_field_account_get_filter(
  *
  * Creates a datasheet item field.
  *
- * Returns: The new field.
+ * Returns: (skip) (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_datasheet_new(const char *id,
 	const gchar *text, PurpleRequestDatasheet *sheet);
@@ -1922,11 +1922,11 @@ gboolean purple_request_field_alphanumeric_validator(PurpleRequestField *field,
  *                 Use "html", for example, to allow the user to enter HTML.
  * @ok_text:       The text for the <literal>OK</literal> button, which may not
  *                 be %NULL.
- * @ok_cb:         The callback for the <literal>OK</literal> button, which may
+ * @ok_cb: (scope notified):         The callback for the <literal>OK</literal> button, which may
  *                 not be %NULL.
  * @cancel_text:   The text for the <literal>Cancel</literal> button, which may
  *                 not be %NULL.
- * @cancel_cb:     The callback for the <literal>Cancel</literal> button, which
+ * @cancel_cb: (scope notified):     The callback for the <literal>Cancel</literal> button, which
  *                 may be %NULL.
  * @cpar:          The #PurpleRequestCommonParameters object, which gets
  *                 unref'ed after this call.
@@ -1958,11 +1958,11 @@ void *purple_request_input(void *handle, const char *title, const char *primary,
  *                 listed in the varargs.
  * @ok_text:       The text for the <literal>OK</literal> button, which may not
  *                 be %NULL.
- * @ok_cb:         The callback for the <literal>OK</literal> button, which may
+ * @ok_cb: (scope notified):         The callback for the <literal>OK</literal> button, which may
  *                 not be %NULL.
  * @cancel_text:   The text for the <literal>Cancel</literal> button, which may
  *                 not be %NULL.
- * @cancel_cb:     The callback for the <literal>Cancel</literal> button, or
+ * @cancel_cb: (scope notified):     The callback for the <literal>Cancel</literal> button, or
  *                 %NULL to do nothing.
  * @cpar:          The #PurpleRequestCommonParameters object, which gets
  *                 unref'ed after this call.
@@ -1996,11 +1996,11 @@ void *purple_request_choice(void *handle, const char *title, const char *primary
  *                 listed in the varargs.
  * @ok_text:       The text for the <literal>OK</literal> button, which may not
  *                 be %NULL.
- * @ok_cb:         The callback for the <literal>OK</literal> button, which may
+ * @ok_cb: (scope notified):         The callback for the <literal>OK</literal> button, which may
  *                 not be %NULL.
  * @cancel_text:   The text for the <literal>Cancel</literal> button, which may
  *                 not be %NULL.
- * @cancel_cb:     The callback for the <literal>Cancel</literal> button, or
+ * @cancel_cb: (scope notified):     The callback for the <literal>Cancel</literal> button, or
  *                 %NULL to do nothing.
  * @cpar:          The #PurpleRequestCommonParameters object, which gets
  *                 unref'ed after this call.
@@ -2154,12 +2154,12 @@ purple_request_wait_progress(void *ui_handle, gfloat fraction);
  * @fields:      The list of fields.
  * @ok_text:     The text for the <literal>OK</literal> button, which may not be
  *               %NULL.
- * @ok_cb:       The callback for the <literal>OK</literal> button, which may
+ * @ok_cb: (scope notified):       The callback for the <literal>OK</literal> button, which may
  *               not be
  *               %NULL.
  * @cancel_text: The text for the <literal>Cancel</literal> button, which may
  *               not be %NULL.
- * @cancel_cb:   The callback for the <literal>Cancel</literal> button, which
+ * @cancel_cb: (scope notified):   The callback for the <literal>Cancel</literal> button, which
  *               may be %NULL.
  * @cpar:        The #PurpleRequestCommonParameters object, which gets
  *               unref'ed after this call.
@@ -2311,8 +2311,8 @@ void purple_request_close_with_handle(void *handle);
  * @filename:   The default filename (may be %NULL)
  * @savedialog: True if this dialog is being used to save a file.  False if
  *              it is being used to open a file.
- * @ok_cb:      The callback for the <literal>OK</literal> button.
- * @cancel_cb:  The callback for the <literal>Cancel</literal> button, which
+ * @ok_cb: (scope notified):      The callback for the <literal>OK</literal> button.
+ * @cancel_cb: (scope notified):  The callback for the <literal>Cancel</literal> button, which
  *              may be %NULL.
  * @cpar:       The #PurpleRequestCommonParameters object, which gets unref'ed
  *              after this call.
@@ -2335,8 +2335,8 @@ purple_request_file(void *handle, const char *title, const char *filename,
  *             purple_request_input().
  * @title:     The title of the message, or %NULL if it should have no title.
  * @dirname:   The default directory name (may be %NULL)
- * @ok_cb:     The callback for the <literal>OK</literal> button.
- * @cancel_cb: The callback for the <literal>Cancel</literal> button, which
+ * @ok_cb: (scope notified):     The callback for the <literal>OK</literal> button.
+ * @cancel_cb: (scope notified): The callback for the <literal>Cancel</literal> button, which
  *             may be %NULL.
  * @cpar:      The #PurpleRequestCommonParameters object, which gets unref'ed
  *             after this call.

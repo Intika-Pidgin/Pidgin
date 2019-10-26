@@ -73,7 +73,7 @@ G_BEGIN_DECLS
  *
  * Create a new plugin preference frame
  *
- * Returns: a new PurplePluginPrefFrame
+ * Returns: (skip) (transfer full): a new PurplePluginPrefFrame
  */
 PurplePluginPrefFrame *purple_plugin_pref_frame_new(void);
 
@@ -109,7 +109,7 @@ GList *purple_plugin_pref_frame_get_prefs(PurplePluginPrefFrame *frame);
  *
  * Create a new plugin preference
  *
- * Returns: a new PurplePluginPref
+ * Returns: (skip) (transfer full): a new PurplePluginPref
  */
 PurplePluginPref *purple_plugin_pref_new(void);
 
@@ -119,7 +119,7 @@ PurplePluginPref *purple_plugin_pref_new(void);
  *
  * Create a new plugin preference with name
  *
- * Returns: a new PurplePluginPref
+ * Returns: (skip) (transfer full): a new PurplePluginPref
  */
 PurplePluginPref *purple_plugin_pref_new_with_name(const char *name);
 
@@ -129,7 +129,7 @@ PurplePluginPref *purple_plugin_pref_new_with_name(const char *name);
  *
  * Create a new plugin preference with label
  *
- * Returns: a new PurplePluginPref
+ * Returns: (skip) (transfer full): a new PurplePluginPref
  */
 PurplePluginPref *purple_plugin_pref_new_with_label(const char *label);
 
@@ -140,7 +140,7 @@ PurplePluginPref *purple_plugin_pref_new_with_label(const char *label);
  *
  * Create a new plugin preference with name and label
  *
- * Returns: a new PurplePluginPref
+ * Returns: (skip) (transfer full): a new PurplePluginPref
  */
 PurplePluginPref *purple_plugin_pref_new_with_name_and_label(const char *name, const char *label);
 
@@ -245,7 +245,7 @@ void purple_plugin_pref_add_choice(PurplePluginPref *pref, const char *label, gp
  *
  * Get the choices for a choices plugin pref
  *
- * Returns: (transfer none): GList of the choices
+ * Returns: (element-type void) (transfer none): GList of the choices
  */
 GList *purple_plugin_pref_get_choices(PurplePluginPref *pref);
 
