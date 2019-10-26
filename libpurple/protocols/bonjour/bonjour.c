@@ -448,7 +448,7 @@ bonjour_rename_group(PurpleConnection *connection, const char *old_name, PurpleG
 
 	new_group = purple_group_get_name(group);
 
-	g_list_foreach(moved_buddies, (GFunc)bonjour_do_group_change, new_group);
+	g_list_foreach(moved_buddies, (GFunc)bonjour_do_group_change, (gpointer)new_group);
 }
 
 static gboolean
