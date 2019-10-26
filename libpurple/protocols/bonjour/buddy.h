@@ -21,7 +21,7 @@
 
 #include <purple.h>
 
-#include "jabber.h"
+#include "xmpp.h"
 
 typedef struct
 {
@@ -45,7 +45,7 @@ typedef struct
 	gchar *node;
 	gchar *ver;
 
-	BonjourJabberConversation *conversation;
+	BonjourXMPPConversation *conversation;
 
 	gpointer mdns_impl_data;
 } BonjourBuddy;

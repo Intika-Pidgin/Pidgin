@@ -47,7 +47,7 @@
 #include <ifaddrs.h>
 #endif
 
-#include "jabber.h"
+#include "xmpp.h"
 #include "parser.h"
 #include "bonjour.h"
 #include "buddy.h"
@@ -73,10 +73,10 @@ enum sent_stream_start_types {
 static void
 xep_iq_parse(PurpleXmlNode *packet, PurpleBuddy *pb);
 
-static BonjourJabberConversation *
-bonjour_jabber_conv_new(PurpleBuddy *pb, PurpleAccount *account, const char *ip) {
+static BonjourXMPPConversation *
+bonjour_xmpp_conv_new(PurpleBuddy *pb, PurpleAccount *account, const char *ip) {
 
-	BonjourJabberConversation *bconv = g_new0(BonjourJabberConversation, 1);
+	BonjourXMPPConversation *bconv = g_new0(BonjourXMPPConversation, 1);
 	bconv->cancellable = g_cancellable_new();
 	bconv->tx_buf = purple_circular_buffer_new(512);
 	bconv->tx_handler = 0;
@@ -133,7 +133,7 @@ get_xmlnode_contents(PurpleXmlNode *node)
 }
 
 static void
-_jabber_parse_and_write_message_to_ui(PurpleXmlNode *message_node, PurpleBuddy *pb)
+_xmpp_parse_and_write_message_to_ui(PurpleXmlNode *message_node, PurpleBuddy *pb)
 {
 	PurpleXmlNode *body_node, *html_node, *events_node;
 	PurpleConnection *gc = purple_account_get_connection(purple_buddy_get_account(pb));
@@ -262,7 +262,7 @@ _send_data_write_cb(GObject *stream, gpointer data)
 {
 	PurpleBuddy *pb = data;
 	BonjourBuddy *bb = purple_buddy_get_protocol_data(pb);
-	BonjourJabberConversation *bconv = bb->conversation;
+	BonjourXMPPConversation *bconv = bb->conversation;
 	gsize writelen;
 	gssize ret;
 	GError *error = NULL;
@@ -301,7 +301,7 @@ _send_data_write_cb(GObject *stream, gpointer data)
 				_("Unable to send message."),
 				PURPLE_MESSAGE_ERROR);
 
-		bonjour_jabber_close_conversation(bb->conversation);
+		bonjour_xmpp_close_conversation(bb->conversation);
 		bb->conversation = NULL;
 		g_clear_error(&error);
 		return;
@@ -314,7 +314,7 @@ static gint
 _send_data(PurpleBuddy *pb, char *message)
 {
 	BonjourBuddy *bb = purple_buddy_get_protocol_data(pb);
-	BonjourJabberConversation *bconv = bb->conversation;
+	BonjourXMPPConversation *bconv = bb->conversation;
 	gsize len = strlen(message);
 	gssize ret;
 	GError *error = NULL;
@@ -354,7 +354,7 @@ _send_data(PurpleBuddy *pb, char *message)
 				_("Unable to send message."),
 				PURPLE_MESSAGE_ERROR);
 
-		bonjour_jabber_close_conversation(bb->conversation);
+		bonjour_xmpp_close_conversation(bb->conversation);
 		bb->conversation = NULL;
 		g_clear_error(&error);
 		return -1;
@@ -379,13 +379,13 @@ _send_data(PurpleBuddy *pb, char *message)
 	return ret;
 }
 
-void bonjour_jabber_process_packet(PurpleBuddy *pb, PurpleXmlNode *packet) {
+void bonjour_xmpp_process_packet(PurpleBuddy *pb, PurpleXmlNode *packet) {
 
 	g_return_if_fail(packet != NULL);
 	g_return_if_fail(pb != NULL);
 
 	if (purple_strequal(packet->name, "message"))
-		_jabber_parse_and_write_message_to_ui(packet, pb);
+		_xmpp_parse_and_write_message_to_ui(packet, pb);
 	else if (purple_strequal(packet->name, "iq"))
 		xep_iq_parse(packet, pb);
 	else {
@@ -394,7 +394,7 @@ void bonjour_jabber_process_packet(PurpleBuddy *pb, PurpleXmlNode *packet) {
 	}
 }
 
-static void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
+static void bonjour_xmpp_stream_ended(BonjourXMPPConversation *bconv) {
 
 	/* Inform the user that the conversation has been closed */
 	BonjourBuddy *bb = NULL;
@@ -406,7 +406,7 @@ static void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
 		bb = purple_buddy_get_protocol_data(bconv->pb);
 
 	/* Close the socket, clear the watcher and free memory */
-	bonjour_jabber_close_conversation(bconv);
+	bonjour_xmpp_close_conversation(bconv);
 	if(bb)
 		bb->conversation = NULL;
 }
@@ -414,7 +414,7 @@ static void bonjour_jabber_stream_ended(BonjourJabberConversation *bconv) {
 static gboolean
 _client_socket_handler(GObject *stream, gpointer data)
 {
-	BonjourJabberConversation *bconv = data;
+	BonjourXMPPConversation *bconv = data;
 	GError *error = NULL;
 	gssize len;
 	static char message[4096];
@@ -432,7 +432,7 @@ _client_socket_handler(GObject *stream, gpointer data)
 			        "receive of %" G_GSSIZE_FORMAT " error: %s",
 			        len, error ? error->message : "(null)");
 
-			bonjour_jabber_close_conversation(bconv);
+			bonjour_xmpp_close_conversation(bconv);
 			if (bconv->pb != NULL) {
 				BonjourBuddy *bb = purple_buddy_get_protocol_data(bconv->pb);
 
@@ -448,7 +448,7 @@ _client_socket_handler(GObject *stream, gpointer data)
 	} else if (len == 0) { /* The other end has closed the socket */
 		const gchar *name = purple_buddy_get_name(bconv->pb);
 		purple_debug_warning("bonjour", "Connection closed (without stream end) by %s.\n", (name) ? name : "(unknown)");
-		bonjour_jabber_stream_ended(bconv);
+		bonjour_xmpp_stream_ended(bconv);
 		return FALSE;
 	}
 
@@ -467,7 +467,7 @@ struct _stream_start_data {
 static void
 _start_stream(GObject *stream, gpointer data)
 {
-	BonjourJabberConversation *bconv = data;
+	BonjourXMPPConversation *bconv = data;
 	struct _stream_start_data *ss = bconv->stream_data;
 	GError *error = NULL;
 	gsize len;
@@ -505,7 +505,7 @@ _start_stream(GObject *stream, gpointer data)
 				_("Unable to send the message, the conversation couldn't be started."),
 				PURPLE_MESSAGE_ERROR);
 
-		bonjour_jabber_close_conversation(bconv);
+		bonjour_xmpp_close_conversation(bconv);
 		if(bb != NULL)
 			bb->conversation = NULL;
 
@@ -514,7 +514,7 @@ _start_stream(GObject *stream, gpointer data)
 	}
 
 	/* This is EXTREMELY unlikely to happen */
-	if (ret < len) {
+	if (G_UNLIKELY(ret < len)) {
 		char *tmp = g_strdup(ss->msg + ret);
 		g_free(ss->msg);
 		ss->msg = tmp;
@@ -530,11 +530,11 @@ _start_stream(GObject *stream, gpointer data)
 	bconv->tx_handler = 0;
 	bconv->sent_stream_start = FULLY_SENT;
 
-	bonjour_jabber_stream_started(bconv);
+	bonjour_xmpp_stream_started(bconv);
 }
 
 static gboolean
-bonjour_jabber_send_stream_init(BonjourJabberConversation *bconv,
+bonjour_xmpp_send_stream_init(BonjourXMPPConversation *bconv,
                                 GError **error)
 {
 	gchar *stream_start;
@@ -616,12 +616,12 @@ bonjour_jabber_send_stream_init(BonjourJabberConversation *bconv,
 /* This gets called when we've successfully sent our <stream:stream />
  * AND when we've received a <stream:stream /> */
 void
-bonjour_jabber_stream_started(BonjourJabberConversation *bconv)
+bonjour_xmpp_stream_started(BonjourXMPPConversation *bconv)
 {
 	GError *error = NULL;
 
 	if (bconv->sent_stream_start == NOT_SENT &&
-	    !bonjour_jabber_send_stream_init(bconv, &error)) {
+	    !bonjour_xmpp_send_stream_init(bconv, &error)) {
 		const char *bname = bconv->buddy_name;
 
 		if (bconv->pb)
@@ -653,7 +653,7 @@ bonjour_jabber_stream_started(BonjourJabberConversation *bconv)
 		/* This must be asynchronous because it destroys the parser and we
 		 * may be in the middle of parsing.
 		 */
-		async_bonjour_jabber_close_conversation(bconv);
+		async_bonjour_xmpp_close_conversation(bconv);
 		g_clear_error(&error);
 		return;
 	}
@@ -682,12 +682,12 @@ static void
 _server_socket_handler(GSocketService *service, GSocketConnection *connection,
                        GObject *source_object, gpointer data)
 {
-	BonjourJabber *jdata = data;
+	BonjourXMPP *jdata = data;
 	GSocketAddress *their_addr; /* connector's address information */
 	GInetAddress *their_inet_addr;
 	gchar *address_text;
 	struct _match_buddies_by_address *mbba;
-	BonjourJabberConversation *bconv;
+	BonjourXMPPConversation *bconv;
 	GSList *buddies;
 	GSource *source;
 
@@ -733,7 +733,7 @@ _server_socket_handler(GSocketService *service, GSocketConnection *connection,
 	/* We've established that this *could* be from one of our buddies.
 	 * Wait for the stream open to see if that matches too before assigning it.
 	 */
-	bconv = bonjour_jabber_conv_new(NULL, jdata->account, address_text);
+	bconv = bonjour_xmpp_conv_new(NULL, jdata->account, address_text);
 
 	/* We wait for the stream start before doing anything else */
 	bconv->socket = g_object_ref(connection);
@@ -749,7 +749,7 @@ _server_socket_handler(GSocketService *service, GSocketConnection *connection,
 }
 
 gint
-bonjour_jabber_start(BonjourJabber *jdata)
+bonjour_xmpp_start(BonjourXMPP *jdata)
 {
 	GError *error = NULL;
 	guint16 port;
@@ -858,7 +858,7 @@ _connected_to_buddy(GObject *source, GAsyncResult *res, gpointer user_data)
 				_("Unable to send the message, the conversation couldn't be started."),
 				PURPLE_MESSAGE_ERROR);
 
-		bonjour_jabber_close_conversation(bb->conversation);
+		bonjour_xmpp_close_conversation(bb->conversation);
 		bb->conversation = NULL;
 		return;
 	}
@@ -869,7 +869,7 @@ _connected_to_buddy(GObject *source, GAsyncResult *res, gpointer user_data)
 	bb->conversation->output =
 	        g_io_stream_get_output_stream(G_IO_STREAM(conn));
 
-	if (!bonjour_jabber_send_stream_init(bb->conversation, &error)) {
+	if (!bonjour_xmpp_send_stream_init(bb->conversation, &error)) {
 		PurpleConversation *conv = NULL;
 		PurpleAccount *account = NULL;
 
@@ -888,7 +888,7 @@ _connected_to_buddy(GObject *source, GAsyncResult *res, gpointer user_data)
 				_("Unable to send the message, the conversation couldn't be started."),
 				PURPLE_MESSAGE_ERROR);
 
-		bonjour_jabber_close_conversation(bb->conversation);
+		bonjour_xmpp_close_conversation(bb->conversation);
 		bb->conversation = NULL;
 		g_clear_error(&error);
 		return;
@@ -904,7 +904,7 @@ _connected_to_buddy(GObject *source, GAsyncResult *res, gpointer user_data)
 }
 
 void
-bonjour_jabber_conv_match_by_name(BonjourJabberConversation *bconv) {
+bonjour_xmpp_conv_match_by_name(BonjourXMPPConversation *bconv) {
 	PurpleBuddy *pb = NULL;
 	BonjourBuddy *bb = NULL;
 
@@ -925,7 +925,7 @@ bonjour_jabber_conv_match_by_name(BonjourJabberConversation *bconv) {
 			if (ip != NULL && g_ascii_strcasecmp(ip, bconv->ip) == 0) {
 				PurpleConnection *pc = purple_account_get_connection(bconv->account);
 				BonjourData *bd = purple_connection_get_protocol_data(pc);
-				BonjourJabber *jdata = bd->jabber_data;
+				BonjourXMPP *jdata = bd->xmpp_data;
 
 				purple_debug_info("bonjour", "Matched buddy %s to incoming conversation \"from\" attrib and IP (%s)\n",
 					purple_buddy_get_name(pb), bconv->ip);
@@ -935,7 +935,7 @@ bonjour_jabber_conv_match_by_name(BonjourJabberConversation *bconv) {
 
 				/* Check if the buddy already has a conversation and, if so, replace it */
 				if(bb->conversation != NULL && bb->conversation != bconv)
-					bonjour_jabber_close_conversation(bb->conversation);
+					bonjour_xmpp_close_conversation(bb->conversation);
 
 				bconv->pb = pb;
 				bb->conversation = bconv;
@@ -951,16 +951,16 @@ bonjour_jabber_conv_match_by_name(BonjourJabberConversation *bconv) {
 		/* This must be asynchronous because it destroys the parser and we
 		 * may be in the middle of parsing.
 		 */
-		async_bonjour_jabber_close_conversation(bconv);
+		async_bonjour_xmpp_close_conversation(bconv);
 	}
 }
 
 
 void
-bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv) {
+bonjour_xmpp_conv_match_by_ip(BonjourXMPPConversation *bconv) {
 	PurpleConnection *pc = purple_account_get_connection(bconv->account);
 	BonjourData *bd = purple_connection_get_protocol_data(pc);
-	BonjourJabber *jdata = bd->jabber_data;
+	BonjourXMPP *jdata = bd->xmpp_data;
 	struct _match_buddies_by_address *mbba;
 	GSList *buddies;
 
@@ -987,7 +987,7 @@ bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv) {
 
 			/* Check if the buddy already has a conversation and, if so, replace it */
 			if (bb->conversation != NULL && bb->conversation != bconv)
-				bonjour_jabber_close_conversation(bb->conversation);
+				bonjour_xmpp_close_conversation(bb->conversation);
 
 			bconv->pb = pb;
 			bb->conversation = bconv;
@@ -1000,7 +1000,7 @@ bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv) {
 		/* This must be asynchronous because it destroys the parser and we
 		 * may be in the middle of parsing.
 		 */
-		async_bonjour_jabber_close_conversation(bconv);
+		async_bonjour_xmpp_close_conversation(bconv);
 	}
 
 	g_slist_free(mbba->matched_buddies);
@@ -1008,7 +1008,7 @@ bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv) {
 }
 
 static PurpleBuddy *
-_find_or_start_conversation(BonjourJabber *jdata, const gchar *to)
+_find_or_start_conversation(BonjourXMPP *jdata, const gchar *to)
 {
 	PurpleBuddy *pb = NULL;
 	BonjourBuddy *bb = NULL;
@@ -1040,7 +1040,7 @@ _find_or_start_conversation(BonjourJabber *jdata, const gchar *to)
 			return NULL;
 		}
 
-		bb->conversation = bonjour_jabber_conv_new(pb, jdata->account, ip);
+		bb->conversation = bonjour_xmpp_conv_new(pb, jdata->account, ip);
 		bb->conversation->ip_link = ip;
 
 		g_socket_client_connect_to_host_async(
@@ -1052,7 +1052,7 @@ _find_or_start_conversation(BonjourJabber *jdata, const gchar *to)
 }
 
 int
-bonjour_jabber_send_message(BonjourJabber *jdata, const gchar *to, const gchar *body)
+bonjour_xmpp_send_message(BonjourXMPP *jdata, const gchar *to, const gchar *body)
 {
 	PurpleXmlNode *message_node, *node, *node2;
 	gchar *message, *xhtml;
@@ -1104,17 +1104,17 @@ bonjour_jabber_send_message(BonjourJabber *jdata, const gchar *to, const gchar *
 }
 
 static gboolean
-_async_bonjour_jabber_close_conversation_cb(gpointer data) {
-	BonjourJabberConversation *bconv = data;
-	bonjour_jabber_close_conversation(bconv);
+_async_bonjour_xmpp_close_conversation_cb(gpointer data) {
+	BonjourXMPPConversation *bconv = data;
+	bonjour_xmpp_close_conversation(bconv);
 	return FALSE;
 }
 
 void
-async_bonjour_jabber_close_conversation(BonjourJabberConversation *bconv) {
+async_bonjour_xmpp_close_conversation(BonjourXMPPConversation *bconv) {
 	PurpleConnection *pc = purple_account_get_connection(bconv->account);
 	BonjourData *bd = purple_connection_get_protocol_data(pc);
-	BonjourJabber *jdata = bd->jabber_data;
+	BonjourXMPP *jdata = bd->xmpp_data;
 
 	jdata->pending_conversations = g_slist_remove(jdata->pending_conversations, bconv);
 
@@ -1125,11 +1125,11 @@ async_bonjour_jabber_close_conversation(BonjourJabberConversation *bconv) {
 			bb->conversation = NULL;
 	}
 
-	bconv->close_timeout = g_timeout_add(0, _async_bonjour_jabber_close_conversation_cb, bconv);
+	bconv->close_timeout = g_timeout_add(0, _async_bonjour_xmpp_close_conversation_cb, bconv);
 }
 
 void
-bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
+bonjour_xmpp_close_conversation(BonjourXMPPConversation *bconv)
 {
 	BonjourData *bd = NULL;
 	PurpleConnection *pc = NULL;
@@ -1143,8 +1143,8 @@ bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 
 	bd = purple_connection_get_protocol_data(pc);
 	if (bd) {
-		bd->jabber_data->pending_conversations = g_slist_remove(
-			bd->jabber_data->pending_conversations, bconv);
+		bd->xmpp_data->pending_conversations = g_slist_remove(
+			bd->xmpp_data->pending_conversations, bconv);
 	}
 
 	/* Cancel any file transfers that are waiting to begin */
@@ -1176,7 +1176,7 @@ bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 			            STREAM_END, len, bconv->cancellable,
 			            NULL) != (gssize)len) {
 				purple_debug_error("bonjour",
-					"bonjour_jabber_close_conversation: "
+					"bonjour_xmpp_close_conversation: "
 					"couldn't send data\n");
 			}
 		}
@@ -1226,7 +1226,7 @@ bonjour_jabber_close_conversation(BonjourJabberConversation *bconv)
 }
 
 void
-bonjour_jabber_stop(BonjourJabber *jdata)
+bonjour_xmpp_stop(BonjourXMPP *jdata)
 {
 	/* Close the server socket and remove the watcher */
 	if (jdata->service) {
@@ -1245,7 +1245,7 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 			if (bb && bb->conversation) {
 				/* Any ongoing connection attempt is cancelled
 				 * when a connection is destroyed */
-				bonjour_jabber_close_conversation(bb->conversation);
+				bonjour_xmpp_close_conversation(bb->conversation);
 				bb->conversation = NULL;
 			}
 		}
@@ -1253,7 +1253,7 @@ bonjour_jabber_stop(BonjourJabber *jdata)
 		g_slist_free(buddies);
 	}
 
-	g_slist_free_full(jdata->pending_conversations, (GDestroyNotify)bonjour_jabber_close_conversation);
+	g_slist_free_full(jdata->pending_conversations, (GDestroyNotify)bonjour_xmpp_close_conversation);
 }
 
 XepIq *
@@ -1293,7 +1293,7 @@ xep_iq_new(void *data, XepIqType type, const char *to, const char *from, const c
 	iq = g_new0(XepIq, 1);
 	iq->node = iq_node;
 	iq->type = type;
-	iq->data = ((BonjourData*)data)->jabber_data;
+	iq->data = ((BonjourData*)data)->xmpp_data;
 	iq->to = (char*)to;
 
 	return iq;
@@ -1347,7 +1347,7 @@ xep_iq_send_and_free(XepIq *iq)
 	PurpleBuddy *pb = NULL;
 
 	/* start the talk, reuse the message socket  */
-	pb = _find_or_start_conversation((BonjourJabber*) iq->data, iq->to);
+	pb = _find_or_start_conversation((BonjourXMPP*) iq->data, iq->to);
 	/* Send the message */
 	if (pb != NULL) {
 		/* Convert xml node into stream */
@@ -1365,7 +1365,7 @@ xep_iq_send_and_free(XepIq *iq)
 
 /* This returns a list containing all non-localhost IPs */
 GSList *
-bonjour_jabber_get_local_ips(int fd)
+bonjour_xmpp_get_local_ips(int fd)
 {
 	GSList *ips = NULL;
 	const char *address_text;
