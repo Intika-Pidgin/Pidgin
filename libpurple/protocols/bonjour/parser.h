@@ -1,5 +1,5 @@
 /**
- * @file parser.h Bonjour Jabber XML parser functions
+ * @file parser.h Bonjour XMPP XML parser functions
  *
  * purple
  *
@@ -26,9 +26,9 @@
 #define PURPLE_BONJOUR_PARSER_H
 
 #include "buddy.h"
-#include "jabber.h"
+#include "xmpp.h"
 
-void bonjour_parser_setup(BonjourJabberConversation *bconv);
-void bonjour_parser_process(BonjourJabberConversation *bconv, const char *buf, int len);
+void bonjour_parser_setup(BonjourXMPPConversation *bconv);
+void bonjour_parser_process(BonjourXMPPConversation *bconv, const char *buf, int len);
 
 #endif /* PURPLE_BONJOUR_PARSER_H */

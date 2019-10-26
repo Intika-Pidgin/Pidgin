@@ -258,7 +258,7 @@ bonjour_buddy_delete(BonjourBuddy *buddy)
 	g_free(buddy->node);
 	g_free(buddy->ver);
 
-	bonjour_jabber_close_conversation(buddy->conversation);
+	bonjour_xmpp_close_conversation(buddy->conversation);
 	buddy->conversation = NULL;
 
 	/* Clean up any mdns implementation data */
