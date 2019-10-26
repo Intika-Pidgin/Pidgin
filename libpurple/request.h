@@ -2104,7 +2104,7 @@ purple_request_action_varg(void *handle, const char *title, const char *primary,
  * @secondary:     Secondary information, or %NULL if there is none.
  * @with_progress: %TRUE, if we want to display progress bar, %FALSE
  *                 otherwise
- * @cancel_cb:     The callback for the <literal>Cancel</literal> button, which
+ * @cancel_cb: (scope notified): The callback for the <literal>Cancel</literal> button, which
  *                 may be %NULL.
  * @cpar:          The #PurpleRequestCommonParameters object, which gets
  *                 unref'ed after this call.
