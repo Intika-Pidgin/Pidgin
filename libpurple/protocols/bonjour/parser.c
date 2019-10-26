@@ -155,7 +155,7 @@ bonjour_parser_structured_error_handler(void *user_data, xmlErrorPtr error)
 {
 	BonjourXMPPConversation *bconv = user_data;
 
-	purple_debug_error("xmpp", "XML parser error for BonjourXMPPConversation %p: "
+	purple_debug_error("bonjour", "XML parser error for BonjourXMPPConversation %p: "
 	                             "Domain %i, code %i, level %i: %s",
 	                   bconv,
 	                   error->domain, error->code, error->level,

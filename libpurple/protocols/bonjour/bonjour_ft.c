@@ -235,7 +235,7 @@ xep_ft_si_offer(PurpleXfer *xfer, const gchar *to)
 	purple_xmlnode_set_namespace(feature, "http://jabber.org/protocol/feature-neg");
 
 	x = purple_xmlnode_new_child(feature, "x");
-	purple_xmlnode_set_namespace(x, "xmpp:x:data");
+	purple_xmlnode_set_namespace(x, "jabber:x:data");
 	purple_xmlnode_set_attrib(x, "type", "form");
 
 	field = purple_xmlnode_new_child(x, "field");
@@ -283,7 +283,7 @@ xep_ft_si_result(PurpleXfer *xfer, const char *to)
 	purple_xmlnode_set_namespace(feature, "http://jabber.org/protocol/feature-neg");
 
 	x = purple_xmlnode_new_child(feature, "x");
-	purple_xmlnode_set_namespace(x, "xmpp:x:data");
+	purple_xmlnode_set_namespace(x, "jabber:x:data");
 	purple_xmlnode_set_attrib(x, "type", "submit");
 
 	field = purple_xmlnode_new_child(x, "field");

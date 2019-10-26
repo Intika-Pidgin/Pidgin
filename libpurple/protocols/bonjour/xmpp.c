@@ -62,7 +62,7 @@
 #define STREAM_END "</stream:stream>"
 /* TODO: specify version='1.0' and send stream features */
 #define DOCTYPE "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n" \
-		"<stream:stream xmlns=\"xmpp:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"%s\" to=\"%s\">"
+		"<stream:stream xmlns=\"jabber:client\" xmlns:stream=\"http://etherx.jabber.org/streams\" from=\"%s\" to=\"%s\">"
 
 enum sent_stream_start_types {
 	NOT_SENT       = 0,
@@ -147,7 +147,7 @@ _xmpp_parse_and_write_message_to_ui(PurpleXmlNode *message_node, PurpleBuddy *pb
 		return;
 	}
 
-	events_node = purple_xmlnode_get_child_with_namespace(message_node, "x", "xmpp:x:event");
+	events_node = purple_xmlnode_get_child_with_namespace(message_node, "x", "jabber:x:event");
 	if (events_node != NULL) {
 		if (purple_xmlnode_get_child(events_node, "id") != NULL) {
 			/* The user is just typing */
@@ -514,7 +514,7 @@ _start_stream(GObject *stream, gpointer data)
 	}
 
 	/* This is EXTREMELY unlikely to happen */
-	if (ret < len) {
+	if (G_UNLIKELY(ret < len)) {
 		char *tmp = g_strdup(ss->msg + ret);
 		g_free(ss->msg);
 		ss->msg = tmp;
@@ -1090,7 +1090,7 @@ bonjour_xmpp_send_message(BonjourXMPP *jdata, const gchar *to, const gchar *body
 	purple_xmlnode_insert_child(node, node2);
 
 	node = purple_xmlnode_new_child(message_node, "x");
-	purple_xmlnode_set_namespace(node, "xmpp:x:event");
+	purple_xmlnode_set_namespace(node, "jabber:x:event");
 	purple_xmlnode_insert_child(node, purple_xmlnode_new("composing"));
 
 	message = purple_xmlnode_to_str(message_node, NULL);
