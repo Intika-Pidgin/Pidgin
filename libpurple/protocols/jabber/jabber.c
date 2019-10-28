@@ -880,8 +880,9 @@ static void tls_init(JabberStream *js)
 	js->fd = -1;
 }
 
-static gboolean jabber_login_connect(JabberStream *js, const char *domain, const char *host, int port,
-				 gboolean fatal_failure)
+static gboolean
+jabber_login_connect(JabberStream *js, const char *host, int port,
+                     gboolean fatal_failure)
 {
 	if (purple_proxy_connect(js->gc, purple_connection_get_account(js->gc),
 			host, port, jabber_login_callback, js->gc) == NULL) {
@@ -913,9 +914,11 @@ srv_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 
 		g_error_free(error);
 
-		jabber_login_connect(js, js->user->domain, js->user->domain,
-				purple_account_get_int(purple_connection_get_account(js->gc), "port", 5222),
-				TRUE);
+		jabber_login_connect(
+		        js, js->user->domain,
+		        purple_account_get_int(purple_connection_get_account(js->gc),
+		                               "port", 5222),
+		        TRUE);
 
 	} else {
 		for(l = targets; l; l = l->next) {
@@ -923,7 +926,7 @@ srv_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 			const gchar *hostname = g_srv_target_get_hostname(target);
 			guint port = g_srv_target_get_port(target);
 
-			if(jabber_login_connect(js, hostname, hostname, port, FALSE)) {
+			if (jabber_login_connect(js, hostname, port, FALSE)) {
 				g_resolver_free_targets(targets);
 
 				return;
@@ -932,9 +935,11 @@ srv_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 
 		g_resolver_free_targets(targets);
 
-		jabber_login_connect(js, js->user->domain, js->user->domain,
-				purple_account_get_int(purple_connection_get_account(js->gc), "port", 5222),
-				TRUE);		
+		jabber_login_connect(
+		        js, js->user->domain,
+		        purple_account_get_int(purple_connection_get_account(js->gc),
+		                               "port", 5222),
+		        TRUE);
 	}
 }
 
@@ -1096,8 +1101,9 @@ jabber_stream_connect(JabberStream *js)
 	/* no old-ssl, so if they've specified a connect server, we'll use that, otherwise we'll
 	 * invoke the magic of SRV lookups, to figure out host and port */
 	if(connect_server[0]) {
-		jabber_login_connect(js, js->user->domain, connect_server,
-				purple_account_get_int(account, "port", 5222), TRUE);
+		jabber_login_connect(js, connect_server,
+		                     purple_account_get_int(account, "port", 5222),
+		                     TRUE);
 	} else {
 		GResolver *resolver = g_resolver_get_default();
 		g_resolver_lookup_service_async(resolver,
