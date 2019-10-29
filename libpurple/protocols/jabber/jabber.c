@@ -823,39 +823,6 @@ txt_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 	}
 }
 
-static void
-jabber_login_callback(gpointer data, gint source, const gchar *error)
-{
-	PurpleConnection *gc = data;
-	JabberStream *js = purple_connection_get_protocol_data(gc);
-
-	if (source < 0) {
-		GResolver *resolver = g_resolver_get_default();
-		gchar *name = g_strdup_printf("_xmppconnect.%s", js->user->domain);
-
-		purple_debug_info("jabber", "Couldn't connect directly to %s.  Trying to find alternative connection methods, like BOSH.\n", js->user->domain);
-
-		g_resolver_lookup_records_async(resolver,
-		                                name,
-		                                G_RESOLVER_RECORD_TXT,
-		                                js->cancellable,
-		                                txt_resolved_cb,
-		                                js);
-		g_free(name);
-		g_object_unref(resolver);
-
-		return;
-	}
-
-	js->fd = source;
-
-	if(js->state == JABBER_STREAM_CONNECTING)
-		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
-
-	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	js->inpa = purple_input_add(js->fd, PURPLE_INPUT_READ, jabber_recv_cb, gc);
-}
-
 /* Grabbed duplicate_fd() from GLib's testcases (gio/tests/socket.c).
  * Can be dropped once this prpl has been fully converted to Gio.
  */
@@ -878,8 +845,7 @@ duplicate_fd(int fd)
 /* End function grabbed from GLib */
 
 static void
-jabber_login_callback_async(GObject *source_object, GAsyncResult *res,
-                            gpointer data)
+jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 {
 	GSocketClient *client = G_SOCKET_CLIENT(source_object);
 	JabberStream *js = data;
@@ -960,67 +926,66 @@ static void tls_init(JabberStream *js)
 	js->fd = -1;
 }
 
-static gboolean
-jabber_login_connect(JabberStream *js, const char *host, int port,
-                     gboolean fatal_failure)
-{
-	if (purple_proxy_connect(js->gc, purple_connection_get_account(js->gc),
-			host, port, jabber_login_callback, js->gc) == NULL) {
-		if (fatal_failure) {
-			purple_connection_error(js->gc,
-				PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-				_("Unable to connect"));
-		}
-
-		return FALSE;
-	}
-
-	return TRUE;
-}
-
 static void
-srv_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
+srv_resolved_cb(GObject *source_object, GAsyncResult *result, gpointer data)
 {
+	GSocketClient *client = G_SOCKET_CLIENT(source_object);
 	GError *error = NULL;
-	GList *targets = NULL, *l = NULL;
+	GSocketConnection *conn;
+	GSocket *socket;
 	JabberStream *js = data;
 
-	targets = g_resolver_lookup_service_finish(G_RESOLVER(sender),
-			result, &error);
-	if(error) {
-		purple_debug_warning("jabber",
-		                     "SRV lookup failed, proceeding with normal connection : %s",
-		                     error->message);
+	conn = g_socket_client_connect_to_service_finish(client, result, &error);
+	if (error) {
+		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			/* Do nothing; cancelled. */
 
-		g_error_free(error);
+		} else if (g_error_matches(error, G_RESOLVER_ERROR,
+		                           G_RESOLVER_ERROR_NOT_FOUND)) {
+			/* If there was no response, then attempt fallback behaviour of XMPP
+			 * Core 3.2.2. */
+			purple_debug_warning(
+			        "jabber",
+			        "SRV lookup failed, proceeding with normal connection : %s",
+			        error->message);
 
-		jabber_login_connect(
-		        js, js->user->domain,
-		        purple_account_get_int(purple_connection_get_account(js->gc),
-		                               "port", 5222),
-		        TRUE);
+			g_socket_client_connect_to_host_async(
+			        js->client, js->user->domain,
+			        purple_account_get_int(
+			                purple_connection_get_account(js->gc), "port",
+			                5222),
+			        js->cancellable, jabber_login_callback, js);
 
-	} else {
-		for(l = targets; l; l = l->next) {
-			GSrvTarget *target = (GSrvTarget *)l->data;
-			const gchar *hostname = g_srv_target_get_hostname(target);
-			guint port = g_srv_target_get_port(target);
-
-			if (jabber_login_connect(js, hostname, port, FALSE)) {
-				g_resolver_free_targets(targets);
-
-				return;
-			}
+		} else {
+			/* If resolving failed or connecting failed, then just error out, as
+			 * in XMPP Core 3.2.1 step 8. */
+			purple_connection_g_error(js->gc, error);
 		}
 
-		g_resolver_free_targets(targets);
-
-		jabber_login_connect(
-		        js, js->user->domain,
-		        purple_account_get_int(purple_connection_get_account(js->gc),
-		                               "port", 5222),
-		        TRUE);
+		g_error_free(error);
+		return;
 	}
+
+	socket = g_socket_connection_get_socket(conn);
+	g_assert(socket != NULL);
+
+	/* Duplicate the file descriptor, and then free the connection.
+	 * libpurple's proxy code doesn't keep an object around for the
+	 * lifetime of the connection. Therefore, in order to not leak
+	 * memory, the GSocketConnection must be freed here. In order
+	 * to avoid the double close/free of the file descriptor, the
+	 * file descriptor is duplicated.
+	 */
+	js->fd = duplicate_fd(g_socket_get_fd(socket));
+	g_object_unref(conn);
+
+	if (js->state == JABBER_STREAM_CONNECTING) {
+		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
+	}
+
+	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
+	js->inpa =
+	        purple_input_add(js->fd, PURPLE_INPUT_READ, jabber_recv_cb, js->gc);
 }
 
 static JabberStream *
@@ -1191,17 +1156,11 @@ jabber_stream_connect(JabberStream *js)
 		g_socket_client_connect_to_host_async(
 		        js->client, connect_server,
 		        purple_account_get_int(account, "port", 5222), js->cancellable,
-		        jabber_login_callback_async, js);
+		        jabber_login_callback, js);
 	} else {
-		GResolver *resolver = g_resolver_get_default();
-		g_resolver_lookup_service_async(resolver,
-		                                "xmpp-client",
-		                                "tcp",
-		                                js->user->domain,
-		                                js->cancellable,
-		                                srv_resolved_cb,
-		                                js);
-		g_object_unref(resolver);
+		g_socket_client_connect_to_service_async(js->client, js->user->domain,
+		                                         "xmpp-client", js->cancellable,
+		                                         srv_resolved_cb, js);
 	}
 }
 
