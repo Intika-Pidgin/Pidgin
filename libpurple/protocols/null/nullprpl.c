@@ -331,7 +331,7 @@ static GList *null_chat_info(PurpleConnection *gc) {
   purple_debug_info("nullprpl", "returning chat setting 'room'\n");
 
   pce = g_new0(PurpleProtocolChatEntry, 1);
-  pce->label = _("Chat _room");
+  pce->label = _("Chat room");
   pce->identifier = "room";
   pce->required = TRUE;
 
