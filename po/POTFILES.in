@@ -367,6 +367,7 @@ pidgin/plugins/cap/cap.c
 pidgin/plugins/contact_priority.c
 pidgin/plugins/disco/gtkdisco.c
 pidgin/plugins/disco/xmppdisco.c
+pidgin/plugins/disco/resources/disco.ui
 pidgin/plugins/extplacement.c
 pidgin/plugins/gestures/gestures.c
 pidgin/plugins/gestures/stroke.c
@@ -396,9 +397,8 @@ pidgin/plugins/transparency.c
 pidgin/plugins/unity.c
 pidgin/plugins/win32/winprefs/gtkappbar.c
 pidgin/plugins/win32/winprefs/winprefs.c
-pidgin/plugins/xmppconsole/xmppconsole.c
-pidgin/plugins/disco/resources/disco.ui
 pidgin/plugins/xmppconsole/console.ui
+pidgin/plugins/xmppconsole/xmppconsole.c
 pidgin/resources/Log/log-viewer.ui
 pidgin/resources/Whiteboard/whiteboard.ui
 pidgin/resources/Prefs/vv.ui
