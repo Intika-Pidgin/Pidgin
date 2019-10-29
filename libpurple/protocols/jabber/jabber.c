@@ -35,6 +35,7 @@
 #include "proxy.h"
 #include "protocol.h"
 #include "purpleaccountoption.h"
+#include "purple-gio.h"
 #include "request.h"
 #include "server.h"
 #include "status.h"
@@ -855,6 +856,85 @@ jabber_login_callback(gpointer data, gint source, const gchar *error)
 	js->inpa = purple_input_add(js->fd, PURPLE_INPUT_READ, jabber_recv_cb, gc);
 }
 
+/* Grabbed duplicate_fd() from GLib's testcases (gio/tests/socket.c).
+ * Can be dropped once this prpl has been fully converted to Gio.
+ */
+static int
+duplicate_fd(int fd)
+{
+#ifdef G_OS_WIN32
+	HANDLE newfd;
+
+	if (!DuplicateHandle(GetCurrentProcess(), (HANDLE)fd, GetCurrentProcess(),
+	                     &newfd, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+		return -1;
+	}
+
+	return (int)newfd;
+#else
+	return dup(fd);
+#endif
+}
+/* End function grabbed from GLib */
+
+static void
+jabber_login_callback_async(GObject *source_object, GAsyncResult *res,
+                            gpointer data)
+{
+	GSocketClient *client = G_SOCKET_CLIENT(source_object);
+	JabberStream *js = data;
+	GSocketConnection *conn;
+	GSocket *socket;
+	GError *error = NULL;
+
+	conn = g_socket_client_connect_to_host_finish(client, res, &error);
+	if (conn == NULL) {
+		GResolver *resolver;
+		gchar *name;
+
+		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			g_error_free(error);
+			return;
+		}
+		g_error_free(error);
+
+		name = g_strdup_printf("_xmppconnect.%s", js->user->domain);
+		purple_debug_info("jabber",
+		                  "Couldn't connect directly to %s.  Trying to find "
+		                  "alternative connection methods, like BOSH.\n",
+		                  js->user->domain);
+
+		resolver = g_resolver_get_default();
+		g_resolver_lookup_records_async(resolver, name, G_RESOLVER_RECORD_TXT,
+		                                js->cancellable, txt_resolved_cb, js);
+		g_free(name);
+		g_object_unref(resolver);
+
+		return;
+	}
+
+	socket = g_socket_connection_get_socket(conn);
+	g_assert(socket != NULL);
+
+	/* Duplicate the file descriptor, and then free the connection.
+	 * libpurple's proxy code doesn't keep an object around for the
+	 * lifetime of the connection. Therefore, in order to not leak
+	 * memory, the GSocketConnection must be freed here. In order
+	 * to avoid the double close/free of the file descriptor, the
+	 * file descriptor is duplicated.
+	 */
+	js->fd = duplicate_fd(g_socket_get_fd(socket));
+	g_object_unref(conn);
+
+	if (js->state == JABBER_STREAM_CONNECTING) {
+		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
+	}
+
+	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
+	js->inpa =
+	        purple_input_add(js->fd, PURPLE_INPUT_READ, jabber_recv_cb, js->gc);
+}
+
 static void
 jabber_ssl_connect_failure(PurpleSslConnection *gsc, PurpleSslErrorType error,
 		gpointer data)
@@ -1065,6 +1145,7 @@ jabber_stream_connect(JabberStream *js)
 			"connect_server", "");
 	const char *bosh_url = purple_account_get_string(account,
 			"bosh_url", "");
+	GError *error = NULL;
 
 	jabber_stream_set_state(js, JABBER_STREAM_CONNECTING);
 
@@ -1079,6 +1160,12 @@ jabber_stream_connect(JabberStream *js)
 				_("Malformed BOSH URL"));
 		}
 
+		return;
+	}
+
+	js->client = purple_gio_socket_client_new(account, &error);
+	if (js->client == NULL) {
+		purple_connection_take_error(gc, error);
 		return;
 	}
 
@@ -1101,9 +1188,10 @@ jabber_stream_connect(JabberStream *js)
 	/* no old-ssl, so if they've specified a connect server, we'll use that, otherwise we'll
 	 * invoke the magic of SRV lookups, to figure out host and port */
 	if(connect_server[0]) {
-		jabber_login_connect(js, connect_server,
-		                     purple_account_get_int(account, "port", 5222),
-		                     TRUE);
+		g_socket_client_connect_to_host_async(
+		        js->client, connect_server,
+		        purple_account_get_int(account, "port", 5222), js->cancellable,
+		        jabber_login_callback_async, js);
 	} else {
 		GResolver *resolver = g_resolver_get_default();
 		g_resolver_lookup_service_async(resolver,

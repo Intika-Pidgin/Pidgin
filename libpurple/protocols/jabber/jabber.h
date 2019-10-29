@@ -196,6 +196,7 @@ struct _JabberStream
 	JabberBuddy *user_jb;
 
 	PurpleConnection *gc;
+	GSocketClient *client;
 	PurpleSslConnection *gsc;
 
 	gboolean registration;
