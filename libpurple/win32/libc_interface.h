@@ -103,8 +103,6 @@ wpurple_gethostbyname( name )
 (unsigned int)ntohl( netlong )
 
 /* string.h */
-#define hstrerror( herror ) \
-wpurple_strerror( errno )
 #define strerror( errornum ) \
 wpurple_strerror( errornum )
 #define g_strerror( errornum ) \
@@ -120,14 +118,8 @@ wpurple_write( socket, buf, buflen )
 #define close( fd ) \
 wpurple_close( fd )
 
-#ifndef sleep
-#define sleep(x) Sleep((x)*1000)
-#endif
-
 #define gethostname( name, size ) \
 wpurple_gethostname( name, size )
-
-#define fsync(fd) _commit(fd)
 
 /* sys/time.h */
 #define gettimeofday( timeval, timezone ) \
@@ -139,12 +131,6 @@ wpurple_gettimeofday( timeval, timezone )
 #  undef vsnprintf
 #  define vsnprintf _vsnprintf
 #endif
-
-/* time.h */
-/* XXX: it may be also defined by pthread.h */
-#undef localtime_r
-#define localtime_r( time, resultp ) \
-wpurple_localtime_r( time, resultp )
 
 G_END_DECLS
 
