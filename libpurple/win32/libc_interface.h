@@ -142,9 +142,6 @@ wpurple_gettimeofday( timeval, timezone )
 #  define vsnprintf _vsnprintf
 #endif
 
-#define rename( oldname, newname ) \
-g_rename( oldname, newname )
-
 /* time.h */
 /* XXX: it may be also defined by pthread.h */
 #undef localtime_r

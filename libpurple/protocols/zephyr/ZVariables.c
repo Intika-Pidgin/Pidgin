@@ -87,7 +87,7 @@ Code_t ZSetVariable(var, value)
     	g_free(varfile);
 	return(EIO);		/* can't rely on errno */
     }
-    if (rename(varfilebackup, varfile)) {
+    if (g_rename(varfilebackup, varfile)) {
 	g_free(varfilebackup);
 	g_free(varfile);
 	return (errno);
@@ -127,7 +127,7 @@ Code_t ZUnsetVariable(var)
 	g_free(varfile);
 	return(EIO);		/* errno isn't reliable */
     }
-    if (rename(varfilebackup, varfile)) {
+    if (g_rename(varfilebackup, varfile)) {
 	g_free(varfilebackup);
 	g_free(varfile);
 	return (errno);
