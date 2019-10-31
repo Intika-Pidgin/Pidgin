@@ -156,13 +156,7 @@ if ENABLE_GTK
 
 	install_headers(libpidgin_headers, subdir : 'pidgin-3')
 
-	libpidgin_inc = include_directories('.')
-	libpidgin = shared_library('pidgin3',
-	    libpidgin_SOURCES,
-	    package_revision,
-	    include_directories : [toplevel_inc],
-	    version : PURPLE_LIB_VERSION,
-	    dependencies : [
+	_libpidgin_dependencies = [
 	    	glib,
 	    	gstreamer_video,
 	    	gtk,
@@ -171,9 +165,18 @@ if ENABLE_GTK
 	    	math,
 		libsoup,
 	        talkatu_dep,
-	    	x11,
 	    	libpurple_dep,
-	    ],
+	]
+	if x11.found()
+		_libpidgin_dependencies += x11
+	endif
+	libpidgin_inc = include_directories('.')
+	libpidgin = shared_library('pidgin3',
+	    libpidgin_SOURCES,
+	    package_revision,
+	    include_directories : [toplevel_inc],
+	    version : PURPLE_LIB_VERSION,
+	    dependencies : _libpidgin_dependencies,
 	    install : true)
 	libpidgin_dep = declare_dependency(
 	    include_directories : [toplevel_inc, libpidgin_inc],
