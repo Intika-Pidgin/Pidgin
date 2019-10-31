@@ -104,9 +104,9 @@ gg_oauth_generate_header(const char *method, const char *url,
 		nonce[sizeof(nonce) - 1] = 0;
 	}
 
-	if (gg_oauth_static_timestamp == NULL)
-		snprintf(timestamp, sizeof(timestamp), "%ld", time(NULL));
-	else {
+	if (gg_oauth_static_timestamp == NULL) {
+		g_snprintf(timestamp, sizeof(timestamp), "%ld", time(NULL));
+	} else {
 		strncpy(timestamp, gg_oauth_static_timestamp, sizeof(timestamp) - 1);
 		timestamp[sizeof(timestamp) - 1] = 0;
 	}

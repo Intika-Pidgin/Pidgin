@@ -1467,6 +1467,5 @@ append_iface_if_linklocal(char *ip, guint32 interface_param) {
 	    !IN6_IS_ADDR_LINKLOCAL(&in6_addr))
 		return;
 
-	snprintf(ip + strlen(ip), len_remain, "%%%d",
-		 interface_param);
+	g_snprintf(ip + strlen(ip), len_remain, "%%%d", interface_param);
 }

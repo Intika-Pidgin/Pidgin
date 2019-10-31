@@ -2425,10 +2425,10 @@ const char *pidgin_get_dim_grey_string(GtkWidget *widget) {
 	gtk_style_context_get_background_color(context,
 	                                       gtk_style_context_get_state(context),
 	                                       &bg);
-	snprintf(dim_grey_string, sizeof(dim_grey_string), "#%02x%02x%02x",
-		 (unsigned int)((fg.red + bg.red) * 0.5 * 255),
-		 (unsigned int)((fg.green + bg.green) * 0.5 * 255),
-		 (unsigned int)((fg.blue + bg.blue) * 0.5 * 255));
+	g_snprintf(dim_grey_string, sizeof(dim_grey_string), "#%02x%02x%02x",
+	           (unsigned int)((fg.red + bg.red) * 0.5 * 255),
+	           (unsigned int)((fg.green + bg.green) * 0.5 * 255),
+	           (unsigned int)((fg.blue + bg.blue) * 0.5 * 255));
 	return dim_grey_string;
 }
 

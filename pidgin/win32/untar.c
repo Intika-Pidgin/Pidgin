@@ -392,8 +392,8 @@ static int untar_block(Uchar_t *blk) {
 		memset(nbuf, 0, sizeof nbuf);
 		if ((tblk)->prefix[0])
 		{
-			snprintf(nbuf, sizeof(nbuf), "%s/%s",
-				(tblk)->prefix, (tblk)->filename);
+			g_snprintf(nbuf, sizeof(nbuf), "%s/%s", (tblk)->prefix,
+			           (tblk)->filename);
 		}
 		else
 		{
