@@ -1027,8 +1027,9 @@ bonjour_bytestreams_connect(PurpleXfer *xfer)
 
 	memset(dstaddr, 0, 41);
 	p = dstaddr;
-	for(i = 0; i < 20; i++, p += 2)
-		snprintf(p, 3, "%02x", hashval[i]);
+	for (i = 0; i < 20; i++, p += 2) {
+		g_snprintf(p, 3, "%02x", hashval[i]);
+	}
 
 	xf->proxy_info = purple_proxy_info_new();
 	purple_proxy_info_set_proxy_type(xf->proxy_info, PURPLE_PROXY_SOCKS5);

@@ -526,31 +526,35 @@ pidgin_setup_error_handler(void)
 	 * useful signals like SIGCHLD, so we unblock all the ones we  *
 	 * declare a handler for. thanks JSeymour and Vann.            */
 	if (sigemptyset(&sigset)) {
-		snprintf(errmsg, sizeof(errmsg), "Warning: couldn't initialise empty signal set");
+		g_snprintf(errmsg, sizeof(errmsg),
+		           "Warning: couldn't initialise empty signal set");
 		perror(errmsg);
 	}
 	for(sig_indx = 0; catch_sig_list[sig_indx] != -1; ++sig_indx) {
 		if(signal(catch_sig_list[sig_indx], sighandler) == SIG_ERR) {
-			snprintf(errmsg, sizeof(errmsg), "Warning: couldn't set signal %d for catching",
-				catch_sig_list[sig_indx]);
+			g_snprintf(errmsg, sizeof(errmsg),
+			           "Warning: couldn't set signal %d for catching",
+			           catch_sig_list[sig_indx]);
 			perror(errmsg);
 		}
 		if(sigaddset(&sigset, catch_sig_list[sig_indx])) {
-			snprintf(errmsg, sizeof(errmsg), "Warning: couldn't include signal %d for unblocking",
-				catch_sig_list[sig_indx]);
+			g_snprintf(errmsg, sizeof(errmsg),
+			           "Warning: couldn't include signal %d for unblocking",
+			           catch_sig_list[sig_indx]);
 			perror(errmsg);
 		}
 	}
 	for(sig_indx = 0; ignore_sig_list[sig_indx] != -1; ++sig_indx) {
 		if(signal(ignore_sig_list[sig_indx], SIG_IGN) == SIG_ERR) {
-			snprintf(errmsg, sizeof(errmsg), "Warning: couldn't set signal %d to ignore",
-				ignore_sig_list[sig_indx]);
+			g_snprintf(errmsg, sizeof(errmsg),
+			           "Warning: couldn't set signal %d to ignore",
+			           ignore_sig_list[sig_indx]);
 			perror(errmsg);
 		}
 	}
 
 	if (sigprocmask(SIG_UNBLOCK, &sigset, NULL)) {
-		snprintf(errmsg, sizeof(errmsg), "Warning: couldn't unblock signals");
+		g_snprintf(errmsg, sizeof(errmsg), "Warning: couldn't unblock signals");
 		perror(errmsg);
 	}
 }

@@ -85,7 +85,7 @@ static GSList *generate_presence_txt_records(BonjourDnsSd *data) {
 	const char *jid, *aim, *email;
 
 	/* Convert the port to a string */
-	snprintf(portstring, sizeof(portstring), "%d", data->port_p2pj);
+	g_snprintf(portstring, sizeof(portstring), "%d", data->port_p2pj);
 
 	jid = purple_account_get_string(data->account, "jid", NULL);
 	aim = purple_account_get_string(data->account, "AIM", NULL);

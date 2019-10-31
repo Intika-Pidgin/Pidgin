@@ -462,7 +462,7 @@ create_integer_field(PurpleRequestField *field)
 	int val = purple_request_field_int_get_default_value(field);
 	GntWidget *entry;
 
-	snprintf(str, sizeof(str), "%d", val);
+	g_snprintf(str, sizeof(str), "%d", val);
 	entry = gnt_entry_new(str);
 	gnt_entry_set_flag(GNT_ENTRY(entry), GNT_ENTRY_FLAG_INT);
 	return entry;

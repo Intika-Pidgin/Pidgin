@@ -482,7 +482,7 @@ add_account_options(AccountEditDialog *dialog)
 					if (account)
 						value = purple_account_get_int(account,
 								purple_account_option_get_setting(option), value);
-					snprintf(str, sizeof(str), "%d", value);
+					g_snprintf(str, sizeof(str), "%d", value);
 					gnt_entry_set_flag(GNT_ENTRY(entry), GNT_ENTRY_FLAG_INT);
 					gnt_entry_set_text(GNT_ENTRY(entry), str);
 				}
