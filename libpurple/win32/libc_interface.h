@@ -145,9 +145,6 @@ wpurple_gettimeofday( timeval, timezone )
 #define rename( oldname, newname ) \
 g_rename( oldname, newname )
 
-/* sys/stat.h */
-#define fchmod(a,b)
-
 /* time.h */
 /* XXX: it may be also defined by pthread.h */
 #undef localtime_r
