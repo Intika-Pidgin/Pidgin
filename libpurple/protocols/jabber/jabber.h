@@ -67,6 +67,7 @@ typedef struct _JabberStream JabberStream;
 #include "media.h"
 #include "mediamanager.h"
 #include "protocol.h"
+#include "queuedoutputstream.h"
 #include "roomlist.h"
 #include "sslconn.h"
 
@@ -119,7 +120,6 @@ typedef struct
 
 struct _JabberStream
 {
-	int fd;
 	guint inpa;
 
 	GCancellable *cancellable;
@@ -197,6 +197,9 @@ struct _JabberStream
 
 	PurpleConnection *gc;
 	GSocketClient *client;
+	GIOStream *stream;
+	GInputStream *input;
+	PurpleQueuedOutputStream *output;
 	PurpleSslConnection *gsc;
 
 	gboolean registration;

@@ -508,7 +508,8 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 	g_free(dstaddr);
 
 	g_free(jsx->rxqueue);
-	host = purple_network_get_my_ip(jsx->js->fd);
+	host = purple_network_get_my_ip_from_gio(
+	        G_SOCKET_CONNECTION(jsx->js->stream));
 
 	jsx->rxmaxlen = 5 + strlen(host) + 2;
 	jsx->rxqueue = g_malloc(jsx->rxmaxlen);
@@ -867,7 +868,8 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 		purple_xfer_set_local_port(xfer, purple_network_get_port_from_fd(sock));
 		g_snprintf(port, sizeof(port), "%hu", purple_xfer_get_local_port(xfer));
 
-		public_ip = purple_network_get_my_ip(jsx->js->fd);
+		public_ip = purple_network_get_my_ip_from_gio(
+		        G_SOCKET_CONNECTION(jsx->js->stream));
 
 		/* Include the localhost's IPs (for in-network transfers) */
 		while (local_ips) {

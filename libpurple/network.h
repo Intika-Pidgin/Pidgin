@@ -29,6 +29,7 @@
  */
 
 #include <glib.h>
+#include <gio/gio.h>
 
 G_BEGIN_DECLS
 
@@ -111,6 +112,27 @@ GList *purple_network_get_all_local_system_ips(void);
  * Returns: The local IP address to be used.
  */
 const char *purple_network_get_my_ip(int fd);
+
+/**
+ * purple_network_get_my_ip_from_gio:
+ * @sockconn: The socket connection to use to help figure out the IP, or %NULL.
+ *
+ * Returns the IP address that should be used anywhere a
+ * public IP addresses is needed (listening for an incoming
+ * file transfer, etc).
+ *
+ * If the user has manually specified an IP address via
+ * preferences, then this IP is returned.  Otherwise the
+ * IP address returned by purple_network_get_local_system_ip_from_gio()
+ * is returned.
+ *
+ * Note: The returned string is a pointer to a static buffer. If this
+ *       function is called twice, it may be important to make a copy
+ *       of the returned string.
+ *
+ * Returns: The local IP address to be used.
+ */
+const char *purple_network_get_my_ip_from_gio(GSocketConnection *sockconn);
 
 /**
  * purple_network_listen:
