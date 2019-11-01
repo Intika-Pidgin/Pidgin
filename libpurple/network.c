@@ -150,6 +150,31 @@ purple_network_get_local_system_ip(int fd)
 	return "0.0.0.0";
 }
 
+static const char *
+purple_network_get_local_system_ip_from_gio(GSocketConnection *sockconn)
+{
+	GSocketAddress *addr;
+	GInetSocketAddress *inetsockaddr;
+	static char ip[16];
+
+	strcpy(ip, "0.0.0.0");
+
+	addr = g_socket_connection_get_local_address(sockconn, NULL);
+	if ((inetsockaddr = G_INET_SOCKET_ADDRESS(addr)) != NULL) {
+		GInetAddress *inetaddr =
+		        g_inet_socket_address_get_address(inetsockaddr);
+		if (g_inet_address_get_family(inetaddr) == G_SOCKET_FAMILY_IPV4 &&
+		    !g_inet_address_get_is_loopback(inetaddr)) {
+			gchar *tmp = g_inet_address_to_string(inetaddr);
+			g_snprintf(ip, 16, "%s", tmp);
+			g_free(tmp);
+		}
+	}
+	g_object_unref(addr);
+
+	return ip;
+}
+
 GList *
 purple_network_get_all_local_system_ips(void)
 {
@@ -286,6 +311,42 @@ purple_network_get_my_ip(int fd)
 	return purple_network_get_local_system_ip(fd);
 }
 
+const char *
+purple_network_get_my_ip_from_gio(GSocketConnection *sockconn)
+{
+	const char *ip = NULL;
+	PurpleStunNatDiscovery *stun;
+
+	/* Check if the user specified an IP manually */
+	if (!purple_prefs_get_bool("/purple/network/auto_ip")) {
+		ip = purple_network_get_public_ip();
+		/* Make sure the IP address entered by the user is valid */
+		if ((ip != NULL) && (purple_network_is_ipv4(ip))) {
+			return ip;
+		}
+	} else {
+		/* Check if STUN discovery was already done */
+		stun = purple_stun_discover(NULL);
+		if ((stun != NULL) && (stun->status == PURPLE_STUN_STATUS_DISCOVERED)) {
+			return stun->publicip;
+		}
+
+		/* Attempt to get the IP from a NAT device using UPnP */
+		ip = purple_upnp_get_public_ip();
+		if (ip != NULL) {
+			return ip;
+		}
+
+		/* Attempt to get the IP from a NAT device using NAT-PMP */
+		ip = purple_pmp_get_public_ip();
+		if (ip != NULL) {
+			return ip;
+		}
+	}
+
+	/* Just fetch the IP of the local system */
+	return purple_network_get_local_system_ip_from_gio(sockconn);
+}
 
 static void
 purple_network_set_upnp_port_mapping_cb(gboolean success, gpointer data)

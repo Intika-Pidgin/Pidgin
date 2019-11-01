@@ -379,18 +379,6 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 	}
 }
 
-static int jabber_do_send(JabberStream *js, const char *data, int len)
-{
-	int ret;
-
-	if (js->gsc)
-		ret = purple_ssl_write(js->gsc, data, len);
-	else
-		ret = write(js->fd, data, len);
-
-	return ret;
-}
-
 static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond)
 {
 	JabberStream *js = data;
@@ -406,7 +394,7 @@ static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond
 		return;
 	}
 
-	ret = jabber_do_send(js, output, writelen);
+	ret = purple_ssl_write(js->gsc, output, writelen);
 
 	if (ret < 0 && errno == EAGAIN)
 		return;
@@ -422,6 +410,24 @@ static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond
 	purple_circular_buffer_mark_read(js->write_buffer, ret);
 }
 
+static void
+jabber_push_bytes_cb(GObject *source, GAsyncResult *res, gpointer data)
+{
+	PurpleQueuedOutputStream *stream = PURPLE_QUEUED_OUTPUT_STREAM(source);
+	JabberStream *js = data;
+	gboolean result;
+	GError *error = NULL;
+
+	result = purple_queued_output_stream_push_bytes_finish(stream, res, &error);
+
+	if (!result) {
+		purple_queued_output_stream_clear_queue(stream);
+
+		g_prefix_error(&error, "%s", _("Lost connection with server: "));
+		purple_connection_take_error(js->gc, error);
+	}
+}
+
 static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 {
 	int ret;
@@ -432,9 +438,18 @@ static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 	if (js->state == JABBER_STREAM_CONNECTED)
 		jabber_stream_restart_inactivity_timer(js);
 
-	if (js->writeh == 0)
-		ret = jabber_do_send(js, data, len);
-	else {
+	if (js->gsc == NULL) {
+		GBytes *output = g_bytes_new(data, len);
+		purple_queued_output_stream_push_bytes_async(
+		        js->output, output, G_PRIORITY_DEFAULT, js->cancellable,
+		        jabber_push_bytes_cb, js);
+		g_bytes_unref(output);
+		return success;
+	}
+
+	if (js->writeh == 0) {
+		ret = purple_ssl_write(js->gsc, data, len);
+	} else {
 		ret = -1;
 		errno = EAGAIN;
 	}
@@ -458,10 +473,10 @@ static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 	} else if (ret < len) {
 		if (ret < 0)
 			ret = 0;
-		if (js->writeh == 0)
-			js->writeh = purple_input_add(
-				js->gsc ? js->gsc->fd : js->fd,
-				PURPLE_INPUT_WRITE, jabber_send_cb, js);
+		if (js->writeh == 0) {
+			js->writeh = purple_input_add(js->gsc->fd, PURPLE_INPUT_WRITE,
+			                              jabber_send_cb, js);
+		}
 		purple_circular_buffer_append(js->write_buffer,
 			data + ret, len - ret);
 	}
@@ -532,8 +547,9 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 	if (js->sasl_maxbuf>0) {
 		int pos = 0;
 
-		if (!js->gsc && js->fd<0)
+		if (!js->gsc && js->input == NULL) {
 			g_return_if_reached();
+		}
 
 		while (pos < len) {
 			int towrite;
@@ -683,16 +699,21 @@ jabber_recv_cb_ssl(gpointer data, PurpleSslConnection *gsc,
 }
 
 static void
-jabber_recv_cb(gpointer data, gint source, PurpleInputCondition condition)
+jabber_recv_cb(GObject *stream, gpointer data)
 {
 	PurpleConnection *gc = data;
 	JabberStream *js = purple_connection_get_protocol_data(gc);
-	int len;
+	gssize len;
 	static char buf[4096];
+	GError *error = NULL;
 
 	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
 
-	if((len = read(js->fd, buf, sizeof(buf) - 1)) > 0) {
+	len = g_pollable_input_stream_read_nonblocking(
+	        G_POLLABLE_INPUT_STREAM(stream), buf, sizeof(buf) - 1,
+	        js->cancellable, &error);
+
+	if (len > 0) {
 		purple_connection_update_last_received(gc);
 #ifdef HAVE_CYRUS_SASL
 		if (js->sasl_maxbuf > 0) {
@@ -721,23 +742,20 @@ jabber_recv_cb(gpointer data, gint source, PurpleInputCondition condition)
 		}
 #endif
 		buf[len] = '\0';
-		purple_debug_misc("jabber", "Recv (%d): %s", len, buf);
+		purple_debug_misc("jabber", "Recv (%" G_GSSIZE_FORMAT "): %s", len,
+		                  buf);
 		jabber_parser_process(js, buf, len);
 		if(js->reinit)
 			jabber_stream_init(js);
-	} else if(len < 0 && errno == EAGAIN) {
-		return;
-	} else {
-		gchar *tmp;
-		if (len == 0)
-			tmp = g_strdup(_("Server closed the connection"));
-		else
-			tmp = g_strdup_printf(_("Lost connection with server: %s"),
-					g_strerror(errno));
-		purple_connection_error(js->gc,
-			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
-		g_free(tmp);
+	} else if (len == 0) {
+		purple_connection_error(js->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+		                        _("Server closed the connection"));
+	} else if (error->code != G_IO_ERROR_WOULD_BLOCK &&
+	           error->code != G_IO_ERROR_CANCELLED) {
+		g_prefix_error(&error, "%s", _("Lost connection with server: "));
+		purple_connection_g_error(js->gc, error);
 	}
+	g_clear_error(&error);
 }
 
 static void
@@ -823,34 +841,13 @@ txt_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 	}
 }
 
-/* Grabbed duplicate_fd() from GLib's testcases (gio/tests/socket.c).
- * Can be dropped once this prpl has been fully converted to Gio.
- */
-static int
-duplicate_fd(int fd)
-{
-#ifdef G_OS_WIN32
-	HANDLE newfd;
-
-	if (!DuplicateHandle(GetCurrentProcess(), (HANDLE)fd, GetCurrentProcess(),
-	                     &newfd, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
-		return -1;
-	}
-
-	return (int)newfd;
-#else
-	return dup(fd);
-#endif
-}
-/* End function grabbed from GLib */
-
 static void
 jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 {
 	GSocketClient *client = G_SOCKET_CLIENT(source_object);
 	JabberStream *js = data;
 	GSocketConnection *conn;
-	GSocket *socket;
+	GSource *source;
 	GError *error = NULL;
 
 	conn = g_socket_client_connect_to_host_finish(client, res, &error);
@@ -879,26 +876,20 @@ jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 		return;
 	}
 
-	socket = g_socket_connection_get_socket(conn);
-	g_assert(socket != NULL);
-
-	/* Duplicate the file descriptor, and then free the connection.
-	 * libpurple's proxy code doesn't keep an object around for the
-	 * lifetime of the connection. Therefore, in order to not leak
-	 * memory, the GSocketConnection must be freed here. In order
-	 * to avoid the double close/free of the file descriptor, the
-	 * file descriptor is duplicated.
-	 */
-	js->fd = duplicate_fd(g_socket_get_fd(socket));
-	g_object_unref(conn);
+	js->stream = G_IO_STREAM(conn);
+	js->input = g_io_stream_get_input_stream(js->stream);
+	js->output = purple_queued_output_stream_new(
+	        g_io_stream_get_output_stream(js->stream));
 
 	if (js->state == JABBER_STREAM_CONNECTING) {
 		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
 	}
 
 	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	js->inpa =
-	        purple_input_add(js->fd, PURPLE_INPUT_READ, jabber_recv_cb, js->gc);
+	source = g_pollable_input_stream_create_source(
+	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
+	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
+	js->inpa = g_source_attach(source, NULL);
 }
 
 static void
@@ -918,22 +909,30 @@ jabber_ssl_connect_failure(PurpleSslConnection *gsc, PurpleSslErrorType error,
 
 static void tls_init(JabberStream *js)
 {
+	GSocket *socket;
+	gint fd;
+
+	socket = g_socket_connection_get_socket(G_SOCKET_CONNECTION(js->stream));
+	g_assert(socket != NULL);
+
+	fd = g_socket_get_fd(socket);
+
 	purple_input_remove(js->inpa);
 	js->inpa = 0;
-	js->gsc = purple_ssl_connect_with_host_fd(purple_connection_get_account(js->gc), js->fd,
-			jabber_login_callback_ssl, jabber_ssl_connect_failure, js->certificate_CN, js->gc);
-	/* The fd is no longer our concern */
-	js->fd = -1;
+	js->gsc = purple_ssl_connect_with_host_fd(
+	        purple_connection_get_account(js->gc), fd,
+	        jabber_login_callback_ssl, jabber_ssl_connect_failure,
+	        js->certificate_CN, js->gc);
 }
 
 static void
 srv_resolved_cb(GObject *source_object, GAsyncResult *result, gpointer data)
 {
 	GSocketClient *client = G_SOCKET_CLIENT(source_object);
-	GError *error = NULL;
-	GSocketConnection *conn;
-	GSocket *socket;
 	JabberStream *js = data;
+	GSocketConnection *conn;
+	GSource *source;
+	GError *error = NULL;
 
 	conn = g_socket_client_connect_to_service_finish(client, result, &error);
 	if (error) {
@@ -966,26 +965,20 @@ srv_resolved_cb(GObject *source_object, GAsyncResult *result, gpointer data)
 		return;
 	}
 
-	socket = g_socket_connection_get_socket(conn);
-	g_assert(socket != NULL);
-
-	/* Duplicate the file descriptor, and then free the connection.
-	 * libpurple's proxy code doesn't keep an object around for the
-	 * lifetime of the connection. Therefore, in order to not leak
-	 * memory, the GSocketConnection must be freed here. In order
-	 * to avoid the double close/free of the file descriptor, the
-	 * file descriptor is duplicated.
-	 */
-	js->fd = duplicate_fd(g_socket_get_fd(socket));
-	g_object_unref(conn);
+	js->stream = G_IO_STREAM(conn);
+	js->input = g_io_stream_get_input_stream(js->stream);
+	js->output = purple_queued_output_stream_new(
+	        g_io_stream_get_output_stream(js->stream));
 
 	if (js->state == JABBER_STREAM_CONNECTING) {
 		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
 	}
 
 	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	js->inpa =
-	        purple_input_add(js->fd, PURPLE_INPUT_READ, jabber_recv_cb, js->gc);
+	source = g_pollable_input_stream_create_source(
+	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
+	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
+	js->inpa = g_source_attach(source, NULL);
 }
 
 static JabberStream *
@@ -1010,7 +1003,6 @@ jabber_stream_new(PurpleAccount *account)
 	js = g_new0(JabberStream, 1);
 	purple_connection_set_protocol_data(gc, js);
 	js->gc = gc;
-	js->fd = -1;
 	js->http_conns = soup_session_new_with_options(SOUP_SESSION_PROXY_RESOLVER,
 	                                               resolver, NULL);
 	g_object_unref(resolver);
@@ -1691,18 +1683,23 @@ void jabber_close(PurpleConnection *gc)
 	if (js->bosh) {
 		jabber_bosh_connection_destroy(js->bosh);
 		js->bosh = NULL;
-	} else if ((js->gsc && js->gsc->fd > 0) || js->fd > 0)
+	} else if ((js->gsc && js->gsc->fd > 0) || js->output != NULL)
 		jabber_send_raw(js, "</stream:stream>", -1);
 
 	if(js->gsc) {
 		purple_ssl_close(js->gsc);
-	} else if (js->fd > 0) {
+	} else if (js->output != NULL) {
 		if(js->inpa) {
-			purple_input_remove(js->inpa);
+			g_source_remove(js->inpa);
 			js->inpa = 0;
 		}
-		close(js->fd);
+		purple_gio_graceful_close(js->stream, js->input,
+		                          G_OUTPUT_STREAM(js->output));
 	}
+
+	g_clear_object(&js->output);
+	g_clear_object(&js->input);
+	g_clear_object(&js->stream);
 
 	jabber_buddy_remove_all_pending_buddy_info_requests(js);
 
@@ -1742,7 +1739,7 @@ void jabber_close(PurpleConnection *gc)
 	if (js->write_buffer)
 		g_object_unref(G_OBJECT(js->write_buffer));
 	if(js->writeh)
-		purple_input_remove(js->writeh);
+		g_source_remove(js->writeh);
 	if (js->auth_mech && js->auth_mech->dispose)
 		js->auth_mech->dispose(js);
 #ifdef HAVE_CYRUS_SASL
