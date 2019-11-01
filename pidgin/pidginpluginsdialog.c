@@ -25,10 +25,16 @@
 
 #include <glib/gi18n.h>
 
+#include <gplugin.h>
+#include <gplugin-gtk.h>
+
 struct _PidginPluginsDialog {
 	GtkDialog parent;
 
 	GtkWidget *close_button;
+	GtkWidget *plugin_info;
+
+	GtkListStore *plugin_store;
 };
 
 /******************************************************************************
@@ -41,6 +47,25 @@ struct _PidginPluginsDialog {
 static void
 pidgin_plugins_dialog_close(GtkWidget *b, gpointer data) {
 	gtk_widget_destroy(GTK_WIDGET(data));
+}
+
+static void
+pidgin_plugins_dialog_selection_cb(GtkTreeSelection *sel, gpointer data) {
+	PidginPluginsDialog *dialog = PIDGIN_PLUGINS_DIALOG(data);
+	GPluginPlugin *plugin = NULL;
+	GtkTreeModel *model = NULL;
+	GtkTreeIter iter;
+
+	if(gtk_tree_selection_get_selected(sel, &model, &iter)) {
+		gtk_tree_model_get(model, &iter,
+		                   GPLUGIN_GTK_STORE_PLUGIN_COLUMN, &plugin,
+		                   -1);
+	}
+
+	gplugin_gtk_plugin_info_set_plugin(
+		GPLUGIN_GTK_PLUGIN_INFO(dialog->plugin_info),
+		plugin
+	);
 }
 
 /******************************************************************************
@@ -58,6 +83,10 @@ pidgin_plugins_dialog_class_init(PidginPluginsDialogClass *klass) {
 	);
 
 	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, close_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, plugin_info);
+	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, plugin_store);
+
+	gtk_widget_class_bind_template_callback(widget_class, pidgin_plugins_dialog_selection_cb);
 }
 
 static void
@@ -70,6 +99,13 @@ pidgin_plugins_dialog_init(PidginPluginsDialog *dialog) {
 		"clicked",
 		G_CALLBACK(pidgin_plugins_dialog_close),
 		dialog
+	);
+
+	/* set the sort column for the plugin_store */
+	gtk_tree_sortable_set_sort_column_id(
+		GTK_TREE_SORTABLE(dialog->plugin_store),
+		GPLUGIN_GTK_STORE_MARKUP_COLUMN,
+		GTK_SORT_ASCENDING
 	);
 }
 
