@@ -617,9 +617,9 @@ else
 endif
 
 #######################################################################
-# Check for GPlugin 0.28.0
+# Check for GPlugin 0.28.2
 #######################################################################
-gplugin_dep = dependency('gplugin', version : '>= 0.28.0', required : false)
+gplugin_dep = dependency('gplugin', version : '>= 0.28.2', required : false)
 if gplugin_dep.found()
 	if enable_introspection
 		gplugin_gir = 'GPlugin-0.0'
