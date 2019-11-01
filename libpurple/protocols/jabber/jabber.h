@@ -200,7 +200,6 @@ struct _JabberStream
 	GIOStream *stream;
 	GInputStream *input;
 	PurpleQueuedOutputStream *output;
-	PurpleSslConnection *gsc;
 
 	gboolean registration;
 
@@ -209,9 +208,6 @@ struct _JabberStream
 	GSList *pending_avatar_requests;
 
 	GSList *pending_buddy_info_requests;
-
-	PurpleCircularBuffer *write_buffer;
-	guint writeh;
 
 	gboolean reinit;
 

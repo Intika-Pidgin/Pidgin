@@ -223,12 +223,13 @@ jabber_process_starttls(JabberStream *js, PurpleXmlNode *packet)
 	PurpleAccount *account = NULL;
 	PurpleXmlNode *starttls = NULL;
 
-	/* It's a secure BOSH connection, just return FALSE and skip, without doing anything extra.
-	 * XEP-0206 (XMPP Over BOSH): The client SHOULD ignore any Transport Layer Security (TLS)
-	 * feature since BOSH channel encryption SHOULD be negotiated at the HTTP layer.
+	/* It's a secure BOSH connection, just return FALSE and skip, without doing
+	 * anything extra. XEP-0206 (XMPP Over BOSH): The client SHOULD ignore any
+	 * Transport Layer Security (TLS) feature since BOSH channel encryption
+	 * SHOULD be negotiated at the HTTP layer.
 	 *
-	 * Note: we are already receiving STARTTLS at this point from a SSL/TLS BOSH connection,
-	 * so it is not necessary to check if purple_ssl_is_supported().
+	 * Note: we are already receiving STARTTLS at this point from a SSL/TLS BOSH
+	 * connection, so it is not necessary to check if SSL is supported.
 	 */
 	if (js->bosh && jabber_bosh_connection_is_ssl(js->bosh)) {
 		return FALSE;
@@ -367,9 +368,10 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 				jabber_auth_handle_failure(js, *packet);
 		}
 	} else if (purple_strequal(xmlns, NS_XMPP_TLS)) {
-		if (js->state != JABBER_STREAM_INITIALIZING_ENCRYPTION || js->gsc)
+		if (js->state != JABBER_STREAM_INITIALIZING_ENCRYPTION ||
+		    G_IS_TLS_CONNECTION(js->stream)) {
 			purple_debug_warning("jabber", "Ignoring spurious %s\n", name);
-		else {
+		} else {
 			if (purple_strequal(name, "proceed"))
 				tls_init(js);
 			/* TODO: Handle <failure/>, I guess? */
@@ -377,37 +379,6 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 	} else {
 		purple_debug_warning("jabber", "Unknown packet: %s\n", (*packet)->name);
 	}
-}
-
-static void jabber_send_cb(gpointer data, gint source, PurpleInputCondition cond)
-{
-	JabberStream *js = data;
-	const gchar *output = NULL;
-	int ret, writelen;
-
-	writelen = purple_circular_buffer_get_max_read(js->write_buffer);
-	output = purple_circular_buffer_get_output(js->write_buffer);
-
-	if (writelen == 0) {
-		purple_input_remove(js->writeh);
-		js->writeh = 0;
-		return;
-	}
-
-	ret = purple_ssl_write(js->gsc, output, writelen);
-
-	if (ret < 0 && errno == EAGAIN)
-		return;
-	else if (ret <= 0) {
-		gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
-				g_strerror(errno));
-		purple_connection_error(js->gc,
-			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
-		g_free(tmp);
-		return;
-	}
-
-	purple_circular_buffer_mark_read(js->write_buffer, ret);
 }
 
 static void
@@ -430,7 +401,7 @@ jabber_push_bytes_cb(GObject *source, GAsyncResult *res, gpointer data)
 
 static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 {
-	int ret;
+	GBytes *output;
 	gboolean success = TRUE;
 
 	g_return_val_if_fail(len > 0, FALSE);
@@ -438,48 +409,11 @@ static gboolean do_jabber_send_raw(JabberStream *js, const char *data, int len)
 	if (js->state == JABBER_STREAM_CONNECTED)
 		jabber_stream_restart_inactivity_timer(js);
 
-	if (js->gsc == NULL) {
-		GBytes *output = g_bytes_new(data, len);
-		purple_queued_output_stream_push_bytes_async(
-		        js->output, output, G_PRIORITY_DEFAULT, js->cancellable,
-		        jabber_push_bytes_cb, js);
-		g_bytes_unref(output);
-		return success;
-	}
-
-	if (js->writeh == 0) {
-		ret = purple_ssl_write(js->gsc, data, len);
-	} else {
-		ret = -1;
-		errno = EAGAIN;
-	}
-
-	if (ret < 0 && errno != EAGAIN) {
-		PurpleAccount *account = purple_connection_get_account(js->gc);
-		/*
-		 * The server may have closed the socket (on a stream error), so if
-		 * we're disconnecting, don't generate (possibly another) error that
-		 * (for some UIs) would mask the first.
-		 */
-		if (!purple_account_is_disconnecting(account)) {
-			gchar *tmp = g_strdup_printf(_("Lost connection with server: %s"),
-					g_strerror(errno));
-			purple_connection_error(js->gc,
-				PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
-			g_free(tmp);
-		}
-
-		success = FALSE;
-	} else if (ret < len) {
-		if (ret < 0)
-			ret = 0;
-		if (js->writeh == 0) {
-			js->writeh = purple_input_add(js->gsc->fd, PURPLE_INPUT_WRITE,
-			                              jabber_send_cb, js);
-		}
-		purple_circular_buffer_append(js->write_buffer,
-			data + ret, len - ret);
-	}
+	output = g_bytes_new(data, len);
+	purple_queued_output_stream_push_bytes_async(
+	        js->output, output, G_PRIORITY_DEFAULT, js->cancellable,
+	        jabber_push_bytes_cb, js);
+	g_bytes_unref(output);
 
 	return success;
 }
@@ -547,9 +481,7 @@ void jabber_send_raw(JabberStream *js, const char *data, int len)
 	if (js->sasl_maxbuf>0) {
 		int pos = 0;
 
-		if (!js->gsc && js->input == NULL) {
-			g_return_if_reached();
-		}
+		g_return_if_fail(js->input != NULL);
 
 		while (pos < len) {
 			int towrite;
@@ -664,41 +596,6 @@ static int jabber_get_keepalive_interval(void)
 }
 
 static void
-jabber_recv_cb_ssl(gpointer data, PurpleSslConnection *gsc,
-		PurpleInputCondition cond)
-{
-	PurpleConnection *gc = data;
-	JabberStream *js = purple_connection_get_protocol_data(gc);
-	int len;
-	static char buf[4096];
-
-	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
-
-	while((len = purple_ssl_read(gsc, buf, sizeof(buf) - 1)) > 0) {
-		purple_connection_update_last_received(gc);
-		buf[len] = '\0';
-		purple_debug_misc("jabber", "Recv (ssl)(%d): %s", len, buf);
-		jabber_parser_process(js, buf, len);
-		if(js->reinit)
-			jabber_stream_init(js);
-	}
-
-	if(len < 0 && errno == EAGAIN)
-		return;
-	else {
-		gchar *tmp;
-		if (len == 0)
-			tmp = g_strdup(_("Server closed the connection"));
-		else
-			tmp = g_strdup_printf(_("Lost connection with server: %s"),
-					g_strerror(errno));
-		purple_connection_error(js->gc,
-			PURPLE_CONNECTION_ERROR_NETWORK_ERROR, tmp);
-		g_free(tmp);
-	}
-}
-
-static void
 jabber_recv_cb(GObject *stream, gpointer data)
 {
 	PurpleConnection *gc = data;
@@ -759,20 +656,39 @@ jabber_recv_cb(GObject *stream, gpointer data)
 }
 
 static void
-jabber_login_callback_ssl(gpointer data, PurpleSslConnection *gsc,
-		PurpleInputCondition cond)
+jabber_login_callback_ssl(GObject *source_object, GAsyncResult *res,
+                          gpointer data)
 {
-	PurpleConnection *gc = data;
-	JabberStream *js;
+	GSocketClient *client = G_SOCKET_CLIENT(source_object);
+	JabberStream *js = data;
+	GSocketConnection *conn;
+	GSource *source;
+	GError *error = NULL;
 
-	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
+	conn = g_socket_client_connect_to_host_finish(client, res, &error);
+	if (conn == NULL) {
+		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			g_error_free(error);
+		} else {
+			purple_connection_take_error(js->gc, error);
+		}
+		return;
+	}
 
-	js = purple_connection_get_protocol_data(gc);
+	js->stream = G_IO_STREAM(g_tcp_wrapper_connection_get_base_io_stream(
+	        G_TCP_WRAPPER_CONNECTION(conn)));
+	js->input = g_io_stream_get_input_stream(js->stream);
+	js->output = purple_queued_output_stream_new(
+	        g_io_stream_get_output_stream(js->stream));
 
-	if(js->state == JABBER_STREAM_CONNECTING)
+	if (js->state == JABBER_STREAM_CONNECTING) {
 		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
+	}
 	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	purple_ssl_input_add(gsc, jabber_recv_cb_ssl, gc);
+	source = g_pollable_input_stream_create_source(
+	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
+	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
+	js->inpa = g_source_attach(source, NULL);
 
 	/* Tell the app that we're doing encryption */
 	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING_ENCRYPTION);
@@ -893,36 +809,78 @@ jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 }
 
 static void
-jabber_ssl_connect_failure(PurpleSslConnection *gsc, PurpleSslErrorType error,
-		gpointer data)
+tls_handshake_cb(GObject *source_object, GAsyncResult *res, gpointer data)
 {
-	PurpleConnection *gc = data;
-	JabberStream *js;
+	JabberStream *js = data;
+	GSource *source;
+	GError *error = NULL;
 
-	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
+	if (!g_tls_connection_handshake_finish(G_TLS_CONNECTION(source_object), res,
+	                                       &error)) {
+		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			/* Connection already closed/freed. Escape. */
+		} else if (g_error_matches(error, G_TLS_ERROR, G_TLS_ERROR_HANDSHAKE)) {
+			/* In Gio, a handshake error is because of the cert */
+			purple_connection_ssl_error(js->gc, PURPLE_SSL_CERTIFICATE_INVALID);
+		} else {
+			/* Report any other errors as handshake failing */
+			purple_connection_ssl_error(js->gc, PURPLE_SSL_HANDSHAKE_FAILED);
+		}
 
-	js = purple_connection_get_protocol_data(gc);
-	js->gsc = NULL;
+		g_error_free(error);
+		return;
+	}
 
-	purple_connection_ssl_error (gc, error);
+	js->input = g_io_stream_get_input_stream(js->stream);
+	js->output = purple_queued_output_stream_new(
+	        g_io_stream_get_output_stream(js->stream));
+
+	if (js->state == JABBER_STREAM_CONNECTING) {
+		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
+	}
+	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
+	source = g_pollable_input_stream_create_source(
+	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
+	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
+	js->inpa = g_source_attach(source, NULL);
+
+	/* Tell the app that we're doing encryption */
+	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING_ENCRYPTION);
 }
 
 static void tls_init(JabberStream *js)
 {
-	GSocket *socket;
-	gint fd;
+	GSocketConnectable *identity;
+	GIOStream *tls_conn;
+	GError *error = NULL;
 
-	socket = g_socket_connection_get_socket(G_SOCKET_CONNECTION(js->stream));
-	g_assert(socket != NULL);
-
-	fd = g_socket_get_fd(socket);
-
-	purple_input_remove(js->inpa);
+	g_source_remove(js->inpa);
 	js->inpa = 0;
-	js->gsc = purple_ssl_connect_with_host_fd(
-	        purple_connection_get_account(js->gc), fd,
-	        jabber_login_callback_ssl, jabber_ssl_connect_failure,
-	        js->certificate_CN, js->gc);
+	js->input = NULL;
+	g_filter_output_stream_set_close_base_stream(
+	        G_FILTER_OUTPUT_STREAM(js->output), FALSE);
+	g_output_stream_close(G_OUTPUT_STREAM(js->output), js->cancellable, NULL);
+	js->output = NULL;
+
+	identity = g_network_address_new(js->certificate_CN, 0);
+	tls_conn = g_tls_client_connection_new(js->stream, identity, &error);
+	g_object_unref(identity);
+
+	if (tls_conn == NULL) {
+		purple_debug_warning("jabber",
+		                     "Error creating TLS client connection: %s",
+		                     error->message);
+		g_clear_error(&error);
+		purple_connection_ssl_error(js->gc, PURPLE_SSL_CONNECT_FAILED);
+		return;
+	}
+
+	g_clear_object(&js->stream);
+	js->stream = G_IO_STREAM(tls_conn);
+
+	g_tls_connection_handshake_async(G_TLS_CONNECTION(tls_conn),
+	                                 G_PRIORITY_DEFAULT, js->cancellable,
+	                                 tls_handshake_cb, js);
 }
 
 static void
@@ -1070,7 +1028,6 @@ jabber_stream_new(PurpleAccount *account)
 	js->chats = g_hash_table_new_full(g_str_hash, g_str_equal,
 			g_free, (GDestroyNotify)jabber_chat_free);
 	js->next_id = g_random_int();
-	js->write_buffer = purple_circular_buffer_new(512);
 	js->old_length = 0;
 	js->keepalive_timeout = 0;
 	js->max_inactivity = DEFAULT_INACTIVITY_TIME;
@@ -1130,15 +1087,11 @@ jabber_stream_connect(JabberStream *js)
 
 	/* if they've got old-ssl mode going, we probably want to ignore SRV lookups */
 	if (purple_strequal("old_ssl", purple_account_get_string(account, "connection_security", JABBER_DEFAULT_REQUIRE_TLS))) {
-		js->gsc = purple_ssl_connect(account, js->certificate_CN,
-				purple_account_get_int(account, "port", 5223),
-				jabber_login_callback_ssl, jabber_ssl_connect_failure, gc);
-		if (!js->gsc) {
-			purple_connection_error(gc,
-				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-				_("Unable to establish SSL connection"));
-		}
-
+		g_socket_client_set_tls(js->client, TRUE);
+		g_socket_client_connect_to_host_async(
+		        js->client, js->certificate_CN,
+		        purple_account_get_int(account, "port", 5223), js->cancellable,
+		        jabber_login_callback_ssl, js);
 		return;
 	}
 
@@ -1683,12 +1636,11 @@ void jabber_close(PurpleConnection *gc)
 	if (js->bosh) {
 		jabber_bosh_connection_destroy(js->bosh);
 		js->bosh = NULL;
-	} else if ((js->gsc && js->gsc->fd > 0) || js->output != NULL)
-		jabber_send_raw(js, "</stream:stream>", -1);
-
-	if(js->gsc) {
-		purple_ssl_close(js->gsc);
 	} else if (js->output != NULL) {
+		jabber_send_raw(js, "</stream:stream>", -1);
+	}
+
+	if (js->output != NULL) {
 		if(js->inpa) {
 			g_source_remove(js->inpa);
 			js->inpa = 0;
@@ -1736,10 +1688,6 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->avatar_hash);
 	g_free(js->caps_hash);
 
-	if (js->write_buffer)
-		g_object_unref(G_OBJECT(js->write_buffer));
-	if(js->writeh)
-		g_source_remove(js->writeh);
 	if (js->auth_mech && js->auth_mech->dispose)
 		js->auth_mech->dispose(js);
 #ifdef HAVE_CYRUS_SASL
@@ -1799,7 +1747,11 @@ void jabber_close(PurpleConnection *gc)
 
 void jabber_stream_set_state(JabberStream *js, JabberStreamState state)
 {
-#define JABBER_CONNECT_STEPS ((js->gsc || js->state == JABBER_STREAM_INITIALIZING_ENCRYPTION) ? 9 : 5)
+#define JABBER_CONNECT_STEPS \
+	((G_IS_TLS_CONNECTION(js->stream) || \
+	  js->state == JABBER_STREAM_INITIALIZING_ENCRYPTION) \
+	         ? 9 \
+	         : 5)
 
 	js->state = state;
 	switch(state) {
@@ -1810,8 +1762,10 @@ void jabber_stream_set_state(JabberStream *js, JabberStreamState state)
 					JABBER_CONNECT_STEPS);
 			break;
 		case JABBER_STREAM_INITIALIZING:
-			purple_connection_update_progress(js->gc, _("Initializing Stream"),
-					js->gsc ? 5 : 2, JABBER_CONNECT_STEPS);
+			purple_connection_update_progress(
+			        js->gc, _("Initializing Stream"),
+			        G_IS_TLS_CONNECTION(js->stream) ? 5 : 2,
+			        JABBER_CONNECT_STEPS);
 			jabber_stream_init(js);
 			break;
 		case JABBER_STREAM_INITIALIZING_ENCRYPTION:
@@ -1819,12 +1773,16 @@ void jabber_stream_set_state(JabberStream *js, JabberStreamState state)
 											  6, JABBER_CONNECT_STEPS);
 			break;
 		case JABBER_STREAM_AUTHENTICATING:
-			purple_connection_update_progress(js->gc, _("Authenticating"),
-					js->gsc ? 7 : 3, JABBER_CONNECT_STEPS);
+			purple_connection_update_progress(
+			        js->gc, _("Authenticating"),
+			        G_IS_TLS_CONNECTION(js->stream) ? 7 : 3,
+			        JABBER_CONNECT_STEPS);
 			break;
 		case JABBER_STREAM_POST_AUTH:
-			purple_connection_update_progress(js->gc, _("Re-initializing Stream"),
-					(js->gsc ? 8 : 4), JABBER_CONNECT_STEPS);
+			purple_connection_update_progress(
+			        js->gc, _("Re-initializing Stream"),
+			        (G_IS_TLS_CONNECTION(js->stream) ? 8 : 4),
+			        JABBER_CONNECT_STEPS);
 
 			break;
 		case JABBER_STREAM_CONNECTED:
@@ -2148,7 +2106,7 @@ static void jabber_identities_destroy(void)
 gboolean jabber_stream_is_ssl(JabberStream *js)
 {
 	return (js->bosh && jabber_bosh_connection_is_ssl(js->bosh)) ||
-	       (!js->bosh && js->gsc);
+	       (!js->bosh && G_IS_TLS_CONNECTION(js->stream));
 }
 
 static gboolean
