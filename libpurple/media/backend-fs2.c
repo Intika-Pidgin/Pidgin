@@ -473,7 +473,6 @@ purple_media_backend_fs2_class_init(PurpleMediaBackendFs2Class *klass)
 {
 	GObjectClass *gobject_class = (GObjectClass*)klass;
 	GList *features;
-	GList *it;
 
 	gobject_class->dispose = purple_media_backend_fs2_dispose;
 	gobject_class->finalize = purple_media_backend_fs2_finalize;
