@@ -44,7 +44,6 @@ struct _PurpleJabberBOSHConnection {
 	SoupSession *payload_reqs;
 
 	gchar *url;
-	gboolean is_creating;
 	gboolean is_ssl;
 	gboolean is_terminating;
 
@@ -166,7 +165,6 @@ jabber_bosh_connection_destroy(PurpleJabberBOSHConnection *conn)
 		g_source_remove(conn->send_timer);
 
 	soup_session_abort(conn->payload_reqs);
-	conn->is_creating = FALSE;
 
 	g_clear_object(&conn->payload_reqs);
 	g_string_free(conn->send_buff, TRUE);
@@ -393,8 +391,6 @@ jabber_bosh_connection_session_created(SoupSession *session, SoupMessage *msg,
 	const gchar *sid, *ver, *inactivity_str;
 	int inactivity = 0;
 
-	bosh_conn->is_creating = FALSE;
-
 	if (purple_debug_is_verbose() && purple_debug_is_unsafe()) {
 		purple_debug_misc("jabber-bosh", "received (session creation): %s\n",
 		                  msg->response_body->data);
@@ -470,12 +466,6 @@ jabber_bosh_connection_session_create(PurpleJabberBOSHConnection *conn)
 	SoupMessage *req;
 	GString *data;
 
-	g_return_if_fail(conn != NULL);
-
-	if (conn->sid || conn->is_creating) {
-		return;
-	}
-
 	purple_debug_misc("jabber-bosh", "Requesting Session Create for %p\n",
 		conn);
 
@@ -498,7 +488,6 @@ jabber_bosh_connection_session_create(PurpleJabberBOSHConnection *conn)
 	req = jabber_bosh_connection_http_request_new(conn, data);
 	g_string_free(data, FALSE);
 
-	conn->is_creating = TRUE;
 	soup_session_queue_message(conn->payload_reqs, req,
 	                           jabber_bosh_connection_session_created, conn);
 }
