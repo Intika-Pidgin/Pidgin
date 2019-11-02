@@ -2205,8 +2205,6 @@ novell_login(PurpleAccount * account)
 		purple_connection_update_progress(gc, _("Connecting"),
 										1, NOVELL_CONNECT_STEPS);
 
-		user->conn->use_ssl = TRUE;
-
 		user->conn->ssl_conn = g_new0(NMSSLConn, 1);
 		user->conn->ssl_conn->read = (nm_ssl_read_cb) purple_ssl_read;
 		user->conn->ssl_conn->write = (nm_ssl_write_cb) purple_ssl_write;

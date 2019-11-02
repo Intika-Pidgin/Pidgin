@@ -39,9 +39,6 @@ struct _NMConn
 	/* The port that we are connecting to. */
 	int port;
 
-	/* The file descriptor of the socket for the connection. */
-	int fd;
-
 	/* The transaction counter. */
 	int trans_id;
 
@@ -50,9 +47,6 @@ struct _NMConn
 
 	/* Are we connected? TRUE if so, FALSE if not. */
 	gboolean connected;
-
-	/* Are we running in secure mode? */
-	gboolean use_ssl;
 
 	/* Have we been redirected? */
 	gboolean redirect;
