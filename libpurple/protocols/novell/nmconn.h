@@ -45,12 +45,6 @@ struct _NMConn
 	/* A list of requests currently awaiting a response. */
 	GSList *requests;
 
-	/* Are we connected? TRUE if so, FALSE if not. */
-	gboolean connected;
-
-	/* Have we been redirected? */
-	gboolean redirect;
-
 	/* SSL connection  */
 	NMSSLConn *ssl_conn;
 
@@ -217,24 +211,5 @@ void nm_conn_remove_request_item(NMConn * conn, NMRequest * request);
  *					found.
  */
 NMRequest *nm_conn_find_request(NMConn * conn, int trans_id);
-
-/**
- * Get the server address for the connection.
- *
- * @param conn		The connection.
- *
- * @return 			The server address for the connection.
- *
- */
-const char *nm_conn_get_addr(NMConn * conn);
-
-/**
- * Get the port for the connection.
- *
- * @param conn		The connection.
- *
- * @return 			The port that we are connected to.
- */
-int nm_conn_get_port(NMConn * conn);
 
 #endif /* PURPLE_NOVELL_NMCONN_H */

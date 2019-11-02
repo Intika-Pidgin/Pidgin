@@ -23,7 +23,6 @@
 #include <errno.h>
 #include <string.h>
 #include <ctype.h>
-#include <time.h>
 #include "nmconn.h"
 
 #ifdef _WIN32
@@ -455,8 +454,8 @@ nm_send_request(NMConn *conn, char *cmd, NMField *fields,
 
 	/* Create a request struct, add it to our queue, and return it */
 	if (rc == NM_OK) {
-		NMRequest *new_request = nm_create_request(cmd, conn->trans_id,
-												   time(0), cb, NULL, data);
+		NMRequest *new_request =
+		        nm_create_request(cmd, conn->trans_id, cb, NULL, data);
 		nm_conn_add_request_item(conn, new_request);
 
 		/* Set the out param if it was sent in, otherwise release the request */
@@ -662,22 +661,4 @@ nm_conn_find_request(NMConn * conn, int trans_id)
 		itr = g_slist_next(itr);
 	}
 	return NULL;
-}
-
-const char *
-nm_conn_get_addr(NMConn * conn)
-{
-	if (conn == NULL)
-		return NULL;
-	else
-		return conn->addr;
-}
-
-int
-nm_conn_get_port(NMConn * conn)
-{
-	if (conn == NULL)
-		return -1;
-	else
-		return conn->port;
 }
