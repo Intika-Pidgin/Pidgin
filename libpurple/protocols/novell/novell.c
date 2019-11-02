@@ -1743,7 +1743,6 @@ novell_ssl_connected_cb(gpointer data, PurpleSslConnection * gsc,
 
 	rc = nm_send_login(user, pwd, my_addr, ua, _login_resp_cb, NULL);
 	if (rc == NM_OK) {
-		conn->connected = TRUE;
 		purple_ssl_input_add(gsc, novell_ssl_recv_cb, gc);
 	} else {
 		purple_connection_error(gc,
