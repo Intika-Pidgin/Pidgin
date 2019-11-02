@@ -198,12 +198,7 @@ nm_tcp_write(NMConn * conn, const void *buff, int len)
 	if (conn == NULL || buff == NULL)
 		return -1;
 
-	if (!conn->use_ssl)
-		return (write(conn->fd, buff, len));
-	else if (conn->ssl_conn && conn->ssl_conn->write)
-		return (conn->ssl_conn->write(conn->ssl_conn->data, buff, len));
-	else
-		return -1;
+	return conn->ssl_conn->write(conn->ssl_conn->data, buff, len);
 }
 
 int
@@ -212,12 +207,7 @@ nm_tcp_read(NMConn * conn, void *buff, int len)
 	if (conn == NULL || buff == NULL)
 		return -1;
 
-	if (!conn->use_ssl)
-		return (read(conn->fd, buff, len));
-	else if (conn->ssl_conn && conn->ssl_conn->read)
-		return ((conn->ssl_conn->read)(conn->ssl_conn->data, buff, len));
-	else
-		return -1;
+	return conn->ssl_conn->read(conn->ssl_conn->data, buff, len);
 }
 
 NMERR_T
