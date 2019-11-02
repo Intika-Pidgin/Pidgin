@@ -656,45 +656,6 @@ jabber_recv_cb(GObject *stream, gpointer data)
 }
 
 static void
-jabber_login_callback_ssl(GObject *source_object, GAsyncResult *res,
-                          gpointer data)
-{
-	GSocketClient *client = G_SOCKET_CLIENT(source_object);
-	JabberStream *js = data;
-	GSocketConnection *conn;
-	GSource *source;
-	GError *error = NULL;
-
-	conn = g_socket_client_connect_to_host_finish(client, res, &error);
-	if (conn == NULL) {
-		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
-			g_error_free(error);
-		} else {
-			purple_connection_take_error(js->gc, error);
-		}
-		return;
-	}
-
-	js->stream = G_IO_STREAM(g_tcp_wrapper_connection_get_base_io_stream(
-	        G_TCP_WRAPPER_CONNECTION(conn)));
-	js->input = g_io_stream_get_input_stream(js->stream);
-	js->output = purple_queued_output_stream_new(
-	        g_io_stream_get_output_stream(js->stream));
-
-	if (js->state == JABBER_STREAM_CONNECTING) {
-		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
-	}
-	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	source = g_pollable_input_stream_create_source(
-	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
-	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
-	js->inpa = g_source_attach(source, NULL);
-
-	/* Tell the app that we're doing encryption */
-	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING_ENCRYPTION);
-}
-
-static void
 txt_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 {
 	GError *error = NULL;
@@ -758,12 +719,34 @@ txt_resolved_cb(GObject *sender, GAsyncResult *result, gpointer data)
 }
 
 static void
+jabber_stream_connect_finish(JabberStream *js, GIOStream *stream)
+{
+	GSource *source;
+
+	js->stream = stream;
+	js->input = g_io_stream_get_input_stream(js->stream);
+	js->output = purple_queued_output_stream_new(
+	        g_io_stream_get_output_stream(js->stream));
+
+	if (js->state == JABBER_STREAM_CONNECTING) {
+		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
+	}
+
+	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
+	source = g_pollable_input_stream_create_source(
+	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
+	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
+	js->inpa = g_source_attach(source, NULL);
+}
+
+static void
 jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 {
 	GSocketClient *client = G_SOCKET_CLIENT(source_object);
 	JabberStream *js = data;
 	GSocketConnection *conn;
-	GSource *source;
+	GIOStream *stream;
+	gboolean is_old_ssl = g_socket_client_get_tls(client);
 	GError *error = NULL;
 
 	conn = g_socket_client_connect_to_host_finish(client, res, &error);
@@ -773,6 +756,10 @@ jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 
 		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
 			g_error_free(error);
+			return;
+		} else if (is_old_ssl) {
+			/* Old-style SSL only makes a direct connection, or fails. */
+			purple_connection_take_error(js->gc, error);
 			return;
 		}
 		g_error_free(error);
@@ -792,27 +779,25 @@ jabber_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 		return;
 	}
 
-	js->stream = G_IO_STREAM(conn);
-	js->input = g_io_stream_get_input_stream(js->stream);
-	js->output = purple_queued_output_stream_new(
-	        g_io_stream_get_output_stream(js->stream));
-
-	if (js->state == JABBER_STREAM_CONNECTING) {
-		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
+	if (is_old_ssl) {
+		stream = G_IO_STREAM(g_tcp_wrapper_connection_get_base_io_stream(
+		        G_TCP_WRAPPER_CONNECTION(conn)));
+	} else {
+		stream = G_IO_STREAM(conn);
 	}
 
-	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	source = g_pollable_input_stream_create_source(
-	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
-	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
-	js->inpa = g_source_attach(source, NULL);
+	jabber_stream_connect_finish(js, stream);
+
+	if (is_old_ssl) {
+		/* Tell the app that we're doing encryption */
+		jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING_ENCRYPTION);
+	}
 }
 
 static void
 tls_handshake_cb(GObject *source_object, GAsyncResult *res, gpointer data)
 {
 	JabberStream *js = data;
-	GSource *source;
 	GError *error = NULL;
 
 	if (!g_tls_connection_handshake_finish(G_TLS_CONNECTION(source_object), res,
@@ -831,18 +816,7 @@ tls_handshake_cb(GObject *source_object, GAsyncResult *res, gpointer data)
 		return;
 	}
 
-	js->input = g_io_stream_get_input_stream(js->stream);
-	js->output = purple_queued_output_stream_new(
-	        g_io_stream_get_output_stream(js->stream));
-
-	if (js->state == JABBER_STREAM_CONNECTING) {
-		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
-	}
-	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	source = g_pollable_input_stream_create_source(
-	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
-	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
-	js->inpa = g_source_attach(source, NULL);
+	jabber_stream_connect_finish(js, js->stream);
 
 	/* Tell the app that we're doing encryption */
 	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING_ENCRYPTION);
@@ -889,7 +863,6 @@ srv_resolved_cb(GObject *source_object, GAsyncResult *result, gpointer data)
 	GSocketClient *client = G_SOCKET_CLIENT(source_object);
 	JabberStream *js = data;
 	GSocketConnection *conn;
-	GSource *source;
 	GError *error = NULL;
 
 	conn = g_socket_client_connect_to_service_finish(client, result, &error);
@@ -923,20 +896,7 @@ srv_resolved_cb(GObject *source_object, GAsyncResult *result, gpointer data)
 		return;
 	}
 
-	js->stream = G_IO_STREAM(conn);
-	js->input = g_io_stream_get_input_stream(js->stream);
-	js->output = purple_queued_output_stream_new(
-	        g_io_stream_get_output_stream(js->stream));
-
-	if (js->state == JABBER_STREAM_CONNECTING) {
-		jabber_send_raw(js, "<?xml version='1.0' ?>", -1);
-	}
-
-	jabber_stream_set_state(js, JABBER_STREAM_INITIALIZING);
-	source = g_pollable_input_stream_create_source(
-	        G_POLLABLE_INPUT_STREAM(js->input), js->cancellable);
-	g_source_set_callback(source, (GSourceFunc)jabber_recv_cb, js->gc, NULL);
-	js->inpa = g_source_attach(source, NULL);
+	jabber_stream_connect_finish(js, G_IO_STREAM(conn));
 }
 
 static JabberStream *
@@ -1091,7 +1051,7 @@ jabber_stream_connect(JabberStream *js)
 		g_socket_client_connect_to_host_async(
 		        js->client, js->certificate_CN,
 		        purple_account_get_int(account, "port", 5223), js->cancellable,
-		        jabber_login_callback_ssl, js);
+		        jabber_login_callback, js);
 		return;
 	}
 
