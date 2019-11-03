@@ -91,33 +91,31 @@ G_DEFINE_TYPE_WITH_PRIVATE(PidginSmileyTheme, pidgin_smiley_theme,
  ******************************************************************************/
 
 static void
+pidgin_smiley_theme_index_smiley_free(PidginSmileyThemeIndexSmiley *smiley)
+{
+	g_free(smiley->file);
+	g_list_free_full(smiley->shortcuts, g_free);
+	g_free(smiley);
+}
+
+static void
+pidgin_smiley_theme_index_protocol_free(PidginSmileyThemeIndexProtocol *proto)
+{
+	g_free(proto->name);
+	g_list_free_full(proto->smileys, (GDestroyNotify)pidgin_smiley_theme_index_smiley_free);
+	g_free(proto);
+}
+
+static void
 pidgin_smiley_theme_index_free(PidginSmileyThemeIndex *index)
 {
-	GList *it, *it2;
-
 	g_return_if_fail(index != NULL);
 
 	g_free(index->name);
 	g_free(index->desc);
 	g_free(index->icon);
 	g_free(index->author);
-
-	for (it = index->protocols; it; it = g_list_next(it)) {
-		PidginSmileyThemeIndexProtocol *proto = it->data;
-
-		g_free(proto->name);
-		for (it2 = proto->smileys; it2; it2 = g_list_next(it2)) {
-			PidginSmileyThemeIndexSmiley *smiley = it2->data;
-
-			g_free(smiley->file);
-			g_list_free_full(smiley->shortcuts, g_free);
-			g_free(smiley);
-		}
-		g_list_free(proto->smileys);
-		g_free(proto);
-	}
-	g_list_free(index->protocols);
-
+	g_list_free_full(index->protocols, (GDestroyNotify)pidgin_smiley_theme_index_protocol_free);
 	g_free(index);
 }
 
