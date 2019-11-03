@@ -69,13 +69,7 @@ purple_media_codec_finalize(GObject *info)
 			purple_media_codec_get_instance_private(
 					PURPLE_MEDIA_CODEC(info));
 	g_free(priv->encoding_name);
-	for (; priv->optional_params; priv->optional_params =
-			g_list_delete_link(priv->optional_params, priv->optional_params)) {
-		PurpleKeyValuePair *param = priv->optional_params->data;
-		g_free(param->key);
-		g_free(param->value);
-		g_free(param);
-	}
+	g_list_free_full(priv->optional_params, (GDestroyNotify)purple_key_value_pair_free);
 
 	G_OBJECT_CLASS(purple_media_codec_parent_class)->finalize(info);
 }

@@ -58,17 +58,9 @@ jabber_adhoc_got_buddy_list(JabberStream *js, const char *from, PurpleXmlNode *q
 	if(!jbr)
 		return;
 
-	if(jbr->commands) {
-		/* since the list we just received is complete, wipe the old one */
-		while(jbr->commands) {
-			JabberAdHocCommands *cmd = jbr->commands->data;
-			g_free(cmd->jid);
-			g_free(cmd->node);
-			g_free(cmd->name);
-			g_free(cmd);
-			jbr->commands = g_list_delete_link(jbr->commands, jbr->commands);
-		}
-	}
+	/* since the list we just received is complete, wipe the old one */
+	g_list_free_full(jbr->commands, (GDestroyNotify)jabber_adhoc_commands_free);
+	jbr->commands = NULL;
 
 	for(item = query->child; item; item = item->next) {
 		JabberAdHocCommands *cmd;
@@ -241,14 +233,8 @@ jabber_adhoc_got_server_list(JabberStream *js, const char *from, PurpleXmlNode *
 		return;
 
 	/* clean current list (just in case there is one) */
-	while(js->commands) {
-		JabberAdHocCommands *cmd = js->commands->data;
-		g_free(cmd->jid);
-		g_free(cmd->node);
-		g_free(cmd->name);
-		g_free(cmd);
-		js->commands = g_list_delete_link(js->commands, js->commands);
-	}
+	g_list_free_full(js->commands, (GDestroyNotify)jabber_adhoc_commands_free);
+	js->commands = NULL;
 
 	/* re-fill list */
 	for(item = query->child; item; item = item->next) {

@@ -100,19 +100,6 @@ jabber_si_xfer_find(JabberStream *js, const char *sid, const char *from)
 	return NULL;
 }
 
-static void
-jabber_si_free_streamhost(gpointer data) {
-	JabberBytestreamsStreamhost *sh = data;
-
-	if(!data)
-		return;
-
-	g_free(sh->jid);
-	g_free(sh->host);
-	g_free(sh->zeroconf);
-	g_free(sh);
-}
-
 
 
 static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer);
@@ -140,7 +127,7 @@ jabber_si_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_
 				streamhost->jid, streamhost->host,
 				error_message ? error_message : "(null)");
 		jsx->streamhosts = g_list_remove(jsx->streamhosts, streamhost);
-		jabber_si_free_streamhost(streamhost);
+		jabber_bytestreams_streamhost_free(streamhost);
 		jabber_si_bytestreams_attempt_connect(xfer);
 		return;
 	}
@@ -328,7 +315,7 @@ static void jabber_si_bytestreams_attempt_connect(PurpleXfer *xfer)
 	if (jsx->connect_data == NULL)
 	{
 		jsx->streamhosts = g_list_remove(jsx->streamhosts, streamhost);
-		jabber_si_free_streamhost(streamhost);
+		jabber_bytestreams_streamhost_free(streamhost);
 		jabber_si_bytestreams_attempt_connect(xfer);
 	}
 }
@@ -815,7 +802,7 @@ jabber_si_connect_proxy_cb(JabberStream *js, const char *from,
 	}
 
 	jsx->streamhosts = g_list_remove_link(jsx->streamhosts, matched);
-	g_list_free_full(jsx->streamhosts, jabber_si_free_streamhost);
+	g_list_free_full(jsx->streamhosts, (GDestroyNotify)jabber_bytestreams_streamhost_free);
 
 	jsx->streamhosts = matched;
 
@@ -1779,9 +1766,7 @@ jabber_si_xfer_finalize(GObject *obj) {
 		g_source_remove(jsx->ibb_timeout_handle);
 	}
 
-	if (jsx->streamhosts) {
-		g_list_free_full(jsx->streamhosts, jabber_si_free_streamhost);
-	}
+	g_list_free_full(jsx->streamhosts, (GDestroyNotify)jabber_bytestreams_streamhost_free);
 
 	if (jsx->ibb_session) {
 		purple_debug_info("jabber",

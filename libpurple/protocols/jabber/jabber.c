@@ -1676,14 +1676,7 @@ void jabber_close(PurpleConnection *gc)
 	g_list_free_full(js->chat_servers, g_free);
 	g_list_free_full(js->user_directories, g_free);
 
-	while(js->bs_proxies) {
-		JabberBytestreamsStreamhost *sh = js->bs_proxies->data;
-		g_free(sh->jid);
-		g_free(sh->host);
-		g_free(sh->zeroconf);
-		g_free(sh);
-		js->bs_proxies = g_list_delete_link(js->bs_proxies, js->bs_proxies);
-	}
+	g_list_free_full(js->bs_proxies, (GDestroyNotify)jabber_bytestreams_streamhost_free);
 
 	if (js->http_conns) {
 		soup_session_abort(js->http_conns);
@@ -1714,14 +1707,7 @@ void jabber_close(PurpleConnection *gc)
 	g_free(js->sasl_password);
 #endif
 	g_free(js->serverFQDN);
-	while(js->commands) {
-		JabberAdHocCommands *cmd = js->commands->data;
-		g_free(cmd->jid);
-		g_free(cmd->node);
-		g_free(cmd->name);
-		g_free(cmd);
-		js->commands = g_list_delete_link(js->commands, js->commands);
-	}
+	g_list_free_full(js->commands, (GDestroyNotify)jabber_adhoc_commands_free);
 	g_free(js->server_name);
 	g_free(js->certificate_CN);
 	g_free(js->gmail_last_time);
@@ -2018,26 +2004,20 @@ void jabber_add_feature(const char *namespace, JabberFeatureEnabled cb) {
 	jabber_features = g_list_append(jabber_features, feat);
 }
 
+static void jabber_feature_free(JabberFeature *feature) {
+	g_free(feature->namespace);
+	g_free(feature);
+}
+
 void jabber_remove_feature(const char *namespace) {
 	GList *feature;
 	for(feature = jabber_features; feature; feature = feature->next) {
 		JabberFeature *feat = (JabberFeature*)feature->data;
 		if(purple_strequal(feat->namespace, namespace)) {
-			g_free(feat->namespace);
-			g_free(feature->data);
+			jabber_feature_free(feat);
 			jabber_features = g_list_delete_link(jabber_features, feature);
 			break;
 		}
-	}
-}
-
-static void jabber_features_destroy(void)
-{
-	while (jabber_features) {
-		JabberFeature *feature = jabber_features->data;
-		g_free(feature->namespace);
-		g_free(feature);
-		jabber_features = g_list_delete_link(jabber_features, jabber_features);
 	}
 }
 
@@ -2065,6 +2045,26 @@ jabber_identity_compare(gconstpointer a, gconstpointer b)
 	return g_strcmp0(ac->lang, bc->lang);
 }
 
+JabberIdentity *jabber_identity_new(const gchar *category, const gchar *type,
+				    const gchar *lang, const gchar *name)
+{
+	JabberIdentity *id = g_new0(JabberIdentity, 1);
+	id->category = g_strdup(category);
+	id->type = g_strdup(type);
+	id->lang = g_strdup(lang);
+	id->name = g_strdup(name);
+	return id;
+}
+
+void jabber_identity_free(JabberIdentity *id)
+{
+	g_free(id->category);
+	g_free(id->type);
+	g_free(id->lang);
+	g_free(id->name);
+	g_free(id);
+}
+
 void jabber_add_identity(const gchar *category, const gchar *type,
                          const gchar *lang, const gchar *name)
 {
@@ -2075,35 +2075,28 @@ void jabber_add_identity(const gchar *category, const gchar *type,
 	g_return_if_fail(category != NULL);
 	g_return_if_fail(type != NULL);
 
+	ident = jabber_identity_new(category, type, lang, name);
+
 	/* Check if this identity is already there... */
-	for (identity = jabber_identities; identity; identity = identity->next) {
-		JabberIdentity *id = identity->data;
-		if (purple_strequal(id->category, category) &&
-			purple_strequal(id->type, type) &&
-			purple_strequal(id->lang, lang))
-			return;
+	identity = g_list_find_custom(jabber_identities, ident, jabber_identity_compare);
+	if (identity != NULL) {
+		jabber_identity_free(ident);
+		return;
 	}
 
-	ident = g_new0(JabberIdentity, 1);
-	ident->category = g_strdup(category);
-	ident->type = g_strdup(type);
-	ident->lang = g_strdup(lang);
-	ident->name = g_strdup(name);
 	jabber_identities = g_list_insert_sorted(jabber_identities, ident,
 	                                         jabber_identity_compare);
 }
 
-static void jabber_identities_destroy(void)
+void jabber_bytestreams_streamhost_free(JabberBytestreamsStreamhost *sh)
 {
-	while (jabber_identities) {
-		JabberIdentity *id = jabber_identities->data;
-		g_free(id->category);
-		g_free(id->type);
-		g_free(id->lang);
-		g_free(id->name);
-		g_free(id);
-		jabber_identities = g_list_delete_link(jabber_identities, jabber_identities);
-	}
+	if(!sh)
+		return;
+
+	g_free(sh->jid);
+	g_free(sh->host);
+	g_free(sh->zeroconf);
+	g_free(sh);
 }
 
 gboolean jabber_stream_is_ssl(JabberStream *js)
@@ -3989,8 +3982,8 @@ jabber_do_uninit(void)
 #endif
 
 	jabber_auth_uninit();
-	jabber_features_destroy();
-	jabber_identities_destroy();
+	g_list_free_full(jabber_features, (GDestroyNotify)jabber_feature_free);
+	g_list_free_full(jabber_identities, (GDestroyNotify)jabber_identity_free);
 
 	g_hash_table_destroy(jabber_cmds);
 	jabber_cmds = NULL;
