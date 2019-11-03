@@ -27,9 +27,9 @@
 #include "nmuser.h"
 #include "notify.h"
 #include "novell.h"
+#include "purple-gio.h"
 #include "purpleaccountoption.h"
 #include "util.h"
-#include "sslconn.h"
 #include "request.h"
 #include "network.h"
 #include "status.h"
@@ -1672,22 +1672,7 @@ _show_privacy_locked_error(PurpleConnection *gc, NMUser *user)
  ******************************************************************************/
 
 static void
-novell_ssl_connect_error(PurpleSslConnection * gsc,
-						 PurpleSslErrorType error, gpointer data)
-{
-	PurpleConnection *gc;
-	NMUser *user;
-
-	gc = data;
-	user = purple_connection_get_protocol_data(gc);
-	user->conn->data = NULL;
-
-	purple_connection_ssl_error (gc, error);
-}
-
-static void
-novell_ssl_recv_cb(gpointer data, PurpleSslConnection * gsc,
-				   PurpleInputCondition condition)
+novell_ssl_recv_cb(GObject *stream, gpointer data)
 {
 	PurpleConnection *gc = data;
 	NMUser *user;
@@ -1716,19 +1701,28 @@ novell_ssl_recv_cb(gpointer data, PurpleSslConnection * gsc,
 }
 
 static void
-novell_ssl_connected_cb(gpointer data, PurpleSslConnection * gsc,
-						PurpleInputCondition cond)
+novell_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 {
+	GSocketClient *client = G_SOCKET_CLIENT(source_object);
 	PurpleConnection *gc = data;
+	GSocketConnection *sockconn;
 	NMUser *user;
 	NMConn *conn;
 	NMERR_T rc = 0;
 	const char *pwd = NULL;
-	const char *my_addr = NULL;
+	gchar *my_addr = NULL;
 	char *ua = NULL;
+	GError *error = NULL;
 
-	if (gc == NULL || gsc == NULL)
+	sockconn = g_socket_client_connect_to_host_finish(client, res, &error);
+	if (sockconn == NULL) {
+		if (g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			g_error_free(error);
+		} else {
+			purple_connection_take_error(gc, error);
+		}
 		return;
+	}
 
 	user = purple_connection_get_protocol_data(gc);
 	if ((user == NULL) || (conn = user->conn) == NULL)
@@ -1737,13 +1731,21 @@ novell_ssl_connected_cb(gpointer data, PurpleSslConnection * gsc,
 	purple_connection_update_progress(gc, _("Authenticating..."),
 									2, NOVELL_CONNECT_STEPS);
 
-	my_addr = purple_network_get_my_ip(gsc->fd);
+	conn->stream = G_IO_STREAM(sockconn);
+	conn->input = g_io_stream_get_input_stream(conn->stream);
+	conn->output = g_io_stream_get_output_stream(conn->stream);
+
+	my_addr = purple_network_get_my_ip_from_gio(sockconn);
 	pwd = purple_connection_get_password(gc);
 	ua = _user_agent_string();
 
 	rc = nm_send_login(user, pwd, my_addr, ua, _login_resp_cb, NULL);
 	if (rc == NM_OK) {
-		purple_ssl_input_add(gsc, novell_ssl_recv_cb, gc);
+		GSource *source;
+		source = g_pollable_input_stream_create_source(
+		        G_POLLABLE_INPUT_STREAM(conn->input), user->cancellable);
+		g_source_set_callback(source, (GSourceFunc)novell_ssl_recv_cb, gc,
+		                      NULL);
 	} else {
 		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
@@ -1754,6 +1756,7 @@ novell_ssl_connected_cb(gpointer data, PurpleSslConnection * gsc,
 									3, NOVELL_CONNECT_STEPS);
 
 	g_free(ua);
+	g_free(my_addr);
 }
 
 /*******************************************************************************
@@ -2167,6 +2170,7 @@ novell_login(PurpleAccount * account)
 	const char *server;
 	const char *name;
 	int port;
+	GError *error = NULL;
 
 	if (account == NULL)
 		return;
@@ -2204,17 +2208,16 @@ novell_login(PurpleAccount * account)
 		purple_connection_update_progress(gc, _("Connecting"),
 										1, NOVELL_CONNECT_STEPS);
 
-		user->conn->read = (nm_ssl_read_cb)purple_ssl_read;
-		user->conn->write = (nm_ssl_write_cb)purple_ssl_write;
-
-		user->conn->data = purple_ssl_connect(
-		        user->client_data, user->conn->addr, user->conn->port,
-		        novell_ssl_connected_cb, novell_ssl_connect_error, gc);
-		if (user->conn->data == NULL) {
-			purple_connection_error(gc,
-				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
-				_("SSL support unavailable"));
+		user->conn->client = purple_gio_socket_client_new(account, &error);
+		if (user->conn->client == NULL) {
+			purple_connection_take_error(gc, error);
+			return;
 		}
+
+		g_socket_client_set_tls(user->conn->client, TRUE);
+		g_socket_client_connect_to_host_async(
+		        user->conn->client, user->conn->addr, user->conn->port,
+		        user->cancellable, novell_login_callback, gc);
 	}
 }
 
@@ -2231,7 +2234,7 @@ novell_close(PurpleConnection * gc)
 	if (user) {
 		conn = user->conn;
 		if (conn) {
-			purple_ssl_close(user->conn->data);
+			nm_release_conn(conn);
 		}
 		nm_deinitialize_user(user);
 	}

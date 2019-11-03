@@ -21,6 +21,8 @@
 #ifndef PURPLE_NOVELL_NMCONN_H
 #define PURPLE_NOVELL_NMCONN_H
 
+#include <gio/gio.h>
+
 typedef struct _NMConn NMConn;
 
 #include "nmfield.h"
@@ -44,12 +46,11 @@ struct _NMConn
 	/* A list of requests currently awaiting a response. */
 	GSList *requests;
 
-	/*  Data to pass to the callbacks */
-	gpointer data;
-
-	/* Callbacks for reading/writing */
-	nm_ssl_read_cb read;
-	nm_ssl_write_cb write;
+	/* Connections to server. */
+	GSocketClient *client;
+	GIOStream *stream;
+	GInputStream *input;
+	GOutputStream *output;
 };
 
 /**

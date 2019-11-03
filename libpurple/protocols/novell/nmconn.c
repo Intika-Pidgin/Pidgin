@@ -20,9 +20,11 @@
 
 #include <glib.h>
 #include <unistd.h>
-#include <errno.h>
 #include <string.h>
 #include <ctype.h>
+
+#include "purple-gio.h"
+
 #include "nmconn.h"
 
 #ifdef _WIN32
@@ -180,13 +182,21 @@ nm_create_conn(const char *addr, int port)
 
 void nm_release_conn(NMConn *conn)
 {
-	if (conn) {
-		g_slist_free_full(conn->requests, (GDestroyNotify)nm_release_request);
-		conn->requests = NULL;
-		g_free(conn->addr);
-		conn->addr = NULL;
-		g_free(conn);
+	g_return_if_fail(conn != NULL);
+
+	g_slist_free_full(conn->requests, (GDestroyNotify)nm_release_request);
+	conn->requests = NULL;
+
+	if (conn->input) {
+		purple_gio_graceful_close(conn->stream, conn->input,
+					  conn->output);
 	}
+	g_clear_object(&conn->input);
+	g_clear_object(&conn->output);
+	g_clear_object(&conn->stream);
+
+	g_clear_pointer(&conn->addr, g_free);
+	g_free(conn);
 }
 
 int
@@ -195,7 +205,7 @@ nm_tcp_write(NMConn * conn, const void *buff, int len)
 	if (conn == NULL || buff == NULL)
 		return -1;
 
-	return conn->write(conn->data, buff, len);
+	return g_output_stream_write(conn->output, buff, len, NULL, NULL);
 }
 
 int
@@ -204,44 +214,21 @@ nm_tcp_read(NMConn * conn, void *buff, int len)
 	if (conn == NULL || buff == NULL)
 		return -1;
 
-	return conn->read(conn->data, buff, len);
+	return g_input_stream_read(conn->input, buff, len, NULL, NULL);
 }
 
 NMERR_T
 nm_read_all(NMConn * conn, char *buff, int len)
 {
 	NMERR_T rc = NM_OK;
-	int bytes_left = len;
-	int bytes_read;
-	int total_bytes = 0;
-	int retry = 1000;
 
 	if (conn == NULL || buff == NULL)
 		return NMERR_BAD_PARM;
 
-	/* Keep reading until buffer is full */
-	while (bytes_left) {
-		bytes_read = nm_tcp_read(conn, &buff[total_bytes], bytes_left);
-		if (bytes_read > 0) {
-			bytes_left -= bytes_read;
-			total_bytes += bytes_read;
-		} else {
-			if (errno == EAGAIN) {
-				if (--retry == 0) {
-					rc = NMERR_TCP_READ;
-					break;
-				}
-#ifdef _WIN32
-				Sleep(1);
-#else
-				usleep(1000);
-#endif
-			} else {
-				rc = NMERR_TCP_READ;
-				break;
-			}
-		}
+	if (!g_input_stream_read_all(conn->input, buff, len, NULL, NULL, NULL)) {
+		rc = NMERR_TCP_READ;
 	}
+
 	return rc;
 }
 

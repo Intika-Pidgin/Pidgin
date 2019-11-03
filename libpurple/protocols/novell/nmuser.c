@@ -56,7 +56,7 @@ nm_initialize_user(const char *name, const char *server_addr,
 
 	user = g_new0(NMUser, 1);
 
-
+	user->cancellable = g_cancellable_new();
 
 	user->contacts =
 		g_hash_table_new_full(g_str_hash, nm_utf8_str_equal,
@@ -81,6 +81,8 @@ nm_initialize_user(const char *name, const char *server_addr,
 void
 nm_deinitialize_user(NMUser * user)
 {
+	g_cancellable_cancel(user->cancellable);
+
 	nm_release_conn(user->conn);
 
 	if (user->contacts) {
@@ -103,6 +105,8 @@ nm_deinitialize_user(NMUser * user)
 
 	nm_conference_list_free(user);
 	nm_destroy_contact_list(user);
+
+	g_object_unref(user->cancellable);
 
 	g_free(user);
 }
