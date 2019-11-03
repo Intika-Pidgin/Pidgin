@@ -429,7 +429,7 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 	char buffer[42]; /* 40 for DST.ADDR + 2 bytes for port number*/
 	int len;
 	char *dstaddr, *hash;
-	const char *host;
+	gchar *host;
 
 	purple_debug_info("jabber", "in jabber_si_xfer_bytestreams_send_read_again_cb\n");
 
@@ -528,6 +528,8 @@ jabber_si_xfer_bytestreams_send_read_again_cb(gpointer data, gint source,
 		jabber_si_xfer_bytestreams_send_read_again_resp_cb, xfer));
 	jabber_si_xfer_bytestreams_send_read_again_resp_cb(xfer, source,
 		PURPLE_INPUT_WRITE);
+
+	g_free(host);
 }
 
 static void
@@ -858,7 +860,7 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 		gchar *jid;
 		GList *local_ips =
 			purple_network_get_all_local_system_ips();
-		const char *public_ip;
+		gchar *public_ip;
 		gboolean has_public_ip = FALSE;
 
 		jsx->local_streamhost_fd = sock;
@@ -895,6 +897,7 @@ jabber_si_xfer_bytestreams_listen_cb(int sock, gpointer data)
 		}
 
 		g_free(jid);
+		g_free(public_ip);
 
 		/* The listener for the local proxy */
 		purple_xfer_set_watcher(xfer, purple_input_add(sock, PURPLE_INPUT_READ,

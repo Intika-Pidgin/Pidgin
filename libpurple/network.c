@@ -150,14 +150,12 @@ purple_network_get_local_system_ip(int fd)
 	return "0.0.0.0";
 }
 
-static const char *
+static gchar *
 purple_network_get_local_system_ip_from_gio(GSocketConnection *sockconn)
 {
 	GSocketAddress *addr;
 	GInetSocketAddress *inetsockaddr;
-	static char ip[16];
-
-	strcpy(ip, "0.0.0.0");
+	gchar *ip;
 
 	addr = g_socket_connection_get_local_address(sockconn, NULL);
 	if ((inetsockaddr = G_INET_SOCKET_ADDRESS(addr)) != NULL) {
@@ -165,14 +163,14 @@ purple_network_get_local_system_ip_from_gio(GSocketConnection *sockconn)
 		        g_inet_socket_address_get_address(inetsockaddr);
 		if (g_inet_address_get_family(inetaddr) == G_SOCKET_FAMILY_IPV4 &&
 		    !g_inet_address_get_is_loopback(inetaddr)) {
-			gchar *tmp = g_inet_address_to_string(inetaddr);
-			g_snprintf(ip, 16, "%s", tmp);
-			g_free(tmp);
+			ip = g_inet_address_to_string(inetaddr);
+			g_object_unref(addr);
+			return ip;
 		}
 	}
 	g_object_unref(addr);
 
-	return ip;
+	return g_strdup("0.0.0.0");
 }
 
 GList *
@@ -311,10 +309,10 @@ purple_network_get_my_ip(int fd)
 	return purple_network_get_local_system_ip(fd);
 }
 
-const char *
+gchar *
 purple_network_get_my_ip_from_gio(GSocketConnection *sockconn)
 {
-	const char *ip = NULL;
+	const gchar *ip = NULL;
 	PurpleStunNatDiscovery *stun;
 
 	/* Check if the user specified an IP manually */
@@ -322,25 +320,25 @@ purple_network_get_my_ip_from_gio(GSocketConnection *sockconn)
 		ip = purple_network_get_public_ip();
 		/* Make sure the IP address entered by the user is valid */
 		if ((ip != NULL) && (purple_network_is_ipv4(ip))) {
-			return ip;
+			return g_strdup(ip);
 		}
 	} else {
 		/* Check if STUN discovery was already done */
 		stun = purple_stun_discover(NULL);
 		if ((stun != NULL) && (stun->status == PURPLE_STUN_STATUS_DISCOVERED)) {
-			return stun->publicip;
+			return g_strdup(stun->publicip);
 		}
 
 		/* Attempt to get the IP from a NAT device using UPnP */
 		ip = purple_upnp_get_public_ip();
 		if (ip != NULL) {
-			return ip;
+			return g_strdup(ip);
 		}
 
 		/* Attempt to get the IP from a NAT device using NAT-PMP */
 		ip = purple_pmp_get_public_ip();
 		if (ip != NULL) {
-			return ip;
+			return g_strdup(ip);
 		}
 	}
 

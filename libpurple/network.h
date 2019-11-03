@@ -126,13 +126,9 @@ const char *purple_network_get_my_ip(int fd);
  * IP address returned by purple_network_get_local_system_ip_from_gio()
  * is returned.
  *
- * Note: The returned string is a pointer to a static buffer. If this
- *       function is called twice, it may be important to make a copy
- *       of the returned string.
- *
  * Returns: The local IP address to be used.
  */
-const char *purple_network_get_my_ip_from_gio(GSocketConnection *sockconn);
+gchar *purple_network_get_my_ip_from_gio(GSocketConnection *sockconn);
 
 /**
  * purple_network_listen:
