@@ -183,8 +183,6 @@ void nm_release_conn(NMConn *conn)
 	if (conn) {
 		g_slist_free_full(conn->requests, (GDestroyNotify)nm_release_request);
 		conn->requests = NULL;
-		g_free(conn->ssl_conn);
-		conn->ssl_conn = NULL;
 		g_free(conn->addr);
 		conn->addr = NULL;
 		g_free(conn);
@@ -197,7 +195,7 @@ nm_tcp_write(NMConn * conn, const void *buff, int len)
 	if (conn == NULL || buff == NULL)
 		return -1;
 
-	return conn->ssl_conn->write(conn->ssl_conn->data, buff, len);
+	return conn->write(conn->data, buff, len);
 }
 
 int
@@ -206,7 +204,7 @@ nm_tcp_read(NMConn * conn, void *buff, int len)
 	if (conn == NULL || buff == NULL)
 		return -1;
 
-	return conn->ssl_conn->read(conn->ssl_conn->data, buff, len);
+	return conn->read(conn->data, buff, len);
 }
 
 NMERR_T
