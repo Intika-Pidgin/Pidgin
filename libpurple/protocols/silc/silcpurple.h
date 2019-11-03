@@ -83,6 +83,9 @@ typedef struct {
 
 /* The SILC Purple plugin context */
 typedef struct SilcPurpleStruct {
+	GCancellable *cancellable;
+	GSocketConnection *sockconn;
+
 	SilcClient client;
 	SilcClientConnection conn;
 	SilcPublicKey public_key;
