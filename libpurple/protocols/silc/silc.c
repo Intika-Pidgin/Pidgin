@@ -135,15 +135,6 @@ silcpurple_keepalive(PurpleConnection *gc)
 			 NULL, 0);
 }
 
-#if __SILC_TOOLKIT_VERSION < SILC_VERSION(1,1,1)
-static gboolean
-silcpurple_scheduler(gpointer *context)
-{
-	SilcClient client = (SilcClient)context;
-	silc_client_run_one(client);
-	return TRUE;
-}
-#else
 typedef struct {
   SilcPurple sg;
   SilcUInt32 fd;
@@ -241,7 +232,6 @@ silcpurple_scheduler(SilcSchedule schedule,
 	  }
 	}
 }
-#endif /* __SILC_TOOLKIT_VERSION */
 
 static void
 silcpurple_connect_cb(SilcClient client, SilcClientConnection conn,
@@ -644,16 +634,11 @@ silcpurple_login(PurpleAccount *account)
 		return;
 	}
 
-#if __SILC_TOOLKIT_VERSION < SILC_VERSION(1,1,1)
-	/* Schedule SILC using Glib's event loop */
-	sg->scheduler = g_timeout_add(300, (GSourceFunc)silcpurple_scheduler, client);
-#else
 	/* Run SILC scheduler */
 	sg->tasks = silc_dlist_init();
 	silc_schedule_set_notify(client->schedule, silcpurple_scheduler,
 				 client);
 	silc_client_run_one(client);
-#endif /* __SILC_TOOLKIT_VERSION */
 }
 
 static int
@@ -677,9 +662,7 @@ static void
 silcpurple_close(PurpleConnection *gc)
 {
 	SilcPurple sg = purple_connection_get_protocol_data(gc);
-#if __SILC_TOOLKIT_VERSION >= SILC_VERSION(1,1,1)
 	SilcPurpleTask task;
-#endif /* __SILC_TOOLKIT_VERSION */
 	GHashTable *ui_info;
 	const char *ui_name = NULL, *ui_website = NULL;
 	char *quit_msg;
@@ -709,7 +692,6 @@ silcpurple_close(PurpleConnection *gc)
 	if (sg->conn)
 		silc_client_close_connection(sg->client, sg->conn);
 
-#if __SILC_TOOLKIT_VERSION >= SILC_VERSION(1,1,1)
 	if (sg->conn)
 	  silc_client_run_one(sg->client);
 	silc_schedule_set_notify(sg->client->schedule, NULL, NULL);
@@ -720,7 +702,6 @@ silcpurple_close(PurpleConnection *gc)
 	  silc_free(task);
 	}
 	silc_dlist_uninit(sg->tasks);
-#endif /* __SILC_TOOLKIT_VERSION */
 
 	if (sg->scheduler)
 		g_source_remove(sg->scheduler);
