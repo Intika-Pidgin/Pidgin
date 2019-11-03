@@ -601,7 +601,7 @@ jabber_recv_cb(GObject *stream, gpointer data)
 	PurpleConnection *gc = data;
 	JabberStream *js = purple_connection_get_protocol_data(gc);
 	gssize len;
-	static char buf[4096];
+	gchar buf[4096];
 	GError *error = NULL;
 
 	PURPLE_ASSERT_CONNECTION_IS_VALID(gc);
@@ -1598,9 +1598,7 @@ void jabber_close(PurpleConnection *gc)
 		js->bosh = NULL;
 	} else if (js->output != NULL) {
 		jabber_send_raw(js, "</stream:stream>", -1);
-	}
 
-	if (js->output != NULL) {
 		if(js->inpa) {
 			g_source_remove(js->inpa);
 			js->inpa = 0;
