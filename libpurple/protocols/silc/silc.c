@@ -42,6 +42,12 @@ static SilcBool silcpurple_log_error(SilcLogType type, char *message,
 	return TRUE;
 }
 
+static void
+silcpurple_free(SilcPurple sg)
+{
+	silc_free(sg);
+}
+
 static const char *
 silcpurple_list_icon(PurpleAccount *a, PurpleBuddy *b)
 {
@@ -370,7 +376,7 @@ silcpurple_stream_created(SilcSocketStreamStatus status, SilcStream stream,
 			_("Connection failed"));
 		silc_pkcs_public_key_free(sg->public_key);
 		silc_pkcs_private_key_free(sg->private_key);
-		silc_free(sg);
+		silcpurple_free(sg);
 		purple_connection_set_protocol_data(gc, NULL);
 		return;
 	}
@@ -417,7 +423,7 @@ silcpurple_login_connected(gpointer data, gint source, const gchar *error_messag
 		                             _("Connection failed"));
 		silc_pkcs_public_key_free(sg->public_key);
 		silc_pkcs_private_key_free(sg->private_key);
-		silc_free(sg);
+		silcpurple_free(sg);
 		purple_connection_set_protocol_data(gc, NULL);
 		return;
 	}
@@ -445,7 +451,7 @@ static void silcpurple_continue_running(SilcPurple sg)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 		                             _("Unable to connect"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 }
@@ -470,7 +476,7 @@ static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields
 			_("Password is required to sign on."), NULL,
 			purple_request_cpar_from_connection(gc));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 
@@ -489,7 +495,7 @@ static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Unable to load SILC key pair"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 	silcpurple_continue_running(sg);
@@ -506,7 +512,7 @@ static void silcpurple_no_password_cb(PurpleConnection *gc, PurpleRequestFields 
 	purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 			_("Unable to load SILC key pair"));
 	purple_connection_set_protocol_data(gc, NULL);
-	silc_free(sg);
+	silcpurple_free(sg);
 }
 
 static void silcpurple_running(SilcClient client, void *context)
@@ -535,7 +541,7 @@ static void silcpurple_running(SilcClient client, void *context)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Unable to load SILC key pair"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 	silcpurple_continue_running(sg);
@@ -617,7 +623,7 @@ silcpurple_login(PurpleAccount *account)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Unable to initialize SILC protocol"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		silc_free(hostname);
 		g_free(username);
 		return;
@@ -630,7 +636,7 @@ silcpurple_login(PurpleAccount *account)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Error loading SILC key pair"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 
@@ -654,7 +660,7 @@ silcpurple_close_final(gpointer *context)
 		silc_hash_free(sg->sha1hash);
 	if (sg->mimeass)
 		silc_mime_assembler_free(sg->mimeass);
-	silc_free(sg);
+	silcpurple_free(sg);
 	return 0;
 }
 
