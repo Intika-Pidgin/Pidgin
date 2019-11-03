@@ -26,16 +26,15 @@ struct _NMRequest
 {
 	int trans_id;
 	char *cmd;
-	int gmt;
 	gpointer data;
 	gpointer user_define;
 	nm_response_cb callback;
 	int ref_count;
-	NMERR_T ret_code;
 };
 
-NMRequest *nm_create_request(const char *cmd, int trans_id, int gmt, nm_response_cb cb,
-							 gpointer resp_data, gpointer user_define)
+NMRequest *
+nm_create_request(const char *cmd, int trans_id, nm_response_cb cb,
+                  gpointer resp_data, gpointer user_define)
 {
 	NMRequest *req;
 
@@ -45,7 +44,6 @@ NMRequest *nm_create_request(const char *cmd, int trans_id, int gmt, nm_response
 	req  = g_new0(NMRequest, 1);
 	req->cmd = g_strdup(cmd);
 	req->trans_id = trans_id;
-	req->gmt = gmt;
 	req->callback = cb;
 	req->data = resp_data;
 	req->user_define = user_define;
@@ -140,21 +138,4 @@ nm_request_get_callback(NMRequest * req)
 		return NULL;
 
 	return req->callback;
-}
-
-
-void
-nm_request_set_ret_code(NMRequest * req, NMERR_T rc)
-{
-	if (req)
-		req->ret_code = rc;
-}
-
-NMERR_T
-nm_request_get_ret_code(NMRequest * req)
-{
-	if (req)
-		return req->ret_code;
-	else
-		return (NMERR_T) - 1;
 }

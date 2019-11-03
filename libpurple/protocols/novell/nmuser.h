@@ -81,9 +81,6 @@ struct _NMUser
 	/* Our connection information */
 	NMConn *conn;
 
-	/* Our public IP address */
-	char *address;
-
 	/* This is the contact list */
 	NMFolder *root_folder;
 
@@ -109,15 +106,6 @@ struct _NMUser
 	gboolean default_deny;
 	GSList *allow_list;
 	GSList *deny_list;
-
-	/* Pending requests. If we need to go to the server to more info
-	 * before processing a request we will queue it up and process when
-	 * we get a response
-	 */
-	GSList *pending_requests;
-
-	/* Pending events. Same as above except for events. */
-	GSList *pending_events;
 
 	/* Generic pointer to data needed by the client
 	 * using the API
