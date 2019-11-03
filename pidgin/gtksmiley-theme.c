@@ -93,6 +93,8 @@ G_DEFINE_TYPE_WITH_PRIVATE(PidginSmileyTheme, pidgin_smiley_theme,
 static void
 pidgin_smiley_theme_index_smiley_free(PidginSmileyThemeIndexSmiley *smiley)
 {
+	g_return_if_fail(smiley != NULL);
+
 	g_free(smiley->file);
 	g_list_free_full(smiley->shortcuts, g_free);
 	g_free(smiley);
@@ -101,6 +103,8 @@ pidgin_smiley_theme_index_smiley_free(PidginSmileyThemeIndexSmiley *smiley)
 static void
 pidgin_smiley_theme_index_protocol_free(PidginSmileyThemeIndexProtocol *proto)
 {
+	g_return_if_fail(proto != NULL);
+
 	g_free(proto->name);
 	g_list_free_full(proto->smileys, (GDestroyNotify)pidgin_smiley_theme_index_smiley_free);
 	g_free(proto);

@@ -3063,6 +3063,8 @@ pidgin_blist_paint_tip(GtkWidget *widget, cairo_t *cr, gpointer null)
 static void
 tooltip_data_free(struct tooltip_data *td)
 {
+	g_return_if_fail(td != NULL);
+
 	g_clear_object(&td->avatar);
 	g_clear_object(&td->status_icon);
 	g_clear_object(&td->protocol_icon);

@@ -4254,6 +4254,8 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 
 void purple_key_value_pair_free(PurpleKeyValuePair *kvp)
 {
+	g_return_if_fail(kvp != NULL);
+
 	g_free(kvp->value);
 	g_free(kvp->key);
 	g_free(kvp);

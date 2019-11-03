@@ -2005,6 +2005,8 @@ void jabber_add_feature(const char *namespace, JabberFeatureEnabled cb) {
 }
 
 static void jabber_feature_free(JabberFeature *feature) {
+	g_return_if_fail(feature != NULL);
+
 	g_free(feature->namespace);
 	g_free(feature);
 }
@@ -2058,6 +2060,8 @@ JabberIdentity *jabber_identity_new(const gchar *category, const gchar *type,
 
 void jabber_identity_free(JabberIdentity *id)
 {
+	g_return_if_fail(id != NULL);
+
 	g_free(id->category);
 	g_free(id->type);
 	g_free(id->lang);
@@ -2090,8 +2094,7 @@ void jabber_add_identity(const gchar *category, const gchar *type,
 
 void jabber_bytestreams_streamhost_free(JabberBytestreamsStreamhost *sh)
 {
-	if(!sh)
-		return;
+	g_return_if_fail(sh != NULL);
 
 	g_free(sh->jid);
 	g_free(sh->host);

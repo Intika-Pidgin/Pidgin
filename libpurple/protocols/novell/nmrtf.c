@@ -242,6 +242,8 @@ nm_rtf_strip_formatting(NMRtfContext *ctx, const char *input)
 static void
 nm_rtf_font_free(NMRtfFont *font)
 {
+	g_return_if_fail(font != NULL);
+
 	g_free(font->name);
 	g_free(font);
 }
