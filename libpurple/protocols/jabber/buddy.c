@@ -708,6 +708,7 @@ static void jabber_buddy_info_destroy(JabberBuddyInfo *jbi)
 	if (jbi->timeout_handle > 0)
 		g_source_remove(jbi->timeout_handle);
 
+	g_slist_free(jbi->ids);
 	g_free(jbi->jid);
 	g_hash_table_destroy(jbi->resources);
 	g_free(jbi->last_message);
@@ -1459,22 +1460,8 @@ static void jabber_time_parse(JabberStream *js, const char *from,
 
 void jabber_buddy_remove_all_pending_buddy_info_requests(JabberStream *js)
 {
-	if (js->pending_buddy_info_requests)
-	{
-		JabberBuddyInfo *jbi;
-		GSList *l = js->pending_buddy_info_requests;
-		while (l) {
-			jbi = l->data;
-
-			g_slist_free(jbi->ids);
-			jabber_buddy_info_destroy(jbi);
-
-			l = l->next;
-		}
-
-		g_slist_free(js->pending_buddy_info_requests);
-		js->pending_buddy_info_requests = NULL;
-	}
+	g_slist_free_full(js->pending_buddy_info_requests, (GDestroyNotify)jabber_buddy_info_destroy);
+	js->pending_buddy_info_requests = NULL;
 }
 
 static gboolean jabber_buddy_get_info_timeout(gpointer data)

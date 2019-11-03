@@ -239,20 +239,18 @@ nm_rtf_strip_formatting(NMRtfContext *ctx, const char *input)
 	return NULL;
 }
 
+static void
+nm_rtf_font_free(NMRtfFont *font)
+{
+	g_free(font->name);
+	g_free(font);
+}
+
 void
 nm_rtf_deinit(NMRtfContext *ctx)
 {
-	GSList *node;
-	NMRtfFont *font;
-
 	if (ctx) {
-		for (node = ctx->font_table; node; node = node->next) {
-			font = node->data;
-			g_free(font->name);
-			g_free(font);
-			node->data = NULL;
-		}
-		g_slist_free(ctx->font_table);
+		g_slist_free_full(ctx->font_table, (GDestroyNotify)nm_rtf_font_free);
 		g_slist_free_full(ctx->saved, g_free);
 		g_string_free(ctx->ansi, TRUE);
 		g_string_free(ctx->output, TRUE);
