@@ -45,6 +45,9 @@ static SilcBool silcpurple_log_error(SilcLogType type, char *message,
 static void
 silcpurple_free(SilcPurple sg)
 {
+	g_cancellable_cancel(sg->cancellable);
+	g_clear_object(&sg->cancellable);
+	g_clear_object(&sg->sockconn);
 	silc_free(sg);
 }
 
@@ -409,29 +412,45 @@ silcpurple_stream_created(SilcSocketStreamStatus status, SilcStream stream,
 }
 
 static void
-silcpurple_login_connected(gpointer data, gint source, const gchar *error_message)
+silcpurple_login_connected(GObject *source, GAsyncResult *res, gpointer data)
 {
 	PurpleConnection *gc = data;
 	SilcPurple sg;
+	GSocketConnection *conn;
+	GSocket *socket;
+	gint fd;
+	GError *error = NULL;
 
 	g_return_if_fail(gc != NULL);
 
 	sg = purple_connection_get_protocol_data(gc);
 
-	if (source < 0) {
-		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-		                             _("Connection failed"));
-		silc_pkcs_public_key_free(sg->public_key);
-		silc_pkcs_private_key_free(sg->private_key);
-		silcpurple_free(sg);
-		purple_connection_set_protocol_data(gc, NULL);
+	conn = g_socket_client_connect_to_host_finish(G_SOCKET_CLIENT(source),
+			res, &error);
+	if (conn == NULL) {
+		if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+						     _("Connection failed"));
+			silc_pkcs_public_key_free(sg->public_key);
+			silc_pkcs_private_key_free(sg->private_key);
+			silcpurple_free(sg);
+			purple_connection_set_protocol_data(gc, NULL);
+		}
+
+		g_clear_error(&error);
 		return;
 	}
+
+	socket = g_socket_connection_get_socket(conn);
+	g_assert(socket != NULL);
+
+	fd = g_socket_get_fd(socket);
+	sg->sockconn = conn;
 
 	silc_hash_alloc((unsigned char *)"sha1", &sg->sha1hash);
 
 	/* Wrap socket to TCP stream */
-	silc_socket_tcp_stream_create(source, TRUE, FALSE,
+	silc_socket_tcp_stream_create(fd, TRUE, FALSE,
 				      sg->client->schedule,
 				      silcpurple_stream_created, gc);
 }
@@ -440,20 +459,27 @@ static void silcpurple_continue_running(SilcPurple sg)
 {
 	PurpleConnection *gc = sg->gc;
 	PurpleAccount *account = purple_connection_get_account(gc);
+	GSocketClient *client;
 
-	/* Connect to the SILC server */
-	if (purple_proxy_connect(gc, account,
-				 purple_account_get_string(account, "server",
-							   "silc.silcnet.org"),
-				 purple_account_get_int(account, "port", 706),
-				 silcpurple_login_connected, gc) == NULL)
-	{
-		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-		                             _("Unable to connect"));
+	client = purple_gio_socket_client_new(account, &error);
+	if (client == NULL) {
+		/* Assume it's a proxy error */
+		purple_notify_error(NULL, NULL, _("Invalid proxy settings"),
+			error->message,
+			purple_request_cpar_from_account(account));
+		purple_connection_take_error(gc, error);
 		purple_connection_set_protocol_data(gc, NULL);
 		silcpurple_free(sg);
 		return;
 	}
+
+	/* Connect to the SILC server */
+	g_socket_client_connect_to_host_async(client,
+				 purple_account_get_string(account, "server",
+							   "silc.silcnet.org"),
+				 purple_account_get_int(account, "port", 706),
+				 sg->cancellable, silcpurple_login_connected, gc);
+	g_object_unref(client);
 }
 
 static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields *fields)
@@ -612,6 +638,7 @@ silcpurple_login(PurpleAccount *account)
 	sg = silc_calloc(1, sizeof(*sg));
 	if (!sg)
 		return;
+	sg->cancellable = g_cancellable_new();
 	sg->client = client;
 	sg->gc = gc;
 	sg->account = account;
