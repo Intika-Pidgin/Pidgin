@@ -773,6 +773,13 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 }
 
 static void
+protocol_opt_entry_free(ProtocolOptEntry *opt_entry)
+{
+	g_free(opt_entry->setting);
+	g_free(opt_entry);
+}
+
+static void
 add_account_options(AccountPrefsDialog *dialog)
 {
 	PurpleAccountOption *option;
@@ -797,12 +804,7 @@ add_account_options(AccountPrefsDialog *dialog)
 		dialog->protocol_frame = NULL;
 	}
 
-	while (dialog->protocol_opt_entries != NULL) {
-		ProtocolOptEntry *opt_entry = dialog->protocol_opt_entries->data;
-		g_free(opt_entry->setting);
-		g_free(opt_entry);
-		dialog->protocol_opt_entries = g_list_delete_link(dialog->protocol_opt_entries, dialog->protocol_opt_entries);
-	}
+	g_list_free_full(dialog->protocol_opt_entries, (GDestroyNotify)protocol_opt_entry_free);
 
 	if (dialog->protocol == NULL ||
 			purple_protocol_get_account_options(dialog->protocol) == NULL)
@@ -1246,12 +1248,7 @@ account_win_destroy_cb(GtkWidget *w, GdkEvent *event,
 	gtk_widget_destroy(dialog->window);
 
 	g_list_free(dialog->user_split_entries);
-	while (dialog->protocol_opt_entries != NULL) {
-		ProtocolOptEntry *opt_entry = dialog->protocol_opt_entries->data;
-		g_free(opt_entry->setting);
-		g_free(opt_entry);
-		dialog->protocol_opt_entries = g_list_delete_link(dialog->protocol_opt_entries, dialog->protocol_opt_entries);
-	}
+	g_list_free_full(dialog->protocol_opt_entries, (GDestroyNotify)protocol_opt_entry_free);
 	g_free(dialog->protocol_id);
 	g_object_unref(dialog->sg);
 

@@ -88,6 +88,14 @@ void purple_util_set_current_song(const char *title, const char *artist,
 char * purple_util_format_song_info(const char *title, const char *artist,
 		const char *album, gpointer unused);
 
+/**
+ * purple_key_value_pair_free:
+ * @kvp:  The PurpleKeyValuePair to free.
+ *
+ * Frees a PurpleKeyValuePair.
+ */
+void purple_key_value_pair_free(PurpleKeyValuePair *kvp);
+
 /**************************************************************************/
 /* Utility Subsystem                                                      */
 /**************************************************************************/

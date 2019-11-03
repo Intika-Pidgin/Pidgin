@@ -188,12 +188,16 @@ static void buddy_ticker_add_buddy(PurpleBuddy *b) {
 	td->timeout = g_timeout_add(11000, buddy_ticker_set_pixmap_cb, td);
 }
 
-static void buddy_ticker_remove(TickerData *td) {
-	gtk_ticker_remove(GTK_TICKER(ticker), td->ebox);
-	tickerbuds = g_list_remove(tickerbuds, td);
+static void ticker_data_free(TickerData *td) {
 	if (td->timeout != 0)
 		g_source_remove(td->timeout);
 	g_free(td);
+}
+
+static void buddy_ticker_remove(TickerData *td) {
+	gtk_ticker_remove(GTK_TICKER(ticker), td->ebox);
+	tickerbuds = g_list_remove(tickerbuds, td);
+	ticker_data_free(td);
 }
 
 static void buddy_ticker_update_contact(PurpleContact *contact) {
@@ -287,20 +291,14 @@ status_changed_cb(PurpleBuddy *b, PurpleStatus *os, PurpleStatus *s)
 static void
 signoff_cb(PurpleConnection *gc)
 {
-	TickerData *td;
 	if (!purple_connections_get_all()) {
-		while (tickerbuds) {
-			td = tickerbuds->data;
-			tickerbuds = g_list_delete_link(tickerbuds, tickerbuds);
-			if (td->timeout != 0)
-				g_source_remove(td->timeout);
-			g_free(td);
-		}
+		g_list_free_full(tickerbuds, (GDestroyNotify)ticker_data_free);
 		gtk_widget_destroy(tickerwindow);
 		tickerwindow = NULL;
 		ticker = NULL;
 	} else {
 		GList *t = tickerbuds;
+		TickerData *td;
 		while (t) {
 			td = t->data;
 			t = t->next;
@@ -361,15 +359,7 @@ plugin_load(PurplePlugin *plugin, GError **error)
 static gboolean
 plugin_unload(PurplePlugin *plugin, GError **error)
 {
-	TickerData *td;
-
-	while (tickerbuds) {
-		td = tickerbuds->data;
-		tickerbuds = g_list_delete_link(tickerbuds, tickerbuds);
-		if (td->timeout != 0)
-			g_source_remove(td->timeout);
-		g_free(td);
-	}
+	g_list_free_full(tickerbuds, (GDestroyNotify)ticker_data_free);
 
 	if (tickerwindow != NULL) {
 		gtk_widget_destroy(tickerwindow);

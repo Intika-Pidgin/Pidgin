@@ -3061,29 +3061,24 @@ pidgin_blist_paint_tip(GtkWidget *widget, cairo_t *cr, gpointer null)
 }
 
 static void
-pidgin_blist_destroy_tooltip_data(void)
+tooltip_data_free(struct tooltip_data *td)
 {
-	while(gtkblist->tooltipdata) {
-		struct tooltip_data *td = gtkblist->tooltipdata->data;
-
-		if(td->avatar)
-			g_object_unref(td->avatar);
-		if(td->status_icon)
-			g_object_unref(td->status_icon);
-		if(td->protocol_icon)
-			g_object_unref(td->protocol_icon);
-		if (td->layout)
-			g_object_unref(td->layout);
-		if (td->name_layout)
-			g_object_unref(td->name_layout);
-		g_free(td);
-		gtkblist->tooltipdata = g_list_delete_link(gtkblist->tooltipdata, gtkblist->tooltipdata);
-	}
+	if(td->avatar)
+		g_object_unref(td->avatar);
+	if(td->status_icon)
+		g_object_unref(td->status_icon);
+	if(td->protocol_icon)
+		g_object_unref(td->protocol_icon);
+	if (td->layout)
+		g_object_unref(td->layout);
+	if (td->name_layout)
+		g_object_unref(td->name_layout);
+	g_free(td);
 }
 
 void pidgin_blist_tooltip_destroy()
 {
-	pidgin_blist_destroy_tooltip_data();
+	g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
 	pidgin_tooltip_destroy();
 }
 
@@ -3115,7 +3110,7 @@ pidgin_blist_create_tooltip_for_node(GtkWidget *widget, gpointer data, int *w, i
 
 	if (gtkblist->tooltipdata) {
 		gtkblist->tipwindow = NULL;
-		pidgin_blist_destroy_tooltip_data();
+		g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
 	}
 
 	gtkblist->tipwindow = widget;
@@ -3304,7 +3299,7 @@ pidgin_blist_create_tooltip(GtkWidget *widget, GtkTreePath *path,
 
 	if (gtkblist->tooltipdata) {
 		gtkblist->tipwindow = NULL;
-		pidgin_blist_destroy_tooltip_data();
+		g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
 	}
 
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(gtkblist->treemodel), &iter, path);

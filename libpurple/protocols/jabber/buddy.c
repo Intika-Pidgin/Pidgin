@@ -58,6 +58,14 @@ typedef struct {
 	gchar *last_message;
 } JabberBuddyInfo;
 
+void jabber_adhoc_commands_free(JabberAdHocCommands *cmd)
+{
+	g_free(cmd->jid);
+	g_free(cmd->node);
+	g_free(cmd->name);
+	g_free(cmd);
+}
+
 static void
 jabber_buddy_resource_free(JabberBuddyResource *jbr)
 {
@@ -65,15 +73,7 @@ jabber_buddy_resource_free(JabberBuddyResource *jbr)
 
 	jbr->jb->resources = g_list_remove(jbr->jb->resources, jbr);
 
-	while(jbr->commands) {
-		JabberAdHocCommands *cmd = jbr->commands->data;
-		g_free(cmd->jid);
-		g_free(cmd->node);
-		g_free(cmd->name);
-		g_free(cmd);
-		jbr->commands = g_list_delete_link(jbr->commands, jbr->commands);
-	}
-
+	g_list_free_full(jbr->commands, (GDestroyNotify)jabber_adhoc_commands_free);
 	g_list_free_full(jbr->caps.exts, g_free);
 	g_free(jbr->name);
 	g_free(jbr->status);

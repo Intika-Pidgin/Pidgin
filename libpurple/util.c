@@ -4252,6 +4252,13 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	return g_string_free(string, FALSE);
 }
 
+void purple_key_value_pair_free(PurpleKeyValuePair *kvp)
+{
+	g_free(kvp->value);
+	g_free(kvp->key);
+	g_free(kvp);
+}
+
 const gchar *
 purple_get_host_name(void)
 {
