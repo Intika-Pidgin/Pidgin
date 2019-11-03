@@ -189,6 +189,8 @@ static void buddy_ticker_add_buddy(PurpleBuddy *b) {
 }
 
 static void ticker_data_free(TickerData *td) {
+	g_return_if_fail(td != NULL);
+
 	if (td->timeout != 0)
 		g_source_remove(td->timeout);
 	g_free(td);

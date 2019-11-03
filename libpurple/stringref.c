@@ -147,6 +147,8 @@ size_t purple_stringref_len(const PurpleStringref *stringref)
 
 static void stringref_free(PurpleStringref *stringref)
 {
+	g_return_if_fail(stringref != NULL);
+
 	if (REFCOUNT(stringref->ref) == 0) {
 		g_free(stringref);
 		return;

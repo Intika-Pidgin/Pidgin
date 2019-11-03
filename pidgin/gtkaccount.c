@@ -775,6 +775,8 @@ add_user_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 static void
 protocol_opt_entry_free(ProtocolOptEntry *opt_entry)
 {
+	g_return_if_fail(opt_entry != NULL);
+
 	g_free(opt_entry->setting);
 	g_free(opt_entry);
 }
