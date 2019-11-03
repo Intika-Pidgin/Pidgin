@@ -71,8 +71,6 @@ nm_initialize_user(const char *name, const char *server_addr,
 
 	user->name = g_strdup(name);
 	user->conn = nm_create_conn(server_addr, port);
-	user->conn->addr = g_strdup(server_addr);
-	user->conn->port = port;
 	user->evt_callback = event_callback;
 	user->client_data = data;
 
