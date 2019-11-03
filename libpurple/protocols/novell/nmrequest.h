@@ -30,12 +30,11 @@ typedef struct _NMRequest NMRequest;
  *
  *	@param	cmd				The request command string (e.g. "login")
  *	@param	trans_id		The request transaction id
- *	@param	gmt				The time in seconds that the request was created
  *
  *	@return The new request object
  */
-NMRequest *nm_create_request(const char *cmd, int trans_id, int gmt, nm_response_cb cb,
-							 gpointer resp_data, gpointer user_define);
+NMRequest *nm_create_request(const char *cmd, int trans_id, nm_response_cb cb,
+                             gpointer resp_data, gpointer user_define);
 
 /**
  *	Release a request object.
@@ -85,15 +84,6 @@ void nm_request_set_data(NMRequest * req, gpointer data);
 void nm_request_set_user_define(NMRequest * req, gpointer user_define);
 
 /**
- *	Set the return code. This is the return code that we received in
- *  the server response fields.
- *
- *	@param	req			The request object
- *	@param	rc			The return code to set
- */
-void nm_request_set_ret_code(NMRequest * req, NMERR_T rc);
-
-/**
  *	Get the transaction id for this request.
  *
  *	@param	req			The request object
@@ -137,14 +127,5 @@ gpointer nm_request_get_user_define(NMRequest * req);
  * 	@return	The response callback
  */
 nm_response_cb nm_request_get_callback(NMRequest * req);
-
-/**
- *	Get the return code
- *
- *	@param	req			The request object
- *
- * 	@return	The return code (from the response fields)
- */
-NMERR_T nm_request_get_ret_code(NMRequest * req);
 
 #endif /* PURPLE_NOVELL_NMREQUEST_H */

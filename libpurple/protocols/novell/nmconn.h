@@ -22,7 +22,6 @@
 #define PURPLE_NOVELL_NMCONN_H
 
 typedef struct _NMConn NMConn;
-typedef struct _NMSSLConn NMSSLConn;
 
 #include "nmfield.h"
 #include "nmuser.h"
@@ -39,31 +38,11 @@ struct _NMConn
 	/* The port that we are connecting to. */
 	int port;
 
-	/* The file descriptor of the socket for the connection. */
-	int fd;
-
 	/* The transaction counter. */
 	int trans_id;
 
 	/* A list of requests currently awaiting a response. */
 	GSList *requests;
-
-	/* Are we connected? TRUE if so, FALSE if not. */
-	gboolean connected;
-
-	/* Are we running in secure mode? */
-	gboolean use_ssl;
-
-	/* Have we been redirected? */
-	gboolean redirect;
-
-	/* SSL connection  */
-	NMSSLConn *ssl_conn;
-
-};
-
-struct _NMSSLConn
-{
 
 	/*  Data to pass to the callbacks */
 	gpointer data;
@@ -71,7 +50,6 @@ struct _NMSSLConn
 	/* Callbacks for reading/writing */
 	nm_ssl_read_cb read;
 	nm_ssl_write_cb write;
-
 };
 
 /**
@@ -223,24 +201,5 @@ void nm_conn_remove_request_item(NMConn * conn, NMRequest * request);
  *					found.
  */
 NMRequest *nm_conn_find_request(NMConn * conn, int trans_id);
-
-/**
- * Get the server address for the connection.
- *
- * @param conn		The connection.
- *
- * @return 			The server address for the connection.
- *
- */
-const char *nm_conn_get_addr(NMConn * conn);
-
-/**
- * Get the port for the connection.
- *
- * @param conn		The connection.
- *
- * @return 			The port that we are connected to.
- */
-int nm_conn_get_port(NMConn * conn);
 
 #endif /* PURPLE_NOVELL_NMCONN_H */
