@@ -1680,7 +1680,7 @@ novell_ssl_connect_error(PurpleSslConnection * gsc,
 
 	gc = data;
 	user = purple_connection_get_protocol_data(gc);
-	user->conn->ssl_conn->data = NULL;
+	user->conn->data = NULL;
 
 	purple_connection_ssl_error (gc, error);
 }
@@ -2204,14 +2204,13 @@ novell_login(PurpleAccount * account)
 		purple_connection_update_progress(gc, _("Connecting"),
 										1, NOVELL_CONNECT_STEPS);
 
-		user->conn->ssl_conn = g_new0(NMSSLConn, 1);
-		user->conn->ssl_conn->read = (nm_ssl_read_cb) purple_ssl_read;
-		user->conn->ssl_conn->write = (nm_ssl_write_cb) purple_ssl_write;
+		user->conn->read = (nm_ssl_read_cb)purple_ssl_read;
+		user->conn->write = (nm_ssl_write_cb)purple_ssl_write;
 
-		user->conn->ssl_conn->data = purple_ssl_connect(user->client_data,
-													  user->conn->addr, user->conn->port,
-													  novell_ssl_connected_cb, novell_ssl_connect_error, gc);
-		if (user->conn->ssl_conn->data == NULL) {
+		user->conn->data = purple_ssl_connect(
+		        user->client_data, user->conn->addr, user->conn->port,
+		        novell_ssl_connected_cb, novell_ssl_connect_error, gc);
+		if (user->conn->data == NULL) {
 			purple_connection_error(gc,
 				PURPLE_CONNECTION_ERROR_NO_SSL_SUPPORT,
 				_("SSL support unavailable"));
@@ -2231,8 +2230,8 @@ novell_close(PurpleConnection * gc)
 	user = purple_connection_get_protocol_data(gc);
 	if (user) {
 		conn = user->conn;
-		if (conn && conn->ssl_conn) {
-			purple_ssl_close(user->conn->ssl_conn->data);
+		if (conn) {
+			purple_ssl_close(user->conn->data);
 		}
 		nm_deinitialize_user(user);
 	}

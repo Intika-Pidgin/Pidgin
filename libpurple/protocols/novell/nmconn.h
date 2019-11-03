@@ -22,7 +22,6 @@
 #define PURPLE_NOVELL_NMCONN_H
 
 typedef struct _NMConn NMConn;
-typedef struct _NMSSLConn NMSSLConn;
 
 #include "nmfield.h"
 #include "nmuser.h"
@@ -45,21 +44,12 @@ struct _NMConn
 	/* A list of requests currently awaiting a response. */
 	GSList *requests;
 
-	/* SSL connection  */
-	NMSSLConn *ssl_conn;
-
-};
-
-struct _NMSSLConn
-{
-
 	/*  Data to pass to the callbacks */
 	gpointer data;
 
 	/* Callbacks for reading/writing */
 	nm_ssl_read_cb read;
 	nm_ssl_write_cb write;
-
 };
 
 /**
