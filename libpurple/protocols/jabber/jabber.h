@@ -377,10 +377,15 @@ void jabber_remove_feature(const gchar *namespace);
  */
 void jabber_add_identity(const gchar *category, const gchar *type, const gchar *lang, const gchar *name);
 
+JabberIdentity *jabber_identity_new(const gchar *category, const gchar *type, const gchar *lang, const gchar *name);
+void jabber_identity_free(JabberIdentity *id);
+
 /**
  * GCompareFunc for JabberIdentity structs.
  */
 gint jabber_identity_compare(gconstpointer a, gconstpointer b);
+
+void jabber_bytestreams_streamhost_free(JabberBytestreamsStreamhost *sh);
 
 /**
  * Returns true if this connection is over a secure (SSL) stream. Use this
