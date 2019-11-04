@@ -1320,16 +1320,6 @@ const char *purple_escape_filename(const char *str);
 void purple_restore_default_signal_handlers(void);
 
 /**
- * purple_get_host_name:
- *
- * Gets the host name of the machine. If it not possible to determine the
- * host name, "localhost" is returned
- *
- * Returns: The hostname
- */
-const gchar *purple_get_host_name(void);
-
-/**
  * purple_uuid_random:
  *
  * Returns a type 4 (random) UUID

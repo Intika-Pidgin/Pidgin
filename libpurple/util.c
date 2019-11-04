@@ -3769,12 +3769,6 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	return g_string_free(string, FALSE);
 }
 
-const gchar *
-purple_get_host_name(void)
-{
-	return g_get_host_name();
-}
-
 gchar *
 purple_uuid_random(void)
 {

@@ -417,6 +417,7 @@ version 3.0.0 (??/??/????):
 		  event loop yourself. See GLib Main Event Loop docs.
 		* PurpleEventLoopUiOps. Manually drive the GLib event loop
 		  yourself. See GLib Main Event Loop docs.
+		* purple_get_host_name. Use g_get_host_name, instead.
 		* purple_get_tzoff_str(). Use g_date_time_format, instead.
 		* purple_ip_address_is_valid, purple_ipv4_address_is_valid, and
 		  purple_ipv6_address_is_valid. Use g_hostname_is_ip_address()
