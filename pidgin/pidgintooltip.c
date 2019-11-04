@@ -112,6 +112,8 @@ setup_tooltip_window(void)
 	GtkWidget *tipwindow;
 
 	tipwindow = gtk_window_new(GTK_WINDOW_POPUP);
+	gtk_window_set_transient_for(GTK_WINDOW(tipwindow),
+	                             GTK_WINDOW(pidgin_tooltip.widget));
 	name = gtk_window_get_title(GTK_WINDOW(pidgin_tooltip.widget));
 	gtk_window_set_type_hint(GTK_WINDOW(tipwindow), GDK_WINDOW_TYPE_HINT_TOOLTIP);
 	gtk_widget_set_app_paintable(tipwindow, TRUE);
