@@ -113,7 +113,7 @@ pidgin_contact_completion_match_func(GtkEntryCompletion *completion,
 		return FALSE;
 	}
 
-	if(!purple_str_has_prefix(name, key)) {
+	if (!g_str_has_prefix(name, key)) {
 		g_free(name);
 		return FALSE;
 	}

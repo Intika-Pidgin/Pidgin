@@ -482,10 +482,11 @@ open_button_cb(GtkButton *button, PidginXferDialog *dialog)
 	{
 		char *escaped = g_shell_quote(filename);
 
-		if (purple_str_has_suffix(filename, ".desktop"))
+		if (g_str_has_suffix(filename, ".desktop")) {
 			command = g_strdup_printf("kfmclient openURL %s 'text/plain'", escaped);
-		else
+		} else {
 			command = g_strdup_printf("kfmclient openURL %s", escaped);
+		}
 		g_free(escaped);
 	}
 	else

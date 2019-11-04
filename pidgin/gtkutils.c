@@ -1374,7 +1374,7 @@ pidgin_dnd_file_manage(GtkSelectionData *sd, PurpleAccount *account, const char 
 
 #ifndef _WIN32
 		/* Are we trying to send a .desktop file? */
-		else if (purple_str_has_suffix(basename, ".desktop")) {
+		else if (g_str_has_suffix(basename, ".desktop")) {
 			pidgin_dnd_file_send_desktop(account, who, filename);
 
 			continue;
@@ -1579,8 +1579,7 @@ static gboolean buddyname_completion_match_func(GtkEntryCompletion *completion,
 	val1.g_type = 0;
 	gtk_tree_model_get_value(model, iter, COMPLETION_NORMALIZED_COLUMN, &val1);
 	tmp = g_value_get_string(&val1);
-	if (tmp != NULL && purple_str_has_prefix(tmp, key))
-	{
+	if (tmp != NULL && g_str_has_prefix(tmp, key)) {
 		g_value_unset(&val1);
 		return TRUE;
 	}
@@ -1589,8 +1588,7 @@ static gboolean buddyname_completion_match_func(GtkEntryCompletion *completion,
 	val2.g_type = 0;
 	gtk_tree_model_get_value(model, iter, COMPLETION_COMPARISON_COLUMN, &val2);
 	tmp = g_value_get_string(&val2);
-	if (tmp != NULL && purple_str_has_prefix(tmp, key))
-	{
+	if (tmp != NULL && g_str_has_prefix(tmp, key)) {
 		g_value_unset(&val2);
 		return TRUE;
 	}
@@ -2351,14 +2349,12 @@ gboolean pidgin_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 	normalized = g_utf8_casefold(tmp, -1);
 	g_free(tmp);
 
-	if (purple_str_has_prefix(normalized, enteredstring))
-	{
+	if (g_str_has_prefix(normalized, enteredstring)) {
 		g_free(withmarkup);
 		g_free(enteredstring);
 		g_free(normalized);
 		return FALSE;
 	}
-
 
 	/* Use Pango to separate by words. */
 	len = g_utf8_strlen(normalized, -1);
@@ -2371,8 +2367,7 @@ gboolean pidgin_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 	for (i = 0; i < (len - 1) ; i++)
 	{
 		if (log_attrs[i].is_word_start &&
-		    purple_str_has_prefix(word, enteredstring))
-		{
+		    g_str_has_prefix(word, enteredstring)) {
 			result = FALSE;
 			break;
 		}
@@ -2390,7 +2385,7 @@ gboolean pidgin_tree_view_search_equal_func(GtkTreeModel *model, gint column,
 		if (!g_unichar_isalnum(c))
 		{
 			word = g_utf8_find_next_char(word, NULL);
-			if (purple_str_has_prefix(word, enteredstring))
+			if (g_str_has_prefix(word, enteredstring))
 			{
 				result = FALSE;
 				break;

@@ -26,7 +26,7 @@ void jabber_google_presence_incoming(JabberStream *js, const char *user, JabberB
 {
 	if (!js->googletalk)
 		return;
-	if (jbr->status && purple_str_has_prefix(jbr->status, "♫ ")) {
+	if (jbr->status && g_str_has_prefix(jbr->status, "♫ ")) {
 		purple_protocol_got_user_status(purple_connection_get_account(js->gc), user, "tune",
 					    PURPLE_TUNE_TITLE, jbr->status + strlen("♫ "), NULL);
 		g_free(jbr->status);
