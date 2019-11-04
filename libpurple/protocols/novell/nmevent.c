@@ -144,31 +144,43 @@ handle_receive_message(NMUser * user, NMEvent * event, gboolean autoreply)
 	char *msg = NULL;
 	char *nortf = NULL;
 	char *guid = NULL;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
+	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
 	}
 
 	/* Read the conference flags */
-	if (rc == NM_OK) {
-		rc = nm_read_uint32(conn, &flags);
+	if (error == NULL) {
+		flags = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                        &error);
 	}
 
 	/* Read the message text */
-	if (rc == NM_OK) {
-		rc = nm_read_uint32(conn, &size);
-		if (size > 100000)	return NMERR_PROTOCOL;
+	if (error == NULL) {
+		size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                       &error);
+		if (size > 100000) {
+			g_clear_error(&error);
+			return NMERR_PROTOCOL;
+		}
 
-		if (rc == NM_OK) {
+		if (error == NULL) {
 			msg = g_new0(char, size + 1);
-			rc = nm_read_all(conn, msg, size);
+			g_input_stream_read_all(G_INPUT_STREAM(conn->input), msg, size,
+			                        NULL, user->cancellable, &error);
 
 			purple_debug(PURPLE_DEBUG_INFO, "novell", "Message is %s\n", msg);
 
@@ -192,6 +204,16 @@ handle_receive_message(NMUser * user, NMEvent * event, gboolean autoreply)
 				nm_event_set_text(event, msg);
 			}
 		}
+	}
+
+	if (error != NULL) {
+		if (error->code == G_IO_ERROR_CANCELLED) {
+			rc = NM_OK;
+		} else {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
+		return rc;
 	}
 
 	/* Check to see if we already know about the conference */
@@ -260,31 +282,42 @@ handle_conference_invite(NMUser * user, NMEvent * event)
 	char *msg = NULL;
 	NMConn *conn;
 	NMUserRecord *user_record;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
+	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
 	}
 
 	/* Read the the message */
-	if (rc == NM_OK) {
-		rc = nm_read_uint32(conn, &size);
-		if (size > 100000)	return NMERR_PROTOCOL;
+	if (error == NULL) {
+		size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                       &error);
+		if (size > 100000) {
+			g_clear_error(&error);
+			return NMERR_PROTOCOL;
+		}
 
-		if (rc == NM_OK) {
+		if (error == NULL) {
 			msg = g_new0(char, size + 1);
-			rc = nm_read_all(conn, msg, size);
+			g_input_stream_read_all(G_INPUT_STREAM(conn->input), msg, size,
+			                        NULL, user->cancellable, &error);
 		}
 	}
 
 	/* Store the event data */
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		NMConference *conference;
 
 		nm_event_set_text(event, msg);
@@ -316,6 +349,11 @@ handle_conference_invite(NMUser * user, NMEvent * event)
 			nm_release_conference(conference);
 
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(msg);
@@ -336,16 +374,32 @@ handle_conference_invite_notify(NMUser * user, NMEvent * event)
 	NMConn *conn;
 	NMConference *conference;
 	NMUserRecord *user_record;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
+	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
+	}
+
+	if (error != NULL) {
+		if (error->code == G_IO_ERROR_CANCELLED) {
+			rc = NM_OK;
+		} else {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
+		return rc;
 	}
 
 	conference = nm_conference_list_find(user, guid);
@@ -387,25 +441,36 @@ handle_conference_reject(NMUser * user, NMEvent * event)
 	char *guid = NULL;
 	NMConn *conn;
 	NMConference *conference;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
-
-	if (rc == NM_OK) {
-		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
 	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
+		guid = g_new0(char, size + 1);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
+	}
+
+	if (error == NULL) {
 		conference = nm_conference_list_find(user, guid);
 		if (conference) {
 			nm_event_set_conference(event, conference);
 		} else {
 			rc = NMERR_CONFERENCE_NOT_FOUND;
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(guid);
@@ -425,24 +490,31 @@ handle_conference_left(NMUser * user, NMEvent * event)
 	char *guid = NULL;
 	NMConference *conference;
 	NMConn *conn;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
+	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
 	}
 
 	/* Read the conference flags */
-	if (rc == NM_OK) {
-		rc = nm_read_uint32(conn, &flags);
+	if (error == NULL) {
+		flags = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                        &error);
 	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		conference = nm_conference_list_find(user, guid);
 		if (conference) {
 			nm_event_set_conference(event, conference);
@@ -456,6 +528,11 @@ handle_conference_left(NMUser * user, NMEvent * event)
 		} else {
 			rc = NMERR_CONFERENCE_NOT_FOUND;
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(guid);
@@ -474,19 +551,25 @@ handle_conference_closed(NMUser * user, NMEvent * event)
 	char *guid = NULL;
 	NMConference *conference;
 	NMConn *conn;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
-
-	if (rc == NM_OK) {
-		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
 	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
+		guid = g_new0(char, size + 1);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
+	}
+
+	if (error == NULL) {
 		conference = nm_conference_list_find(user, guid);
 		if (conference) {
 			nm_event_set_conference(event, conference);
@@ -494,6 +577,11 @@ handle_conference_closed(NMUser * user, NMEvent * event)
 		} else {
 			rc = NMERR_CONFERENCE_NOT_FOUND;
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(guid);
@@ -513,24 +601,31 @@ handle_conference_joined(NMUser * user, NMEvent * event)
 	NMConn *conn;
 	NMConference *conference;
 	NMUserRecord *user_record;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
+	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
 	}
 
 	/* Read the conference flags */
-	if (rc == NM_OK) {
-		rc = nm_read_uint32(conn, &flags);
+	if (error == NULL) {
+		flags = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                        &error);
 	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		conference = nm_conference_list_find(user, guid);
 		if (conference) {
 			nm_conference_set_flags(conference, flags);
@@ -555,6 +650,11 @@ handle_conference_joined(NMUser * user, NMEvent * event)
 		} else {
 			rc = NMERR_CONFERENCE_NOT_FOUND;
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(guid);
@@ -571,25 +671,36 @@ handle_typing(NMUser * user, NMEvent * event)
 	char *guid = NULL;
 	NMConference *conference;
 	NMConn *conn;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
-
-	if (rc == NM_OK) {
-		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
 	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
+		guid = g_new0(char, size + 1);
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size, NULL,
+		                        user->cancellable, &error);
+	}
+
+	if (error == NULL) {
 		conference = nm_conference_list_find(user, guid);
 		if (conference) {
 			nm_event_set_conference(event, conference);
 		} else {
 			rc = NMERR_CONFERENCE_NOT_FOUND;
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(guid);
@@ -609,24 +720,31 @@ handle_status_change(NMUser * user, NMEvent * event)
 	char *text = NULL;
 	NMUserRecord *user_record;
 	NMConn *conn;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read new status */
-	rc = nm_read_uint16(conn, &status);
-	if (rc == NM_OK) {
+	status = g_data_input_stream_read_uint16(conn->input, user->cancellable,
+	                                         &error);
+	if (error == NULL) {
 
 		/* Read the status text */
-		rc = nm_read_uint32(conn, &size);
-		if (size > 10000)	return NMERR_PROTOCOL;
+		size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                       &error);
+		if (size > 10000) {
+			g_clear_error(&error);
+			return NMERR_PROTOCOL;
+		}
 
-		if (rc == NM_OK) {
+		if (error == NULL) {
 			text = g_new0(char, size + 1);
-			rc = nm_read_all(conn, text, size);
+			g_input_stream_read_all(G_INPUT_STREAM(conn->input), text, size,
+			                        NULL, user->cancellable, &error);
 		}
 	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		nm_event_set_text(event, text);
 
 		/* Get a reference to the user record and store the new status */
@@ -635,6 +753,11 @@ handle_status_change(NMUser * user, NMEvent * event)
 			nm_event_set_user_record(event, user_record);
 			nm_user_record_set_status(user_record, status, text);
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(text);
@@ -650,16 +773,27 @@ handle_undeliverable_status(NMUser * user, NMEvent * event)
 	guint32 size = 0;
 	char *guid = NULL;
 	NMConn *conn;
+	GError *error = NULL;
 
 	conn = nm_user_get_conn(user);
 
 	/* Read the conference guid */
-	rc = nm_read_uint32(conn, &size);
-	if (size > 1000)	return NMERR_PROTOCOL;
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (size > 1000) {
+		g_clear_error(&error);
+		return NMERR_PROTOCOL;
+	}
 
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		guid = g_new0(char, size + 1);
-		rc = nm_read_all(conn, guid, size);
+		rc = g_input_stream_read_all(G_INPUT_STREAM(conn->input), guid, size,
+		                             NULL, user->cancellable, &error);
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	g_free(guid);
@@ -803,6 +937,7 @@ nm_process_event(NMUser * user, int type)
 	char *source = NULL;
 	nm_event_cb cb;
 	NMConn *conn;
+	GError *error = NULL;
 
 	if (user == NULL)
 		return NMERR_BAD_PARM;
@@ -813,20 +948,22 @@ nm_process_event(NMUser * user, int type)
 	conn = nm_user_get_conn(user);
 
 	/* Read the event source */
-	rc = nm_read_uint32(conn, &size);
-	if (rc == NM_OK) {
+	size = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+	                                       &error);
+	if (error == NULL) {
 		if (size > 1000000) {
 			/* Size is larger than our 1MB sanity check. Ignore it. */
 			rc = NMERR_PROTOCOL;
 		} else {
 			source = g_new0(char, size);
 
-			rc = nm_read_all(conn, source, size);
+			rc = g_input_stream_read_all(G_INPUT_STREAM(conn->input), source,
+			                             size, NULL, user->cancellable, &error);
 		}
 	}
 
 	/* Read the event data */
-	if (rc == NM_OK) {
+	if (error == NULL) {
 		event = nm_create_event(type, source, time(0));
 
 		if (event) {
@@ -901,6 +1038,11 @@ nm_process_event(NMUser * user, int type)
 				break;
 			}
 		}
+	} else {
+		if (error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	if (rc == (NMERR_T)-1) {
