@@ -42,6 +42,25 @@ static SilcBool silcpurple_log_error(SilcLogType type, char *message,
 	return TRUE;
 }
 
+static void
+silcpurple_free(SilcPurple sg)
+{
+	g_return_if_fail(sg != NULL);
+
+	g_cancellable_cancel(sg->cancellable);
+	g_clear_object(&sg->cancellable);
+	g_clear_object(&sg->sockconn);
+
+	g_clear_pointer(&sg->client, silc_client_free);
+	g_clear_pointer(&sg->sha1hash, silc_hash_free);
+	g_clear_pointer(&sg->mimeass, silc_mime_assembler_free);
+
+	g_clear_pointer(&sg->public_key, silc_pkcs_public_key_free);
+	g_clear_pointer(&sg->private_key, silc_pkcs_private_key_free);
+
+	silc_free(sg);
+}
+
 static const char *
 silcpurple_list_icon(PurpleAccount *a, PurpleBuddy *b)
 {
@@ -135,15 +154,6 @@ silcpurple_keepalive(PurpleConnection *gc)
 			 NULL, 0);
 }
 
-#if __SILC_TOOLKIT_VERSION < SILC_VERSION(1,1,1)
-static gboolean
-silcpurple_scheduler(gpointer *context)
-{
-	SilcClient client = (SilcClient)context;
-	silc_client_run_one(client);
-	return TRUE;
-}
-#else
 typedef struct {
   SilcPurple sg;
   SilcUInt32 fd;
@@ -241,7 +251,6 @@ silcpurple_scheduler(SilcSchedule schedule,
 	  }
 	}
 }
-#endif /* __SILC_TOOLKIT_VERSION */
 
 static void
 silcpurple_connect_cb(SilcClient client, SilcClientConnection conn,
@@ -378,9 +387,7 @@ silcpurple_stream_created(SilcSocketStreamStatus status, SilcStream stream,
 		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Connection failed"));
-		silc_pkcs_public_key_free(sg->public_key);
-		silc_pkcs_private_key_free(sg->private_key);
-		silc_free(sg);
+		silcpurple_free(sg);
 		purple_connection_set_protocol_data(gc, NULL);
 		return;
 	}
@@ -413,29 +420,43 @@ silcpurple_stream_created(SilcSocketStreamStatus status, SilcStream stream,
 }
 
 static void
-silcpurple_login_connected(gpointer data, gint source, const gchar *error_message)
+silcpurple_login_connected(GObject *source, GAsyncResult *res, gpointer data)
 {
 	PurpleConnection *gc = data;
 	SilcPurple sg;
+	GSocketConnection *conn;
+	GSocket *socket;
+	gint fd;
+	GError *error = NULL;
 
 	g_return_if_fail(gc != NULL);
 
 	sg = purple_connection_get_protocol_data(gc);
 
-	if (source < 0) {
-		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-		                             _("Connection failed"));
-		silc_pkcs_public_key_free(sg->public_key);
-		silc_pkcs_private_key_free(sg->private_key);
-		silc_free(sg);
-		purple_connection_set_protocol_data(gc, NULL);
+	conn = g_socket_client_connect_to_host_finish(G_SOCKET_CLIENT(source),
+			res, &error);
+	if (conn == NULL) {
+		if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
+			purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
+						     _("Connection failed"));
+			silcpurple_free(sg);
+			purple_connection_set_protocol_data(gc, NULL);
+		}
+
+		g_clear_error(&error);
 		return;
 	}
+
+	socket = g_socket_connection_get_socket(conn);
+	g_assert(socket != NULL);
+
+	fd = g_socket_get_fd(socket);
+	sg->sockconn = conn;
 
 	silc_hash_alloc((unsigned char *)"sha1", &sg->sha1hash);
 
 	/* Wrap socket to TCP stream */
-	silc_socket_tcp_stream_create(source, TRUE, FALSE,
+	silc_socket_tcp_stream_create(fd, TRUE, FALSE,
 				      sg->client->schedule,
 				      silcpurple_stream_created, gc);
 }
@@ -444,20 +465,27 @@ static void silcpurple_continue_running(SilcPurple sg)
 {
 	PurpleConnection *gc = sg->gc;
 	PurpleAccount *account = purple_connection_get_account(gc);
+	GSocketClient *client;
+
+	client = purple_gio_socket_client_new(account, &error);
+	if (client == NULL) {
+		/* Assume it's a proxy error */
+		purple_notify_error(NULL, NULL, _("Invalid proxy settings"),
+			error->message,
+			purple_request_cpar_from_account(account));
+		purple_connection_take_error(gc, error);
+		purple_connection_set_protocol_data(gc, NULL);
+		silcpurple_free(sg);
+		return;
+	}
 
 	/* Connect to the SILC server */
-	if (purple_proxy_connect(gc, account,
+	g_socket_client_connect_to_host_async(client,
 				 purple_account_get_string(account, "server",
 							   "silc.silcnet.org"),
 				 purple_account_get_int(account, "port", 706),
-				 silcpurple_login_connected, gc) == NULL)
-	{
-		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-		                             _("Unable to connect"));
-		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
-		return;
-	}
+				 sg->cancellable, silcpurple_login_connected, gc);
+	g_object_unref(client);
 }
 
 static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields *fields)
@@ -480,7 +508,7 @@ static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields
 			_("Password is required to sign on."), NULL,
 			purple_request_cpar_from_connection(gc));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 
@@ -499,7 +527,7 @@ static void silcpurple_got_password_cb(PurpleConnection *gc, PurpleRequestFields
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Unable to load SILC key pair"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 	silcpurple_continue_running(sg);
@@ -516,7 +544,7 @@ static void silcpurple_no_password_cb(PurpleConnection *gc, PurpleRequestFields 
 	purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 			_("Unable to load SILC key pair"));
 	purple_connection_set_protocol_data(gc, NULL);
-	silc_free(sg);
+	silcpurple_free(sg);
 }
 
 static void silcpurple_running(SilcClient client, void *context)
@@ -545,7 +573,7 @@ static void silcpurple_running(SilcClient client, void *context)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Unable to load SILC key pair"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 	silcpurple_continue_running(sg);
@@ -616,6 +644,7 @@ silcpurple_login(PurpleAccount *account)
 	sg = silc_calloc(1, sizeof(*sg));
 	if (!sg)
 		return;
+	sg->cancellable = g_cancellable_new();
 	sg->client = client;
 	sg->gc = gc;
 	sg->account = account;
@@ -627,7 +656,7 @@ silcpurple_login(PurpleAccount *account)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Unable to initialize SILC protocol"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		silc_free(hostname);
 		g_free(username);
 		return;
@@ -640,20 +669,15 @@ silcpurple_login(PurpleAccount *account)
 		purple_connection_error(gc, PURPLE_CONNECTION_ERROR_OTHER_ERROR,
 		                             _("Error loading SILC key pair"));
 		purple_connection_set_protocol_data(gc, NULL);
-		silc_free(sg);
+		silcpurple_free(sg);
 		return;
 	}
 
-#if __SILC_TOOLKIT_VERSION < SILC_VERSION(1,1,1)
-	/* Schedule SILC using Glib's event loop */
-	sg->scheduler = g_timeout_add(300, (GSourceFunc)silcpurple_scheduler, client);
-#else
 	/* Run SILC scheduler */
 	sg->tasks = silc_dlist_init();
 	silc_schedule_set_notify(client->schedule, silcpurple_scheduler,
 				 client);
 	silc_client_run_one(client);
-#endif /* __SILC_TOOLKIT_VERSION */
 }
 
 static int
@@ -664,12 +688,8 @@ silcpurple_close_final(gpointer *context)
 	purple_debug_info("silc", "Finalizing SilcPurple %p\n", sg);
 
 	silc_client_stop(sg->client, NULL, NULL);
-	silc_client_free(sg->client);
-	if (sg->sha1hash)
-		silc_hash_free(sg->sha1hash);
-	if (sg->mimeass)
-		silc_mime_assembler_free(sg->mimeass);
-	silc_free(sg);
+
+	silcpurple_free(sg);
 	return 0;
 }
 
@@ -677,9 +697,7 @@ static void
 silcpurple_close(PurpleConnection *gc)
 {
 	SilcPurple sg = purple_connection_get_protocol_data(gc);
-#if __SILC_TOOLKIT_VERSION >= SILC_VERSION(1,1,1)
 	SilcPurpleTask task;
-#endif /* __SILC_TOOLKIT_VERSION */
 	GHashTable *ui_info;
 	const char *ui_name = NULL, *ui_website = NULL;
 	char *quit_msg;
@@ -709,7 +727,6 @@ silcpurple_close(PurpleConnection *gc)
 	if (sg->conn)
 		silc_client_close_connection(sg->client, sg->conn);
 
-#if __SILC_TOOLKIT_VERSION >= SILC_VERSION(1,1,1)
 	if (sg->conn)
 	  silc_client_run_one(sg->client);
 	silc_schedule_set_notify(sg->client->schedule, NULL, NULL);
@@ -720,7 +737,6 @@ silcpurple_close(PurpleConnection *gc)
 	  silc_free(task);
 	}
 	silc_dlist_uninit(sg->tasks);
-#endif /* __SILC_TOOLKIT_VERSION */
 
 	if (sg->scheduler)
 		g_source_remove(sg->scheduler);

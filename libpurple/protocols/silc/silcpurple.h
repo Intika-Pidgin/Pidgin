@@ -37,9 +37,6 @@
 #include "server.h"
 #include "util.h"
 
-#undef SILC_VERSION
-#define SILC_VERSION(a, b, c) (((a) << 24) + ((b) << 16) + ((c) << 8))
-
 #define SILCPURPLE_TYPE_PROTOCOL             (silcpurple_protocol_get_type())
 #define SILCPURPLE_PROTOCOL(obj)             (G_TYPE_CHECK_INSTANCE_CAST((obj), SILCPURPLE_TYPE_PROTOCOL, SilcProtocol))
 #define SILCPURPLE_PROTOCOL_CLASS(klass)     (G_TYPE_CHECK_CLASS_CAST((klass), SILCPURPLE_TYPE_PROTOCOL, SilcProtocolClass))
@@ -86,6 +83,9 @@ typedef struct {
 
 /* The SILC Purple plugin context */
 typedef struct SilcPurpleStruct {
+	GCancellable *cancellable;
+	GSocketConnection *sockconn;
+
 	SilcClient client;
 	SilcClientConnection conn;
 	SilcPublicKey public_key;
