@@ -433,9 +433,9 @@ create_string_field(PurpleRequestField *field, GntWidget **username)
 			purple_request_field_string_get_default_value(field));
 	gnt_entry_set_masked(GNT_ENTRY(entry),
 			purple_request_field_string_is_masked(field));
-	if (hint && purple_str_has_prefix(hint, "screenname")) {
+	if (hint && g_str_has_prefix(hint, "screenname")) {
 		PurpleBlistNode *node = purple_blist_get_default_root();
-		gboolean offline = purple_str_has_suffix(hint, "all");
+		gboolean offline = g_str_has_suffix(hint, "all");
 		for (; node; node = purple_blist_node_next(node, offline)) {
 			if (!PURPLE_IS_BUDDY(node))
 				continue;

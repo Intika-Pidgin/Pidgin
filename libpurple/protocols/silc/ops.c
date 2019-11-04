@@ -182,7 +182,7 @@ silcpurple_mime_message(SilcClient client, SilcClientConnection conn,
 	}
 
 	/* Image */
-	if (purple_str_has_prefix(type, "image/")) {
+	if (g_str_has_prefix(type, "image/")) {
 		char tmp[32];
 		PurpleImage *img;
 		guint img_id;

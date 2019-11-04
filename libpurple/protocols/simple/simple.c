@@ -1288,8 +1288,7 @@ static void process_incoming_notify(struct simple_account_data *sip, struct sipm
 			while (ssparts[i])
 			{
 				g_strchug(ssparts[i]);
-				if (purple_str_has_prefix(ssparts[i], "terminated"))
-				{
+				if (g_str_has_prefix(ssparts[i], "terminated")) {
 					purple_debug_info("simple", "Subscription expired!");
 					if (b->dialog)
 					{

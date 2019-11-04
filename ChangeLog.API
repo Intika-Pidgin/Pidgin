@@ -499,6 +499,8 @@ version 3.0.0 (??/??/????):
 		* purple_strlcat
 		* purple_strlcpy
 		* purple_str_binary_to_ascii
+		* purple_str_has_prefix. Use g_str_has_prefix instead
+		* purple_str_has_suffix. Use g_str_has_suffix instead
 		* purple_str_size_to_units. Use g_format_size() instead.
 		* purple_timeout_*. Use g_timeout_* or g_idle_* instead.
 		* purple_txt_cancel

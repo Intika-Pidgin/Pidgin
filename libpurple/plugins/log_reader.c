@@ -100,9 +100,11 @@ static GList *adium_logger_list(PurpleLogType type, const char *sn, PurpleAccoun
 		const gchar *file;
 
 		while ((file = g_dir_read_name(dir))) {
-			if (!purple_str_has_prefix(file, sn))
+			if (!g_str_has_prefix(file, sn)) {
 				continue;
-			if (purple_str_has_suffix(file, ".html") || purple_str_has_suffix(file, ".AdiumHTMLLog")) {
+			}
+			if (g_str_has_suffix(file, ".html") ||
+			    g_str_has_suffix(file, ".AdiumHTMLLog")) {
 				GDateTime *dt;
 				gint year, month, day, hour, minute, second;
 				const char *date = file;
@@ -165,7 +167,7 @@ static GList *adium_logger_list(PurpleLogType type, const char *sn, PurpleAccoun
 
 					list = g_list_prepend(list, log);
 				}
-			} else if (purple_str_has_suffix(file, ".adiumLog")) {
+			} else if (g_str_has_suffix(file, ".adiumLog")) {
 				GDateTime *dt;
 				gint year, month, day, hour, minute, second;
 				const char *date = file;
@@ -269,8 +271,7 @@ static char *adium_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 	/* This problem only seems to show up on Windows.
 	 * The BOM is displaying as a space at the beginning of the log.
 	 */
-	if (purple_str_has_prefix(read, "\xef\xbb\xbf"))
-	{
+	if (g_str_has_prefix(read, "\xef\xbb\xbf")) {
 		/* FIXME: This feels so wrong... */
 		char *temp = g_strdup(&(read[3]));
 		g_free(read);
@@ -578,8 +579,9 @@ static GList *msn_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 			while ((name = g_dir_read_name(dir))) {
 				const char *c = name;
 
-				if (!purple_str_has_prefix(c, username))
+				if (!g_str_has_prefix(c, username)) {
 					continue;
+				}
 
 				c += strlen(username);
 				while (*c) {
@@ -631,8 +633,9 @@ static GList *msn_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 				const char *c = name;
 				gchar *full_path;
 
-				if (!purple_str_has_prefix(c, username))
+				if (!g_str_has_prefix(c, username)) {
 					continue;
+				}
 
 				c += strlen(username);
 				while (*c) {
@@ -862,16 +865,18 @@ static char * msn_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 				 * friendly name or alias. For this test, "match" is defined as:
 				 * ^(friendly_name|alias)([^a-zA-Z0-9].*)?$
 				 */
-				from_name_matches = (purple_str_has_prefix(from_name, friendly_name) &&
-				                      !isalnum(*(from_name + friendly_name_length))) ||
-				                     (purple_str_has_prefix(from_name, alias) &&
-				                      !isalnum(*(from_name + alias_length)));
+				from_name_matches =
+				        (g_str_has_prefix(from_name, friendly_name) &&
+				         !isalnum(*(from_name + friendly_name_length))) ||
+				        (g_str_has_prefix(from_name, alias) &&
+				         !isalnum(*(from_name + alias_length)));
 
-				to_name_matches = to_name != NULL && (
-				                   (purple_str_has_prefix(to_name, friendly_name) &&
-				                    !isalnum(*(to_name + friendly_name_length))) ||
-				                   (purple_str_has_prefix(to_name, alias) &&
-				                    !isalnum(*(to_name + alias_length))));
+				to_name_matches =
+				        to_name != NULL &&
+				        ((g_str_has_prefix(to_name, friendly_name) &&
+				          !isalnum(*(to_name + friendly_name_length))) ||
+				         (g_str_has_prefix(to_name, alias) &&
+				          !isalnum(*(to_name + alias_length))));
 
 				if (from_name_matches) {
 					if (!to_name_matches) {
@@ -901,15 +906,13 @@ static char * msn_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 						 * matches their alias. For this test, "match" is
 						 * defined as: ^alias([^a-zA-Z0-9].*)?$
 						 */
-						from_name_matches = (purple_str_has_prefix(
-								from_name, alias) &&
-								!isalnum(*(from_name +
-								alias_length)));
+						from_name_matches =
+						        (g_str_has_prefix(from_name, alias) &&
+						         !isalnum(*(from_name + alias_length)));
 
-						to_name_matches = to_name && (purple_str_has_prefix(
-								to_name, alias) &&
-								!isalnum(*(to_name +
-								alias_length)));
+						to_name_matches = to_name &&
+						                  (g_str_has_prefix(to_name, alias) &&
+						                   !isalnum(*(to_name + alias_length)));
 
 						g_free(alias);
 
@@ -929,17 +932,17 @@ static char * msn_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 							 * this test, "match" is defined as:
 							 * ^friendly_name([^a-zA-Z0-9].*)?$
 							 */
-							from_name_matches = (purple_str_has_prefix(
-									from_name,
-									server_alias) &&
-									!isalnum(*(from_name +
-									friendly_name_length)));
+							from_name_matches =
+							        (g_str_has_prefix(from_name,
+							                          server_alias) &&
+							         !isalnum(*(from_name +
+							                    friendly_name_length)));
 
-							to_name_matches = to_name && (
-									(purple_str_has_prefix(
-									to_name, server_alias) &&
-									!isalnum(*(to_name +
-									friendly_name_length))));
+							to_name_matches =
+							        to_name &&
+							        ((g_str_has_prefix(to_name, server_alias) &&
+							          !isalnum(*(to_name +
+							                     friendly_name_length))));
 
 							if (from_name_matches) {
 								if (!to_name_matches) {
@@ -1142,7 +1145,7 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 			}
 
 			*c = '\0';
-			if (purple_str_has_prefix(line, "Session Close ")) {
+			if (g_str_has_prefix(line, "Session Close ")) {
 				if (data && !data->length) {
 					if (!(data->length = last_line_offset - data->offset)) {
 						/* This log had no data, so we remove it. */
@@ -1156,7 +1159,7 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 					}
 				}
 			} else if (line[0] && line[1] && line[2] &&
-					   purple_str_has_prefix(&line[3], "sion Start ")) {
+			           g_str_has_prefix(&line[3], "sion Start ")) {
 				/* The conditional is to make sure we're not reading off
 				 * the end of the string.  We don't want strlen(), as that'd
 				 * have to count the whole string needlessly.
@@ -1418,17 +1421,18 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 					line++;
 			}
 
-			if (purple_str_has_prefix(line, "*** ")) {
+			if (g_str_has_prefix(line, "*** ")) {
 				line += (sizeof("*** ") - 1);
 				g_string_append(formatted, "<b>");
 				footer = "</b>";
-				if (purple_str_has_prefix(line, "NOTE: This user is offline.")) {
+				if (g_str_has_prefix(line, "NOTE: This user is offline.")) {
 					line = _("User is offline.");
-				} else if (purple_str_has_prefix(line,
-						"NOTE: Your status is currently set to ")) {
+				} else if (g_str_has_prefix(
+				                   line,
+				                   "NOTE: Your status is currently set to ")) {
 
 					line += (sizeof("NOTE: ") - 1);
-				} else if (purple_str_has_prefix(line, "Auto-response sent to ")) {
+				} else if (g_str_has_prefix(line, "Auto-response sent to ")) {
 					g_string_append(formatted, _("Auto-response sent:"));
 					while (*line && *line != ':')
 						line++;
@@ -1462,8 +1466,8 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 						g_string_append(formatted, log->name);
 
 					line = " logged in.";
-				} else if (purple_str_has_prefix(line,
-					"One or more messages may have been undeliverable.")) {
+				} else if (g_str_has_prefix(line, "One or more messages may "
+				                                  "have been undeliverable.")) {
 
 					g_string_append(formatted,
 						"<span style=\"color: #ff0000;\">");
@@ -1472,8 +1476,8 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 						  "undeliverable."));
 					line = "";
 					footer = "</span></b>";
-				} else if (purple_str_has_prefix(line,
-						"You have been disconnected.")) {
+				} else if (g_str_has_prefix(line,
+				                            "You have been disconnected.")) {
 
 					g_string_append(formatted,
 						"<span style=\"color: #ff0000;\">");
@@ -1481,8 +1485,8 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 						_("You were disconnected from the server."));
 					line = "";
 					footer = "</span></b>";
-				} else if (purple_str_has_prefix(line,
-						"You are currently disconnected.")) {
+				} else if (g_str_has_prefix(
+				                   line, "You are currently disconnected.")) {
 
 					g_string_append(formatted,
 						"<span style=\"color: #ff0000;\">");
@@ -1490,15 +1494,16 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 					         "will not be received unless you are "
 					         "logged in.");
 					footer = "</span></b>";
-				} else if (purple_str_has_prefix(line,
-						"Your previous message has not been sent.")) {
+				} else if (g_str_has_prefix(line, "Your previous message has "
+				                                  "not been sent.")) {
 
 					g_string_append(formatted,
 						"<span style=\"color: #ff0000;\">");
 
-					if (purple_str_has_prefix(line,
-						"Your previous message has not been sent.  "
-						"Reason: Maximum length exceeded.")) {
+					if (g_str_has_prefix(
+					            line,
+					            "Your previous message has not been sent.  "
+					            "Reason: Maximum length exceeded.")) {
 
 						g_string_append(formatted,
 							_("Message could not be sent because "
@@ -1514,7 +1519,7 @@ static char * trillian_logger_read (PurpleLog *log, PurpleLogReadFlags *flags)
 
 					footer = "</span></b>";
 				}
-			} else if (purple_str_has_prefix(line, data->their_nickname)) {
+			} else if (g_str_has_prefix(line, data->their_nickname)) {
 				if (buddy != NULL) {
 					const char *alias = purple_buddy_get_alias(buddy);
 
@@ -1684,8 +1689,8 @@ static GList *qip_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 		gboolean add_new_log = FALSE;
 
 		if (c && *c) {
-			if (purple_str_has_prefix(c, QIP_LOG_IN_MESSAGE) ||
-				purple_str_has_prefix(c, QIP_LOG_OUT_MESSAGE)) {
+			if (g_str_has_prefix(c, QIP_LOG_IN_MESSAGE) ||
+			    g_str_has_prefix(c, QIP_LOG_OUT_MESSAGE)) {
 
 				char *tmp;
 
@@ -1841,12 +1846,12 @@ static char *qip_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 	while (c && *c) {
 		gboolean is_in_message = FALSE;
 
-		if (purple_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC) ||
-		    purple_str_has_prefix(line, QIP_LOG_OUT_MESSAGE_ESC)) {
+		if (g_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC) ||
+		    g_str_has_prefix(line, QIP_LOG_OUT_MESSAGE_ESC)) {
 
 			char *tmp;
 
-			is_in_message = purple_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC);
+			is_in_message = g_str_has_prefix(line, QIP_LOG_IN_MESSAGE_ESC);
 
 			/* find EOL */
 			c = strchr(c, '\n');
@@ -2010,7 +2015,7 @@ static GList *amsn_logger_parse_file(char *filename, const char *sn, PurpleAccou
 		gint year, month, day, hour, minute, second;
 		GDateTime *dt;
 		while (c && *c) {
-			if (purple_str_has_prefix(c, AMSN_LOG_CONV_START)) {
+			if (g_str_has_prefix(c, AMSN_LOG_CONV_START)) {
 				char month_str[4];
 				if (sscanf(c + strlen(AMSN_LOG_CONV_START),
 				           "%u %3s %u %u:%u:%u",
@@ -2027,7 +2032,7 @@ static GList *amsn_logger_parse_file(char *filename, const char *sn, PurpleAccou
 					offset = c - contents;
 					start_log = c;
 				}
-			} else if (purple_str_has_prefix(c, AMSN_LOG_CONV_END) && found_start) {
+			} else if (g_str_has_prefix(c, AMSN_LOG_CONV_END) && found_start) {
 				data = g_new0(struct amsn_logger_data, 1);
 				data->path = g_strdup(filename);
 				data->offset = offset;
@@ -2215,7 +2220,7 @@ static char *amsn_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 		if (!end)
 			break;
 		*end = '\0';
-		if (purple_str_has_prefix(start, AMSN_LOG_FORMAT_TAG) && in_span) {
+		if (g_str_has_prefix(start, AMSN_LOG_FORMAT_TAG) && in_span) {
 			/* New format for this line */
 			g_string_append(formatted, "</span><br>");
 			in_span = FALSE;
@@ -2244,19 +2249,19 @@ static char *amsn_logger_read(PurpleLog *log, PurpleLogReadFlags *flags)
 				old_tag = tag + 7; /* C + xxxxxx */
 			} else {
 				/* |"Lxxx is a 3-digit colour code */
-				if (purple_str_has_prefix(tag, "RED")) {
+				if (g_str_has_prefix(tag, "RED")) {
 					g_string_append(formatted, "<span style=\"color: red;\">");
 					in_span = TRUE;
-				} else if (purple_str_has_prefix(tag, "GRA")) {
+				} else if (g_str_has_prefix(tag, "GRA")) {
 					g_string_append(formatted, "<span style=\"color: gray;\">");
 					in_span = TRUE;
-				} else if (purple_str_has_prefix(tag, "NOR")) {
+				} else if (g_str_has_prefix(tag, "NOR")) {
 					g_string_append(formatted, "<span style=\"color: black;\">");
 					in_span = TRUE;
-				} else if (purple_str_has_prefix(tag, "ITA")) {
+				} else if (g_str_has_prefix(tag, "ITA")) {
 					g_string_append(formatted, "<span style=\"color: blue;\">");
 					in_span = TRUE;
-				} else if (purple_str_has_prefix(tag, "GRE")) {
+				} else if (g_str_has_prefix(tag, "GRE")) {
 					g_string_append(formatted, "<span style=\"color: darkgreen;\">");
 					in_span = TRUE;
 				} else {
@@ -2429,7 +2434,7 @@ static void log_reader_init_prefs(void) {
 		*temp = '\0';
 
 		/* Set path. */
-		if (purple_str_has_suffix(value, "trillian.exe")) {
+		if (g_str_has_suffix(value, "trillian.exe")) {
 			value[strlen(value) - (sizeof("trillian.exe") - 1)] = '\0';
 			path = g_build_filename(value, "users", "default", "talk.ini", NULL);
 		}
@@ -2472,7 +2477,7 @@ static void log_reader_init_prefs(void) {
 					*cursor = '\0';
 
 					/* XXX: This assumes the first Directory key is under [Logging]. */
-					if (purple_str_has_prefix(line, "Directory=")) {
+					if (g_str_has_prefix(line, "Directory=")) {
 						line += (sizeof("Directory=") - 1);
 						g_strchomp(line);
 						purple_prefs_add_string(

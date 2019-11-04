@@ -927,18 +927,6 @@ const char *purple_normalize_nocase(const PurpleAccount *account, const char *st
 gboolean purple_validate(const PurpleProtocol *protocol, const char *str);
 
 /**
- * purple_str_has_prefix:
- * @s:  The string to check.
- * @p:  The prefix in question.
- *
- * Compares two strings to see if the first contains the second as
- * a proper prefix.
- *
- * Returns:   TRUE if p is a prefix of s, otherwise FALSE.
- */
-gboolean purple_str_has_prefix(const char *s, const char *p);
-
-/**
  * purple_str_has_caseprefix:
  * @s: The string to check.
  * @p: The prefix in question.
@@ -950,18 +938,6 @@ gboolean purple_str_has_prefix(const char *s, const char *p);
  */
 gboolean
 purple_str_has_caseprefix(const gchar *s, const gchar *p);
-
-/**
- * purple_str_has_suffix:
- * @s:  The string to check.
- * @x:  The suffix in question.
- *
- * Compares two strings to see if the second is a proper suffix
- * of the first.
- *
- * Returns:   TRUE if x is a a suffix of s, otherwise FALSE.
- */
-gboolean purple_str_has_suffix(const char *s, const char *x);
 
 /**
  * purple_strdup_withhtml:

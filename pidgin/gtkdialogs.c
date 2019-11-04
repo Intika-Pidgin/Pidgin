@@ -417,8 +417,9 @@ pidgin_dialogs_info_cb(gpointer data, PurpleRequestFields *fields)
 	username = g_strdup(purple_normalize(account,
 		purple_request_fields_get_string(fields,  "screenname")));
 
-	if (username != NULL && purple_str_has_suffix(username, "rocksmyworld"))
+	if (username != NULL && g_str_has_suffix(username, "rocksmyworld")) {
 		found = pidgin_dialogs_ee(username);
+	}
 
 	if (!found && username != NULL && *username != '\0' && account != NULL)
 		pidgin_retrieve_user_info(purple_account_get_connection(account), username);
