@@ -3073,9 +3073,16 @@ tooltip_data_free(struct tooltip_data *td)
 	g_free(td);
 }
 
-void pidgin_blist_tooltip_destroy()
+static void
+pidgin_blist_destroy_tooltip_data(void)
 {
 	g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
+	gtkblist->tooltipdata = NULL;
+}
+
+void pidgin_blist_tooltip_destroy()
+{
+	pidgin_blist_destroy_tooltip_data();
 	pidgin_tooltip_destroy();
 }
 
@@ -3107,7 +3114,7 @@ pidgin_blist_create_tooltip_for_node(GtkWidget *widget, gpointer data, int *w, i
 
 	if (gtkblist->tooltipdata) {
 		gtkblist->tipwindow = NULL;
-		g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
+		pidgin_blist_destroy_tooltip_data();
 	}
 
 	gtkblist->tipwindow = widget;
@@ -3296,7 +3303,7 @@ pidgin_blist_create_tooltip(GtkWidget *widget, GtkTreePath *path,
 
 	if (gtkblist->tooltipdata) {
 		gtkblist->tipwindow = NULL;
-		g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
+		pidgin_blist_destroy_tooltip_data();
 	}
 
 	gtk_tree_model_get_iter(GTK_TREE_MODEL(gtkblist->treemodel), &iter, path);

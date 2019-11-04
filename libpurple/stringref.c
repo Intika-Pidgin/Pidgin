@@ -161,6 +161,7 @@ static void stringref_free(PurpleStringref *stringref)
 static gboolean gs_idle_cb(gpointer data)
 {
 	g_list_free_full(gclist, (GDestroyNotify)stringref_free);
+	gclist = NULL;
 
 	return FALSE;
 }
