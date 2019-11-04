@@ -699,7 +699,7 @@ pidgin_parse_x_im_contact(const char *msg, gboolean all_accounts,
 		if (*s != '\0') *s++ = '\0';
 
 		/* Clear past any whitespace */
-		while (*s != '\0' && *s == ' ')
+		while (*s == ' ')
 			s++;
 
 		/* Now let's grab until the end of the line. */
