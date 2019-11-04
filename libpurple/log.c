@@ -871,7 +871,7 @@ void purple_log_common_writer(PurpleLog *log, const char *ext)
 		if (dir == NULL)
 			return;
 
-		purple_build_dir (dir, S_IRUSR | S_IWUSR | S_IXUSR);
+		g_mkdir_with_parents(dir, S_IRUSR | S_IWUSR | S_IXUSR);
 
 		dt = g_date_time_to_local(log->time);
 		tz = purple_escape_filename(g_date_time_get_timezone_abbreviation(dt));

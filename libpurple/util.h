@@ -591,19 +591,6 @@ purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path);
 void purple_util_set_user_dir(const char *dir);
 
 /**
- * purple_build_dir:
- * @path: The path you wish to create.  Note that it must start
- *        from the root or this function will fail.
- * @mode: Unix-style permissions for this directory.
- *
- * Builds a complete path from the root, making any directories along
- * the path which do not already exist.
- *
- * Returns: 0 for success, nonzero on any error.
- */
-int purple_build_dir(const char *path, int mode);
-
-/**
  * purple_util_write_data_to_file:
  * @filename: The basename of the file to write in the purple_user_dir.
  * @data:     A string of data to write.
