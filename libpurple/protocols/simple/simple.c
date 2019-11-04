@@ -117,7 +117,6 @@ static void simple_keep_alive(PurpleConnection *gc) {
 			purple_debug_error("simple", "failed sending keep alive\n");
 		}
 	}
-	return;
 }
 
 static gboolean process_register_response(struct simple_account_data *sip, struct sipmsg *msg, struct transaction *tc);

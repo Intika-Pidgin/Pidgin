@@ -333,8 +333,6 @@ void irc_msg_chanmode(struct irc_conn *irc, const char *name, const char *from, 
 	purple_conversation_write_system_message(PURPLE_CONVERSATION(chat), buf, 0);
 	g_free(escaped);
 	g_free(buf);
-
-	return;
 }
 
 void irc_msg_whois(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -1010,7 +1008,6 @@ void irc_msg_kick(struct irc_conn *irc, const char *name, const char *from, char
 	}
 
 	g_free(nick);
-	return;
 }
 
 void irc_msg_mode(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -1362,8 +1359,6 @@ void irc_msg_quit(struct irc_conn *irc, const char *name, const char *from, char
 		irc_buddy_status(data[0], ib, irc);
 	}
 	g_free(data[0]);
-
-	return;
 }
 
 void irc_msg_unavailable(struct irc_conn *irc, const char *name, const char *from, char **args)

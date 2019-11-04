@@ -2066,8 +2066,6 @@ void finch_blist_init()
 	                               PURPLE_SIGNAL_PRIORITY_HIGHEST);
 
 	finch_blist_install_manager(&default_manager);
-
-	return;
 }
 
 static gboolean

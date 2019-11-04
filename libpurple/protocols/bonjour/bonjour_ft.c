@@ -877,7 +877,6 @@ bonjour_sock5_request_cb(gpointer data, gint source, PurpleInputCondition cond)
 	default:
 		break;
 	}
-	return;
 }
 
 static void
@@ -943,8 +942,6 @@ bonjour_bytestreams_init(PurpleXfer *xfer)
 						      bonjour_bytestreams_listen, xfer);
 	if (xf->listen_data == NULL)
 		purple_xfer_cancel_local(xfer);
-
-	return;
 }
 
 static void

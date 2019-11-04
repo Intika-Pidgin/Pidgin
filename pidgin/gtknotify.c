@@ -1555,8 +1555,6 @@ pidgin_notify_pounce_add(PurpleAccount *account, PurplePounce *pounce,
 		g_object_unref(icon);
 
 	gtk_widget_show_all(pounce_dialog->dialog);
-
-	return;
 }
 
 static PidginNotifyDialog *
