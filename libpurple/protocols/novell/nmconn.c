@@ -36,27 +36,6 @@
 #define NO_ESCAPE(ch) ((ch == 0x20) || (ch >= 0x30 && ch <= 0x39) || \
 					(ch >= 0x41 && ch <= 0x5a) || (ch >= 0x61 && ch <= 0x7a))
 
-/* Read data from conn until the end of a line */
-static NMERR_T
-read_line(NMConn * conn, char *buff, int len)
-{
-	NMERR_T rc = NM_OK;
-	int total_bytes = 0;
-
-	while ((rc == NM_OK) && (total_bytes < (len - 1))) {
-		rc = nm_read_all(conn, &buff[total_bytes], 1);
-		if (rc == NM_OK) {
-			total_bytes += 1;
-			if (buff[total_bytes - 1] == '\n') {
-				break;
-			}
-		}
-	}
-	buff[total_bytes] = '\0';
-
-	return rc;
-}
-
 static char *
 url_escape_string(char *src)
 {
@@ -188,8 +167,8 @@ void nm_release_conn(NMConn *conn)
 	conn->requests = NULL;
 
 	if (conn->input) {
-		purple_gio_graceful_close(conn->stream, conn->input,
-					  conn->output);
+		purple_gio_graceful_close(conn->stream, G_INPUT_STREAM(conn->input),
+		                          conn->output);
 	}
 	g_clear_object(&conn->input);
 	g_clear_object(&conn->output);
@@ -199,68 +178,10 @@ void nm_release_conn(NMConn *conn)
 	g_free(conn);
 }
 
-int
-nm_tcp_write(NMConn * conn, const void *buff, int len)
-{
-	if (conn == NULL || buff == NULL)
-		return -1;
-
-	return g_output_stream_write(conn->output, buff, len, NULL, NULL);
-}
-
-int
-nm_tcp_read(NMConn * conn, void *buff, int len)
-{
-	if (conn == NULL || buff == NULL)
-		return -1;
-
-	return g_input_stream_read(conn->input, buff, len, NULL, NULL);
-}
-
 NMERR_T
-nm_read_all(NMConn * conn, char *buff, int len)
+nm_write_fields(NMUser *user, NMField *fields)
 {
-	NMERR_T rc = NM_OK;
-
-	if (conn == NULL || buff == NULL)
-		return NMERR_BAD_PARM;
-
-	if (!g_input_stream_read_all(conn->input, buff, len, NULL, NULL, NULL)) {
-		rc = NMERR_TCP_READ;
-	}
-
-	return rc;
-}
-
-NMERR_T
-nm_read_uint32(NMConn *conn, guint32 *val)
-{
-	NMERR_T rc = NM_OK;
-
-	rc = nm_read_all(conn, (char *)val, sizeof(*val));
-	if (rc == NM_OK) {
-		*val = GUINT32_FROM_LE(*val);
-	}
-
-	return rc;
-}
-
-NMERR_T
-nm_read_uint16(NMConn *conn, guint16 *val)
-{
-	NMERR_T rc = NM_OK;
-
-	rc = nm_read_all(conn, (char *)val, sizeof(*val));
-	if (rc == NM_OK) {
-		*val = GUINT16_FROM_LE(*val);
-	}
-
-	return rc;
-}
-
-NMERR_T
-nm_write_fields(NMConn * conn, NMField * fields)
-{
+	NMConn *conn;
 	NMERR_T rc = NM_OK;
 	NMField *field;
 	char *value = NULL;
@@ -270,9 +191,10 @@ nm_write_fields(NMConn * conn, NMField * fields)
 	int bytes_to_send;
 	int val = 0;
 
-	if (conn == NULL || fields == NULL) {
-		return NMERR_BAD_PARM;
-	}
+	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
+	conn = user->conn;
+	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(fields != NULL, NMERR_BAD_PARM);
 
 	/* Format each field as valid "post" data and write it out */
 	for (field = fields; (rc == NM_OK) && (field->tag); field++) {
@@ -285,7 +207,8 @@ nm_write_fields(NMConn * conn, NMField * fields)
 
 		/* Write the field tag */
 		bytes_to_send = g_snprintf(buffer, sizeof(buffer), "&tag=%s", field->tag);
-		ret = nm_tcp_write(conn, buffer, bytes_to_send);
+		ret = g_output_stream_write(conn->output, buffer, bytes_to_send,
+		                            user->cancellable, NULL);
 		if (ret < 0) {
 			rc = NMERR_TCP_WRITE;
 		}
@@ -294,7 +217,8 @@ nm_write_fields(NMConn * conn, NMField * fields)
 		if (rc == NM_OK) {
 			method = encode_method(field->method);
 			bytes_to_send = g_snprintf(buffer, sizeof(buffer), "&cmd=%s", method);
-			ret = nm_tcp_write(conn, buffer, bytes_to_send);
+			ret = g_output_stream_write(conn->output, buffer, bytes_to_send,
+			                            user->cancellable, NULL);
 			if (ret < 0) {
 				rc = NMERR_TCP_WRITE;
 			}
@@ -310,9 +234,13 @@ nm_write_fields(NMConn * conn, NMField * fields)
 					bytes_to_send = g_snprintf(buffer, sizeof(buffer),
 											   "&val=%s", value);
 					if (bytes_to_send > (int)sizeof(buffer)) {
-						ret = nm_tcp_write(conn, buffer, sizeof(buffer));
+						ret = g_output_stream_write(conn->output, buffer,
+						                            sizeof(buffer),
+						                            user->cancellable, NULL);
 					} else {
-						ret = nm_tcp_write(conn, buffer, bytes_to_send);
+						ret = g_output_stream_write(conn->output, buffer,
+						                            bytes_to_send,
+						                            user->cancellable, NULL);
 					}
 
 					if (ret < 0) {
@@ -329,7 +257,9 @@ nm_write_fields(NMConn * conn, NMField * fields)
 					val = nm_count_fields((NMField *) field->ptr_value);
 					bytes_to_send = g_snprintf(buffer, sizeof(buffer),
 											   "&val=%u", val);
-					ret = nm_tcp_write(conn, buffer, bytes_to_send);
+					ret = g_output_stream_write(conn->output, buffer,
+					                            bytes_to_send,
+					                            user->cancellable, NULL);
 					if (ret < 0) {
 						rc = NMERR_TCP_WRITE;
 					}
@@ -340,7 +270,9 @@ nm_write_fields(NMConn * conn, NMField * fields)
 
 					bytes_to_send = g_snprintf(buffer, sizeof(buffer),
 											   "&val=%u", field->value);
-					ret = nm_tcp_write(conn, buffer, bytes_to_send);
+					ret = g_output_stream_write(conn->output, buffer,
+					                            bytes_to_send,
+					                            user->cancellable, NULL);
 					if (ret < 0) {
 						rc = NMERR_TCP_WRITE;
 					}
@@ -353,7 +285,8 @@ nm_write_fields(NMConn * conn, NMField * fields)
 		if (rc == NM_OK) {
 			bytes_to_send = g_snprintf(buffer, sizeof(buffer),
 									   "&type=%u", field->type);
-			ret = nm_tcp_write(conn, buffer, bytes_to_send);
+			ret = g_output_stream_write(conn->output, buffer, bytes_to_send,
+			                            user->cancellable, NULL);
 			if (ret < 0) {
 				rc = NMERR_TCP_WRITE;
 			}
@@ -364,8 +297,7 @@ nm_write_fields(NMConn * conn, NMField * fields)
 			if (field->type == NMFIELD_TYPE_ARRAY ||
 				field->type == NMFIELD_TYPE_MV) {
 
-				rc = nm_write_fields(conn, (NMField *) field->ptr_value);
-
+				rc = nm_write_fields(user, (NMField *)field->ptr_value);
 			}
 		}
 	}
@@ -374,9 +306,10 @@ nm_write_fields(NMConn * conn, NMField * fields)
 }
 
 NMERR_T
-nm_send_request(NMConn *conn, char *cmd, NMField *fields,
-				nm_response_cb cb, gpointer data, NMRequest **request)
+nm_send_request(NMUser *user, char *cmd, NMField *fields, nm_response_cb cb,
+                gpointer data, NMRequest **request)
 {
+	NMConn *conn;
 	NMERR_T rc = NM_OK;
 	char buffer[512];
 	int bytes_to_send;
@@ -384,13 +317,16 @@ nm_send_request(NMConn *conn, char *cmd, NMField *fields,
 	NMField *request_fields = NULL;
 	char *str = NULL;
 
-	if (conn == NULL || cmd == NULL)
-		return NMERR_BAD_PARM;
+	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
+	conn = user->conn;
+	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(cmd != NULL, NMERR_BAD_PARM);
 
 	/* Write the post */
 	bytes_to_send = g_snprintf(buffer, sizeof(buffer),
 							   "POST /%s HTTP/1.0\r\n", cmd);
-	ret = nm_tcp_write(conn, buffer, bytes_to_send);
+	ret = g_output_stream_write(conn->output, buffer, bytes_to_send,
+	                            user->cancellable, NULL);
 	if (ret < 0) {
 		rc = NMERR_TCP_WRITE;
 	}
@@ -400,13 +336,15 @@ nm_send_request(NMConn *conn, char *cmd, NMField *fields,
 		if (purple_strequal("login", cmd)) {
 			bytes_to_send = g_snprintf(buffer, sizeof(buffer),
 									   "Host: %s:%d\r\n\r\n", conn->addr, conn->port);
-			ret = nm_tcp_write(conn, buffer, bytes_to_send);
+			ret = g_output_stream_write(conn->output, buffer, bytes_to_send,
+			                            user->cancellable, NULL);
 			if (ret < 0) {
 				rc = NMERR_TCP_WRITE;
 			}
 		} else {
 			bytes_to_send = g_snprintf(buffer, sizeof(buffer), "\r\n");
-			ret = nm_tcp_write(conn, buffer, bytes_to_send);
+			ret = g_output_stream_write(conn->output, buffer, bytes_to_send,
+			                            user->cancellable, NULL);
 			if (ret < 0) {
 				rc = NMERR_TCP_WRITE;
 			}
@@ -426,12 +364,13 @@ nm_send_request(NMConn *conn, char *cmd, NMField *fields,
 
 	/* Send the request to the server */
 	if (rc == NM_OK) {
-		rc = nm_write_fields(conn, request_fields);
+		rc = nm_write_fields(user, request_fields);
 	}
 
 	/* Write the CRLF to terminate the data */
 	if (rc == NM_OK) {
-		ret = nm_tcp_write(conn, "\r\n", strlen("\r\n"));
+		ret = g_output_stream_write(conn->output, "\r\n", strlen("\r\n"),
+		                            user->cancellable, NULL);
 		if (ret < 0) {
 			rc = NMERR_TCP_WRITE;
 		}
@@ -457,22 +396,24 @@ nm_send_request(NMConn *conn, char *cmd, NMField *fields,
 }
 
 NMERR_T
-nm_read_header(NMConn * conn)
+nm_read_header(NMUser *user)
 {
+	NMConn *conn;
 	NMERR_T rc = NM_OK;
-	char buffer[512];
+	gchar *buffer;
 	char *ptr = NULL;
 	int i;
 	char rtn_buf[8];
 	int rtn_code = 0;
+	GError *error = NULL;
 
-	if (conn == NULL)
-		return NMERR_BAD_PARM;
+	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
+	conn = user->conn;
+	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
 
-	*buffer = '\0';
-	rc = read_line(conn, buffer, sizeof(buffer));
-	if (rc == NM_OK) {
-
+	buffer = g_data_input_stream_read_line(conn->input, NULL, user->cancellable,
+	                                       &error);
+	if (error == NULL) {
 		/* Find the return code */
 		ptr = strchr(buffer, ' ');
 		if (ptr != NULL) {
@@ -493,8 +434,19 @@ nm_read_header(NMConn * conn)
 
 	/* Finish reading header, in the future we might want to do more processing here */
 	/* TODO: handle more general redirects in the future */
-	while ((rc == NM_OK) && (!purple_strequal(buffer, "\r\n"))) {
-		rc = read_line(conn, buffer, sizeof(buffer));
+	while ((error == NULL) && !purple_strequal(buffer, "\r")) {
+		g_free(buffer);
+		buffer = g_data_input_stream_read_line(conn->input, NULL,
+		                                       user->cancellable, &error);
+	}
+	g_free(buffer);
+
+	if (error != NULL) {
+		if (error->code != G_IO_ERROR_WOULD_BLOCK &&
+		    error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	if (rc == NM_OK && rtn_code == 301)
@@ -504,8 +456,9 @@ nm_read_header(NMConn * conn)
 }
 
 NMERR_T
-nm_read_fields(NMConn * conn, int count, NMField ** fields)
+nm_read_fields(NMUser *user, int count, NMField **fields)
 {
+	NMConn *conn;
 	NMERR_T rc = NM_OK;
 	guint8 type;
 	guint8 method;
@@ -513,9 +466,12 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 	char tag[64];
 	NMField *sub_fields = NULL;
 	char *str = NULL;
+	GError *error = NULL;
 
-	if (conn == NULL || fields == NULL)
-		return NMERR_BAD_PARM;
+	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
+	conn = user->conn;
+	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(fields != NULL, NMERR_BAD_PARM);
 
 	do {
 		if (count > 0) {
@@ -523,36 +479,46 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 		}
 
 		/* Read the field type, method, and tag */
-		rc = nm_read_all(conn, (char *)&type, sizeof(type));
-		if (rc != NM_OK || type == 0)
+		type = g_data_input_stream_read_byte(conn->input, user->cancellable,
+		                                     &error);
+		if (error != NULL || type == 0) {
 			break;
+		}
 
-		rc = nm_read_all(conn, (char *)&method, sizeof(method));
-		if (rc != NM_OK)
+		method = g_data_input_stream_read_byte(conn->input, user->cancellable,
+		                                       &error);
+		if (error != NULL) {
 			break;
+		}
 
-		rc = nm_read_uint32(conn, &val);
-		if (rc != NM_OK)
+		val = g_data_input_stream_read_uint32(conn->input, user->cancellable,
+		                                      &error);
+		if (error != NULL) {
 			break;
+		}
 
 		if (val > sizeof(tag)) {
 			rc = NMERR_PROTOCOL;
 			break;
 		}
 
-		rc = nm_read_all(conn, tag, val);
-		if (rc != NM_OK)
+		g_input_stream_read_all(G_INPUT_STREAM(conn->input), tag, val, NULL,
+		                        user->cancellable, &error);
+		if (error != NULL) {
 			break;
+		}
 
 		if (type == NMFIELD_TYPE_MV || type == NMFIELD_TYPE_ARRAY) {
 
 			/* Read the subarray (first read the number of items in the array) */
-			rc = nm_read_uint32(conn, &val);
-			if (rc != NM_OK)
+			val = g_data_input_stream_read_uint32(conn->input,
+			                                      user->cancellable, &error);
+			if (error != NULL) {
 				break;
+			}
 
 			if (val > 0) {
-				rc = nm_read_fields(conn, val, &sub_fields);
+				rc = nm_read_fields(user, val, &sub_fields);
 				if (rc != NM_OK)
 					break;
 			}
@@ -565,9 +531,11 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 		} else if (type == NMFIELD_TYPE_UTF8 || type == NMFIELD_TYPE_DN) {
 
 			/* Read the string (first read the length) */
-			rc = nm_read_uint32(conn, &val);
-			if (rc != NM_OK)
+			val = g_data_input_stream_read_uint32(conn->input,
+			                                      user->cancellable, &error);
+			if (error != NULL) {
 				break;
+			}
 
 			if (val >= NMFIELD_MAX_STR_LENGTH) {
 				rc = NMERR_PROTOCOL;
@@ -577,9 +545,11 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 			if (val > 0) {
 				str = g_new0(char, val + 1);
 
-				rc = nm_read_all(conn, str, val);
-				if (rc != NM_OK)
+				g_input_stream_read_all(G_INPUT_STREAM(conn->input), str, val,
+				                        NULL, user->cancellable, &error);
+				if (error != NULL) {
 					break;
+				}
 
 				*fields = nm_field_add_pointer(*fields, tag, 0, method,
 											   0, str, type);
@@ -589,9 +559,11 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 		} else {
 
 			/* Read the numerical value */
-			rc = nm_read_uint32(conn, &val);
-			if (rc != NM_OK)
+			val = g_data_input_stream_read_uint32(conn->input,
+			                                      user->cancellable, &error);
+			if (error != NULL) {
 				break;
+			}
 
 			*fields = nm_field_add_number(*fields, tag, 0, method,
 										  0, val, type);
@@ -603,6 +575,13 @@ nm_read_fields(NMConn * conn, int count, NMField ** fields)
 
 	if (sub_fields != NULL) {
 		nm_free_fields(&sub_fields);
+	}
+
+	if (error != NULL) {
+		if (error->code != G_IO_ERROR_WOULD_BLOCK && error->code != G_IO_ERROR_CANCELLED) {
+			rc = NMERR_TCP_READ;
+		}
+		g_error_free(error);
 	}
 
 	return rc;
