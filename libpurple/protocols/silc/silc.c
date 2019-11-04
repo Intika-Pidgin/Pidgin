@@ -45,9 +45,19 @@ static SilcBool silcpurple_log_error(SilcLogType type, char *message,
 static void
 silcpurple_free(SilcPurple sg)
 {
+	g_return_if_fail(sg != NULL);
+
 	g_cancellable_cancel(sg->cancellable);
 	g_clear_object(&sg->cancellable);
 	g_clear_object(&sg->sockconn);
+
+	g_clear_pointer(&sg->client, silc_client_free);
+	g_clear_pointer(&sg->sha1hash, silc_hash_free);
+	g_clear_pointer(&sg->mimeass, silc_mime_assembler_free);
+
+	g_clear_pointer(&sg->public_key, silc_pkcs_public_key_free);
+	g_clear_pointer(&sg->private_key, silc_pkcs_private_key_free);
+
 	silc_free(sg);
 }
 
@@ -377,8 +387,6 @@ silcpurple_stream_created(SilcSocketStreamStatus status, SilcStream stream,
 		purple_connection_error(gc,
 			PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 			_("Connection failed"));
-		silc_pkcs_public_key_free(sg->public_key);
-		silc_pkcs_private_key_free(sg->private_key);
 		silcpurple_free(sg);
 		purple_connection_set_protocol_data(gc, NULL);
 		return;
@@ -431,8 +439,6 @@ silcpurple_login_connected(GObject *source, GAsyncResult *res, gpointer data)
 		if (!g_error_matches(error, G_IO_ERROR, G_IO_ERROR_CANCELLED)) {
 			purple_connection_error(gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
 						     _("Connection failed"));
-			silc_pkcs_public_key_free(sg->public_key);
-			silc_pkcs_private_key_free(sg->private_key);
 			silcpurple_free(sg);
 			purple_connection_set_protocol_data(gc, NULL);
 		}
@@ -682,11 +688,7 @@ silcpurple_close_final(gpointer *context)
 	purple_debug_info("silc", "Finalizing SilcPurple %p\n", sg);
 
 	silc_client_stop(sg->client, NULL, NULL);
-	silc_client_free(sg->client);
-	if (sg->sha1hash)
-		silc_hash_free(sg->sha1hash);
-	if (sg->mimeass)
-		silc_mime_assembler_free(sg->mimeass);
+
 	silcpurple_free(sg);
 	return 0;
 }
