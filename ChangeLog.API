@@ -393,6 +393,7 @@ version 3.0.0 (??/??/????):
 		* purple_buddy_icons_has_custom_icon
 		* purple_buddy_icons_find_custom_icon
 		* purple_buddy_icons_set_custom_icon
+		* purple_build_dir. Use g_mkdir_with_parents instead
 		* purple_certificate_check_signature_chain_with_failing. Use
 		  purple_certificate_check_signature_chain, instead
 		* purple_certificate_display_x509. Use purple_request_certificate,

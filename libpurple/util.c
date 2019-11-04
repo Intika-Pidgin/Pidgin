@@ -2166,7 +2166,7 @@ purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path)
 	gboolean xdg_path_exists;
 
 	/* Create destination directory */
-	mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
+	mkdir_res = g_mkdir_with_parents(purple_xdg_dir, S_IRWXU);
 	if (mkdir_res == -1) {
 		purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
 					purple_xdg_dir, g_strerror(errno));
@@ -2213,11 +2213,6 @@ void purple_util_set_user_dir(const char *dir)
 		custom_user_dir = g_strdup(dir);
 	else
 		custom_user_dir = NULL;
-}
-
-int purple_build_dir(const char *path, int mode)
-{
-	return g_mkdir_with_parents(path, mode);
 }
 
 static gboolean
