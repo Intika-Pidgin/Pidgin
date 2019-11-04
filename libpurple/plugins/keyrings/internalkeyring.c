@@ -849,7 +849,7 @@ intkeyring_export_password(PurpleAccount *account, const char **mode,
 
 	*mode = "ciphertext";
 	*data = ciphertext;
-	*destroy = (GDestroyNotify)g_free;
+	*destroy = g_free;
 	return TRUE;
 }
 
