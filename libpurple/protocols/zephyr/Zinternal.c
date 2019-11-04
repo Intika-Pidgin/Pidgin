@@ -850,7 +850,6 @@ void Z_RemQueue(qptr)
     qptr->prev->next = qptr->next;
     qptr->next->prev = qptr->prev;
     free ((char *)qptr);
-    return;
 }
 
 Code_t Z_SendFragmentedNotice(notice, len, cert_func, send_func)

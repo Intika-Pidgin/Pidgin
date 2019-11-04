@@ -1400,8 +1400,6 @@ static void zephyr_inithosts(zephyr_account *zephyr)
 	}
 
 	g_strlcpy(zephyr->ourhostcanon, hent->h_name, sizeof(zephyr->ourhostcanon));
-
-	return;
 }
 
 static void process_zsubs(zephyr_account *zephyr)
@@ -2582,7 +2580,6 @@ static void zephyr_chat_set_topic(PurpleConnection * gc, int id, const char *top
 	topic_utf8 = zephyr_recv_convert(gc,(gchar *)topic);
 	purple_chat_conversation_set_topic(gcc,sender,topic_utf8);
 	g_free(topic_utf8);
-	return;
 }
 
 /*  commands */

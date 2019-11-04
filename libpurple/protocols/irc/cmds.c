@@ -694,6 +694,4 @@ static void irc_do_mode(struct irc_conn *irc, const char *target, const char *si
 		irc_send(irc, buf);
 		g_free(buf);
 	}
-
-	return;
 }
