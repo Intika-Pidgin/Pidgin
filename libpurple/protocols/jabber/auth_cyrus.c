@@ -402,11 +402,22 @@ static JabberSaslState
 jabber_cyrus_start(JabberStream *js, PurpleXmlNode *mechanisms,
                    PurpleXmlNode **reply, char **error)
 {
-	PurpleXmlNode *mechnode;
+	PurpleXmlNode *mechnode, *hostname;
 	JabberSaslState ret;
 
 	js->sasl_mechs = g_string_new("");
 	js->sasl_password = g_strdup(purple_connection_get_password(js->gc));
+	/* XEP-0233 says we should grab the hostname for Kerberos v5, but there
+	 * is no claim about other SASL mechanisms. Fortunately, most don't
+	 * care what we use, so just use the domainpart. */
+	hostname = purple_xmlnode_get_child_with_namespace(
+	        mechanisms, "hostname", NS_XMPP_SERVER_REGISTRATION);
+	if (hostname) {
+		js->serverFQDN = purple_xmlnode_get_data(hostname);
+	}
+	if (js->serverFQDN == NULL) {
+		js->serverFQDN = g_strdup(js->user->domain);
+	}
 
 	for(mechnode = purple_xmlnode_get_child(mechanisms, "mechanism"); mechnode;
 			mechnode = purple_xmlnode_get_next_twin(mechnode))

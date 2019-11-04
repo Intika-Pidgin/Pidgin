@@ -358,15 +358,14 @@ ggp_ggdrive_auth(PurpleConnection *gc, ggp_ggdrive_auth_cb cb,
 	msg = soup_message_new("PUT", "https://drive.mpa.gg.pl/signin");
 	ggp_edisc_set_defaults(msg);
 
-	metadata =
-	        g_strdup_printf("{"
-	                        "\"id\": \"%032x\", "
-	                        "\"name\": \"%s\", "
-	                        "\"os_version\": \"" GGP_EDISC_OS "\", "
-	                        "\"client_version\": \"%s\", "
-	                        "\"type\": \"" GGP_EDISC_TYPE "\"}",
-	                        g_random_int_range(1, 1 << 16),
-	                        purple_get_host_name(), ggp_libgaduw_version(gc));
+	metadata = g_strdup_printf("{"
+	                           "\"id\": \"%032x\", "
+	                           "\"name\": \"%s\", "
+	                           "\"os_version\": \"" GGP_EDISC_OS "\", "
+	                           "\"client_version\": \"%s\", "
+	                           "\"type\": \"" GGP_EDISC_TYPE "\"}",
+	                           g_random_int_range(1, 1 << 16),
+	                           g_get_host_name(), ggp_libgaduw_version(gc));
 
 	tmp = g_strdup_printf("IMToken %s", imtoken);
 	soup_message_headers_replace(msg->request_headers, "Authorization", tmp);

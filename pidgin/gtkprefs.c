@@ -1259,8 +1259,9 @@ theme_install_theme(char *path, struct theme_info *info)
 		gchar *destdir_escaped = g_shell_quote(destdir);
 		gchar *command;
 
-		if (!g_file_test(destdir, G_FILE_TEST_IS_DIR))
-			purple_build_dir(destdir, S_IRUSR | S_IWUSR | S_IXUSR);
+		if (!g_file_test(destdir, G_FILE_TEST_IS_DIR)) {
+			g_mkdir_with_parents(destdir, S_IRUSR | S_IWUSR | S_IXUSR);
+		}
 
 		command = g_strdup_printf("tar > /dev/null xzf %s -C %s", path_escaped, destdir_escaped);
 		g_free(path_escaped);
@@ -1298,8 +1299,9 @@ theme_install_theme(char *path, struct theme_info *info)
 			                                     purple_theme_get_name(theme),
 			                                     "purple", info->type, NULL);
 
-			if (!g_file_test(theme_dest, G_FILE_TEST_IS_DIR))
-				purple_build_dir(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
+			if (!g_file_test(theme_dest, G_FILE_TEST_IS_DIR)) {
+				g_mkdir_with_parents(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
+			}
 
 			g_free(theme_dest);
 			theme_dest = g_build_filename(purple_data_dir(), "themes",
@@ -1344,8 +1346,9 @@ theme_install_theme(char *path, struct theme_info *info)
 			g_free(source_name);
 		}
 
-		if (!g_file_test(temp_path, G_FILE_TEST_IS_DIR))
-			purple_build_dir(temp_path, S_IRUSR | S_IWUSR | S_IXUSR);
+		if (!g_file_test(temp_path, G_FILE_TEST_IS_DIR)) {
+			g_mkdir_with_parents(temp_path, S_IRUSR | S_IWUSR | S_IXUSR);
+		}
 
 		if (purple_theme_file_copy(path, temp_file)) {
 			/* find the theme, could be in subfolder */
@@ -1357,8 +1360,9 @@ theme_install_theme(char *path, struct theme_info *info)
 				                         purple_theme_get_name(theme), "purple",
 				                         info->type, NULL);
 
-				if(!g_file_test(theme_dest, G_FILE_TEST_IS_DIR))
-					purple_build_dir(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
+				if(!g_file_test(theme_dest, G_FILE_TEST_IS_DIR)) {
+					g_mkdir_with_parents(theme_dest, S_IRUSR | S_IWUSR | S_IXUSR);
+				}
 
 				if (g_rename(purple_theme_get_dir(theme), theme_dest)) {
 					purple_debug_error("gtkprefs", "Error renaming %s to %s: "

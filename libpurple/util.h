@@ -306,21 +306,6 @@ time_t purple_str_to_time(const char *timestamp, gboolean utc,
  */
 GDateTime *purple_str_to_date_time(const char *timestamp, gboolean utc);
 
-/**
- * purple_uts35_to_str:
- * @format: The formatting string, according to UTS \#35
- *               See http://unicode.org/reports/tr35/
- *               (NOTE: not all formats are supported)
- * @len:    The length of the formatting string
- * @tm:     The time to format, or %NULL to use the current local time
- *
- * Formats a datetime according to a UTS-35 Date Format Pattern.
- *
- * Returns: The time, formatted as per the user's settings.
- */
-char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
-
-
 /**************************************************************************/
 /* Markup Functions                                                       */
 /**************************************************************************/
@@ -360,38 +345,6 @@ gchar *purple_markup_escape_text(const gchar *text, gssize length);
 gboolean purple_markup_find_tag(const char *needle, const char *haystack,
 							  const char **start, const char **end,
 							  GData **attributes);
-
-/**
- * purple_markup_extract_info_field:
- * @str:            The string to parse.
- * @len:            The size of str.
- * @user_info:      The destination PurpleNotifyUserInfo to which the new
- *                       field info should be added.
- * @start_token:    The beginning token.
- * @skip:           The number of characters to skip after the
- *                       start token.
- * @end_token:      The ending token.
- * @check_value:    The value that the last character must meet.
- * @no_value_token: The token indicating no value is given.
- * @display_name:   The short descriptive name to display for this token.
- * @is_link:        TRUE if this should be a link, or FALSE otherwise.
- * @link_prefix:    The prefix for the link.
- * @format_cb: (scope call): A callback to format the value before adding it.
- *
- * Extracts a field of data from HTML.
- *
- * This is a scary function. It used to be used for MSN and Yahoo prpls,
- * but since those prpls have been removed, this is now deprecated.
- *
- * Returns: TRUE if successful, or FALSE otherwise.
- */
-gboolean purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo *user_info,
-                                        const char *start_token, int skip,
-                                        const char *end_token, char check_value,
-                                        const char *no_value_token,
-                                        const char *display_name, gboolean is_link,
-                                        const char *link_prefix,
-					PurpleInfoFieldFormatCallback format_cb);
 
 /**
  * purple_markup_html_to_xhtml:
@@ -636,19 +589,6 @@ purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path);
  * Define a custom purple settings directory, overriding the default (user's home directory/.purple)
  */
 void purple_util_set_user_dir(const char *dir);
-
-/**
- * purple_build_dir:
- * @path: The path you wish to create.  Note that it must start
- *        from the root or this function will fail.
- * @mode: Unix-style permissions for this directory.
- *
- * Builds a complete path from the root, making any directories along
- * the path which do not already exist.
- *
- * Returns: 0 for success, nonzero on any error.
- */
-int purple_build_dir(const char *path, int mode);
 
 /**
  * purple_util_write_data_to_file:
@@ -987,18 +927,6 @@ const char *purple_normalize_nocase(const PurpleAccount *account, const char *st
 gboolean purple_validate(const PurpleProtocol *protocol, const char *str);
 
 /**
- * purple_str_has_prefix:
- * @s:  The string to check.
- * @p:  The prefix in question.
- *
- * Compares two strings to see if the first contains the second as
- * a proper prefix.
- *
- * Returns:   TRUE if p is a prefix of s, otherwise FALSE.
- */
-gboolean purple_str_has_prefix(const char *s, const char *p);
-
-/**
  * purple_str_has_caseprefix:
  * @s: The string to check.
  * @p: The prefix in question.
@@ -1010,18 +938,6 @@ gboolean purple_str_has_prefix(const char *s, const char *p);
  */
 gboolean
 purple_str_has_caseprefix(const gchar *s, const gchar *p);
-
-/**
- * purple_str_has_suffix:
- * @s:  The string to check.
- * @x:  The suffix in question.
- *
- * Compares two strings to see if the second is a proper suffix
- * of the first.
- *
- * Returns:   TRUE if x is a a suffix of s, otherwise FALSE.
- */
-gboolean purple_str_has_suffix(const char *s, const char *x);
 
 /**
  * purple_strdup_withhtml:
@@ -1157,22 +1073,6 @@ const char *purple_strcasestr(const char *haystack, const char *needle);
 char *purple_str_seconds_to_string(guint sec);
 
 /**
- * purple_str_binary_to_ascii:
- * @binary: A string of random data, possibly with embedded NULs
- *               and such.
- * @len: The length in bytes of the input string. Must not be 0.
- *
- * Converts a binary string into a NUL terminated ascii string,
- * replacing nonascii characters and characters below SPACE (including
- * NUL) into \\xyy, where yy are two hex digits. Also backslashes are
- * changed into two backslashes (\\\\). The returned, newly allocated
- * string can be outputted to the console, and must be g_free()d.
- *
- * Returns: A newly allocated ASCIIZ string.
- */
-char *purple_str_binary_to_ascii(const unsigned char *binary, guint len);
-
-/**
  * purple_utf16_size:
  * @str: String to check.
  *
@@ -1242,16 +1142,6 @@ const char *purple_url_encode(const char *str);
  * Returns: True if the email address is syntactically correct.
  */
 gboolean purple_email_is_valid(const char *address);
-
-/**
- * purple_ipv6_address_is_valid:
- * @ip: The IP address to validate.
- *
- * Checks if the given IP address is a syntactically valid IPv6 address.
- *
- * Returns: True if the IP address is syntactically correct.
- */
-gboolean purple_ipv6_address_is_valid(const char *ip);
 
 /**
  * purple_uri_list_extract_uris:
@@ -1421,16 +1311,6 @@ const char *purple_unescape_filename(const char *str);
 const char *purple_escape_filename(const char *str);
 
 /**
- * purple_escape_js:
- * @str: The string to escape.
- *
- * Escapes javascript-unfriendly substrings from a string.
- *
- * Returns: The javascript-safe string (must be g_free'd after use).
- */
-gchar * purple_escape_js(const gchar *str);
-
-/**
  * purple_restore_default_signal_handlers:
  *
  * Restore default signal handlers for signals which might reasonably have
@@ -1438,16 +1318,6 @@ gchar * purple_escape_js(const gchar *str);
  * inherit the handlers of the parent.
  */
 void purple_restore_default_signal_handlers(void);
-
-/**
- * purple_get_host_name:
- *
- * Gets the host name of the machine. If it not possible to determine the
- * host name, "localhost" is returned
- *
- * Returns: The hostname
- */
-const gchar *purple_get_host_name(void);
 
 /**
  * purple_uuid_random:

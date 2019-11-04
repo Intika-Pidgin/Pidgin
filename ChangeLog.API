@@ -393,6 +393,7 @@ version 3.0.0 (??/??/????):
 		* purple_buddy_icons_has_custom_icon
 		* purple_buddy_icons_find_custom_icon
 		* purple_buddy_icons_set_custom_icon
+		* purple_build_dir. Use g_mkdir_with_parents instead
 		* purple_certificate_check_signature_chain_with_failing. Use
 		  purple_certificate_check_signature_chain, instead
 		* purple_certificate_display_x509. Use purple_request_certificate,
@@ -416,10 +417,12 @@ version 3.0.0 (??/??/????):
 		  event loop yourself. See GLib Main Event Loop docs.
 		* PurpleEventLoopUiOps. Manually drive the GLib event loop
 		  yourself. See GLib Main Event Loop docs.
+		* purple_get_host_name. Use g_get_host_name, instead.
 		* purple_get_tzoff_str(). Use g_date_time_format, instead.
 		* purple_ip_address_is_valid, purple_ipv4_address_is_valid, and
 		  purple_ipv6_address_is_valid. Use g_hostname_is_ip_address()
 		  or #GInetAddress instead.
+		* purple_markup_extract_info_field
 		* PurpleMimeDocument, PurpleMimePart,
 		  purple_mime_document_new, purple_mime_document_free,
 		  purple_mime_document_parse, purple_mime_document_parsen,
@@ -496,6 +499,9 @@ version 3.0.0 (??/??/????):
 		* purple_status_type_set_primary_attr
 		* purple_strlcat
 		* purple_strlcpy
+		* purple_str_binary_to_ascii
+		* purple_str_has_prefix. Use g_str_has_prefix instead
+		* purple_str_has_suffix. Use g_str_has_suffix instead
 		* purple_str_size_to_units. Use g_format_size() instead.
 		* purple_timeout_*. Use g_timeout_* or g_idle_* instead.
 		* purple_txt_cancel
@@ -508,6 +514,7 @@ version 3.0.0 (??/??/????):
 		  purple_util_fetch_url_request, instead.
 		* purple_util_get_image_checksum.  Use
 		  g_compute_checksum_for_data(G_CHECKSUM_SHA1, ...), instead.
+		* purple_uts35_to_str
 		* PurpleCertificateVerificationStatus.PURPLE_CERTIFICATE_INVALID
 		* PurpleConnectionUiOps.report_disconnect_reason
 		* PurplePluginProtocolInfo.add_buddy_with_invite

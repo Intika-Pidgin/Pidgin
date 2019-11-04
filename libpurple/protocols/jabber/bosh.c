@@ -134,12 +134,6 @@ jabber_bosh_connection_new(JabberStream *js, const gchar *url)
 	conn->rid = (((guint64)g_random_int() << 32) | g_random_int());
 	conn->rid &= 0xFFFFFFFFFFFFFLL;
 
-	if (g_hostname_is_ip_address(url_p->host)) {
-		js->serverFQDN = g_strdup(js->user->domain);
-	} else {
-		js->serverFQDN = g_strdup(url_p->host);
-	}
-
 	soup_uri_free(url_p);
 	g_object_unref(resolver);
 

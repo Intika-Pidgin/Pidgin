@@ -871,7 +871,7 @@ void purple_log_common_writer(PurpleLog *log, const char *ext)
 		if (dir == NULL)
 			return;
 
-		purple_build_dir (dir, S_IRUSR | S_IWUSR | S_IXUSR);
+		g_mkdir_with_parents(dir, S_IRUSR | S_IWUSR | S_IXUSR);
 
 		dt = g_date_time_to_local(log->time);
 		tz = purple_escape_filename(g_date_time_get_timezone_abbreviation(dt));
@@ -927,9 +927,8 @@ GList *purple_log_common_lister(PurpleLogType type, const char *name, PurpleAcco
 
 	while ((filename = g_dir_read_name(dir)))
 	{
-		if (purple_str_has_suffix(filename, ext) &&
-		    strlen(filename) >= (17 + strlen(ext)))
-		{
+		if (g_str_has_suffix(filename, ext) &&
+		    strlen(filename) >= (17 + strlen(ext))) {
 			PurpleLog *log;
 			PurpleLogCommonLoggerData *data;
 			GDateTime *stamp = purple_str_to_date_time(purple_unescape_filename(filename), FALSE);
@@ -971,9 +970,8 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 
 	while ((filename = g_dir_read_name(dir)))
 	{
-		if (purple_str_has_suffix(filename, ext) &&
-		    strlen(filename) >= (17 + strlen(ext)))
-		{
+		if (g_str_has_suffix(filename, ext) &&
+		    strlen(filename) >= (17 + strlen(ext))) {
 			char *tmp = g_build_filename(path, filename, NULL);
 			GStatBuf st;
 			if (g_stat(tmp, &st))
