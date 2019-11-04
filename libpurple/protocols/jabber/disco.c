@@ -91,10 +91,7 @@ jabber_disco_bytestream_server_cb(JabberStream *js, const char *from,
 	/* TODO: When we support zeroconf proxies, fix this to handle them */
 	if (!(sh->jid && sh->host && sh->port > 0)) {
 		js->bs_proxies = g_list_remove(js->bs_proxies, sh);
-		g_free(sh->jid);
-		g_free(sh->host);
-		g_free(sh->zeroconf);
-		g_free(sh);
+		jabber_bytestreams_streamhost_free(sh);
 	}
 }
 
