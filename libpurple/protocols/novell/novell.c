@@ -1732,8 +1732,14 @@ novell_login_callback(GObject *source_object, GAsyncResult *res, gpointer data)
 									2, NOVELL_CONNECT_STEPS);
 
 	conn->stream = G_IO_STREAM(sockconn);
-	conn->input = g_io_stream_get_input_stream(conn->stream);
+	conn->input =
+	        g_data_input_stream_new(g_io_stream_get_input_stream(conn->stream));
 	conn->output = g_io_stream_get_output_stream(conn->stream);
+
+	g_data_input_stream_set_byte_order(conn->input,
+	                                   G_DATA_STREAM_BYTE_ORDER_LITTLE_ENDIAN);
+	g_data_input_stream_set_newline_type(conn->input,
+	                                     G_DATA_STREAM_NEWLINE_TYPE_LF);
 
 	my_addr = purple_network_get_my_ip_from_gio(sockconn);
 	pwd = purple_connection_get_password(gc);
