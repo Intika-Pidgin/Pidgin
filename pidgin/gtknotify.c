@@ -360,7 +360,7 @@ pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 }
 
 static void
-reset_mail_dialog(GtkDialog *unused)
+reset_mail_dialog(gpointer unused)
 {
 	g_return_if_fail(mail_dialog != NULL);
 
@@ -841,7 +841,7 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		pidgin_blist_set_headline(label_text, "mail-unread",
 				G_CALLBACK(pidgin_notify_emails_present),
 				mail_dialog->dialog,
-				(GDestroyNotify)reset_mail_dialog);
+				reset_mail_dialog);
 		mail_dialog->in_use = FALSE;
 		g_free(label_text);
 	} else if (!gtk_widget_has_focus(mail_dialog->dialog))
