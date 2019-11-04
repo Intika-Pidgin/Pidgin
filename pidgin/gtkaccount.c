@@ -807,6 +807,7 @@ add_account_options(AccountPrefsDialog *dialog)
 	}
 
 	g_list_free_full(dialog->protocol_opt_entries, (GDestroyNotify)protocol_opt_entry_free);
+	dialog->protocol_opt_entries = NULL;
 
 	if (dialog->protocol == NULL ||
 			purple_protocol_get_account_options(dialog->protocol) == NULL)
