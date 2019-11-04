@@ -306,21 +306,6 @@ time_t purple_str_to_time(const char *timestamp, gboolean utc,
  */
 GDateTime *purple_str_to_date_time(const char *timestamp, gboolean utc);
 
-/**
- * purple_uts35_to_str:
- * @format: The formatting string, according to UTS \#35
- *               See http://unicode.org/reports/tr35/
- *               (NOTE: not all formats are supported)
- * @len:    The length of the formatting string
- * @tm:     The time to format, or %NULL to use the current local time
- *
- * Formats a datetime according to a UTS-35 Date Format Pattern.
- *
- * Returns: The time, formatted as per the user's settings.
- */
-char *purple_uts35_to_str(const char *format, size_t len, struct tm *tm);
-
-
 /**************************************************************************/
 /* Markup Functions                                                       */
 /**************************************************************************/
@@ -360,38 +345,6 @@ gchar *purple_markup_escape_text(const gchar *text, gssize length);
 gboolean purple_markup_find_tag(const char *needle, const char *haystack,
 							  const char **start, const char **end,
 							  GData **attributes);
-
-/**
- * purple_markup_extract_info_field:
- * @str:            The string to parse.
- * @len:            The size of str.
- * @user_info:      The destination PurpleNotifyUserInfo to which the new
- *                       field info should be added.
- * @start_token:    The beginning token.
- * @skip:           The number of characters to skip after the
- *                       start token.
- * @end_token:      The ending token.
- * @check_value:    The value that the last character must meet.
- * @no_value_token: The token indicating no value is given.
- * @display_name:   The short descriptive name to display for this token.
- * @is_link:        TRUE if this should be a link, or FALSE otherwise.
- * @link_prefix:    The prefix for the link.
- * @format_cb: (scope call): A callback to format the value before adding it.
- *
- * Extracts a field of data from HTML.
- *
- * This is a scary function. It used to be used for MSN and Yahoo prpls,
- * but since those prpls have been removed, this is now deprecated.
- *
- * Returns: TRUE if successful, or FALSE otherwise.
- */
-gboolean purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo *user_info,
-                                        const char *start_token, int skip,
-                                        const char *end_token, char check_value,
-                                        const char *no_value_token,
-                                        const char *display_name, gboolean is_link,
-                                        const char *link_prefix,
-					PurpleInfoFieldFormatCallback format_cb);
 
 /**
  * purple_markup_html_to_xhtml:
@@ -1157,22 +1110,6 @@ const char *purple_strcasestr(const char *haystack, const char *needle);
 char *purple_str_seconds_to_string(guint sec);
 
 /**
- * purple_str_binary_to_ascii:
- * @binary: A string of random data, possibly with embedded NULs
- *               and such.
- * @len: The length in bytes of the input string. Must not be 0.
- *
- * Converts a binary string into a NUL terminated ascii string,
- * replacing nonascii characters and characters below SPACE (including
- * NUL) into \\xyy, where yy are two hex digits. Also backslashes are
- * changed into two backslashes (\\\\). The returned, newly allocated
- * string can be outputted to the console, and must be g_free()d.
- *
- * Returns: A newly allocated ASCIIZ string.
- */
-char *purple_str_binary_to_ascii(const unsigned char *binary, guint len);
-
-/**
  * purple_utf16_size:
  * @str: String to check.
  *
@@ -1242,16 +1179,6 @@ const char *purple_url_encode(const char *str);
  * Returns: True if the email address is syntactically correct.
  */
 gboolean purple_email_is_valid(const char *address);
-
-/**
- * purple_ipv6_address_is_valid:
- * @ip: The IP address to validate.
- *
- * Checks if the given IP address is a syntactically valid IPv6 address.
- *
- * Returns: True if the IP address is syntactically correct.
- */
-gboolean purple_ipv6_address_is_valid(const char *ip);
 
 /**
  * purple_uri_list_extract_uris:
@@ -1419,16 +1346,6 @@ const char *purple_unescape_filename(const char *str);
  * Returns: The resulting string.
  */
 const char *purple_escape_filename(const char *str);
-
-/**
- * purple_escape_js:
- * @str: The string to escape.
- *
- * Escapes javascript-unfriendly substrings from a string.
- *
- * Returns: The javascript-safe string (must be g_free'd after use).
- */
-gchar * purple_escape_js(const gchar *str);
 
 /**
  * purple_restore_default_signal_handlers:
