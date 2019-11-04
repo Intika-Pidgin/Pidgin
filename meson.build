@@ -455,7 +455,7 @@ endif
 #######################################################################
 # Check for SILC client includes and libraries
 #######################################################################
-silc = dependency('silcclient', version : '>= 1.1', required : get_option('silc'))
+silc = dependency('silcclient', version : '>= 1.1.1', required : get_option('silc'))
 
 #######################################################################
 # Check for Gadu-Gadu protocol library (libgadu)
