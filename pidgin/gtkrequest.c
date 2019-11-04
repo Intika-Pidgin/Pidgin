@@ -1073,8 +1073,7 @@ setup_entry_field(GtkWidget *entry, PurpleRequestField *field)
 
 	if ((type_hint = purple_request_field_get_field_type_hint(field)) != NULL)
 	{
-		if (purple_str_has_prefix(type_hint, "screenname"))
-		{
+		if (g_str_has_prefix(type_hint, "screenname")) {
 			GtkWidget *optmenu = NULL;
 			PurpleRequestFieldGroup *group = purple_request_field_get_group(field);
 			GList *fields = purple_request_field_group_get_fields(group);

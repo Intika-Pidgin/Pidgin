@@ -479,7 +479,7 @@ check_for_and_do_command(PurpleConversation *conv)
 
 	cmd = talkatu_buffer_get_plain_text(TALKATU_BUFFER(buffer));
 
-	if (cmd && purple_str_has_prefix(cmd, prefix)) {
+	if (cmd && g_str_has_prefix(cmd, prefix)) {
 		PurpleCmdStatus status;
 		char *error, *cmdline, *markup, *send_history;
 

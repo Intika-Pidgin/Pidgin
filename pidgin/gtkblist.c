@@ -5687,8 +5687,9 @@ pidgin_blist_search_equal_func(GtkTreeModel *model, gint column,
 		enteredstring = g_utf8_casefold(tmp, -1);
 		g_free(tmp);
 
-		if (purple_str_has_prefix(compare, enteredstring))
+		if (g_str_has_prefix(compare, enteredstring)) {
 			res = FALSE;
+		}
 		g_free(enteredstring);
 	}
 

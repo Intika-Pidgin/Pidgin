@@ -67,6 +67,7 @@ typedef void (*nm_event_cb) (NMUser * user, NMEvent * event);
 /* This represents user that we are currently logged in as */
 struct _NMUser
 {
+	GCancellable *cancellable;
 
 	char *name;
 

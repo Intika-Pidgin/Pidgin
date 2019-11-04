@@ -54,8 +54,9 @@ ensure_path_exists(const char *dir)
 {
 	if (!g_file_test(dir, G_FILE_TEST_IS_DIR))
 	{
-		if (purple_build_dir(dir, S_IRUSR | S_IWUSR | S_IXUSR))
+		if (g_mkdir_with_parents(dir, S_IRUSR | S_IWUSR | S_IXUSR)) {
 			return FALSE;
+		}
 	}
 
 	return TRUE;

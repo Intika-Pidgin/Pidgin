@@ -1287,8 +1287,7 @@ purple_keyring_init(void)
 		GPluginPluginInfo *info =
 		        GPLUGIN_PLUGIN_INFO(purple_plugin_get_info(plugin));
 
-		if (!purple_str_has_prefix(gplugin_plugin_info_get_id(info),
-		                           "keyring-")) {
+		if (!g_str_has_prefix(gplugin_plugin_info_get_id(info), "keyring-")) {
 			continue;
 		}
 

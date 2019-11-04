@@ -35,15 +35,9 @@ static gchar *cache_dir = NULL;
 static gchar *config_dir = NULL;
 static gchar *data_dir = NULL;
 
-static JsonNode *escape_js_node = NULL;
-static JsonGenerator *escape_js_gen = NULL;
-
 void
 purple_util_init(void)
 {
-	escape_js_node = json_node_new(JSON_NODE_VALUE);
-	escape_js_gen = json_generator_new();
-	json_node_set_boolean(escape_js_node, FALSE);
 }
 
 void
@@ -65,12 +59,6 @@ purple_util_uninit(void)
 
 	g_free(data_dir);
 	data_dir = NULL;
-
-	json_node_free(escape_js_node);
-	escape_js_node = NULL;
-
-	g_object_unref(escape_js_gen);
-	escape_js_gen = NULL;
 }
 
 /**************************************************************************
@@ -573,333 +561,6 @@ purple_str_to_date_time(const char *timestamp, gboolean utc)
 	return retval;
 }
 
-char *
-purple_uts35_to_str(const char *format, size_t len, struct tm *tm)
-{
-	GString *string;
-	guint i, count;
-
-	if (tm == NULL) {
-		time_t now = time(NULL);
-		tm = localtime(&now);
-	}
-
-	string = g_string_sized_new(len);
-	i = 0;
-	while (i < len) {
-		count = 1;
-		while ((i + count) < len && format[i] == format[i+count])
-			count++;
-
-		switch (format[i]) {
-			/* Era Designator */
-			case 'G':
-				if (count <= 3) {
-					/* Abbreviated */
-				} else if (count == 4) {
-					/* Full */
-				} else if (count >= 5) {
-					/* Narrow */
-					count = 5;
-				}
-				break;
-
-
-			/* Year */
-			case 'y':
-				if (count == 2) {
-					/* Two-digits only */
-					g_string_append(string, purple_utf8_strftime("%y", tm));
-				} else {
-					/* Zero-padding */
-					g_string_append_printf(string, "%0*d",
-							count,
-							tm->tm_year + 1900);
-				}
-				break;
-
-			/* Year (in "Week of Year" based calendars) */
-			case 'Y':
-				if (count == 2) {
-					/* Two-digits only */
-				} else {
-					/* Zero-padding */
-				}
-				break;
-
-			/* Extended Year */
-			case 'u':
-				break;
-
-			/* Cyclic Year Name */
-			case 'U':
-				if (count <= 3) {
-					/* Abbreviated */
-				} else if (count == 4) {
-					/* Full */
-				} else if (count >= 5) {
-					/* Narrow */
-					count = 5;
-				}
-				break;
-
-
-			/* Quarter */
-			case 'Q':
-			/* Stand-alone Quarter */
-			case 'q':
-				if (count <= 2) {
-					/* Numerical */
-				} else if (count == 3) {
-					/* Abbreviation */
-				} else if (count >= 4) {
-					/* Full */
-					count = 4;
-				}
-				break;
-
-			/* Month */
-			case 'M':
-			/* Stand-alone Month */
-			case 'L':
-				if (count <= 2) {
-					/* Numerical */
-					g_string_append(string, purple_utf8_strftime("%m", tm));
-				} else if (count == 3) {
-					/* Abbreviation */
-					g_string_append(string, purple_utf8_strftime("%b", tm));
-				} else if (count == 4) {
-					/* Full */
-					g_string_append(string, purple_utf8_strftime("%B", tm));
-				} else if (count >= 5) {
-					g_string_append_len(string, purple_utf8_strftime("%b", tm), 1);
-					count = 5;
-				}
-				break;
-
-			/* Ignored */
-			case 'l':
-				break;
-
-
-			/* Week of Year */
-			case 'w':
-				g_string_append(string, purple_utf8_strftime("%W", tm));
-				count = MIN(count, 2);
-				break;
-
-			/* Week of Month */
-			case 'W':
-				count = 1;
-				break;
-
-
-			/* Day of Month */
-			case 'd':
-				g_string_append(string, purple_utf8_strftime("%d", tm));
-				count = MIN(count, 2);
-				break;
-
-			/* Day of Year */
-			case 'D':
-				g_string_append(string, purple_utf8_strftime("%j", tm));
-				count = MIN(count, 3);
-				break;
-
-			/* Day of Year in Month */
-			case 'F':
-				count = 1;
-				break;
-
-			/* Modified Julian Day */
-			case 'g':
-				break;
-
-
-			/* Day of Week */
-			case 'E':
-				if (count <= 3) {
-					/* Short */
-					g_string_append(string, purple_utf8_strftime("%a", tm));
-				} else if (count == 4) {
-					/* Full */
-					g_string_append(string, purple_utf8_strftime("%A", tm));
-				} else if (count >= 5) {
-					/* Narrow */
-					g_string_append_len(string, purple_utf8_strftime("%a", tm), 1);
-					count = 5;
-				}
-				break;
-
-			/* Local Day of Week */
-			case 'e':
-				if (count <= 2) {
-					/* Numeric */
-					g_string_append(string, purple_utf8_strftime("%u", tm));
-				} else if (count == 3) {
-					/* Short */
-					g_string_append(string, purple_utf8_strftime("%a", tm));
-				} else if (count == 4) {
-					/* Full */
-					g_string_append(string, purple_utf8_strftime("%A", tm));
-				} else if (count >= 5) {
-					/* Narrow */
-					g_string_append_len(string, purple_utf8_strftime("%a", tm), 1);
-					count = 5;
-				}
-				break;
-
-			/* Stand-alone Local Day of Week */
-			case 'c':
-				if (count <= 2) {
-					/* Numeric */
-					g_string_append(string, purple_utf8_strftime("%u", tm));
-					count = 1;
-				} else if (count == 3) {
-					/* Short */
-					g_string_append(string, purple_utf8_strftime("%a", tm));
-				} else if (count == 4) {
-					/* Full */
-					g_string_append(string, purple_utf8_strftime("%A", tm));
-				} else if (count >= 5) {
-					/* Narrow */
-					g_string_append_len(string, purple_utf8_strftime("%a", tm), 1);
-					count = 5;
-				}
-				break;
-
-
-			/* AM/PM */
-			case 'a':
-				g_string_append(string, purple_utf8_strftime("%p", tm));
-				break;
-
-
-			/* Hour (1-12) */
-			case 'h':
-				if (count == 1) {
-					/* No padding */
-					g_string_append(string, purple_utf8_strftime("%I", tm));
-				} else if (count >= 2) {
-					/* Zero-padded */
-					g_string_append(string, purple_utf8_strftime("%I", tm));
-					count = 2;
-				}
-				break;
-
-			/* Hour (0-23) */
-			case 'H':
-				if (count == 1) {
-					/* No padding */
-					g_string_append(string, purple_utf8_strftime("%H", tm));
-				} else if (count >= 2) {
-					/* Zero-padded */
-					g_string_append(string, purple_utf8_strftime("%H", tm));
-					count = 2;
-				}
-				break;
-
-			/* Hour (0-11) */
-			case 'K':
-			/* Hour (1-24) */
-			case 'k':
-				if (count == 1) {
-					/* No padding */
-				} else if (count >= 2) {
-					/* Zero-padded */
-					count = 2;
-				}
-				break;
-
-			/* Hour (hHkK by locale) */
-			case 'j':
-				break;
-
-
-			/* Minute */
-			case 'm':
-				g_string_append(string, purple_utf8_strftime("%M", tm));
-				count = MIN(count, 2);
-				break;
-
-
-			/* Second */
-			case 's':
-				g_string_append(string, purple_utf8_strftime("%S", tm));
-				count = MIN(count, 2);
-				break;
-
-			/* Fractional Sub-second */
-			case 'S':
-				break;
-
-			/* Millisecond */
-			case 'A':
-				break;
-
-
-			/* Time Zone (specific non-location format) */
-			case 'z':
-				if (count <= 3) {
-					/* Short */
-				} else if (count >= 4) {
-					/* Full */
-					count = 4;
-				}
-				break;
-
-			/* Time Zone */
-			case 'Z':
-				if (count <= 3) {
-					/* RFC822 */
-					g_string_append(string, purple_utf8_strftime("%z", tm));
-				} else if (count == 4) {
-					/* Localized GMT */
-				} else if (count >= 5) {
-					/* ISO8601 */
-					g_string_append(string, purple_utf8_strftime("%z", tm));
-					count = 5;
-				}
-				break;
-
-			/* Time Zone (generic non-location format) */
-			case 'v':
-				if (count <= 3) {
-					/* Short */
-					g_string_append(string, purple_utf8_strftime("%Z", tm));
-					count = 1;
-				} else if (count >= 4) {
-					/* Long */
-					g_string_append(string, purple_utf8_strftime("%Z", tm));
-					count = 4;
-				}
-				break;
-
-			/* Time Zone */
-			case 'V':
-				if (count <= 3) {
-					/* Same as z */
-					count = 1;
-				} else if (count >= 4) {
-					/* Generic Location Format) */
-					g_string_append(string, purple_utf8_strftime("%Z", tm));
-					count = 4;
-				}
-				break;
-
-
-			default:
-				g_string_append_len(string, format + i, count);
-				break;
-		}
-
-		i += count;
-	}
-
-	return g_string_free(string, FALSE);
-}
-
-
 /**************************************************************************
  * Markup Functions
  **************************************************************************/
@@ -1280,100 +941,6 @@ purple_markup_find_tag(const char *needle, const char *haystack,
 	}
 
 	return found;
-}
-
-gboolean
-purple_markup_extract_info_field(const char *str, int len, PurpleNotifyUserInfo *user_info,
-							   const char *start_token, int skip,
-							   const char *end_token, char check_value,
-							   const char *no_value_token,
-							   const char *display_name, gboolean is_link,
-							   const char *link_prefix,
-							   PurpleInfoFieldFormatCallback format_cb)
-{
-	const char *p, *q;
-
-	g_return_val_if_fail(str          != NULL, FALSE);
-	g_return_val_if_fail(user_info    != NULL, FALSE);
-	g_return_val_if_fail(start_token  != NULL, FALSE);
-	g_return_val_if_fail(end_token    != NULL, FALSE);
-	g_return_val_if_fail(display_name != NULL, FALSE);
-
-	p = strstr(str, start_token);
-
-	if (p == NULL)
-		return FALSE;
-
-	p += strlen(start_token) + skip;
-
-	if (p >= str + len)
-		return FALSE;
-
-	if (check_value != '\0' && *p == check_value)
-		return FALSE;
-
-	q = strstr(p, end_token);
-
-	/* Trim leading blanks */
-	while (*p != '\n' && g_ascii_isspace(*p)) {
-		p += 1;
-	}
-
-	/* Trim trailing blanks */
-	while (q > p && g_ascii_isspace(*(q - 1))) {
-		q -= 1;
-	}
-
-	/* Don't bother with null strings */
-	if (p == q)
-		return FALSE;
-
-	if (q != NULL && (!no_value_token ||
-	                  strncmp(p, no_value_token, strlen(no_value_token)))) {
-		GString *dest = g_string_new("");
-
-		if (is_link)
-		{
-			g_string_append(dest, "<a href=\"");
-
-			if (link_prefix)
-				g_string_append(dest, link_prefix);
-
-			if (format_cb != NULL)
-			{
-				char *reformatted = format_cb(p, q - p);
-				g_string_append(dest, reformatted);
-				g_free(reformatted);
-			}
-			else
-				g_string_append_len(dest, p, q - p);
-			g_string_append(dest, "\">");
-
-			if (link_prefix)
-				g_string_append(dest, link_prefix);
-
-			g_string_append_len(dest, p, q - p);
-			g_string_append(dest, "</a>");
-		}
-		else
-		{
-			if (format_cb != NULL)
-			{
-				char *reformatted = format_cb(p, q - p);
-				g_string_append(dest, reformatted);
-				g_free(reformatted);
-			}
-			else
-				g_string_append_len(dest, p, q - p);
-		}
-
-		purple_notify_user_info_add_pair_html(user_info, display_name, dest->str);
-		g_string_free(dest, TRUE);
-
-		return TRUE;
-	}
-
-	return FALSE;
 }
 
 struct purple_parse_tag {
@@ -2599,7 +2166,7 @@ purple_move_to_xdg_base_dir(const char *purple_xdg_dir, char *path)
 	gboolean xdg_path_exists;
 
 	/* Create destination directory */
-	mkdir_res = purple_build_dir(purple_xdg_dir, S_IRWXU);
+	mkdir_res = g_mkdir_with_parents(purple_xdg_dir, S_IRWXU);
 	if (mkdir_res == -1) {
 		purple_debug_error("util", "Error creating xdg directory %s: %s; failed migration\n",
 					purple_xdg_dir, g_strerror(errno));
@@ -2646,11 +2213,6 @@ void purple_util_set_user_dir(const char *dir)
 		custom_user_dir = g_strdup(dir);
 	else
 		custom_user_dir = NULL;
-}
-
-int purple_build_dir(const char *path, int mode)
-{
-	return g_mkdir_with_parents(path, mode);
 }
 
 static gboolean
@@ -3112,24 +2674,12 @@ purple_strdup_withhtml(const gchar *src)
 }
 
 gboolean
-purple_str_has_prefix(const char *s, const char *p)
-{
-	return g_str_has_prefix(s, p);
-}
-
-gboolean
 purple_str_has_caseprefix(const gchar *s, const gchar *p)
 {
 	g_return_val_if_fail(s, FALSE);
 	g_return_val_if_fail(p, FALSE);
 
 	return (g_ascii_strncasecmp(s, p, strlen(p)) == 0);
-}
-
-gboolean
-purple_str_has_suffix(const char *s, const char *x)
-{
-	return g_str_has_suffix(s, x);
 }
 
 char *
@@ -3350,27 +2900,6 @@ purple_str_seconds_to_string(guint secs)
 	return ret;
 }
 
-
-char *
-purple_str_binary_to_ascii(const unsigned char *binary, guint len)
-{
-	GString *ret;
-	guint i;
-
-	g_return_val_if_fail(len > 0, NULL);
-
-	ret = g_string_sized_new(len);
-
-	for (i = 0; i < len; i++)
-		if (binary[i] < 32 || binary[i] > 126)
-			g_string_append_printf(ret, "\\x%02x", binary[i] & 0xFF);
-		else if (binary[i] == '\\')
-			g_string_append(ret, "\\\\");
-		else
-			g_string_append_c(ret, binary[i]);
-
-	return g_string_free(ret, FALSE);
-}
 
 size_t
 purple_utf16_size(const gunichar2 *str)
@@ -4146,18 +3675,6 @@ purple_escape_filename(const char *str)
 	return buf;
 }
 
-gchar * purple_escape_js(const gchar *str)
-{
-	gchar *escaped;
-
-	json_node_set_string(escape_js_node, str);
-	json_generator_set_root(escape_js_gen, escape_js_node);
-	escaped = json_generator_to_data(escape_js_gen, NULL);
-	json_node_set_boolean(escape_js_node, FALSE);
-
-	return escaped;
-}
-
 void purple_restore_default_signal_handlers(void)
 {
 #ifndef _WIN32
@@ -4250,12 +3767,6 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	}
 
 	return g_string_free(string, FALSE);
-}
-
-const gchar *
-purple_get_host_name(void)
-{
-	return g_get_host_name();
 }
 
 gchar *
