@@ -152,7 +152,7 @@ static void sighandler(int sig)
 	}
 
 	written = write(signal_sockets[0], &sig, sizeof(int));
-	if (written < 0 || written != sizeof(int)) {
+	if (written != sizeof(int)) {
 		/* This should never happen */
 		purple_debug_error("sighandler", "Received signal %d but only "
 				"wrote %" G_GSSIZE_FORMAT " bytes out of %"
