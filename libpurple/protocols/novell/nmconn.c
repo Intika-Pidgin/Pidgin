@@ -192,9 +192,10 @@ nm_write_fields(NMUser *user, NMField *fields)
 	int val = 0;
 
 	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
-	conn = user->conn;
-	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(user->conn != NULL, NMERR_BAD_PARM);
 	g_return_val_if_fail(fields != NULL, NMERR_BAD_PARM);
+
+	conn = user->conn;
 
 	/* Format each field as valid "post" data and write it out */
 	for (field = fields; (rc == NM_OK) && (field->tag); field++) {
@@ -318,9 +319,10 @@ nm_send_request(NMUser *user, char *cmd, NMField *fields, nm_response_cb cb,
 	char *str = NULL;
 
 	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
-	conn = user->conn;
-	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(user->conn != NULL, NMERR_BAD_PARM);
 	g_return_val_if_fail(cmd != NULL, NMERR_BAD_PARM);
+
+	conn = user->conn;
 
 	/* Write the post */
 	bytes_to_send = g_snprintf(buffer, sizeof(buffer),
@@ -408,8 +410,9 @@ nm_read_header(NMUser *user)
 	GError *error = NULL;
 
 	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(user->conn != NULL, NMERR_BAD_PARM);
+
 	conn = user->conn;
-	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
 
 	buffer = g_data_input_stream_read_line(conn->input, NULL, user->cancellable,
 	                                       &error);
@@ -469,9 +472,10 @@ nm_read_fields(NMUser *user, int count, NMField **fields)
 	GError *error = NULL;
 
 	g_return_val_if_fail(user != NULL, NMERR_BAD_PARM);
-	conn = user->conn;
-	g_return_val_if_fail(conn != NULL, NMERR_BAD_PARM);
+	g_return_val_if_fail(user->conn != NULL, NMERR_BAD_PARM);
 	g_return_val_if_fail(fields != NULL, NMERR_BAD_PARM);
+
+	conn = user->conn;
 
 	do {
 		if (count > 0) {
