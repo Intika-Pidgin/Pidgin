@@ -858,7 +858,9 @@ jabber_google_session_parse(JabberStream *js, const char *from,
 	session->remote_jid = g_strdup(session->id.initiator);
 	session->session_data = g_new0(GoogleAVSessionData, 1);
 
-	google_session_handle_initiate(js, session, session_node, iq_id);
+	if (!google_session_handle_initiate(js, session, session_node, iq_id)) {
+		google_session_destroy(session);
+	}
 }
 #endif /* USE_VV */
 
