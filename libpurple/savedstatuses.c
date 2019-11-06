@@ -674,8 +674,8 @@ purple_savedstatus_unset_substatus(PurpleSavedStatus *saved_status,
  * exist for this account.
  */
 static void
-purple_savedstatus_unset_all_substatuses(const PurpleAccount *account,
-		gpointer user_data)
+purple_savedstatus_unset_all_substatuses(PurpleAccount *account,
+                                         gpointer user_data)
 {
 	g_return_if_fail(account != NULL);
 
