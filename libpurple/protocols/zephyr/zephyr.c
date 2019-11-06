@@ -2410,11 +2410,12 @@ static void zephyr_join_chat(PurpleConnection * gc, GHashTable * data)
 	const char *instname;
 	const char *recip;
 	zephyr_account *zephyr = purple_connection_get_protocol_data(gc);
+
+	g_return_if_fail(zephyr != NULL);
+
 	classname = g_hash_table_lookup(data, "class");
 	instname = g_hash_table_lookup(data, "instance");
 	recip = g_hash_table_lookup(data, "recipient");
-
-
 	if (!classname)
 		return;
 
