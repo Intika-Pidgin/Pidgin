@@ -39,7 +39,7 @@
 #include "iq.h"
 #include "si.h"
 
-#define STREAMHOST_CONNECT_TIMEOUT 15
+#define STREAMHOST_CONNECT_TIMEOUT 5
 #define ENABLE_FT_THUMBNAILS 0
 
 typedef struct _JabberSIXfer {
@@ -356,13 +356,17 @@ void jabber_bytestreams_parse(JabberStream *js, const char *from,
 				((host = xmlnode_get_attrib(streamhost, "host")) &&
 				(port = xmlnode_get_attrib(streamhost, "port")) &&
 				(portnum = atoi(port))))) {
-			JabberBytestreamsStreamhost *sh = g_new0(JabberBytestreamsStreamhost, 1);
-			sh->jid = g_strdup(jid);
-			sh->host = g_strdup(host);
-			sh->port = portnum;
-			sh->zeroconf = g_strdup(zeroconf);
-			/* If there were a lot of these, it'd be worthwhile to prepend and reverse. */
-			jsx->streamhosts = g_list_append(jsx->streamhosts, sh);
+			/* ignore 0.0.0.0 */
+			if(purple_strequal(host, "0.0.0.0") != 0) {
+				JabberBytestreamsStreamhost *sh = g_new0(JabberBytestreamsStreamhost, 1);
+				sh->jid = g_strdup(jid);
+				sh->host = g_strdup(host);
+				sh->port = portnum;
+				sh->zeroconf = g_strdup(zeroconf);
+
+				/* If there were a lot of these, it'd be worthwhile to prepend and reverse. */
+				jsx->streamhosts = g_list_append(jsx->streamhosts, sh);
+			}
 		}
 	}
 
