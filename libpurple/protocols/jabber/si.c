@@ -372,7 +372,7 @@ void jabber_bytestreams_parse(JabberStream *js, const char *from,
 				(port = purple_xmlnode_get_attrib(streamhost, "port")) &&
 				(portnum = atoi(port))))) {
 			/* ignore 0.0.0.0 */
-			if(purple_strequal(host, "0.0.0.0") != 0) {
+			if(purple_strequal(host, "0.0.0.0") == FALSE) {
 				JabberBytestreamsStreamhost *sh = g_new0(JabberBytestreamsStreamhost, 1);
 				sh->jid = g_strdup(jid);
 				sh->host = g_strdup(host);
