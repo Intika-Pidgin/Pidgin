@@ -758,35 +758,16 @@ purple_prefs_add_path_list(const char *name, GList *value)
 				g_strdup(tmp->data));
 }
 
-
 static void
-remove_pref(struct purple_pref *pref)
+free_pref(struct purple_pref *pref)
 {
 	char *name;
 
-	if(!pref)
-		return;
-
-	while(pref->first_child)
-		remove_pref(pref->first_child);
-
-	if(pref == &prefs)
-		return;
-
-	if(pref->parent->first_child == pref) {
-		pref->parent->first_child = pref->sibling;
-	} else {
-		struct purple_pref *sib = pref->parent->first_child;
-		while(sib && sib->sibling != pref)
-			sib = sib->sibling;
-		if(sib)
-			sib->sibling = pref->sibling;
-	}
-
 	name = pref_full_name(pref);
 
-	if (prefs_loaded)
+	if (prefs_loaded) {
 		purple_debug_info("prefs", "removing pref %s\n", name);
+	}
 
 	g_hash_table_remove(prefs_hash, name);
 	g_free(name);
@@ -796,6 +777,53 @@ remove_pref(struct purple_pref *pref)
 	g_slist_free_full(pref->callbacks, g_free);
 	g_free(pref->name);
 	g_free(pref);
+}
+
+static void
+remove_pref(struct purple_pref *pref)
+{
+	struct purple_pref *child;
+
+	if (!pref) {
+		return;
+	}
+
+	child = pref->first_child;
+	while (child) {
+		struct purple_pref *next;
+		if (child->first_child) {
+			next = child->first_child;
+		} else if (child->sibling) {
+			next = child->sibling;
+			free_pref(child);
+		} else {
+			if (child->parent != pref) {
+				next = child->parent;
+			} else {
+				next = NULL;
+			}
+			free_pref(child);
+		}
+		child = next;
+	}
+
+	if (pref == &prefs) {
+		return;
+	}
+
+	if (pref->parent->first_child == pref) {
+		pref->parent->first_child = pref->sibling;
+	} else {
+		child = pref->parent->first_child;
+		while (child && child->sibling != pref) {
+			child = child->sibling;
+		}
+		if (child) {
+			child->sibling = pref->sibling;
+		}
+	}
+
+	free_pref(pref);
 }
 
 void
