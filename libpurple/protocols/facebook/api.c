@@ -739,7 +739,6 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", msg);
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request URL: %s", url);
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request Data: %s", data);
 
 	return msg;
 }

@@ -692,7 +692,6 @@ purple_savedstatus_delete_by_status(PurpleSavedStatus *status)
 	saved_statuses = g_list_remove(saved_statuses, status);
 	creation_time = purple_savedstatus_get_creation_time(status);
 	g_hash_table_remove(creation_times, (gconstpointer)creation_time);
-	free_saved_status(status);
 
 	schedule_save();
 
@@ -710,6 +709,8 @@ purple_savedstatus_delete_by_status(PurpleSavedStatus *status)
 
 	purple_signal_emit(purple_savedstatuses_get_handle(),
 			"savedstatus-deleted", status);
+
+	free_saved_status(status);
 }
 
 gboolean
