@@ -108,8 +108,8 @@ jingle_google_p2p_add_local_candidate(JingleTransport *transport, const gchar *i
 
 			google_p2p_candidate->generation = generation;
 
-			priv->local_candidates = g_list_append(
-					priv->local_candidates, candidate);
+			priv->local_candidates =
+			        g_list_append(priv->local_candidates, google_p2p_candidate);
 
 			g_object_notify_by_pspec(G_OBJECT(google_p2p), properties[PROP_LOCAL_CANDIDATES]);
 
