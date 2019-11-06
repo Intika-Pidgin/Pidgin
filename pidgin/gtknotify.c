@@ -800,10 +800,10 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		}
 	} else {
 		if (count > 0) {
-			notification = g_strdup_printf(ngettext("%s has %d new message.",
-							   "%s has %d new messages.",
-							   (int)count),
-							   *tos, (int)count);
+			notification = g_strdup_printf(
+			        ngettext("%s has %d new message.",
+			                 "%s has %d new messages.", (int)count),
+			        tos ? *tos : "(unknown)", (int)count);
 			data2 = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE, &new_data);
 			if (data2 && new_data) {
 				data = data2;
