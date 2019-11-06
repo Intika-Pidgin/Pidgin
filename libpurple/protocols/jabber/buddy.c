@@ -74,8 +74,6 @@ jabber_buddy_resource_free(JabberBuddyResource *jbr)
 {
 	g_return_if_fail(jbr != NULL);
 
-	jbr->jb->resources = g_list_remove(jbr->jb->resources, jbr);
-
 	g_list_free_full(jbr->commands, (GDestroyNotify)jabber_adhoc_commands_free);
 	g_list_free_full(jbr->caps.exts, g_free);
 	g_free(jbr->name);
@@ -92,8 +90,7 @@ void jabber_buddy_free(JabberBuddy *jb)
 	g_return_if_fail(jb != NULL);
 
 	g_free(jb->error_msg);
-	while(jb->resources)
-		jabber_buddy_resource_free(jb->resources->data);
+	g_list_free_full(jb->resources, (GDestroyNotify)jabber_buddy_resource_free);
 
 	g_free(jb);
 }
@@ -256,6 +253,7 @@ void jabber_buddy_remove_resource(JabberBuddy *jb, const char *resource)
 	if(!jbr)
 		return;
 
+	jbr->jb->resources = g_list_remove(jbr->jb->resources, jbr);
 	jabber_buddy_resource_free(jbr);
 }
 
