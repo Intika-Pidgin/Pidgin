@@ -1049,14 +1049,11 @@ nm_process_event(NMUser * user, int type)
 		/* -1 means that we are not ready to callback yet. */
 		rc = NM_OK;
 	} else if (rc == NM_OK && (cb = nm_user_get_event_callback(user))) {
-
 		cb(user, event);
+	}
 
-		if (event)
-			nm_release_event(event);
-	} else {
-		if (event)
-			nm_release_event(event);
+	if (event) {
+		nm_release_event(event);
 	}
 
 	/* Cleanup */

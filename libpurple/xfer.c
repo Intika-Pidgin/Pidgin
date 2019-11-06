@@ -235,11 +235,10 @@ purple_xfer_conversation_write_internal(PurpleXfer *xfer,
 
 	if (print_thumbnail && thumbnail_data) {
 		gchar *message_with_img;
-		gpointer data = g_memdup(thumbnail_data, size);
 		PurpleImage *img;
 		guint id;
 
-		img = purple_image_new_from_data(data, size);
+		img = purple_image_new_from_data(thumbnail_data, size);
 		id = purple_image_store_add(img);
 		g_object_unref(img);
 
