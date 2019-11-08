@@ -233,6 +233,13 @@ jingle_handle_session_initiate(JingleSession *session, PurpleXmlNode *jingle)
 				"unsupported-applications"));
 		} else {
 			jingle_session_add_content(session, parsed_content);
+			/* since we don't have the possibility to enable
+			 * our local video after the video connection is
+			 * established, we ignore senders of type
+			 * 'initiator', and reply with senders of type
+			 * 'both' instead.
+			 */
+			jingle_content_modify(parsed_content, "both");
 			jingle_content_handle_action(parsed_content, content,
 					JINGLE_SESSION_INITIATE);
 		}
