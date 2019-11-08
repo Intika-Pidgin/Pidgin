@@ -619,7 +619,7 @@ endif
 #######################################################################
 # Check for GPlugin 0.28.2
 #######################################################################
-gplugin_dep = dependency('gplugin', version : '>= 0.28.2', required : false)
+gplugin_dep = dependency('gplugin', version : '>= 0.29.0', required : false)
 if gplugin_dep.found()
 	if enable_introspection
 		gplugin_gir = 'GPlugin-0.0'
