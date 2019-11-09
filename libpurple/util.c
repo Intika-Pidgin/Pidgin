@@ -561,6 +561,20 @@ purple_str_to_date_time(const char *timestamp, gboolean utc)
 	return retval;
 }
 
+gint purple_get_month(const char *month_abbr)
+{
+	const char *months[] = {
+		"Jan", "Feb", "Mar", "Apr", "May", "Jun",
+		"Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+		NULL};
+	for (gint month = 0; months[month] != NULL; month++) {
+		if (purple_strequal(month_abbr, months[month])) {
+			return month + 1;
+		}
+	}
+	return 0;
+}
+
 /**************************************************************************
  * Markup Functions
  **************************************************************************/

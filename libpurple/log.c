@@ -1704,31 +1704,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 				purple_debug_warning("log", "invalid date format\n");
 			}
 			/* Ugly hack, in case current locale is not English */
-			if (purple_strequal(month_str, "Jan")) {
-				month = 1;
-			} else if (purple_strequal(month_str, "Feb")) {
-				month = 2;
-			} else if (purple_strequal(month_str, "Mar")) {
-				month = 3;
-			} else if (purple_strequal(month_str, "Apr")) {
-				month = 4;
-			} else if (purple_strequal(month_str, "May")) {
-				month = 5;
-			} else if (purple_strequal(month_str, "Jun")) {
-				month = 6;
-			} else if (purple_strequal(month_str, "Jul")) {
-				month = 7;
-			} else if (purple_strequal(month_str, "Aug")) {
-				month = 8;
-			} else if (purple_strequal(month_str, "Sep")) {
-				month = 9;
-			} else if (purple_strequal(month_str, "Oct")) {
-				month = 10;
-			} else if (purple_strequal(month_str, "Nov")) {
-				month = 11;
-			} else if (purple_strequal(month_str, "Dec")) {
-				month = 12;
-			}
+			month = purple_get_month(month_str);
 			if (lasttime)
 				g_date_time_unref(lasttime);
 			lasttime = g_date_time_new_local(year, month, day,
