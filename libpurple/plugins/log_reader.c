@@ -1209,7 +1209,7 @@ static GList *trillian_logger_list(PurpleLogType type, const char *sn, PurpleAcc
 					} else {
 						PurpleLog *log;
 
-						month = purple_get_month(month_str);
+						month = purple_time_parse_month(month_str);
 
 						data = g_new0(
 							struct trillian_logger_data, 1);
@@ -2013,7 +2013,7 @@ static GList *amsn_logger_parse_file(char *filename, const char *sn, PurpleAccou
 					                   "Error parsing start date for %s\n",
 					                   filename);
 				} else {
-					month = purple_get_month(month_str);
+					month = purple_time_parse_month(month_str);
 
 					found_start = TRUE;
 					offset = c - contents;
