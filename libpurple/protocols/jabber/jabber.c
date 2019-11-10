@@ -595,7 +595,7 @@ static int jabber_get_keepalive_interval(void)
 	return PING_TIMEOUT;
 }
 
-static void
+static gboolean
 jabber_recv_cb(GObject *stream, gpointer data)
 {
 	PurpleConnection *gc = data;
@@ -610,7 +610,7 @@ jabber_recv_cb(GObject *stream, gpointer data)
 	        G_POLLABLE_INPUT_STREAM(stream), buf, sizeof(buf) - 1,
 	        js->cancellable, &error);
 
-	if (len > 0) {
+	while (len > 0) {
 		purple_connection_update_last_received(gc);
 #ifdef HAVE_CYRUS_SASL
 		if (js->sasl_maxbuf > 0) {
@@ -635,7 +635,7 @@ jabber_recv_cb(GObject *stream, gpointer data)
 				if (js->reinit)
 					jabber_stream_init(js);
 			}
-			return;
+			return G_SOURCE_CONTINUE;
 		}
 #endif
 		buf[len] = '\0';
@@ -644,15 +644,17 @@ jabber_recv_cb(GObject *stream, gpointer data)
 		jabber_parser_process(js, buf, len);
 		if(js->reinit)
 			jabber_stream_init(js);
-	} else if (len == 0) {
-		purple_connection_error(js->gc, PURPLE_CONNECTION_ERROR_NETWORK_ERROR,
-		                        _("Server closed the connection"));
-	} else if (error->code != G_IO_ERROR_WOULD_BLOCK &&
-	           error->code != G_IO_ERROR_CANCELLED) {
+		len = g_pollable_input_stream_read_nonblocking(
+			G_POLLABLE_INPUT_STREAM(stream), buf, sizeof(buf) - 1,
+			js->cancellable, &error);
+	}
+	if (error->code != G_IO_ERROR_WOULD_BLOCK &&
+	    error->code != G_IO_ERROR_CANCELLED) {
 		g_prefix_error(&error, "%s", _("Lost connection with server: "));
 		purple_connection_g_error(js->gc, error);
 	}
 	g_clear_error(&error);
+	return G_SOURCE_CONTINUE;
 }
 
 static void
