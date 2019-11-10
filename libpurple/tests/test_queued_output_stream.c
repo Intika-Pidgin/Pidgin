@@ -254,84 +254,6 @@ test_queued_output_stream_push_bytes_async_error(void) {
 	g_clear_object(&output);
 }
 
-static void
-test_queued_output_stream_clear_queue_on_error_cb(GObject *source,
-		GAsyncResult *res, gpointer user_data)
-{
-	PurpleQueuedOutputStream *queued = PURPLE_QUEUED_OUTPUT_STREAM(source);
-	gint *done = user_data;
-	GError *err = NULL;
-
-	g_assert_false(purple_queued_output_stream_push_bytes_finish(queued,
-			res, &err));
-
-	g_assert_error(err, G_IO_ERROR, G_IO_ERROR_CANCELLED);
-	g_clear_error(&err);
-
-	purple_queued_output_stream_clear_queue(queued);
-
-	--*done;
-}
-
-static void
-test_queued_output_stream_clear_queue_on_error(void) {
-	GMemoryOutputStream *output;
-	PurpleQueuedOutputStream *queued;
-	GBytes *bytes;
-	GCancellable *cancellable;
-	GError *err = NULL;
-	gint done = 3;
-
-	output = G_MEMORY_OUTPUT_STREAM(g_memory_output_stream_new_resizable());
-	g_assert_nonnull(output);
-
-	queued = purple_queued_output_stream_new(G_OUTPUT_STREAM(output));
-	g_assert_true(PURPLE_IS_QUEUED_OUTPUT_STREAM(queued));
-
-	cancellable = g_cancellable_new();
-	g_assert_nonnull(cancellable);
-
-	g_cancellable_cancel(cancellable);
-	g_assert_true(g_cancellable_is_cancelled(cancellable));
-
-	bytes = g_bytes_new_static(test_bytes_data, test_bytes_data_len);
-
-	purple_queued_output_stream_push_bytes_async(queued, bytes,
-			G_PRIORITY_DEFAULT, cancellable,
-			test_queued_output_stream_clear_queue_on_error_cb,
-			&done);
-
-	/* Don't set cancellable on these */
-	purple_queued_output_stream_push_bytes_async(queued, bytes,
-			G_PRIORITY_DEFAULT, NULL,
-			test_queued_output_stream_clear_queue_on_error_cb,
-			&done);
-
-	purple_queued_output_stream_push_bytes_async(queued, bytes,
-			G_PRIORITY_DEFAULT, NULL,
-			test_queued_output_stream_clear_queue_on_error_cb,
-			&done);
-
-	g_bytes_unref(bytes);
-
-	while (done > 0) {
-		g_main_context_iteration(NULL, TRUE);
-	}
-
-	g_assert_cmpint(done, ==, 0);
-
-	g_assert_cmpmem(g_memory_output_stream_get_data(output),
-			g_memory_output_stream_get_data_size(output),
-			NULL, 0);
-
-	g_assert_true(g_output_stream_close(
-			G_OUTPUT_STREAM(queued), NULL, &err));
-	g_assert_no_error(err);
-
-	g_clear_object(&queued);
-	g_clear_object(&output);
-}
-
 /******************************************************************************
  * Main
  *****************************************************************************/
@@ -349,8 +271,6 @@ main(gint argc, gchar **argv) {
 			test_queued_output_stream_push_bytes_async_multiple);
 	g_test_add_func("/queued-output-stream/push-bytes-async-error",
 			test_queued_output_stream_push_bytes_async_error);
-	g_test_add_func("/queued-output-stream/clear-queue-on-error",
-			test_queued_output_stream_clear_queue_on_error);
 
 	return g_test_run();
 }
