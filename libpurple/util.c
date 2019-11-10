@@ -561,7 +561,7 @@ purple_str_to_date_time(const char *timestamp, gboolean utc)
 	return retval;
 }
 
-gint purple_get_month(const char *month_abbr)
+gint purple_time_parse_month(const char *month_abbr)
 {
 	const char *months[] = {
 		"Jan", "Feb", "Mar", "Apr", "May", "Jun",

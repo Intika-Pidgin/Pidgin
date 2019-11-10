@@ -1704,7 +1704,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 				purple_debug_warning("log", "invalid date format\n");
 			}
 			/* Ugly hack, in case current locale is not English */
-			month = purple_get_month(month_str);
+			month = purple_time_parse_month(month_str);
 			if (lasttime)
 				g_date_time_unref(lasttime);
 			lasttime = g_date_time_new_local(year, month, day,
