@@ -76,14 +76,8 @@ char *ttyname(void);
 # include <krb.h>
 # ifndef WIN32
 #  include <krb_err.h>
-#  ifndef HAVE_KRB_GET_ERR_TEXT
-#   define krb_get_err_text(n)	krb_err_txt[n]
-#  endif
 # endif /* WIN32 */
 # include <des.h>
-# ifndef HAVE_KRB_LOG
-#  define krb_log		log
-# endif
 #endif /* ZEPHYR_USES_KERBEROS */
 
 #ifdef HAVE_SYS_SELECT_H
