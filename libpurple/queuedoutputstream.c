@@ -216,6 +216,7 @@ purple_queued_output_stream_push_bytes_async(PurpleQueuedOutputStream *stream,
 		return;
 	}
 
+	g_clear_error (&error);
 	priv->pending_queued = TRUE;
 
 	if (set_pending) {
