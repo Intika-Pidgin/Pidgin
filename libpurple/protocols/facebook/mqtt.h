@@ -339,15 +339,11 @@ fb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, const GByteArray *pload);
 /**
  * fb_mqtt_subscribe:
  * @mqtt: The #FbMqtt.
- * @topic1: The first topic.
- * @qos1: The first QoS.
  * @...: The %NULL-terminated list of topic/QoS pairs.
  *
  * Sends a message of type #FB_MQTT_MESSAGE_TYPE_SUBSCRIBE.
  */
-void
-fb_mqtt_subscribe(FbMqtt *mqtt, const gchar *topic1, guint16 qos1, ...)
-                  G_GNUC_NULL_TERMINATED;
+void fb_mqtt_subscribe(FbMqtt *mqtt, ...) G_GNUC_NULL_TERMINATED;
 
 /**
  * fb_mqtt_unsubscribe:
