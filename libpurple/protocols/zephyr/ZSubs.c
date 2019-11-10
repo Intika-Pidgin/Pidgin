@@ -16,33 +16,28 @@ static Code_t Z_Subscriptions(register ZSubscription_t *sublist, int nitems,
 static Code_t subscr_sendoff(ZNotice_t *notice, char **lyst, int num,
                              int authit);
 
-Code_t ZSubscribeTo(sublist, nitems, port)
-    ZSubscription_t *sublist;
-    int nitems;
-    unsigned int port;
+Code_t
+ZSubscribeTo(ZSubscription_t *sublist, int nitems, unsigned int port)
 {
     return (Z_Subscriptions(sublist, nitems, port, CLIENT_SUBSCRIBE, 1));
 }
 
-Code_t ZSubscribeToSansDefaults(sublist, nitems, port)
-    ZSubscription_t *sublist;
-    int nitems;
-    unsigned int port;
+Code_t
+ZSubscribeToSansDefaults(ZSubscription_t *sublist, int nitems,
+                         unsigned int port)
 {
     return (Z_Subscriptions(sublist, nitems, port, CLIENT_SUBSCRIBE_NODEFS,
 			    1));
 }
 
-Code_t ZUnsubscribeTo(sublist, nitems, port)
-    ZSubscription_t *sublist;
-    int nitems;
-    unsigned int port;
+Code_t
+ZUnsubscribeTo(ZSubscription_t *sublist, int nitems, unsigned int port)
 {
     return (Z_Subscriptions(sublist, nitems, port, CLIENT_UNSUBSCRIBE, 1));
 }
 
-Code_t ZCancelSubscriptions(port)
-    unsigned int port;
+Code_t
+ZCancelSubscriptions(unsigned int port)
 {
     return (Z_Subscriptions((ZSubscription_t *)0, 0, port,
 			    CLIENT_CANCELSUB, 0));
@@ -55,12 +50,8 @@ Code_t ZCancelSubscriptions(port)
  */
 
 static Code_t
-Z_Subscriptions(sublist, nitems, port, opcode, authit)
-    register ZSubscription_t *sublist;
-    int nitems;
-    unsigned int port;
-    char *opcode;
-    int authit;
+Z_Subscriptions(register ZSubscription_t *sublist, int nitems,
+                unsigned int port, char *opcode, int authit)
 {
     register int i, j;
     int retval;
@@ -160,11 +151,7 @@ Z_Subscriptions(sublist, nitems, port, opcode, authit)
 }
 
 static Code_t
-subscr_sendoff(notice, lyst, num, authit)
-ZNotice_t *notice;
-char **lyst;
-int num;
-int authit;
+subscr_sendoff(ZNotice_t *notice, char **lyst, int num, int authit)
 {
     register Code_t retval;
     ZNotice_t retnotice;
