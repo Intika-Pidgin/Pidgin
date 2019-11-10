@@ -752,11 +752,10 @@ add_jbr_info(JabberBuddyInfo *jbi, const char *resource,
 		now_t += jbr->tz_off;
 		now = gmtime(&now_t);
 
-		timestamp =
-			g_strdup_printf("%s %c%02d%02d", purple_time_format(now),
-		                    jbr->tz_off < 0 ? '-' : '+',
-		                    abs(jbr->tz_off / (60*60)),
-		                    abs((jbr->tz_off % (60*60)) / 60));
+		timestamp = g_strdup_printf("%s %c%02d%02d", purple_time_format(now),
+		                            jbr->tz_off < 0 ? '-' : '+',
+		                            abs((int)(jbr->tz_off / (60 * 60))),
+		                            abs((int)((jbr->tz_off % (60 * 60)) / 60)));
 		purple_notify_user_info_prepend_pair_plaintext(user_info, _("Local Time"), timestamp);
 		g_free(timestamp);
 	}
