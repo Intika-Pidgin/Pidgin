@@ -29,7 +29,8 @@
 #define INADDR_NONE 0xffffffff
 #endif
 
-Code_t ZInitialize()
+Code_t
+ZInitialize(void)
 {
     struct servent *hmserv;
     struct hostent *hostent;
@@ -44,11 +45,7 @@ Code_t ZInitialize()
     char *krealm = NULL;
     int krbval;
     char d1[ANAME_SZ], d2[INST_SZ];
-
-    /*    initialize_krb_error_table(); */
 #endif
-
-    initialize_zeph_error_table();
 
     (void) memset((char *)&__HM_addr, 0, sizeof(__HM_addr));
 

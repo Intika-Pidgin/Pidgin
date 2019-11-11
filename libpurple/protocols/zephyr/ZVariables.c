@@ -47,9 +47,8 @@ ZGetVariable(const gchar *var)
 	return ret;
 }
 
-Code_t ZSetVariable(var, value)
-    char *var;
-    char *value;
+Code_t
+ZSetVariable(char *var, char *value)
 {
     int written;
     FILE *fpin, *fpout;
@@ -97,8 +96,8 @@ Code_t ZSetVariable(var, value)
     return (ZERR_NONE);
 }
 
-Code_t ZUnsetVariable(var)
-    char *var;
+Code_t
+ZUnsetVariable(char *var)
 {
     FILE *fpin, *fpout;
     char *varfile, *varfilebackup, varbfr[512];
