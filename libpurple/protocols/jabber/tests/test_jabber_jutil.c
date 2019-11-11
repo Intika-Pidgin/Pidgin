@@ -219,6 +219,7 @@ main(gint argc, gchar **argv) {
 	gchar *test_name;
 	gint i;
 	g_test_init(&argc, &argv, NULL);
+	g_test_set_nonfatal_assertions();
 
 	for (i = 0; test_jabber_util_get_resource_exists_data[i].input; i++) {
 		test_name = g_strdup_printf("/jabber/util/get_resource/exists/%d", i);
