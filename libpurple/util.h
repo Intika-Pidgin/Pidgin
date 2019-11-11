@@ -314,6 +314,19 @@ time_t purple_str_to_time(const char *timestamp, gboolean utc,
  */
 GDateTime *purple_str_to_date_time(const char *timestamp, gboolean utc);
 
+/**
+ * purple_time_parse_month:
+ * @month_abbr: The 3-letter month abbreviation
+ *
+ * Get month number suitable for GDateTime. If @month_abbr is unknown,
+ * returns 0.
+ *
+ * Returns: A month number or 0.
+ *
+ * Since: 3.0.0
+ */
+gint purple_time_parse_month(const char *month_abbr);
+
 /**************************************************************************/
 /* Markup Functions                                                       */
 /**************************************************************************/
