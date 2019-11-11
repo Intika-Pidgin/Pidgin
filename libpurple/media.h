@@ -30,6 +30,7 @@
 #include "media/candidate.h"
 #include "media/codec.h"
 #include "media/enum-types.h"
+#include "glibcompat.h"
 
 #include <glib.h>
 #include <glib-object.h>

@@ -115,6 +115,7 @@ purple_coreheaders = \
 	eventloop.h \
 	ft.h \
 	gaim-compat.h \
+	glibcompat.h \
 	idle.h \
 	imgstore.h \
 	log.h \
