@@ -47,6 +47,7 @@ purple_coresources = \
 	desktopitem.c \
 	eventloop.c \
 	ft.c \
+	glibcompat.c \
 	idle.c \
 	imgstore.c \
 	log.c \
