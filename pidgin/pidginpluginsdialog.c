@@ -31,6 +31,7 @@
 struct _PidginPluginsDialog {
 	GtkDialog parent;
 
+	GtkWidget *configure_plugin_button;
 	GtkWidget *close_button;
 	GtkWidget *plugin_info;
 
@@ -40,6 +41,11 @@ struct _PidginPluginsDialog {
 /******************************************************************************
  * Helpers
  *****************************************************************************/
+static gboolean
+pidgin_plugins_dialog_plugin_has_config(GPluginPlugin *plugin) {
+	return FALSE;
+}
+
 
 /******************************************************************************
  * Callbacks
@@ -66,6 +72,15 @@ pidgin_plugins_dialog_selection_cb(GtkTreeSelection *sel, gpointer data) {
 		GPLUGIN_GTK_PLUGIN_INFO(dialog->plugin_info),
 		plugin
 	);
+
+	gtk_widget_set_sensitive(
+		GTK_WIDGET(dialog->configure_plugin_button),
+		pidgin_plugins_dialog_plugin_has_config(plugin)
+	);
+}
+
+static void
+pidgin_plugins_dialog_config_plugin_cb(GtkWidget *button, gpointer data) {
 }
 
 /******************************************************************************
@@ -82,11 +97,13 @@ pidgin_plugins_dialog_class_init(PidginPluginsDialogClass *klass) {
 		"/im/pidgin/Pidgin/Plugins/dialog.ui"
 	);
 
+	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, configure_plugin_button);
 	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, close_button);
 	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, plugin_info);
 	gtk_widget_class_bind_template_child(widget_class, PidginPluginsDialog, plugin_store);
 
 	gtk_widget_class_bind_template_callback(widget_class, pidgin_plugins_dialog_selection_cb);
+	gtk_widget_class_bind_template_callback(widget_class, pidgin_plugins_dialog_config_plugin_cb);
 }
 
 static void
