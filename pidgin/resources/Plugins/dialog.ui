@@ -26,8 +26,10 @@
               <object class="GtkButton" id="configure_plugin_button">
                 <property name="label" translatable="yes">Configure Plugin</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <signal name="clicked" handler="pidgin_plugins_dialog_config_plugin_cb" object="PidginPluginsDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
