@@ -1,8 +1,3 @@
-/**
- * @file glibcompat.h Compatibility for many glib versions.
- * @ingroup core
- */
-
 /* purple
  *
  * Purple is the legal property of its developers, whose names are too numerous
@@ -24,33 +19,25 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02111-1301 USA
  */
 
-#ifndef PURPLE_GLIBCOMPAT_H
-#define PURPLE_GLIBCOMPAT_H
-
-#include <glib.h>
+#include "glibcompat.h"
 
 #if !GLIB_CHECK_VERSION(2,32,0)
-# define G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-# define G_GNUC_END_IGNORE_DEPRECATIONS
 
-void g_queue_free_full(GQueue *queue, GDestroyNotify free_func);
+gboolean
+g_hash_table_contains(GHashTable *hash_table, gconstpointer key) {
+	return g_hash_table_lookup_extended(hash_table, key, NULL, NULL);
+}
 
-gboolean g_hash_table_contains (GHashTable *hash_table, gconstpointer key);
+void
+g_queue_free_full(GQueue *queue, GDestroyNotify free_func) {
+	GList *l = NULL;
+
+	for(l = queue->head; l != NULL; l = l->next) {
+		free_func(l->data);
+	}
+
+	g_queue_free(queue);
+}
 
 #endif /* !GLIB_CHECK_VERSION(2,32,0) */
-
-#ifdef __clang__
-
-#undef G_GNUC_BEGIN_IGNORE_DEPRECATIONS
-#define G_GNUC_BEGIN_IGNORE_DEPRECATIONS \
-	_Pragma ("clang diagnostic push") \
-	_Pragma ("clang diagnostic ignored \"-Wdeprecated-declarations\"")
-
-#undef G_GNUC_END_IGNORE_DEPRECATIONS
-#define G_GNUC_END_IGNORE_DEPRECATIONS \
-	_Pragma ("clang diagnostic pop")
-
-#endif /* __clang__ */
-
-#endif /* PURPLE_GLIBCOMPAT_H */
 
