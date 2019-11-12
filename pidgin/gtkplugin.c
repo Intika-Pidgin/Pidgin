@@ -34,18 +34,6 @@
 
 typedef struct
 {
-	PidginPluginConfigFrameCb config_frame_cb;
-} PidginPluginInfoPrivate;
-
-enum
-{
-	PROP_0,
-	PROP_GTK_CONFIG_FRAME_CB,
-	PROP_LAST
-};
-
-typedef struct
-{
 	enum
 	{
 		PIDGIN_PLUGIN_UI_DATA_TYPE_FRAME,
@@ -64,9 +52,6 @@ typedef struct
 	} u;
 } PidginPluginUiData;
 
-G_DEFINE_TYPE_WITH_PRIVATE(PidginPluginInfo, pidgin_plugin_info,
-		PURPLE_TYPE_PLUGIN_INFO);
-
 static void plugin_toggled_stage_two(PurplePlugin *plug, GtkTreeModel *model,
                                   GtkTreeIter *iter, GError *error, gboolean unload);
 
@@ -83,91 +68,11 @@ static GtkLabel *plugin_filename = NULL;
 
 static GtkWidget *pref_button = NULL;
 
-/* Set method for GObject properties */
-static void
-pidgin_plugin_info_set_property(GObject *obj, guint param_id, const GValue *value,
-		GParamSpec *pspec)
-{
-	PidginPluginInfoPrivate *priv =
-			pidgin_plugin_info_get_instance_private(
-					PIDGIN_PLUGIN_INFO(obj));
-
-	switch (param_id) {
-		case PROP_GTK_CONFIG_FRAME_CB:
-			priv->config_frame_cb = g_value_get_pointer(value);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
-			break;
-	}
-}
-
-/* Get method for GObject properties */
-static void
-pidgin_plugin_info_get_property(GObject *obj, guint param_id, GValue *value,
-		GParamSpec *pspec)
-{
-	PidginPluginInfoPrivate *priv =
-			pidgin_plugin_info_get_instance_private(
-					PIDGIN_PLUGIN_INFO(obj));
-
-	switch (param_id) {
-		case PROP_GTK_CONFIG_FRAME_CB:
-			g_value_set_pointer(value, priv->config_frame_cb);
-			break;
-		default:
-			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
-			break;
-	}
-}
-
-/* Class initializer function */
-static void pidgin_plugin_info_class_init(PidginPluginInfoClass *klass)
-{
-	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
-
-	/* Setup properties */
-	obj_class->get_property = pidgin_plugin_info_get_property;
-	obj_class->set_property = pidgin_plugin_info_set_property;
-
-	g_object_class_install_property(obj_class, PROP_GTK_CONFIG_FRAME_CB,
-		g_param_spec_pointer("gtk-config-frame-cb",
-		                     "GTK configuration frame callback",
-		                     "Callback that returns a GTK configuration frame",
-		                     G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
-		                     G_PARAM_STATIC_STRINGS));
-}
-
-static void
-pidgin_plugin_info_init(PidginPluginInfo *info)
-{
-}
-
-PidginPluginInfo *
-pidgin_plugin_info_new(const char *first_property, ...)
-{
-	GObject *info;
-	va_list var_args;
-
-	/* at least ID is required */
-	if (!first_property)
-		return NULL;
-
-	va_start(var_args, first_property);
-	info = g_object_new_valist(PIDGIN_TYPE_PLUGIN_INFO, first_property,
-	                           var_args);
-	va_end(var_args);
-
-	g_object_set(info, "ui-requirement", PIDGIN_UI, NULL);
-
-	return PIDGIN_PLUGIN_INFO(info);
-}
-
 static gboolean
 pidgin_plugin_has_prefs(PurplePlugin *plugin)
 {
 	PurplePluginInfo *info = purple_plugin_get_info(plugin);
-	PidginPluginInfoPrivate *priv = NULL;
+	PurplePluginPrefFrameCb config_frame_cb = NULL;
 	gboolean ret;
 
 	g_return_val_if_fail(plugin != NULL, FALSE);
@@ -175,43 +80,11 @@ pidgin_plugin_has_prefs(PurplePlugin *plugin)
 	if (!purple_plugin_is_loaded(plugin))
 		return FALSE;
 
-	if (PIDGIN_IS_PLUGIN_INFO(info))
-		priv = pidgin_plugin_info_get_instance_private(
-				PIDGIN_PLUGIN_INFO(info));
-
-	ret = ((priv && priv->config_frame_cb) ||
+	ret = (config_frame_cb ||
 			purple_plugin_info_get_pref_frame_cb(info) ||
 			purple_plugin_info_get_pref_request_cb(info));
 
 	return ret;
-}
-
-static GtkWidget *
-pidgin_plugin_get_config_frame(PurplePlugin *plugin,
-	PurplePluginPrefFrame **purple_pref_frame)
-{
-	GtkWidget *config = NULL;
-	PurplePluginInfo *info;
-	PurplePluginPrefFrameCb pref_frame_cb = NULL;
-
-	g_return_val_if_fail(PURPLE_IS_PLUGIN(plugin), NULL);
-
-	info = purple_plugin_get_info(plugin);
-	if(!PURPLE_IS_PLUGIN_INFO(info))
-		return NULL;
-
-	pref_frame_cb = purple_plugin_info_get_pref_frame_cb(info);
-	if(pref_frame_cb) {
-		PurplePluginPrefFrame *frame = pref_frame_cb(plugin);
-
-		if(frame) {
-			config = pidgin_plugin_pref_create_frame(frame);
-
-			*purple_pref_frame = frame;
-		}
-	}
-
-	return config;
 }
 
 static void
@@ -260,11 +133,9 @@ static void
 pidgin_plugin_open_config(PurplePlugin *plugin, GtkWindow *parent)
 {
 	PurplePluginInfo *info;
-	PidginPluginInfoPrivate *priv = NULL;
 	PidginPluginUiData *ui_data;
 	PurplePluginPrefFrameCb pref_frame_cb;
 	PurplePluginPrefRequestCb pref_request_cb;
-	PidginPluginConfigFrameCb get_pidgin_frame = NULL;
 	gint prefs_count;
 
 	g_return_if_fail(plugin != NULL);
@@ -279,22 +150,20 @@ pidgin_plugin_open_config(PurplePlugin *plugin, GtkWindow *parent)
 	if (purple_plugin_info_get_ui_data(info))
 		return;
 
-	if (PIDGIN_IS_PLUGIN_INFO(info))
-		priv = pidgin_plugin_info_get_instance_private(
-				PIDGIN_PLUGIN_INFO(info));
-
 	pref_frame_cb = purple_plugin_info_get_pref_frame_cb(info);
 	pref_request_cb = purple_plugin_info_get_pref_request_cb(info);
 
-	if (priv)
-		get_pidgin_frame = priv->config_frame_cb;
+	ui_data = g_new0(PidginPluginUiData, 1);
+	purple_plugin_info_set_ui_data(info, ui_data);
 
 	prefs_count = 0;
-	if (pref_frame_cb)
+	if (pref_frame_cb) {
 		prefs_count++;
+
+		ui_data->u.frame.pref_frame = pref_frame_cb(plugin);
+	}
+
 	if (pref_request_cb)
-		prefs_count++;
-	if (get_pidgin_frame)
 		prefs_count++;
 
 	if (prefs_count > 1) {
@@ -306,13 +175,11 @@ pidgin_plugin_open_config(PurplePlugin *plugin, GtkWindow *parent)
 	}
 	g_return_if_fail(prefs_count > 0);
 
-	ui_data = g_new0(PidginPluginUiData, 1);
-	purple_plugin_info_set_ui_data(info, ui_data);
 
 	/* Priority: pidgin frame > purple request > purple frame
 	 * Purple frame could be replaced with purple request some day.
 	 */
-	if (pref_request_cb && !get_pidgin_frame) {
+	if (pref_request_cb) {
 		ui_data->type = PIDGIN_PLUGIN_UI_DATA_TYPE_REQUEST;
 		ui_data->u.request_handle = pref_request_cb(plugin);
 		purple_request_add_close_notify(ui_data->u.request_handle,
@@ -324,8 +191,7 @@ pidgin_plugin_open_config(PurplePlugin *plugin, GtkWindow *parent)
 
 		ui_data->type = PIDGIN_PLUGIN_UI_DATA_TYPE_FRAME;
 
-		box = pidgin_plugin_get_config_frame(plugin,
-			&ui_data->u.frame.pref_frame);
+		box = pidgin_plugin_pref_create_frame(ui_data->u.frame.pref_frame);
 		if (box == NULL) {
 			purple_debug_error("gtkplugin",
 				"Failed to display prefs frame");
