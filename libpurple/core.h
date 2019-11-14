@@ -151,7 +151,7 @@ const char *purple_core_get_ui(void);
  * This is used to connect to
  * <link linkend="chapter-signals-core">core signals</link>.
  *
- * Returns: (skip) (transfer none): A handle to the purple core.
+ * Returns: (transfer none): A handle to the purple core.
  */
 PurpleCore *purple_get_core(void);
 

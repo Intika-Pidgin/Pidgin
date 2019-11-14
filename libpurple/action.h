@@ -75,7 +75,7 @@ G_BEGIN_DECLS
  *
  * Creates a new PurpleActionMenu.
  *
- * Returns: (skip) (transfer full): The PurpleActionMenu.
+ * Returns: (transfer full): The PurpleActionMenu.
  */
 PurpleActionMenu *purple_action_menu_new(const gchar *label, GCallback callback, gpointer data, GList *children);
 
@@ -103,7 +103,7 @@ const gchar *purple_action_menu_get_label(const PurpleActionMenu *act);
  *
  * Returns the callback of the PurpleActionMenu.
  *
- * Returns: (skip) (transfer none): The callback function.
+ * Returns: (transfer none): The callback function.
  */
 GCallback purple_action_menu_get_callback(const PurpleActionMenu *act);
 

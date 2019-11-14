@@ -102,7 +102,7 @@ G_BEGIN_DECLS
  *
  * Creates a new buddy pounce.
  *
- * Returns: (skip) (transfer full): The new buddy pounce structure.
+ * Returns: (transfer full): The new buddy pounce structure.
  */
 PurplePounce *purple_pounce_new(const char *ui_type, PurpleAccount *pouncer,
 							const char *pouncee, PurplePounceEvent event,
@@ -330,7 +330,7 @@ void purple_pounce_execute(PurpleAccount *pouncer, const char *pouncee,
  *
  * Finds a pounce with the specified event(s) and buddy.
  *
- * Returns: (skip) (transfer none): The pounce if found, or %NULL otherwise.
+ * Returns: (transfer none): The pounce if found, or %NULL otherwise.
  */
 PurplePounce *purple_find_pounce(PurpleAccount *pouncer,
 							 const char *pouncee, PurplePounceEvent events);

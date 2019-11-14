@@ -149,7 +149,7 @@ void purple_media_codec_remove_optional_parameter(PurpleMediaCodec *codec,
  *
  * Gets an optional parameter based on the values given.
  *
- * Returns: (skip) (transfer none): The value found or NULL.
+ * Returns: (transfer none): The value found or NULL.
  */
 PurpleKeyValuePair *purple_media_codec_get_optional_parameter(
 		PurpleMediaCodec *codec, const gchar *name,
