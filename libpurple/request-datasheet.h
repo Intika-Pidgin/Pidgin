@@ -64,7 +64,7 @@ G_BEGIN_DECLS
  *
  * Creates new Datasheet.
  *
- * Returns: (skip) (transfer full): The new datasheet.
+ * Returns: (transfer full): The new datasheet.
  */
 PurpleRequestDatasheet *
 purple_request_datasheet_new(void);
@@ -176,7 +176,7 @@ purple_request_datasheet_get_actions(PurpleRequestDatasheet *sheet);
  *
  * Creates new datasheet action.
  *
- * Returns: (skip) (transfer full): The new action.
+ * Returns: (transfer full): The new action.
  */
 PurpleRequestDatasheetAction *
 purple_request_datasheet_action_new(void);
@@ -287,7 +287,7 @@ purple_request_datasheet_record_get_key(
  *
  * Returns the datasheet of a record.
  *
- * Returns: (skip) (transfer none): The datasheet.
+ * Returns: (transfer none): The datasheet.
  */
 PurpleRequestDatasheet *
 purple_request_datasheet_record_get_datasheet(
@@ -300,7 +300,7 @@ purple_request_datasheet_record_get_datasheet(
  *
  * Looks up for a record in datasheet.
  *
- * Returns: (skip) (transfer none): The record if found, %NULL otherwise.
+ * Returns: (transfer none): The record if found, %NULL otherwise.
  */
 PurpleRequestDatasheetRecord *
 purple_request_datasheet_record_find(PurpleRequestDatasheet *sheet,
@@ -315,7 +315,7 @@ purple_request_datasheet_record_find(PurpleRequestDatasheet *sheet,
  *
  * If the specified key already exists in datasheet, old record is returned.
  *
- * Returns: (skip) (transfer full): The record.
+ * Returns: (transfer full): The record.
  */
 PurpleRequestDatasheetRecord *
 purple_request_datasheet_record_add(PurpleRequestDatasheet *sheet,

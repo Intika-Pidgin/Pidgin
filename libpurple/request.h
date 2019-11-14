@@ -280,7 +280,7 @@ G_BEGIN_DECLS
  * Creates new parameters set for the request, which may or may not be used by
  * the UI to display the request.
  *
- * Returns: (skip) (transfer full): The new parameters set.
+ * Returns: (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_new(void);
@@ -291,7 +291,7 @@ purple_request_cpar_new(void);
  *
  * Creates new parameters set initially bound with the #PurpleConnection.
  *
- * Returns: (skip) (transfer full): The new parameters set.
+ * Returns: (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_from_connection(PurpleConnection *gc);
@@ -302,7 +302,7 @@ purple_request_cpar_from_connection(PurpleConnection *gc);
  *
  * Creates new parameters set initially bound with the #PurpleAccount.
  *
- * Returns: (skip) (transfer full): The new parameters set.
+ * Returns: (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_from_account(PurpleAccount *account);
@@ -313,7 +313,7 @@ purple_request_cpar_from_account(PurpleAccount *account);
  *
  * Creates new parameters set initially bound with the #PurpleConversation.
  *
- * Returns: (skip) (transfer full): The new parameters set.
+ * Returns: (transfer full): The new parameters set.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_from_conversation(PurpleConversation *conv);
@@ -335,7 +335,7 @@ purple_request_cpar_ref(PurpleRequestCommonParameters *cpar);
  *
  * The object will be destroyed when this reaches 0.
  *
- * Returns: (skip) (transfer full): The NULL, if object was destroyed, cpar otherwise.
+ * Returns: (transfer full): The NULL, if object was destroyed, cpar otherwise.
  */
 PurpleRequestCommonParameters *
 purple_request_cpar_unref(PurpleRequestCommonParameters *cpar);
@@ -501,7 +501,7 @@ purple_request_cpar_set_help_cb(PurpleRequestCommonParameters *cpar,
  *
  * Gets the callback for the Help button.
  *
- * Returns: (skip) (transfer none): The callback.
+ * Returns: (transfer none): The callback.
  */
 PurpleRequestHelpCb
 purple_request_cpar_get_help_cb(PurpleRequestCommonParameters *cpar,
@@ -566,7 +566,7 @@ purple_request_cpar_get_parent_from(PurpleRequestCommonParameters *cpar);
  *
  * Creates a list of fields to pass to purple_request_fields().
  *
- * Returns: (skip) (transfer full): A PurpleRequestFields structure.
+ * Returns: (transfer full): A PurpleRequestFields structure.
  */
 PurpleRequestFields *purple_request_fields_new(void);
 
@@ -707,7 +707,7 @@ gboolean purple_request_fields_all_valid(const PurpleRequestFields *fields);
  *
  * Return the field with the specified ID.
  *
- * Returns: (skip) (transfer none): The field, if found.
+ * Returns: (transfer none): The field, if found.
  */
 PurpleRequestField *purple_request_fields_get_field(
 		const PurpleRequestFields *fields, const char *id);
@@ -804,7 +804,7 @@ void purple_request_fields_set_ui_data(PurpleRequestFields *fields, gpointer ui_
  *
  * Creates a fields group with an optional title.
  *
- * Returns: (skip) (transfer full): A new fields group
+ * Returns: (transfer full): A new fields group
  */
 PurpleRequestFieldGroup *purple_request_field_group_new(const char *title);
 
@@ -895,7 +895,7 @@ PurpleRequestFields *purple_request_field_group_get_fields_list(
  *
  * Creates a field of the specified type.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_new(const char *id, const char *text,
 										 PurpleRequestFieldType type);
@@ -978,7 +978,7 @@ PurpleRequestFieldType purple_request_field_get_field_type(const PurpleRequestFi
  *
  * Returns the group for the field.
  *
- * Returns: (skip) (transfer none): The UI data.
+ * Returns: (transfer none): The UI data.
  */
 PurpleRequestFieldGroup *purple_request_field_get_group(const PurpleRequestField *field);
 
@@ -1154,7 +1154,7 @@ void purple_request_field_set_ui_data(PurpleRequestField *field,
  *
  * Creates a string request field.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_string_new(const char *id,
 												const char *text,
@@ -1247,7 +1247,7 @@ gboolean purple_request_field_string_is_masked(const PurpleRequestField *field);
  *
  * Creates an integer field.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_int_new(const char *id,
 	const char *text, int default_value, int lower_bound, int upper_bound);
@@ -1343,7 +1343,7 @@ int purple_request_field_int_get_value(const PurpleRequestField *field);
  *
  * This is often represented as a checkbox.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_bool_new(const char *id,
 											  const char *text,
@@ -1404,7 +1404,7 @@ gboolean purple_request_field_bool_get_value(const PurpleRequestField *field);
  *
  * This is often represented as a group of radio buttons.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *
 purple_request_field_choice_new(const char *id, const char *text,
@@ -1499,7 +1499,7 @@ purple_request_field_choice_set_data_destructor(PurpleRequestField *field,
  *
  * Creates a multiple list item field.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_list_new(const char *id, const char *text);
 
@@ -1637,7 +1637,7 @@ GList *purple_request_field_list_get_icons(const PurpleRequestField *field);
  *
  * Creates a label field.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_label_new(const char *id,
 											   const char *text);
@@ -1655,7 +1655,7 @@ PurpleRequestField *purple_request_field_label_new(const char *id,
  *
  * Creates an image field.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_image_new(const char *id, const char *text,
 											   const char *buf, gsize size);
@@ -1724,7 +1724,7 @@ unsigned int purple_request_field_image_get_scale_y(PurpleRequestField *field);
  *
  * By default, this field will not show offline accounts.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_account_new(const char *id,
 												 const char *text,
@@ -1821,7 +1821,7 @@ gboolean purple_request_field_account_get_show_all(
  * This function will determine which accounts get displayed and which
  * don't.
  *
- * Returns: (skip) (transfer none): The account filter function.
+ * Returns: (transfer none): The account filter function.
  */
 PurpleFilterAccountFunc purple_request_field_account_get_filter(
 		const PurpleRequestField *field);
@@ -1838,7 +1838,7 @@ PurpleFilterAccountFunc purple_request_field_account_get_filter(
  *
  * Creates a datasheet item field.
  *
- * Returns: (skip) (transfer full): The new field.
+ * Returns: (transfer full): The new field.
  */
 PurpleRequestField *purple_request_field_datasheet_new(const char *id,
 	const gchar *text, PurpleRequestDatasheet *sheet);

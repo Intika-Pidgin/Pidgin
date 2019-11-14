@@ -438,7 +438,7 @@ purple_conversation_set_e2ee_state(PurpleConversation *conv,
  *
  * Gets current conversation's E2EE state.
  *
- * Returns: (skip) (transfer none): Current E2EE state for conversation.
+ * Returns: (transfer none): Current E2EE state for conversation.
  */
 PurpleE2eeState *
 purple_conversation_get_e2ee_state(PurpleConversation *conv);

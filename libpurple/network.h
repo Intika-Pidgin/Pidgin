@@ -147,7 +147,7 @@ const char *purple_network_get_my_ip(int fd);
  * poking) for IPv6-only listeners (if an IPv6 socket supports v4-mapped
  * addresses, a mapping is done).
  *
- * Returns: (skip) (transfer full): A pointer to a data structure that can be used to cancel
+ * Returns: (transfer full): A pointer to a data structure that can be used to cancel
  *          the pending listener, or %NULL if unable to obtain a local
  *          socket to listen on.
  */
@@ -195,7 +195,7 @@ PurpleNetworkListenData *purple_network_listen(unsigned short port,
  * poking) for IPv6-only listeners (if an IPv6 socket supports v4-mapped
  * addresses, a mapping is done).
  *
- * Returns: (skip) (transfer full): A pointer to a data structure that can be used to cancel
+ * Returns: (transfer full): A pointer to a data structure that can be used to cancel
  *          the pending listener, or %NULL if unable to obtain a local
  *          socket to listen on.
  */

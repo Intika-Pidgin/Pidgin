@@ -555,7 +555,7 @@ gboolean purple_log_common_is_deletable(PurpleLog *log);
  *
  * Creates a new logger
  *
- * Returns: (skip) (transfer full): The new logger.
+ * Returns: (transfer full): The new logger.
  */
 PurpleLogLogger *purple_log_logger_new(const char *id, const char *name, int functions, ...);
 
