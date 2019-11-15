@@ -72,7 +72,6 @@ pidgin_plugins_dialog_plugin_has_config(GPluginPlugin *plugin) {
 	GPluginPluginInfo *ginfo = gplugin_plugin_get_info(plugin);
 	PurplePluginInfo *info = PURPLE_PLUGIN_INFO(ginfo);
 	GPluginPluginState state;
-	gboolean ret;
 
 	g_return_val_if_fail(GPLUGIN_IS_PLUGIN(plugin), FALSE);
 
@@ -82,10 +81,8 @@ pidgin_plugins_dialog_plugin_has_config(GPluginPlugin *plugin) {
 		return FALSE;
 	}
 
-	ret = (purple_plugin_info_get_pref_frame_cb(info) ||
+	return (purple_plugin_info_get_pref_frame_cb(info) ||
 	       purple_plugin_info_get_pref_request_cb(info));
-
-	return ret;
 }
 
 static GPluginPlugin *

@@ -47,8 +47,9 @@ pidgin_plugin_info_new(const char *first_property, ...)
 	va_list var_args;
 
 	/* at least ID is required */
-	if (!first_property)
+	if (!first_property) {
 		return NULL;
+	}
 
 	va_start(var_args, first_property);
 	info = g_object_new_valist(PIDGIN_TYPE_PLUGIN_INFO, first_property,
