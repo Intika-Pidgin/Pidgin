@@ -35,7 +35,6 @@
       <xi:include href="xml/gtkmedia.xml" />
       <xi:include href="xml/gtknickcolors.xml" />
       <xi:include href="xml/gtknotify.xml" />
-      <xi:include href="xml/gtkplugin.xml" />
       <xi:include href="xml/gtkpluginpref.xml" />
       <xi:include href="xml/gtkpounce.xml" />
       <xi:include href="xml/gtkprefs.xml" />
@@ -61,6 +60,8 @@
       <xi:include href="xml/pidginlog.xml" />
       <xi:include href="xml/pidginmenutray.xml" />
       <xi:include href="xml/pidginmessage.xml" />
+      <xi:include href="xml/pidginplugininfo.xml" />
+      <xi:include href="xml/pidginpluginsdialog.xml" />
       <xi:include href="xml/pidginstock.xml" />
       <xi:include href="xml/pidgintalkatu.xml" />
       <xi:include href="xml/pidgintooltip.xml" />
