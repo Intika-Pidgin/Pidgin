@@ -23,7 +23,6 @@
 #include <string.h>
 
 #include "account.h"
-#include "glibcompat.h"
 
 #include "api.h"
 #include "data.h"

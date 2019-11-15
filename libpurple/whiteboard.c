@@ -22,7 +22,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 #include "whiteboard.h"
 #include "protocol.h"
 

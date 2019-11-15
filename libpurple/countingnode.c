@@ -21,7 +21,6 @@
  *
  */
 #include "internal.h"
-#include "glibcompat.h"
 #include "countingnode.h"
 
 typedef struct _PurpleCountingNodePrivate  PurpleCountingNodePrivate;

@@ -21,7 +21,6 @@
  *
  */
 #include "internal.h"
-#include "glibcompat.h"
 #include "util.h"
 
 typedef struct _PurpleBuddyPrivate      PurpleBuddyPrivate;

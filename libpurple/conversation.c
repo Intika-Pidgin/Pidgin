@@ -20,7 +20,6 @@
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
  */
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "buddylist.h"
 #include "cmds.h"

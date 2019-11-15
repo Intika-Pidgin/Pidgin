@@ -20,7 +20,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 #include "codec.h"
 
 struct _PurpleMediaCodec

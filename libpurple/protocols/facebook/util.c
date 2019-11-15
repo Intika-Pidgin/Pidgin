@@ -27,7 +27,6 @@
 
 #include "buddylist.h"
 #include "conversations.h"
-#include "glibcompat.h"
 #include "message.h"
 #include "request.h"
 #include "server.h"

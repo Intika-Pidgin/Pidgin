@@ -23,7 +23,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "debug.h"
 #include "content.h"

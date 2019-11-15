@@ -22,7 +22,6 @@
 #include "image-store.h"
 
 #include "eventloop.h"
-#include "glibcompat.h"
 #include "util.h"
 
 #define TEMP_IMAGE_TIMEOUT 5

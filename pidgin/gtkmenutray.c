@@ -23,7 +23,6 @@
 
 #include "gtkmenutray.h"
 
-#include "glibcompat.h"
 #include "gtk3compat.h"
 
 /******************************************************************************

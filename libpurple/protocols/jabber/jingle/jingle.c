@@ -24,7 +24,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 #include "network.h"
 
 #include "content.h"

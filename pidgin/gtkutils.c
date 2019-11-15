@@ -20,7 +20,7 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
+#include "glibcompat.h" /* for purple_g_stat on win32 */
 #include "pidgin.h"
 
 #ifdef _WIN32

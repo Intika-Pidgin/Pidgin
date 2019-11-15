@@ -30,7 +30,6 @@
 #include "avatar.h"
 
 #include <debug.h>
-#include <glibcompat.h>
 
 #include "gg.h"
 #include "utils.h"

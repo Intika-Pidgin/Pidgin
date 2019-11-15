@@ -23,7 +23,6 @@
 #include "purpleaccountoption.h"
 #include "prefs.h"
 #include "util.h"
-#include "glibcompat.h"
 
 /*
  * An option for an account.
