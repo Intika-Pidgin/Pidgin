@@ -32,7 +32,6 @@
 #include "conversation.h"
 #include "conversations.h"
 #include "conversationtypes.h"
-#include "glibcompat.h"
 #include "image.h"
 #include "image-store.h"
 #include "message.h"

@@ -18,7 +18,6 @@
 */
 
 #include "internal.h"
-#include "glibcompat.h"
 PURPLE_BEGIN_IGNORE_CAST_ALIGN
 #include "silc.h"
 PURPLE_END_IGNORE_CAST_ALIGN

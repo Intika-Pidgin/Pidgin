@@ -21,7 +21,6 @@
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
-#include "glibcompat.h"
 #include "notify.h"
 #include "protocol.h"
 #include "prefs.h"

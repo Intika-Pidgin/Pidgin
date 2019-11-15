@@ -21,7 +21,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 #include "theme.h"
 #include "util.h"
 

@@ -2,7 +2,6 @@
 
 #include "account.h"
 #include "conversation.h"
-#include "glibcompat.h"
 #include "tests.h"
 #include "xmlnode.h"
 #include "protocols/jabber/jutil.h"

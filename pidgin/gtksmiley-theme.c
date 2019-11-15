@@ -22,7 +22,6 @@
 #include "gtksmiley-theme.h"
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "debug.h"
 

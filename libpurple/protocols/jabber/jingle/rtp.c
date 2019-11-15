@@ -23,7 +23,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #ifdef USE_VV
 

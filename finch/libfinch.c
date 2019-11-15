@@ -28,7 +28,6 @@
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
-#include "glibcompat.h"
 #include "log.h"
 #include "notify.h"
 #include "options.h"

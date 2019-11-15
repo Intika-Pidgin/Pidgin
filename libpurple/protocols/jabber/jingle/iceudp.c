@@ -23,7 +23,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "iceudp.h"
 #include "jingle.h"

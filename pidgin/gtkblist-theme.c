@@ -21,7 +21,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "gtkblist-theme.h"
 

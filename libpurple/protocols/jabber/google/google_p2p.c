@@ -23,7 +23,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "google_p2p.h"
 #include "jingle/jingle.h"

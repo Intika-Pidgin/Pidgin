@@ -22,7 +22,7 @@
 #include "internal.h"
 #include "account.h"
 #include "debug.h"
-#include "glibcompat.h"
+#include "glibcompat.h" /* for purple_g_stat on win32 */
 #include "image-store.h"
 #include "log.h"
 #include "prefs.h"

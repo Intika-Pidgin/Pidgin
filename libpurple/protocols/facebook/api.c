@@ -24,7 +24,6 @@
 #include <stdarg.h>
 #include <string.h>
 
-#include "glibcompat.h"
 
 #include "api.h"
 #include "http.h"

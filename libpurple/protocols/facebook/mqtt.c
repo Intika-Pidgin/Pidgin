@@ -27,7 +27,6 @@
 
 #include "account.h"
 #include "eventloop.h"
-#include "glibcompat.h"
 #include "purple-gio.h"
 #include "queuedoutputstream.h"
 

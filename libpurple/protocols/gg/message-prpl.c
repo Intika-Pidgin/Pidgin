@@ -28,7 +28,6 @@
 #include "message-prpl.h"
 
 #include <debug.h>
-#include <glibcompat.h>
 #include <image-store.h>
 
 #include "gg.h"

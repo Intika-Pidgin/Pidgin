@@ -25,7 +25,6 @@
 #include "core.h"
 #include "debug.h"
 #include "xfer.h"
-#include "glibcompat.h"
 #include "idle.h"
 #include "image-store.h"
 #include "keyring.h"

@@ -20,7 +20,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 
 #include "debug.h"
 #include "enums.h"

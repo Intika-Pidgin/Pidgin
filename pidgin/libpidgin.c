@@ -29,7 +29,7 @@
 #include "conversation.h"
 #include "core.h"
 #include "debug.h"
-#include "glibcompat.h"
+#include "glibcompat.h" /* for purple_g_stat on win32 */
 #include "log.h"
 #include "network.h"
 #include "notify.h"

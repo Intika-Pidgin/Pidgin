@@ -21,7 +21,6 @@
  */
 
 #include "internal.h"
-#include "glibcompat.h"
 #include "theme-loader.h"
 
 void purple_theme_loader_set_type_string(PurpleThemeLoader *loader, const gchar *type);
