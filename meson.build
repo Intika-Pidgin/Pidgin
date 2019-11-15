@@ -94,7 +94,7 @@ if host_machine.system() == 'windows'
 	conf.set('WIN32_LEAN_AND_MEAN', true)
 
 	conf.set('LIBPIDGIN_DLL_NAMEW',
-	    'L"libpidgin-@0@.dll"'.format(purple_soversion))
+	    'L"libpidgin3-@0@.dll"'.format(purple_soversion))
 else
 	IS_WIN32 = false
 	ws2_32 = []
@@ -455,7 +455,7 @@ endif
 #######################################################################
 # Check for SILC client includes and libraries
 #######################################################################
-silc = dependency('silcclient', version : '>= 1.1', required : get_option('silc'))
+silc = dependency('silcclient', version : '>= 1.1.1', required : get_option('silc'))
 
 #######################################################################
 # Check for Gadu-Gadu protocol library (libgadu)

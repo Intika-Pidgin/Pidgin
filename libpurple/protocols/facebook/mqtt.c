@@ -791,7 +791,7 @@ fb_mqtt_publish(FbMqtt *mqtt, const gchar *topic, const GByteArray *pload)
 }
 
 void
-fb_mqtt_subscribe(FbMqtt *mqtt, const gchar *topic1, guint16 qos1, ...)
+fb_mqtt_subscribe(FbMqtt *mqtt, ...)
 {
 	const gchar *topic;
 	FbMqttMessage *msg;
@@ -808,15 +808,13 @@ fb_mqtt_subscribe(FbMqtt *mqtt, const gchar *topic1, guint16 qos1, ...)
 	                          FB_MQTT_MESSAGE_FLAG_QOS1);
 
 	fb_mqtt_message_write_mid(msg, &priv->mid); /* Message identifier */
-	fb_mqtt_message_write_str(msg, topic1);     /* First topics */
-	fb_mqtt_message_write_byte(msg, qos1);      /* First QoS value */
 
-	va_start(ap, qos1);
+	va_start(ap, mqtt);
 
 	while ((topic = va_arg(ap, const gchar*)) != NULL) {
 		qos = va_arg(ap, guint);
-		fb_mqtt_message_write_str(msg, topic); /* Remaining topics */
-		fb_mqtt_message_write_byte(msg, qos);  /* Remaining QoS values */
+		fb_mqtt_message_write_str(msg, topic);
+		fb_mqtt_message_write_byte(msg, qos);
 	}
 
 	va_end(ap);

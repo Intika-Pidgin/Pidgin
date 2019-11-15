@@ -35,10 +35,8 @@ Code_t ZRetrieveSubscriptions(unsigned short port, int *nsubs)
 	return(Z_RetSubs(&notice, nsubs, ZAUTH));
 }
 
-static Code_t Z_RetSubs(notice, nsubs, auth_routine)
-	register ZNotice_t *notice;
-	int *nsubs;
-	Z_AuthProc auth_routine;
+static Code_t
+Z_RetSubs(register ZNotice_t *notice, int *nsubs, Z_AuthProc auth_routine)
 {
 	register int i;
 	int retval,nrecv,gimmeack;

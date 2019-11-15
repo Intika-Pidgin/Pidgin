@@ -57,7 +57,7 @@ ggp_buddylist_dump(PurpleAccount *account);
  * @return Name of the buddy, or UIN converted to string, if there is no such
  * user on the list.
  */
-const char * ggp_buddylist_get_buddy_name(PurpleConnection *gc, const uin_t uin);
+const char * ggp_buddylist_get_buddy_name(PurpleConnection *gc, uin_t uin);
 
 #endif /* PURPLE_GG_BLIST_H */
 

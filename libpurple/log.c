@@ -871,7 +871,7 @@ void purple_log_common_writer(PurpleLog *log, const char *ext)
 		if (dir == NULL)
 			return;
 
-		purple_build_dir (dir, S_IRUSR | S_IWUSR | S_IXUSR);
+		g_mkdir_with_parents(dir, S_IRUSR | S_IWUSR | S_IXUSR);
 
 		dt = g_date_time_to_local(log->time);
 		tz = purple_escape_filename(g_date_time_get_timezone_abbreviation(dt));
@@ -927,9 +927,8 @@ GList *purple_log_common_lister(PurpleLogType type, const char *name, PurpleAcco
 
 	while ((filename = g_dir_read_name(dir)))
 	{
-		if (purple_str_has_suffix(filename, ext) &&
-		    strlen(filename) >= (17 + strlen(ext)))
-		{
+		if (g_str_has_suffix(filename, ext) &&
+		    strlen(filename) >= (17 + strlen(ext))) {
 			PurpleLog *log;
 			PurpleLogCommonLoggerData *data;
 			GDateTime *stamp = purple_str_to_date_time(purple_unescape_filename(filename), FALSE);
@@ -971,9 +970,8 @@ int purple_log_common_total_sizer(PurpleLogType type, const char *name, PurpleAc
 
 	while ((filename = g_dir_read_name(dir)))
 	{
-		if (purple_str_has_suffix(filename, ext) &&
-		    strlen(filename) >= (17 + strlen(ext)))
-		{
+		if (g_str_has_suffix(filename, ext) &&
+		    strlen(filename) >= (17 + strlen(ext))) {
 			char *tmp = g_build_filename(path, filename, NULL);
 			GStatBuf st;
 			if (g_stat(tmp, &st))
@@ -1706,31 +1704,7 @@ static GList *old_logger_list(PurpleLogType type, const char *sn, PurpleAccount 
 				purple_debug_warning("log", "invalid date format\n");
 			}
 			/* Ugly hack, in case current locale is not English */
-			if (purple_strequal(month_str, "Jan")) {
-				month = 1;
-			} else if (purple_strequal(month_str, "Feb")) {
-				month = 2;
-			} else if (purple_strequal(month_str, "Mar")) {
-				month = 3;
-			} else if (purple_strequal(month_str, "Apr")) {
-				month = 4;
-			} else if (purple_strequal(month_str, "May")) {
-				month = 5;
-			} else if (purple_strequal(month_str, "Jun")) {
-				month = 6;
-			} else if (purple_strequal(month_str, "Jul")) {
-				month = 7;
-			} else if (purple_strequal(month_str, "Aug")) {
-				month = 8;
-			} else if (purple_strequal(month_str, "Sep")) {
-				month = 9;
-			} else if (purple_strequal(month_str, "Oct")) {
-				month = 10;
-			} else if (purple_strequal(month_str, "Nov")) {
-				month = 11;
-			} else if (purple_strequal(month_str, "Dec")) {
-				month = 12;
-			}
+			month = purple_time_parse_month(month_str);
 			if (lasttime)
 				g_date_time_unref(lasttime);
 			lasttime = g_date_time_new_local(year, month, day,

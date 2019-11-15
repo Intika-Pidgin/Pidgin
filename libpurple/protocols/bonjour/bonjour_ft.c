@@ -33,7 +33,7 @@ static void
 bonjour_xfer_init(PurpleXfer *xfer);
 static void
 bonjour_xfer_receive(PurpleConnection *pc, const char *id, const char *sid, const char *from,
-		     const goffset filesize, const char *filename, int option);
+		     goffset filesize, const char *filename, int option);
 
 /* Look for specific xfer handle */
 static unsigned int next_id = 0;
@@ -80,7 +80,7 @@ xep_ft_si_reject(BonjourData *bd, const char *id, const char *to, const char *er
 		return;
 	}
 
-	iq = xep_iq_new(bd, XEP_IQ_ERROR, to, bonjour_get_jid(bd->jabber_data->account), id);
+	iq = xep_iq_new(bd, XEP_IQ_ERROR, to, bonjour_get_jid(bd->xmpp_data->account), id);
 	if(iq == NULL)
 		return;
 
@@ -213,7 +213,7 @@ xep_ft_si_offer(PurpleXfer *xfer, const gchar *to)
 	/* Assign stream id. */
 	g_free(xf->iq_id);
 	xf->iq_id = g_strdup_printf("%u", next_id++);
-	iq = xep_iq_new(xf->data, XEP_IQ_SET, to, bonjour_get_jid(bd->jabber_data->account), xf->iq_id);
+	iq = xep_iq_new(xf->data, XEP_IQ_SET, to, bonjour_get_jid(bd->xmpp_data->account), xf->iq_id);
 	if(iq == NULL)
 		return;
 
@@ -271,7 +271,7 @@ xep_ft_si_result(PurpleXfer *xfer, const char *to)
 	bd = xf->data;
 
 	purple_debug_info("bonjour", "xep file transfer stream initialization result.\n");
-	iq = xep_iq_new(bd, XEP_IQ_RESULT, to, bonjour_get_jid(bd->jabber_data->account), xf->iq_id);
+	iq = xep_iq_new(bd, XEP_IQ_RESULT, to, bonjour_get_jid(bd->xmpp_data->account), xf->iq_id);
 	if(iq == NULL)
 		return;
 
@@ -727,7 +727,7 @@ xep_bytestreams_parse(PurpleConnection *pc, PurpleXmlNode *packet, PurpleBuddy *
 
 static void
 bonjour_xfer_receive(PurpleConnection *pc, const char *id, const char *sid, const char *from,
-		     const goffset filesize, const char *filename, int option)
+		     goffset filesize, const char *filename, int option)
 {
 	PurpleXfer *xfer;
 	XepXfer *xf;
@@ -877,7 +877,6 @@ bonjour_sock5_request_cb(gpointer data, gint source, PurpleInputCondition cond)
 	default:
 		break;
 	}
-	return;
 }
 
 static void
@@ -904,7 +903,7 @@ bonjour_bytestreams_listen(int sock, gpointer data)
 
 	bd = xf->data;
 
-	iq = xep_iq_new(bd, XEP_IQ_SET, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->jabber_data->account), xf->sid);
+	iq = xep_iq_new(bd, XEP_IQ_SET, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->xmpp_data->account), xf->sid);
 
 	query = purple_xmlnode_new_child(iq->node, "query");
 	purple_xmlnode_set_namespace(query, "http://jabber.org/protocol/bytestreams");
@@ -913,7 +912,7 @@ bonjour_bytestreams_listen(int sock, gpointer data)
 
 	purple_xfer_set_local_port(xfer, purple_network_get_port_from_fd(sock));
 
-	local_ips = bonjour_jabber_get_local_ips(sock);
+	local_ips = bonjour_xmpp_get_local_ips(sock);
 
 	port = g_strdup_printf("%hu", purple_xfer_get_local_port(xfer));
 	while(local_ips) {
@@ -943,8 +942,6 @@ bonjour_bytestreams_init(PurpleXfer *xfer)
 						      bonjour_bytestreams_listen, xfer);
 	if (xf->listen_data == NULL)
 		purple_xfer_cancel_local(xfer);
-
-	return;
 }
 
 static void
@@ -981,7 +978,7 @@ bonjour_bytestreams_connect_cb(gpointer data, gint source, const gchar *error_me
 	/* Here, start the file transfer.*/
 
 	/* Notify Initiator of Connection */
-	iq = xep_iq_new(bd, XEP_IQ_RESULT, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->jabber_data->account), xf->iq_id);
+	iq = xep_iq_new(bd, XEP_IQ_RESULT, purple_xfer_get_remote_user(xfer), bonjour_get_jid(bd->xmpp_data->account), xf->iq_id);
 	q_node = purple_xmlnode_new_child(iq->node, "query");
 	purple_xmlnode_set_namespace(q_node, "http://jabber.org/protocol/bytestreams");
 	tmp_node = purple_xmlnode_new_child(q_node, "streamhost-used");
@@ -1027,8 +1024,9 @@ bonjour_bytestreams_connect(PurpleXfer *xfer)
 
 	memset(dstaddr, 0, 41);
 	p = dstaddr;
-	for(i = 0; i < 20; i++, p += 2)
-		snprintf(p, 3, "%02x", hashval[i]);
+	for (i = 0; i < 20; i++, p += 2) {
+		g_snprintf(p, 3, "%02x", hashval[i]);
+	}
 
 	xf->proxy_info = purple_proxy_info_new();
 	purple_proxy_info_set_proxy_type(xf->proxy_info, PURPLE_PROXY_SOCKS5);

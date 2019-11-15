@@ -85,7 +85,7 @@ static GSList *generate_presence_txt_records(BonjourDnsSd *data) {
 	const char *jid, *aim, *email;
 
 	/* Convert the port to a string */
-	snprintf(portstring, sizeof(portstring), "%d", data->port_p2pj);
+	g_snprintf(portstring, sizeof(portstring), "%d", data->port_p2pj);
 
 	jid = purple_account_get_string(data->account, "jid", NULL);
 	aim = purple_account_get_string(data->account, "AIM", NULL);
@@ -137,24 +137,13 @@ static GSList *generate_presence_txt_records(BonjourDnsSd *data) {
 	return ret;
 }
 
-static void free_presence_txt_records(GSList *lst) {
-	PurpleKeyValuePair *kvp;
-	while(lst) {
-		kvp = lst->data;
-		g_free(kvp->key);
-		g_free(kvp->value);
-		g_free(kvp);
-		lst = g_slist_delete_link(lst, lst);
-	}
-}
-
 static gboolean publish_presence(BonjourDnsSd *data, PublishType type) {
 	GSList *txt_records;
 	gboolean ret;
 
 	txt_records = generate_presence_txt_records(data);
 	ret = _mdns_publish(data, type, txt_records);
-	free_presence_txt_records(txt_records);
+	g_slist_free_full(txt_records, (GDestroyNotify)purple_key_value_pair_free);
 
 	return ret;
 }

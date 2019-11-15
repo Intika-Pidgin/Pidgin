@@ -436,14 +436,12 @@ void jabber_roster_group_change(PurpleConnection *gc, const char *name,
 		const char *old_group, const char *new_group)
 {
 	GSList *buddies, *groups = NULL;
-	PurpleBuddy *b;
 
 	if(!old_group || !new_group || purple_strequal(old_group, new_group))
 		return;
 
 	buddies = purple_blist_find_buddies(purple_connection_get_account(gc), name);
 	while(buddies) {
-		b = buddies->data;
 		groups = g_slist_append(groups, (char*)new_group);
 		buddies = g_slist_delete_link(buddies, buddies);
 	}

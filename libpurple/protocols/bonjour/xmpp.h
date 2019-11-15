@@ -1,5 +1,5 @@
 /**
- * @file jabber.h The Purple interface to mDNS and peer to peer Jabber.
+ * @file xmpp.h The Purple interface to mDNS and peer to peer XMPP.
  *
  * purple
  *
@@ -23,8 +23,8 @@
  *
  */
 
-#ifndef PURPLE_BONJOUR_JABBER_H
-#define PURPLE_BONJOUR_JABBER_H
+#ifndef PURPLE_BONJOUR_XMPP_H
+#define PURPLE_BONJOUR_XMPP_H
 
 #include <libxml/parser.h>
 
@@ -36,7 +36,7 @@ typedef struct
 	guint16 port;
 	PurpleAccount *account;
 	GSList *pending_conversations;
-} BonjourJabber;
+} BonjourXMPP;
 
 typedef struct
 {
@@ -61,31 +61,31 @@ typedef struct
 	gchar *ip;
 	/* This points to a data entry in BonjourBuddy->ips */
 	const gchar *ip_link;
-} BonjourJabberConversation;
+} BonjourXMPPConversation;
 
 /**
- * Start listening for jabber connections.
+ * Start listening for xmpp connections.
  *
  * @return -1 if there was a problem, else returns the listening
  *         port number.
  */
-gint bonjour_jabber_start(BonjourJabber *data);
+gint bonjour_xmpp_start(BonjourXMPP *data);
 
-int bonjour_jabber_send_message(BonjourJabber *data, const char *to, const char *body);
+int bonjour_xmpp_send_message(BonjourXMPP *data, const char *to, const char *body);
 
-void bonjour_jabber_close_conversation(BonjourJabberConversation *bconv);
+void bonjour_xmpp_close_conversation(BonjourXMPPConversation *bconv);
 
-void async_bonjour_jabber_close_conversation(BonjourJabberConversation *bconv);
+void async_bonjour_xmpp_close_conversation(BonjourXMPPConversation *bconv);
 
-void bonjour_jabber_stream_started(BonjourJabberConversation *bconv);
+void bonjour_xmpp_stream_started(BonjourXMPPConversation *bconv);
 
-void bonjour_jabber_process_packet(PurpleBuddy *pb, PurpleXmlNode *packet);
+void bonjour_xmpp_process_packet(PurpleBuddy *pb, PurpleXmlNode *packet);
 
-void bonjour_jabber_stop(BonjourJabber *data);
+void bonjour_xmpp_stop(BonjourXMPP *data);
 
-void bonjour_jabber_conv_match_by_ip(BonjourJabberConversation *bconv);
+void bonjour_xmpp_conv_match_by_ip(BonjourXMPPConversation *bconv);
 
-void bonjour_jabber_conv_match_by_name(BonjourJabberConversation *bconv);
+void bonjour_xmpp_conv_match_by_name(BonjourXMPPConversation *bconv);
 
 typedef enum {
 	XEP_IQ_SET,
@@ -105,8 +105,8 @@ typedef struct {
 
 XepIq *xep_iq_new(void *data, XepIqType type, const char *to, const char *from, const char *id);
 int xep_iq_send_and_free(XepIq *iq);
-GSList * bonjour_jabber_get_local_ips(int fd);
+GSList * bonjour_xmpp_get_local_ips(int fd);
 
 void append_iface_if_linklocal(char *ip, guint32 interface_param);
 
-#endif /* PURPLE_BONJOUR_JABBER_H */
+#endif /* PURPLE_BONJOUR_XMPP_H */

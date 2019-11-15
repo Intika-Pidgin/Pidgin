@@ -462,7 +462,7 @@ purple_presence_dispose(GObject *object)
 		purple_presence_get_instance_private(PURPLE_PRESENCE(object));
 
 	if (priv->statuses) {
-		g_list_free_full(priv->statuses, (GDestroyNotify)g_object_unref);
+		g_list_free_full(priv->statuses, g_object_unref);
 		priv->statuses = NULL;
 	}
 

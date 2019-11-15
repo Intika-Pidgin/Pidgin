@@ -79,6 +79,7 @@ static PurpleRoomlistUiOps *ops = NULL;
 
 G_DEFINE_TYPE_WITH_PRIVATE(PurpleRoomlist, purple_roomlist, G_TYPE_OBJECT);
 
+static void purple_roomlist_room_free(PurpleRoomlistRoom *r);
 static void purple_roomlist_field_free(PurpleRoomlistField *f);
 static void purple_roomlist_room_destroy(PurpleRoomlist *list, PurpleRoomlistRoom *r);
 
@@ -601,9 +602,7 @@ static void purple_roomlist_room_destroy(PurpleRoomlist *list, PurpleRoomlistRoo
 			g_free(j->data);
 	}
 
-	g_list_free(r->fields);
-	g_free(r->name);
-	g_free(r);
+	purple_roomlist_room_free(r);
 }
 
 /**************************************************************************/

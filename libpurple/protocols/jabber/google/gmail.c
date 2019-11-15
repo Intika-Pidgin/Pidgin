@@ -176,7 +176,6 @@ jabber_gmail_poke(JabberStream *js, const char *from, JabberIqType type,
 		purple_xmlnode_set_attrib(query, "newer-than-tid", js->gmail_last_tid);
 
 	jabber_iq_send(iq);
-	return;
 }
 
 void jabber_gmail_init(JabberStream *js) {

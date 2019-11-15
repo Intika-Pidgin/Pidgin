@@ -360,7 +360,7 @@ pounce_row_selected_cb(GtkTreeView *tv, GtkTreePath *path,
 }
 
 static void
-reset_mail_dialog(GtkDialog *unused)
+reset_mail_dialog(gpointer unused)
 {
 	g_return_if_fail(mail_dialog != NULL);
 
@@ -510,12 +510,7 @@ pidgin_widget_decorate_account(GtkWidget *cont, PurpleAccount *account)
 	gtk_widget_set_tooltip_text(image,
 		purple_account_get_username(account));
 
-	if (GTK_IS_DIALOG(cont)) {
-		gtk_box_pack_start(GTK_BOX(gtk_dialog_get_action_area(
-			GTK_DIALOG(cont))), image, FALSE, TRUE, 0);
-		gtk_box_reorder_child(GTK_BOX(gtk_dialog_get_action_area(
-			GTK_DIALOG(cont))), image, 0);
-	} else if (GTK_IS_BOX(cont)) {
+	if (GTK_IS_BOX(cont)) {
 		gtk_widget_set_halign(image, GTK_ALIGN_START);
 		gtk_widget_set_valign(image, GTK_ALIGN_START);
 		gtk_box_pack_end(GTK_BOX(cont), image, FALSE, TRUE, 0);
@@ -800,10 +795,10 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		}
 	} else {
 		if (count > 0) {
-			notification = g_strdup_printf(ngettext("%s has %d new message.",
-							   "%s has %d new messages.",
-							   (int)count),
-							   *tos, (int)count);
+			notification = g_strdup_printf(
+			        ngettext("%s has %d new message.",
+			                 "%s has %d new messages.", (int)count),
+			        tos ? *tos : "(unknown)", (int)count);
 			data2 = pidgin_notify_add_mail(mail_dialog->treemodel, account, notification, urls ? *urls : NULL, count, FALSE, &new_data);
 			if (data2 && new_data) {
 				data = data2;
@@ -841,7 +836,7 @@ pidgin_notify_emails(PurpleConnection *gc, size_t count, gboolean detailed,
 		pidgin_blist_set_headline(label_text, "mail-unread",
 				G_CALLBACK(pidgin_notify_emails_present),
 				mail_dialog->dialog,
-				(GDestroyNotify)reset_mail_dialog);
+				reset_mail_dialog);
 		mail_dialog->in_use = FALSE;
 		g_free(label_text);
 	} else if (!gtk_widget_has_focus(mail_dialog->dialog))
@@ -1157,7 +1152,9 @@ static char *
 userinfo_hash(PurpleAccount *account, const char *who)
 {
 	char key[256];
-	snprintf(key, sizeof(key), "%s - %s", purple_account_get_username(account), purple_normalize(account, who));
+	g_snprintf(key, sizeof(key), "%s - %s",
+	           purple_account_get_username(account),
+	           purple_normalize(account, who));
 	return g_utf8_strup(key, -1);
 }
 
@@ -1553,8 +1550,6 @@ pidgin_notify_pounce_add(PurpleAccount *account, PurplePounce *pounce,
 		g_object_unref(icon);
 
 	gtk_widget_show_all(pounce_dialog->dialog);
-
-	return;
 }
 
 static PidginNotifyDialog *

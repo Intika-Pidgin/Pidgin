@@ -690,7 +690,7 @@ purple_protocols_init(void)
 	void *handle = purple_protocols_get_handle();
 
 	protocols = g_hash_table_new_full(g_str_hash, g_str_equal, g_free,
-			(GDestroyNotify)g_object_unref);
+			g_object_unref);
 
 	purple_signal_register(handle, "protocol-added",
 	                       purple_marshal_VOID__POINTER,

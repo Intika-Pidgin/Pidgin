@@ -18,6 +18,7 @@ tasks:
     type: convey/clean
     files:
       - pvs-studio
+      - scanbuild
 
   export:
     type: docker/export
@@ -46,6 +47,13 @@ plans:
       - TARGET=pvs-studio
       - PVS_STUDIO_USERNAME
       - PVS_STUDIO_KEY
+    stages:
+      - tasks: [import, build-target]
+      - tasks: [export-target]
+        run: always
+
+  scanbuild:
+    environment: [TARGET=scanbuild]
     stages:
       - tasks: [import, build-target]
       - tasks: [export-target]

@@ -89,6 +89,9 @@
 /* XEP-0231 BoB (Bits of Binary) */
 #define NS_BOB "urn:xmpp:bob"
 
+/* XEP-0233 XMPP Server Registration for use with Kerberos V5 */
+#define NS_XMPP_SERVER_REGISTRATION "urn:xmpp:domain-based-name:1"
+
 /* XEP-0237 Roster Versioning */
 #define NS_ROSTER_VERSIONING "urn:xmpp:features:rosterver"
 

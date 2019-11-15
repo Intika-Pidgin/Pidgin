@@ -340,8 +340,8 @@ purple_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 	}
 
 	tmp = purple_xmlnode_get_data(controlURLNode);
-	if(baseURL && !purple_str_has_prefix(tmp, "http://") &&
-	   !purple_str_has_prefix(tmp, "HTTP://")) {
+	if (baseURL && !g_str_has_prefix(tmp, "http://") &&
+	    !g_str_has_prefix(tmp, "HTTP://")) {
 		/* Handle absolute paths in a relative URL.  This probably
 		 * belongs in util.c. */
 		if (tmp[0] == '/') {
@@ -355,7 +355,7 @@ purple_upnp_parse_description_response(const gchar* httpResponse, gsize len,
 			controlURL = g_strdup_printf("%s%s", baseURL, tmp);
 		}
 		g_free(tmp);
-	}else{
+	} else {
 		controlURL = tmp;
 	}
 	g_free(baseURL);

@@ -812,7 +812,7 @@ static void blist_schedule(struct mwPurpleProtocolData *pd) {
 
 static gboolean buddy_is_external(PurpleBuddy *b) {
   g_return_val_if_fail(b != NULL, FALSE);
-  return purple_str_has_prefix(purple_buddy_get_name(b), "@E ");
+  return g_str_has_prefix(purple_buddy_get_name(b), "@E ");
 }
 
 
@@ -3869,9 +3869,10 @@ static void mw_protocol_get_info(PurpleConnection *gc, const char *who) {
   b = purple_blist_find_buddy(acct, who);
   user_info = purple_notify_user_info_new();
 
-  if(purple_str_has_prefix(who, "@E ")) {
-	purple_notify_user_info_add_pair_html(user_info, _("External User"), NULL);
-  }
+	if (g_str_has_prefix(who, "@E ")) {
+		purple_notify_user_info_add_pair_html(user_info, _("External User"),
+		                                      NULL);
+	}
 
   purple_notify_user_info_add_pair_plaintext(user_info, _("User ID"), who);
 
