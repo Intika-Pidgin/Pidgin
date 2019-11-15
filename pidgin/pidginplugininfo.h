@@ -36,7 +36,7 @@ G_DECLARE_FINAL_TYPE(PidginPluginInfo, pidgin_plugin_info, PIDGIN, PLUGIN_INFO, 
  * pidgin_plugin_info_new:
  * @first_property:  The first property name
  * @...:  The value of the first property, followed optionally by more
- *             name/value pairs, followed by %NULL
+ *        name/value pairs, followed by %NULL
  *
  * Creates a new #PidginPluginInfo instance to be returned from
  * #plugin_query of a pidgin plugin, using the provided name/value

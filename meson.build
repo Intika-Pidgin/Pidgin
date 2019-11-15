@@ -617,7 +617,7 @@ else
 endif
 
 #######################################################################
-# Check for GPlugin 0.28.2
+# Check for GPlugin
 #######################################################################
 gplugin_dep = dependency('gplugin', version : '>= 0.29.0', required : false)
 if gplugin_dep.found()
