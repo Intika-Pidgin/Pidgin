@@ -30,8 +30,6 @@
 
 #include <string.h>
 
-#include "gtk3compat.h"
-
 #define PIDGIN_RESPONSE_CONFIGURE 98121
 
 typedef struct

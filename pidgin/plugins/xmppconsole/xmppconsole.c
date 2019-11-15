@@ -31,8 +31,6 @@
 
 #include <gdk/gdkkeysyms.h>
 
-#include "gtk3compat.h"
-
 #define PLUGIN_ID      "gtk-xmpp"
 #define PLUGIN_DOMAIN  (g_quark_from_static_string(PLUGIN_ID))
 

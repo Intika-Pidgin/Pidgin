@@ -32,8 +32,6 @@
 #include "gtkutils.h"
 #include "pidginaccountchooser.h"
 
-#include "gtk3compat.h"
-
 typedef struct
 {
 	GtkWidget *win;

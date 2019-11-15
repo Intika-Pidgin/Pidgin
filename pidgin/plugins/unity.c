@@ -21,7 +21,6 @@
 #include "savedstatuses.h"
 #include "version.h"
 
-#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkconv.h"
 #include "gtkutils.h"
