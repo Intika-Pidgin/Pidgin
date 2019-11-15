@@ -340,19 +340,10 @@ static gint
 pidgin_handle_local_options_cb(GApplication *app, GVariantDict *options,
 		gpointer user_data)
 {
-	gchar *app_id = NULL;
-
 	if (g_variant_dict_contains(options, "version")) {
 		printf("%s %s (libpurple %s)\n", PIDGIN_NAME, DISPLAY_VERSION,
 		                                 purple_core_get_version());
 		return 0;
-	}
-
-	if (g_variant_dict_lookup(options, "gapplication-app-id",
-			"s", &app_id)) {
-		g_variant_dict_remove(options, "gapplication-app-id");
-		g_application_set_application_id(app, app_id);
-		g_free(app_id);
 	}
 
 	return -1;
@@ -411,11 +402,6 @@ login_opt_arg_func(const gchar *option_name, const gchar *value,
 }
 
 static GOptionEntry option_entries[] = {
-	/* Support G_APPLICATION_CAN_OVERRIDE_APP_ID functionality
-	 * even though we don't depend on version 2.48 yet
-	 */
-	{"gapplication-app-id", '\0', 0, G_OPTION_ARG_STRING, NULL,
-		N_("Override the application's ID") },
 	{"config", 'c', 0,
 		G_OPTION_ARG_FILENAME, &opt_config_dir_arg,
 		N_("use DIR for config files"), N_("DIR")},
