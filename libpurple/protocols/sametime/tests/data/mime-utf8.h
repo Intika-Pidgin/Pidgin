@@ -3,11 +3,11 @@
 .name = "utf8-hello",
 .html = "Hello world, Καλημέρα κόσμε, コンニチハ.",
 .mime =
-	"Content-Type: multipart/related; boundary=related_MWa2f_0aac\r\n"
+	"Content-Type: multipart/related; boundary=related_MWc7f_0aac\r\n"
 	"Mime-Version: 1.0\r\n"
 	"Content-Disposition: inline\r\n"
 	"\r\n"
-	"--related_MWa2f_0aac\r\n"
+	"--related_MWc7f_0aac\r\n"
 	"Content-Type: text/html; charset=us-ascii\r\n"
 	"Content-Disposition: inline\r\n"
 	"Content-Transfer-Encoding: 7bit\r\n"
@@ -16,7 +16,7 @@
 		"&#922;&#945;&#955;&#951;&#956;&#8051;&#961;&#945; "
 		"&#954;&#8057;&#963;&#956;&#949;, "
 		"&#12467;&#12531;&#12491;&#12481;&#12495;.\r\n"
-	"--related_MWa2f_0aac--\r\n"
+	"--related_MWc7f_0aac--\r\n"
 },
 {
 /* Hello world in UTF-8. */
@@ -27,11 +27,11 @@
 	"–—‘“”„†•…‰™œŠŸž€ ΑΒΓΔΩαβγδω АБВГДабвгд "
 	"∀∂∈ℝ∧∪≡∞ ↑↗↨↻⇣ ┐┼╔╘░►☺♀ ﬁ�⑀₂ἠḂӥẄɐː⍎אԱა",
 .mime =
-	"Content-Type: multipart/related; boundary=related_MWa2f_0aac\r\n"
+	"Content-Type: multipart/related; boundary=related_MWc7f_0aac\r\n"
 	"Mime-Version: 1.0\r\n"
 	"Content-Disposition: inline\r\n"
 	"\r\n"
-	"--related_MWa2f_0aac\r\n"
+	"--related_MWc7f_0aac\r\n"
 	"Content-Type: text/html; charset=us-ascii\r\n"
 	"Content-Disposition: inline\r\n"
 	"Content-Transfer-Encoding: 7bit\r\n"
@@ -45,5 +45,5 @@
 	"&#8593;&#8599;&#8616;&#8635;&#8675; "
 	"&#9488;&#9532;&#9556;&#9560;&#9617;&#9658;&#9786;&#9792; "
 	"&#64257;&#65533;&#9280;&#8322;&#7968;&#7682;&#1253;&#7812;&#592;&#720;&#9038;&#1488;&#1329;&#4304;\r\n"
-	"--related_MWa2f_0aac--\r\n"
+	"--related_MWc7f_0aac--\r\n"
 },
