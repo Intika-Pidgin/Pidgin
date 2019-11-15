@@ -52,7 +52,6 @@
 #include "gtkidle.h"
 #include "gtkmedia.h"
 #include "gtknotify.h"
-#include "gtkplugin.h"
 #include "gtkpounce.h"
 #include "gtkprefs.h"
 #include "gtkprivacy.h"
@@ -62,10 +61,11 @@
 #include "gtksmiley-theme.h"
 #include "gtksound.h"
 #include "gtkutils.h"
-#include "pidginstock.h"
 #include "gtkwhiteboard.h"
 #include "pidgindebug.h"
 #include "pidginlog.h"
+#include "pidginplugininfo.h"
+#include "pidginstock.h"
 
 #ifndef _WIN32
 #include <signal.h>

@@ -22,7 +22,7 @@
  */
 
 #include "internal.h"
-#include "gtkplugin.h"
+#include "pidginplugininfo.h"
 #include "version.h"
 #include "protocol.h"
 #include "xmlnode.h"
