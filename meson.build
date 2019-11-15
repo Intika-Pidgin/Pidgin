@@ -274,7 +274,7 @@ endif
 # #######################################################################
 # # Check for GLib 2.44 (required)
 # #######################################################################
-glib = dependency('glib-2.0', version : '>= 2.44.0')
+glib = dependency('glib-2.0', version : '>= 2.48.0')
 gio = dependency('gio-2.0')
 gobject = dependency('gobject-2.0')
 gthread = dependency('gthread-2.0')
