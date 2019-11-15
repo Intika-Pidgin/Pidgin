@@ -35,8 +35,8 @@
 #include "version.h"
 
 #include "gtkblist.h"
-#include "gtkplugin.h"
 #include "gtkutils.h"
+#include "pidginplugininfo.h"
 #include "pidginstock.h"
 
 #include "gtkticker.h"

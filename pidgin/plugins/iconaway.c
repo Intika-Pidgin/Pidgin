@@ -26,7 +26,7 @@
 #include "version.h"
 
 #include "gtkconv.h"
-#include "gtkplugin.h"
+#include "pidginplugininfo.h"
 
 #define ICONAWAY_PLUGIN_ID "gtk-iconaway"
 

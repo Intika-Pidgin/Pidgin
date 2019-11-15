@@ -68,14 +68,14 @@
                 <property name="can_focus">True</property>
                 <property name="shadow_type">in</property>
                 <child>
-                  <object class="GPluginGtkView">
+                  <object class="GPluginGtkView" id="tree_view">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
                     <property name="model">plugin_store</property>
                     <property name="headers_clickable">False</property>
                     <child internal-child="selection">
                       <object class="GtkTreeSelection">
-                        <signal name="changed" handler="pidgin_plugins_dialog_selection_cb" object="PidginPluginDialog" swapped="no"/>
+                        <signal name="changed" handler="pidgin_plugins_dialog_selection_cb" object="PidginPluginsDialog" swapped="no"/>
                       </object>
                     </child>
                   </object>

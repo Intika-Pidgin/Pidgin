@@ -20,8 +20,8 @@
 
 #include "internal.h"
 #include "pidgin.h"
-#include "gtkplugin.h"
 #include "gtkutils.h"
+#include "pidginplugininfo.h"
 #include "prefs.h"
 #include "version.h"
 
