@@ -21,8 +21,9 @@
 #ifndef PURPLE_NOVELL_NMCONN_H
 #define PURPLE_NOVELL_NMCONN_H
 
+#include <gio/gio.h>
+
 typedef struct _NMConn NMConn;
-typedef struct _NMSSLConn NMSSLConn;
 
 #include "nmfield.h"
 #include "nmuser.h"
@@ -39,39 +40,17 @@ struct _NMConn
 	/* The port that we are connecting to. */
 	int port;
 
-	/* The file descriptor of the socket for the connection. */
-	int fd;
-
 	/* The transaction counter. */
 	int trans_id;
 
 	/* A list of requests currently awaiting a response. */
 	GSList *requests;
 
-	/* Are we connected? TRUE if so, FALSE if not. */
-	gboolean connected;
-
-	/* Are we running in secure mode? */
-	gboolean use_ssl;
-
-	/* Have we been redirected? */
-	gboolean redirect;
-
-	/* SSL connection  */
-	NMSSLConn *ssl_conn;
-
-};
-
-struct _NMSSLConn
-{
-
-	/*  Data to pass to the callbacks */
-	gpointer data;
-
-	/* Callbacks for reading/writing */
-	nm_ssl_read_cb read;
-	nm_ssl_write_cb write;
-
+	/* Connections to server. */
+	GSocketClient *client;
+	GIOStream *stream;
+	GDataInputStream *input;
+	GOutputStream *output;
 };
 
 /**
@@ -94,64 +73,9 @@ NMConn *nm_create_conn(const char *addr, int port);
 void nm_release_conn(NMConn *conn);
 
 /**
- * Write len bytes from the given buffer.
- *
- * @param conn	The connection to write to.
- * @param buff	The buffer to write from.
- * @param len	The number of bytes to write.
- *
- * @return		The number of bytes written.
- */
-int nm_tcp_write(NMConn * conn, const void *buff, int len);
-
-/**
- * Read at most len bytes into the given buffer.
- *
- * @param conn	The connection to read from.
- * @param buff	The buffer to write to.
- * @param len	The maximum number of bytes to read.
- *
- * @return		The number of bytes read.
- */
-int nm_tcp_read(NMConn * conn, void *buff, int len);
-
-/**
- * Read exactly len bytes into the given buffer.
- *
- * @param conn	The connection to read from.
- * @param buff	The buffer to write to.
- * @param len	The number of bytes to read.
- *
- * @return		NM_OK on success, NMERR_TCP_READ if read fails.
- */
-NMERR_T nm_read_all(NMConn * conn, char *buf, int len);
-
-/**
- * Read a 32 bit value and convert it to the host byte order.
- *
- * @param conn	The connection to read from.
- * @param val	A pointer to unsigned 32 bit integer
- *
- * @return		NM_OK on success, NMERR_TCP_READ if read fails.
- */
-NMERR_T
-nm_read_uint32(NMConn *conn, guint32 *val);
-
-/**
- * Read a 16 bit value and convert it to the host byte order.
- *
- * @param conn	The connection to read from.
- * @param val	A pointer to unsigned 16 bit integer
- *
- * @return		NM_OK on success, NMERR_TCP_READ if read fails.
- */
-NMERR_T
-nm_read_uint16(NMConn *conn, guint16 *val);
-
-/**
  * Dispatch a request to the server.
  *
- * @param conn		The connection.
+ * @param user		The logged-in user.
  * @param cmd		The request to dispatch.
  * @param fields	The field list for the request.
  * @param cb		The response callback for the new request object.
@@ -161,32 +85,32 @@ nm_read_uint16(NMConn *conn, guint16 *val);
  * @return			NM_OK on success.
  */
 NMERR_T
-nm_send_request(NMConn *conn, char *cmd, NMField *fields,
-				nm_response_cb cb, gpointer data, NMRequest **request);
+nm_send_request(NMUser *user, char *cmd, NMField *fields, nm_response_cb cb,
+                gpointer data, NMRequest **request);
 
 /**
  * Write out the given field list.
  *
- * @param conn		The connection to write to.
+ * @param user		The logged-in user.
  * @param fields	The field list to write.
  *
  * @return			NM_OK on success.
  */
-NMERR_T nm_write_fields(NMConn * conn, NMField * fields);
+NMERR_T nm_write_fields(NMUser *user, NMField *fields);
 
 /**
  * Read the headers for a response.
  *
- * @param conn		The connection to read from.
+ * @param user		The logged-in user.
  *
  * @return			NM_OK on success.
  */
-NMERR_T nm_read_header(NMConn * conn);
+NMERR_T nm_read_header(NMUser *user);
 
 /**
  * Read a field list from the connection.
  *
- * @param conn		The connection to read from.
+ * @param user		The logged-in user.
  * @param count		The maximum number of fields to read (or -1 for no max).
  * @param fields	The field list. This is an out param. It
  *					should be freed by calling nm_free_fields
@@ -194,7 +118,7 @@ NMERR_T nm_read_header(NMConn * conn);
  *
  * @return			NM_OK on success.
  */
-NMERR_T nm_read_fields(NMConn * conn, int count, NMField ** fields);
+NMERR_T nm_read_fields(NMUser *user, int count, NMField **fields);
 
 /**
  * Add a request to the connections request list.
@@ -223,24 +147,5 @@ void nm_conn_remove_request_item(NMConn * conn, NMRequest * request);
  *					found.
  */
 NMRequest *nm_conn_find_request(NMConn * conn, int trans_id);
-
-/**
- * Get the server address for the connection.
- *
- * @param conn		The connection.
- *
- * @return 			The server address for the connection.
- *
- */
-const char *nm_conn_get_addr(NMConn * conn);
-
-/**
- * Get the port for the connection.
- *
- * @param conn		The connection.
- *
- * @return 			The port that we are connected to.
- */
-int nm_conn_get_port(NMConn * conn);
 
 #endif /* PURPLE_NOVELL_NMCONN_H */

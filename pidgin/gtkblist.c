@@ -3061,24 +3061,23 @@ pidgin_blist_paint_tip(GtkWidget *widget, cairo_t *cr, gpointer null)
 }
 
 static void
+tooltip_data_free(struct tooltip_data *td)
+{
+	g_return_if_fail(td != NULL);
+
+	g_clear_object(&td->avatar);
+	g_clear_object(&td->status_icon);
+	g_clear_object(&td->protocol_icon);
+	g_clear_object(&td->layout);
+	g_clear_object(&td->name_layout);
+	g_free(td);
+}
+
+static void
 pidgin_blist_destroy_tooltip_data(void)
 {
-	while(gtkblist->tooltipdata) {
-		struct tooltip_data *td = gtkblist->tooltipdata->data;
-
-		if(td->avatar)
-			g_object_unref(td->avatar);
-		if(td->status_icon)
-			g_object_unref(td->status_icon);
-		if(td->protocol_icon)
-			g_object_unref(td->protocol_icon);
-		if (td->layout)
-			g_object_unref(td->layout);
-		if (td->name_layout)
-			g_object_unref(td->name_layout);
-		g_free(td);
-		gtkblist->tooltipdata = g_list_delete_link(gtkblist->tooltipdata, gtkblist->tooltipdata);
-	}
+	g_list_free_full(gtkblist->tooltipdata, (GDestroyNotify)tooltip_data_free);
+	gtkblist->tooltipdata = NULL;
 }
 
 void pidgin_blist_tooltip_destroy()
@@ -5687,8 +5686,9 @@ pidgin_blist_search_equal_func(GtkTreeModel *model, gint column,
 		enteredstring = g_utf8_casefold(tmp, -1);
 		g_free(tmp);
 
-		if (purple_str_has_prefix(compare, enteredstring))
+		if (g_str_has_prefix(compare, enteredstring)) {
 			res = FALSE;
+		}
 		g_free(enteredstring);
 	}
 

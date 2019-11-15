@@ -460,7 +460,7 @@ _mdns_service_browse_callback(DNSServiceRef sdRef, DNSServiceFlags flags, uint32
 gboolean _mdns_init_session(BonjourDnsSd *data) {
 	data->mdns_impl_data = g_new0(Win32SessionImplData, 1);
 
-	bonjour_dns_sd_set_jid(data->account, purple_get_host_name());
+	bonjour_dns_sd_set_jid(data->account, g_get_host_name());
 
 	return TRUE;
 }

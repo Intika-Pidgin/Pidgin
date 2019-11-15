@@ -100,15 +100,7 @@ jabber_caps_client_info_destroy(JabberCapsClientInfo *info)
 	if (info == NULL)
 		return;
 
-	while(info->identities) {
-		JabberIdentity *id = info->identities->data;
-		g_free(id->category);
-		g_free(id->type);
-		g_free(id->name);
-		g_free(id->lang);
-		g_free(id);
-		info->identities = g_list_delete_link(info->identities, info->identities);
-	}
+	g_list_free_full(info->identities, (GDestroyNotify)jabber_identity_free);
 
 	free_string_glist(info->features);
 
@@ -266,12 +258,7 @@ jabber_caps_load(void)
 					if (!category || !type)
 						continue;
 
-					id = g_new0(JabberIdentity, 1);
-					id->category = g_strdup(category);
-					id->type = g_strdup(type);
-					id->name = g_strdup(name);
-					id->lang = g_strdup(lang);
-
+					id = jabber_identity_new(category, type, lang, name);
 					value->identities = g_list_append(value->identities,id);
 				} else if (purple_strequal(child->name, "x")) {
 					/* TODO: See #7814 -- this might cause problems if anyone
@@ -753,12 +740,7 @@ JabberCapsClientInfo *jabber_caps_parse_client_info(PurpleXmlNode *query)
 			if (!category || !type)
 				continue;
 
-			id = g_new0(JabberIdentity, 1);
-			id->category = g_strdup(category);
-			id->type = g_strdup(type);
-			id->name = g_strdup(name);
-			id->lang = g_strdup(lang);
-
+			id = jabber_identity_new(category, type, lang, name);
 			info->identities = g_list_append(info->identities, id);
 		} else if (purple_strequal(child->name, "feature")) {
 			/* parse feature */

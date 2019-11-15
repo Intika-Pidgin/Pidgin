@@ -711,7 +711,7 @@ purple_xmlnode_parser_error_libxml(void *user_data, const char *msg, ...)
 	xpd->error = TRUE;
 
 	va_start(args, msg);
-	vsnprintf(errmsg, sizeof(errmsg), msg, args);
+	g_vsnprintf(errmsg, sizeof(errmsg), msg, args);
 	va_end(args);
 
 	purple_debug_error("xmlnode", "Error parsing xml file: %s", errmsg);

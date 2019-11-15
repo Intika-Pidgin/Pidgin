@@ -739,7 +739,6 @@ fb_api_http_req(FbApi *api, const gchar *url, const gchar *name,
 
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "HTTP Request (%p):", msg);
 	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request URL: %s", url);
-	fb_util_debug(FB_UTIL_DEBUG_INFO, "  Request Data: %s", data);
 
 	return msg;
 }
@@ -2339,7 +2338,7 @@ fb_api_cb_contacts(G_GNUC_UNUSED SoupSession *session, SoupMessage *res,
 		g_signal_emit_by_name(api, "contacts-delta", added, removed);
 
 		g_slist_free_full(added, (GDestroyNotify) fb_api_user_free);
-		g_slist_free_full(removed, (GDestroyNotify) g_free);
+		g_slist_free_full(removed, g_free);
 
 		g_list_free(elms);
 		json_array_unref(arr);

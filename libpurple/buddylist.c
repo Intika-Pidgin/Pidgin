@@ -727,9 +727,7 @@ purple_blist_boot(void)
 	buddies_cache = g_hash_table_new_full(g_direct_hash, g_direct_equal,
 					 NULL, (GDestroyNotify)g_hash_table_destroy);
 
-	groups_cache = g_hash_table_new_full((GHashFunc)g_str_hash,
-					 (GEqualFunc)g_str_equal,
-					 (GDestroyNotify)g_free, NULL);
+	groups_cache = g_hash_table_new_full(g_str_hash, g_str_equal, g_free, NULL);
 
 	for (account = purple_accounts_get_all(); account != NULL; account = account->next)
 	{

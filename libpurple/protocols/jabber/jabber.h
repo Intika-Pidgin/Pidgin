@@ -67,6 +67,7 @@ typedef struct _JabberStream JabberStream;
 #include "media.h"
 #include "mediamanager.h"
 #include "protocol.h"
+#include "queuedoutputstream.h"
 #include "roomlist.h"
 #include "sslconn.h"
 
@@ -119,7 +120,6 @@ typedef struct
 
 struct _JabberStream
 {
-	int fd;
 	guint inpa;
 
 	GCancellable *cancellable;
@@ -196,7 +196,10 @@ struct _JabberStream
 	JabberBuddy *user_jb;
 
 	PurpleConnection *gc;
-	PurpleSslConnection *gsc;
+	GSocketClient *client;
+	GIOStream *stream;
+	GInputStream *input;
+	PurpleQueuedOutputStream *output;
 
 	gboolean registration;
 
@@ -205,9 +208,6 @@ struct _JabberStream
 	GSList *pending_avatar_requests;
 
 	GSList *pending_buddy_info_requests;
-
-	PurpleCircularBuffer *write_buffer;
-	guint writeh;
 
 	gboolean reinit;
 
@@ -377,10 +377,15 @@ void jabber_remove_feature(const gchar *namespace);
  */
 void jabber_add_identity(const gchar *category, const gchar *type, const gchar *lang, const gchar *name);
 
+JabberIdentity *jabber_identity_new(const gchar *category, const gchar *type, const gchar *lang, const gchar *name);
+void jabber_identity_free(JabberIdentity *id);
+
 /**
  * GCompareFunc for JabberIdentity structs.
  */
 gint jabber_identity_compare(gconstpointer a, gconstpointer b);
+
+void jabber_bytestreams_streamhost_free(JabberBytestreamsStreamhost *sh);
 
 /**
  * Returns true if this connection is over a secure (SSL) stream. Use this

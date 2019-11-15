@@ -147,29 +147,21 @@ size_t purple_stringref_len(const PurpleStringref *stringref)
 
 static void stringref_free(PurpleStringref *stringref)
 {
-#ifdef DEBUG
-	if (REFCOUNT(stringref->ref) != 0) {
-		purple_debug(PURPLE_DEBUG_ERROR, "stringref", "Free of nonzero (%d) ref stringref!\n", REFCOUNT(stringref->ref));
+	g_return_if_fail(stringref != NULL);
+
+	if (REFCOUNT(stringref->ref) == 0) {
+		g_free(stringref);
 		return;
 	}
+#ifdef DEBUG
+	purple_debug(PURPLE_DEBUG_ERROR, "stringref", "Free of nonzero (%d) ref stringref!\n", REFCOUNT(stringref->ref));
 #endif /* DEBUG */
-	g_free(stringref);
 }
 
 static gboolean gs_idle_cb(gpointer data)
 {
-	PurpleStringref *ref;
-	GList *del;
-
-	while (gclist != NULL) {
-		ref = gclist->data;
-		if (REFCOUNT(ref->ref) == 0) {
-			stringref_free(ref);
-		}
-		del = gclist;
-		gclist = gclist->next;
-		g_list_free_1(del);
-	}
+	g_list_free_full(gclist, (GDestroyNotify)stringref_free);
+	gclist = NULL;
 
 	return FALSE;
 }

@@ -169,8 +169,9 @@ purple_image_store_get_from_uri(const gchar *uri)
 
 	g_return_val_if_fail(uri != NULL, NULL);
 
-	if (!purple_str_has_prefix(uri, PURPLE_IMAGE_STORE_PROTOCOL))
+	if (!g_str_has_prefix(uri, PURPLE_IMAGE_STORE_PROTOCOL)) {
 		return NULL;
+	}
 
 	uri += sizeof(PURPLE_IMAGE_STORE_PROTOCOL) - 1;
 	if (uri[0] == '-')

@@ -1,5 +1,5 @@
 /*
- * purple - Bonjour Jabber XML parser stuff
+ * purple - Bonjour XMPP XML parser stuff
  *
  * Purple is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -25,11 +25,11 @@
 
 #include <libxml/parser.h>
 
-#include "jabber.h"
 #include "parser.h"
+#include "xmpp.h"
 
 static gboolean
-parse_from_attrib_and_find_buddy(BonjourJabberConversation *bconv, int nb_attributes, const xmlChar **attributes) {
+parse_from_attrib_and_find_buddy(BonjourXMPPConversation *bconv, int nb_attributes, const xmlChar **attributes) {
 	int i;
 
 	/* If the "from" attribute is specified, attach it to the conversation. */
@@ -37,7 +37,7 @@ parse_from_attrib_and_find_buddy(BonjourJabberConversation *bconv, int nb_attrib
 		if(!xmlStrcmp(attributes[i], (xmlChar*) "from")) {
 			int len = attributes[i+4] - attributes[i+3];
 			bconv->buddy_name = g_strndup((char *)attributes[i+3], len);
-			bonjour_jabber_conv_match_by_name(bconv);
+			bonjour_xmpp_conv_match_by_name(bconv);
 
 			return (bconv->pb != NULL);
 		}
@@ -52,7 +52,7 @@ bonjour_parser_element_start_libxml(void *user_data,
 				   int nb_namespaces, const xmlChar **namespaces,
 				   int nb_attributes, int nb_defaulted, const xmlChar **attributes)
 {
-	BonjourJabberConversation *bconv = user_data;
+	BonjourXMPPConversation *bconv = user_data;
 
 	PurpleXmlNode *node;
 	int i;
@@ -66,7 +66,7 @@ bonjour_parser_element_start_libxml(void *user_data,
 			if (bconv->pb == NULL)
 				parse_from_attrib_and_find_buddy(bconv, nb_attributes, attributes);
 
-			bonjour_jabber_stream_started(bconv);
+			bonjour_xmpp_stream_started(bconv);
 		}
 	} else {
 
@@ -79,7 +79,7 @@ bonjour_parser_element_start_libxml(void *user_data,
 			/* We've run out of options for finding who the conversation is from
 			   using explicitly specified stuff; see if we can make a good match
 			   by using the IP */
-			bonjour_jabber_conv_match_by_ip(bconv);
+			bonjour_xmpp_conv_match_by_ip(bconv);
 
 		if(bconv->current)
 			node = purple_xmlnode_new_child(bconv->current, (const char*) element_name);
@@ -113,7 +113,7 @@ static void
 bonjour_parser_element_end_libxml(void *user_data, const xmlChar *element_name,
 				 const xmlChar *prefix, const xmlChar *namespace)
 {
-	BonjourJabberConversation *bconv = user_data;
+	BonjourXMPPConversation *bconv = user_data;
 
 	if(!bconv->current) {
 		/* We don't keep a reference to the start stream PurpleXmlNode,
@@ -121,7 +121,7 @@ bonjour_parser_element_end_libxml(void *user_data, const xmlChar *element_name,
 		if(!xmlStrcmp(element_name, (xmlChar*) "stream"))
 			/* Asynchronously close the conversation to prevent bonjour_parser_setup()
 			 * being called from within this context */
-			async_bonjour_jabber_close_conversation(bconv);
+			async_bonjour_xmpp_close_conversation(bconv);
 		return;
 	}
 
@@ -131,7 +131,7 @@ bonjour_parser_element_end_libxml(void *user_data, const xmlChar *element_name,
 	} else {
 		PurpleXmlNode *packet = bconv->current;
 		bconv->current = NULL;
-		bonjour_jabber_process_packet(bconv->pb, packet);
+		bonjour_xmpp_process_packet(bconv->pb, packet);
 		purple_xmlnode_free(packet);
 	}
 }
@@ -139,7 +139,7 @@ bonjour_parser_element_end_libxml(void *user_data, const xmlChar *element_name,
 static void
 bonjour_parser_element_text_libxml(void *user_data, const xmlChar *text, int text_len)
 {
-	BonjourJabberConversation *bconv = user_data;
+	BonjourXMPPConversation *bconv = user_data;
 
 	if(!bconv->current)
 		return;
@@ -153,9 +153,9 @@ bonjour_parser_element_text_libxml(void *user_data, const xmlChar *text, int tex
 static void
 bonjour_parser_structured_error_handler(void *user_data, xmlErrorPtr error)
 {
-	BonjourJabberConversation *bconv = user_data;
+	BonjourXMPPConversation *bconv = user_data;
 
-	purple_debug_error("jabber", "XML parser error for BonjourJabberConversation %p: "
+	purple_debug_error("bonjour", "XML parser error for BonjourXMPPConversation %p: "
 	                             "Domain %i, code %i, level %i: %s",
 	                   bconv,
 	                   error->domain, error->code, error->level,
@@ -198,7 +198,7 @@ static xmlSAXHandler bonjour_parser_libxml = {
 };
 
 void
-bonjour_parser_setup(BonjourJabberConversation *bconv)
+bonjour_parser_setup(BonjourXMPPConversation *bconv)
 {
 
 	/* This seems backwards, but it makes sense. The libxml code creates
@@ -213,7 +213,7 @@ bonjour_parser_setup(BonjourJabberConversation *bconv)
 }
 
 
-void bonjour_parser_process(BonjourJabberConversation *bconv, const char *buf, int len)
+void bonjour_parser_process(BonjourXMPPConversation *bconv, const char *buf, int len)
 {
 
 	if (bconv->context == NULL) {

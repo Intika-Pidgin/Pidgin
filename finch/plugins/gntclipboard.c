@@ -90,7 +90,6 @@ set_clip(gchar *string)
 			return;
 		}
 	}
-	return;
 }
 
 static void

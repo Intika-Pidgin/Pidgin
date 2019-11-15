@@ -677,7 +677,6 @@ spellchk_new_attach(PurpleConversation *conv)
 
 	g_signal_connect(G_OBJECT(gtkconv->entry), "message_send",
 	                 G_CALLBACK(message_send_cb), spell);
-	return;
 }
 
 static int buf_get_line(char *ibuf, char **buf, gsize *position, gsize len)

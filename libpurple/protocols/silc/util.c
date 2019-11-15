@@ -247,7 +247,7 @@ gboolean silcpurple_check_silc_dir(PurpleConnection *gc)
 	if ((st.st_mode & 0777) != 0600) {
 		purple_debug_warning("silc", "Wrong permissions in your private key file `%s'!\n"
 			"Trying to change them ...\n", file_private_key);
-		if ((fd == -1) || (fchmod(fd, S_IRUSR | S_IWUSR)) == -1) {
+		if ((fd == -1) || (g_fchmod(fd, S_IRUSR | S_IWUSR)) == -1) {
 			purple_debug_error("silc",
 				"Failed to change permissions for private key file!\n"
 				"Permissions for your private key file must be 0600.\n");

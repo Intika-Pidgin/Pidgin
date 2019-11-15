@@ -479,7 +479,7 @@ check_for_and_do_command(PurpleConversation *conv)
 
 	cmd = talkatu_buffer_get_plain_text(TALKATU_BUFFER(buffer));
 
-	if (cmd && purple_str_has_prefix(cmd, prefix)) {
+	if (cmd && g_str_has_prefix(cmd, prefix)) {
 		PurpleCmdStatus status;
 		char *error, *cmdline, *markup, *send_history;
 
@@ -2258,7 +2258,7 @@ set_custom_icon_cb(GtkWidget *widget, PurpleContact *contact)
 		win = pidgin_buddy_icon_chooser_new(GTK_WINDOW(toplevel),
 		                                    custom_icon_sel_cb, contact);
 		g_object_set_data_full(G_OBJECT(contact), "buddy-icon-chooser", win,
-		                       (GDestroyNotify)g_object_unref);
+				       g_object_unref);
 	}
 	gtk_native_dialog_show(GTK_NATIVE_DIALOG(win));
 }
@@ -2744,7 +2744,7 @@ populate_menu_with_options(GtkWidget *menu, PidginConversation *gtkconv, gboolea
 				buddy = purple_buddy_new(account, purple_conversation_get_name(conv), NULL);
 				purple_blist_node_set_transient((PurpleBlistNode *)buddy, TRUE);
 				g_object_set_data_full(G_OBJECT(gtkconv->history), "transient_buddy",
-						buddy, (GDestroyNotify)g_object_unref);
+						buddy, g_object_unref);
 			}
 		}
 	}

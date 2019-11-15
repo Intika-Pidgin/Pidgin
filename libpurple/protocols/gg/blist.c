@@ -187,7 +187,7 @@ char *ggp_buddylist_dump(PurpleAccount *account)
 }
 /* }}} */
 
-const char * ggp_buddylist_get_buddy_name(PurpleConnection *gc, const uin_t uin)
+const char * ggp_buddylist_get_buddy_name(PurpleConnection *gc, uin_t uin)
 {
 	const char *uin_s = ggp_uin_to_str(uin);
 	PurpleBuddy *buddy = purple_blist_find_buddy(

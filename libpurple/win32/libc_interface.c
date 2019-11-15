@@ -488,18 +488,3 @@ int wpurple_gettimeofday(struct timeval *p, struct timezone *z) {
 
 	return res;
 }
-
-/* time.h */
-
-struct tm * wpurple_localtime_r (const time_t *time, struct tm *resultp) {
-	struct tm* tmptm;
-
-	if(!time)
-		return NULL;
-	tmptm = localtime(time);
-	if(resultp && tmptm)
-		return memcpy(resultp, tmptm, sizeof(struct tm));
-	else
-		return NULL;
-}
-

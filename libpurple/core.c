@@ -249,7 +249,7 @@ purple_core_quit(void)
 	purple_log_uninit();
 	_purple_message_uninit();
 	/* Everything after util_uninit cannot try to write things to the
-	 * confdir nor use purple_escape_js
+	 * confdir.
 	 */
 	purple_util_uninit();
 

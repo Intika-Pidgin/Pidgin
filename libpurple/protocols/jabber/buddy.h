@@ -93,6 +93,8 @@ typedef struct {
 	gboolean commands_fetched;
 } JabberBuddyResource;
 
+void jabber_adhoc_commands_free(JabberAdHocCommands *cmd);
+
 void jabber_buddy_free(JabberBuddy *jb);
 JabberBuddy *jabber_buddy_find(JabberStream *js, const char *name,
 		gboolean create);

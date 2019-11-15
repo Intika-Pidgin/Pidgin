@@ -333,8 +333,6 @@ void irc_msg_chanmode(struct irc_conn *irc, const char *name, const char *from, 
 	purple_conversation_write_system_message(PURPLE_CONVERSATION(chat), buf, 0);
 	g_free(escaped);
 	g_free(buf);
-
-	return;
 }
 
 void irc_msg_whois(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -495,8 +493,8 @@ void irc_msg_who(struct irc_conn *irc, const char *name, const char *from, char 
 		}
 		realname = g_strdup(cur);
 
-		g_object_set_data_full(G_OBJECT(cb), "userhost", userhost, (GDestroyNotify)g_free);
-		g_object_set_data_full(G_OBJECT(cb), "realname", realname, (GDestroyNotify)g_free);
+		g_object_set_data_full(G_OBJECT(cb), "userhost", userhost, g_free);
+		g_object_set_data_full(G_OBJECT(cb), "realname", realname, g_free);
 
 		flags = purple_chat_user_get_flags(cb);
 
@@ -971,7 +969,7 @@ void irc_msg_join(struct irc_conn *irc, const char *name, const char *from, char
 	cb = purple_chat_conversation_find_user(chat, nick);
 
 	if (cb) {
-		g_object_set_data_full(G_OBJECT(cb), "userhost", userhost, (GDestroyNotify)g_free);
+		g_object_set_data_full(G_OBJECT(cb), "userhost", userhost, g_free);
 	}
 
 	if ((ib = g_hash_table_lookup(irc->buddies, nick)) != NULL) {
@@ -1010,7 +1008,6 @@ void irc_msg_kick(struct irc_conn *irc, const char *name, const char *from, char
 	}
 
 	g_free(nick);
-	return;
 }
 
 void irc_msg_mode(struct irc_conn *irc, const char *name, const char *from, char **args)
@@ -1362,8 +1359,6 @@ void irc_msg_quit(struct irc_conn *irc, const char *name, const char *from, char
 		irc_buddy_status(data[0], ib, irc);
 	}
 	g_free(data[0]);
-
-	return;
 }
 
 void irc_msg_unavailable(struct irc_conn *irc, const char *name, const char *from, char **args)

@@ -170,16 +170,6 @@ purple_account_option_list_new(const char *text, const char *pref_name,
 	return option;
 }
 
-static void
-purple_account_option_list_free(gpointer data, gpointer user_data)
-{
-	PurpleKeyValuePair *kvp = data;
-
-	g_free(kvp->value);
-	g_free(kvp->key);
-	g_free(kvp);
-}
-
 void
 purple_account_option_destroy(PurpleAccountOption *option)
 {
@@ -196,7 +186,7 @@ purple_account_option_destroy(PurpleAccountOption *option)
 	else if (option->type == PURPLE_PREF_STRING_LIST)
 	{
 		g_list_free_full(option->default_value.list,
-		                 (GDestroyNotify)purple_account_option_list_free);
+		                 (GDestroyNotify)purple_key_value_pair_free);
 	}
 
 	g_free(option);
@@ -258,7 +248,7 @@ purple_account_option_set_list(PurpleAccountOption *option, GList *values)
 	g_return_if_fail(option->type == PURPLE_PREF_STRING_LIST);
 
 	g_list_free_full(option->default_value.list,
-	                 (GDestroyNotify)purple_account_option_list_free);
+	                 (GDestroyNotify)purple_key_value_pair_free);
 
 	option->default_value.list = values;
 }

@@ -101,10 +101,6 @@ struct timezone {
 #endif
 int wpurple_gettimeofday(struct timeval *p, struct timezone *z);
 
-/* time.h */
-struct tm *wpurple_localtime_r(const time_t *time, struct tm *resultp);
-
-
 /* unistd.h */
 int wpurple_read(int fd, void *buf, unsigned int size);
 int wpurple_write(int fd, const void *buf, unsigned int size);
