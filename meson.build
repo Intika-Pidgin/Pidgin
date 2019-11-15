@@ -296,14 +296,11 @@ enable_introspection = dependency('gobject-introspection-1.0', version : '>= 1.3
                                   required : get_option('introspection')).found()
 conf.set('ENABLE_INTROSPECTION', enable_introspection)
 
-# #######################################################################
-# # Check for GTK+ 2.18 and other things used by the GTK UI
-# #######################################################################
-# #######################################################################
+#######################################################################
 # Check Pidgin dependencies
-# #######################################################################
+#######################################################################
 if get_option('gtkui')
-	gtk = dependency('gtk+-3.0', version : '>= 3.20.0')
+	gtk = dependency('gtk+-3.0', version : '>= 3.22.0')
 
 	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
 	if talkatu_dep.found()

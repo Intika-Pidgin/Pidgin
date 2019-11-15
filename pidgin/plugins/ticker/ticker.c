@@ -34,7 +34,6 @@
 #include "signals.h"
 #include "version.h"
 
-#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"

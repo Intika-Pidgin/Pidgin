@@ -46,8 +46,6 @@
 #include "gtkdialogs.h"
 #include "gtknotify.h"
 
-#include "gtk3compat.h"
-
 #ifndef DOCKLET_TOOLTIP_LINE_LIMIT
 #define DOCKLET_TOOLTIP_LINE_LIMIT 5
 #endif

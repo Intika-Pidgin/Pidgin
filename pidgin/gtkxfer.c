@@ -32,8 +32,6 @@
 #include "pidginstock.h"
 #include "gtkutils.h"
 
-#include "gtk3compat.h"
-
 #ifdef _WIN32
 #  include <shellapi.h>
 #endif

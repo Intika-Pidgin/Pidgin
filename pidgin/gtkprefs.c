@@ -67,8 +67,6 @@
 #endif
 #include <libsoup/soup.h>
 
-#include "gtk3compat.h"
-
 #define PREFS_OPTIMAL_ICON_SIZE 32
 
 /* 25MB */

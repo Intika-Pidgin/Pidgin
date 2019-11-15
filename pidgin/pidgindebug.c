@@ -37,8 +37,6 @@
 
 #include <gdk/gdkkeysyms.h>
 
-#include "gtk3compat.h"
-
 #include "pidginresources.h"
 
 struct _PidginDebugWindow {
