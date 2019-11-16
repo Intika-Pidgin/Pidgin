@@ -64,7 +64,7 @@ GtkWidget *pidgin_menu_tray_get_box(PidginMenuTray *menu_tray);
  * pidgin_menu_tray_append:
  * @menu_tray: The tray
  * @widget:    The widget
- * @tooltip:   The tooltip for this widget (widget requires its own X-window)
+ * @tooltip:   The tooltip for this widget
  *
  * Appends a widget into the tray
  */
@@ -74,7 +74,7 @@ void pidgin_menu_tray_append(PidginMenuTray *menu_tray, GtkWidget *widget, const
  * pidgin_menu_tray_prepend:
  * @menu_tray: The tray
  * @widget:    The widget
- * @tooltip:   The tooltip for this widget (widget requires its own X-window)
+ * @tooltip:   The tooltip for this widget
  *
  * Prepends a widget into the tray
  */
@@ -84,7 +84,7 @@ void pidgin_menu_tray_prepend(PidginMenuTray *menu_tray, GtkWidget *widget, cons
  * pidgin_menu_tray_set_tooltip:
  * @menu_tray: The tray
  * @widget:    The widget
- * @tooltip:   The tooltip to set for the widget (widget requires its own X-window)
+ * @tooltip:   The tooltip to set for the widget
  *
  * Set the tooltip for a widget
  */
