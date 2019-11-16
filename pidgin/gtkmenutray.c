@@ -87,30 +87,11 @@ pidgin_menu_tray_map(GtkWidget *widget) {
 }
 
 static void
-pidgin_menu_tray_finalize(GObject *obj) {
-#if 0
-	PidginMenuTray *tray = PIDGIN_MENU_TRAY(obj);
-
-	/* This _might_ be leaking, but I have a sneaking suspicion that the widget is
-	 * getting destroyed in GtkContainer's finalize function.  But if were are
-	 * leaking here, be sure to figure out why this causes a crash.
-	 *	-- Gary
-	 */
-
-	if(GTK_IS_WIDGET(tray->tray))
-		gtk_widget_destroy(GTK_WIDGET(tray->tray));
-#endif
-
-	G_OBJECT_CLASS(pidgin_menu_tray_parent_class)->finalize(obj);
-}
-
-static void
 pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
 	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	GtkMenuItemClass *menu_item_class = GTK_MENU_ITEM_CLASS(klass);
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
-	obj_class->finalize = pidgin_menu_tray_finalize;
 	obj_class->get_property = pidgin_menu_tray_get_property;
 
 	menu_item_class->select = pidgin_menu_tray_select;
@@ -128,7 +109,6 @@ pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
 static void
 pidgin_menu_tray_init(PidginMenuTray *menu_tray) {
 	GtkWidget *widget = GTK_WIDGET(menu_tray);
-	GtkSettings *settings;
 	gint height = -1;
 
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -141,12 +121,7 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 		menu_tray->tray = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
 	}
 
-	settings =
-		gtk_settings_get_for_screen(gtk_widget_get_screen(widget));
-
-	if(gtk_icon_size_lookup_for_settings(settings, GTK_ICON_SIZE_MENU,
-										 NULL, &height))
-	{
+	if(gtk_icon_size_lookup(GTK_ICON_SIZE_MENU, NULL, &height)) {
 		gtk_widget_set_size_request(widget, -1, height);
 	}
 
