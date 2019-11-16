@@ -528,7 +528,7 @@ purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...);
  *
  * Gets extra actions for the PurpleRequestFields dialog.
  *
- * Returns: (element-type void) (transfer none): A list of actions (pairs of arguments, as in
+ * Returns: (element-type PurpleNamedValue) (transfer none): A list of actions (pairs of arguments, as in
  *          setter).
  */
 GSList *
@@ -1472,7 +1472,7 @@ purple_request_field_choice_get_value(const PurpleRequestField *field);
  *
  * Returns a list of elements in a choice field.
  *
- * Returns: (element-type void) (transfer none): The list of pairs of {label, value}.
+ * Returns: (element-type PurpleNamedValue) (transfer none): The list of pairs of {label, value}.
  */
 GList *
 purple_request_field_choice_get_elements(const PurpleRequestField *field);

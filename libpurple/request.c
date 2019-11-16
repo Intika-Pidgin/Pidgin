@@ -395,32 +395,25 @@ void
 purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...)
 {
 	va_list args;
-	GSList *extra = NULL, *it;
+	GSList *extra = NULL;
 
-	it = cpar->extra_actions;
-	while (it != NULL) {
-		gchar *label = it->data;
-
-		g_free(label);
-		it = g_slist_next(it);
-		if (it == NULL)
-			break;
-		it = g_slist_next(it);
-	}
+	g_slist_free_full(cpar->extra_actions, (GDestroyNotify)purple_named_value_free);
 
 	va_start(args, cpar);
 
 	while (TRUE) {
 		const gchar *label;
 		PurpleRequestFieldsCb cb;
+		PurpleNamedValue *extra_action;
 
 		label = va_arg(args, const gchar*);
 		if (label == NULL)
 			break;
 		cb = va_arg(args, PurpleRequestFieldsCb);
 
-		extra = g_slist_append(extra, g_strdup(label));
-		extra = g_slist_append(extra, cb);
+		extra_action = purple_named_value_new(label, cb);
+
+		extra = g_slist_append(extra, extra_action);
 	}
 
 	va_end(args);
@@ -946,22 +939,14 @@ purple_request_field_destroy(PurpleRequestField *field)
 	}
 	else if (field->type == PURPLE_REQUEST_FIELD_CHOICE)
 	{
-		if (field->u.choice.elements != NULL)
-		{
-			GList *it = field->u.choice.elements;
-			while (it != NULL) {
-				g_free(it->data);
-				it = g_list_next(it); /* value */
-				if (it == NULL) {
-					g_warn_if_reached();
-					break;
-				}
-				if (it->data && field->u.choice.data_destroy)
-					field->u.choice.data_destroy(it->data);
-				it = g_list_next(it); /* next label */
-			}
-			g_list_free(field->u.choice.elements);
+		for (GList *it = field->u.choice.elements; it != NULL; it = g_list_next(it)) {
+			PurpleNamedValue *choice = it->data;
+
+			if (choice->value && field->u.choice.data_destroy)
+				field->u.choice.data_destroy(choice->value);
+			purple_named_value_free(choice);
 		}
+		g_list_free(field->u.choice.elements);
 	}
 	else if (field->type == PURPLE_REQUEST_FIELD_LIST)
 	{
@@ -1477,14 +1462,16 @@ void
 purple_request_field_choice_add(PurpleRequestField *field, const char *label,
 	gpointer value)
 {
+	PurpleNamedValue *choice;
+
 	g_return_if_fail(field != NULL);
 	g_return_if_fail(label != NULL);
 	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE);
 
+	choice = purple_named_value_new(label, value);
+
 	field->u.choice.elements = g_list_append(field->u.choice.elements,
-		g_strdup(label));
-	field->u.choice.elements = g_list_append(field->u.choice.elements,
-		value);
+		choice);
 }
 
 void

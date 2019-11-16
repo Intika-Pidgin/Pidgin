@@ -471,22 +471,13 @@ create_integer_field(PurpleRequestField *field)
 static GntWidget*
 create_choice_field(PurpleRequestField *field)
 {
-	GList *it;
 	GntWidget *combo = gnt_combo_box_new();
 
-	it = purple_request_field_choice_get_elements(field);
-	while (it != NULL)
+	for (GList *it = purple_request_field_choice_get_elements(field); it != NULL; it = g_list_next(it))
 	{
-		const gchar *text;
-		gpointer value;
+		PurpleNamedValue *choice = it->data;
 
-		text = it->data;
-		it = g_list_next(it);
-		g_assert(it != NULL);
-		value = it->data;
-		it = g_list_next(it);
-
-		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), value, text);
+		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), choice->value, choice->name);
 	}
 	gnt_combo_box_set_selected(GNT_COMBO_BOX(combo),
 		purple_request_field_choice_get_default_value(field));
@@ -604,7 +595,7 @@ finch_request_fields(const char *title, const char *primary,
 	GntWidget *username = NULL, *accountlist = NULL;
 	PurpleRequestHelpCb help_cb;
 	gpointer help_data;
-	GSList *extra_actions, *it;
+	GSList *extra_actions;
 
 	window = setup_request_window(title, primary, secondary, PURPLE_REQUEST_FIELDS);
 
@@ -690,14 +681,13 @@ finch_request_fields(const char *title, const char *primary,
 			ok, ok_cb, cancel, cancel_cb, NULL);
 
 	extra_actions = purple_request_cpar_get_extra_actions(cpar);
-	for (it = extra_actions; it; it = it->next->next) {
-		const gchar *label = it->data;
-		PurpleRequestFieldsCb *cb = it->next->data;
+	for (GSList *it = extra_actions; it; it = it->next) {
+		PurpleNamedValue *extra_action = it->data;
 
-		GntWidget *button = gnt_button_new(label);
+		GntWidget *button = gnt_button_new(extra_action->name);
 		gnt_box_add_widget_in_front(GNT_BOX(box), button);
 		g_object_set_data(G_OBJECT(button), "ui-handle", window);
-		g_object_set_data(G_OBJECT(button), "extra-cb", cb);
+		g_object_set_data(G_OBJECT(button), "extra-cb", extra_action->value);
 		g_object_set_data(G_OBJECT(button), "extra-cb-data", userdata);
 		g_signal_connect(G_OBJECT(button), "activate",
 			G_CALLBACK(multifield_extra_cb), allfields);
