@@ -96,6 +96,21 @@ typedef enum
 	PURPLE_STATUS_NUM_PRIMITIVES, /*< skip >*/
 } PurpleStatusPrimitive;
 
+/**
+ * PurpleAttr:
+ * @id: The attribute id
+ * @data: The attribute data
+ *
+ * A name-value pair.
+ *
+ * Similar to PurpleKeyValuePair except it doesn't allocate memory for @id and @data.
+ */
+typedef struct _PurpleAttr
+{
+	const gchar *id;
+	gpointer data;
+} PurpleAttr;
+
 #include "presence.h"
 
 #define PURPLE_TUNE_ARTIST	"tune_artist"
@@ -495,7 +510,7 @@ void purple_status_set_active_with_attrs(PurpleStatus *status, gboolean active,
  * purple_status_set_active_with_attrs_list:
  * @status: The status.
  * @active: The active state.
- * @attrs: (element-type void): A list of attributes to set on the status.  This list is
+ * @attrs: (element-type PurpleAttr): A list of attributes to set on the status.  This list is
  *               composed of key/value pairs, where each key is a valid
  *               attribute name for this PurpleStatusType.  The list is
  *               not modified or freed by this function.
@@ -699,6 +714,38 @@ void purple_statuses_init(void);
  * Uninitializes the status subsystem.
  */
 void purple_statuses_uninit(void);
+
+/**************************************************************************/
+/* PurpleAttr helpers                                                     */
+/**************************************************************************/
+
+/**
+ * purple_attr_new:
+ * @id:  The name part of PurpleAttr
+ * @data:  The value part of PurpleAttr
+ *
+ * Creates a new PurpleAttr.
+ *
+ * Returns:  The created PurpleAttr
+ *
+ * Since: 3.0.0
+ */
+PurpleAttr *purple_attr_new(const char *id, gpointer data);
+
+/**
+ * purple_attr_list_from_vargs:
+ * @args:   A list of attributes to parse.  This list is
+ *               composed of key/value pairs, where each key is a valid
+ *               attribute name for this PurpleStatusType.  The list should
+ *               be NULL terminated.
+ *
+ * Returns a list of attributes constructed from args.
+ *
+ * Returns: (element-type PurpleAttr) (transfer full): The list of attributes.
+ *
+ * Since: 3.0.0
+ */
+GList *purple_attr_list_from_vargs(va_list args);
 
 G_END_DECLS
 

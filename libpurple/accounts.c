@@ -210,6 +210,7 @@ parse_status_attrs(PurpleXmlNode *node, PurpleStatus *status)
 	for (child = purple_xmlnode_get_child(node, "attribute"); child != NULL;
 			child = purple_xmlnode_get_next_twin(child))
 	{
+		PurpleAttr *attr = NULL;
 		const char *id = purple_xmlnode_get_attrib(child, "id");
 		const char *value = purple_xmlnode_get_attrib(child, "value");
 
@@ -220,25 +221,25 @@ parse_status_attrs(PurpleXmlNode *node, PurpleStatus *status)
 		if (!attr_value)
 			continue;
 
-		list = g_list_append(list, (char *)id);
-
 		switch (G_VALUE_TYPE(attr_value))
 		{
 			case G_TYPE_STRING:
-				list = g_list_append(list, (char *)value);
+				attr = purple_attr_new(id, (char *)value);
 				break;
 			case G_TYPE_INT:
 			case G_TYPE_BOOLEAN:
 			{
 				int v;
 				if (sscanf(value, "%d", &v) == 1)
-					list = g_list_append(list, GINT_TO_POINTER(v));
-				else
-					list = g_list_remove(list, id);
+					attr = purple_attr_new(id, GINT_TO_POINTER(v));
 				break;
 			}
 			default:
 				break;
+		}
+
+		if (attr != NULL) {
+			list = g_list_append(list, attr);
 		}
 	}
 
@@ -280,7 +281,7 @@ parse_status(PurpleXmlNode *node, PurpleAccount *account)
 
 	purple_account_set_status_list(account, type, active, attrs);
 
-	g_list_free(attrs);
+	g_list_free_full(attrs, g_free);
 }
 
 static void
