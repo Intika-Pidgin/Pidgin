@@ -324,7 +324,6 @@ pidgin/gtkconn.c
 pidgin/gtkconv.c
 pidgin/gtkdialogs.c
 pidgin/gtkdnd-hints.c
-pidgin/gtkdocklet.c
 pidgin/gtkicon-theme.c
 pidgin/gtkicon-theme-loader.c
 pidgin/gtkidle.c
