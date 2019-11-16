@@ -714,18 +714,10 @@ purple_status_set_active(PurpleStatus *status, gboolean active)
 void
 purple_status_set_active_with_attrs(PurpleStatus *status, gboolean active, va_list args)
 {
-	GList *attrs = NULL;
-	const gchar *id;
-	gpointer data;
+	GList *attrs = purple_attr_list_from_vargs(args);
 
-	while ((id = va_arg(args, const char *)) != NULL)
-	{
-		attrs = g_list_append(attrs, (char *)id);
-		data = va_arg(args, void *);
-		attrs = g_list_append(attrs, data);
-	}
 	purple_status_set_active_with_attrs_list(status, active, attrs);
-	g_list_free(attrs);
+	g_list_free_full(attrs, g_free);
 }
 
 void
@@ -758,57 +750,45 @@ purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
 	priv->active = active;
 
 	/* Set any attributes */
-	l = attrs;
-	while (l != NULL)
+	for (l = attrs; l != NULL; l = l->next)
 	{
-		const gchar *id;
+		PurpleAttr *attr = l->data;
 		GValue *value;
 
-		id = l->data;
-		l = l->next;
-		value = purple_status_get_attr_value(status, id);
+		value = purple_status_get_attr_value(status, attr->id);
 		if (value == NULL)
 		{
 			purple_debug_warning("status", "The attribute \"%s\" on the status \"%s\" is "
-							   "not supported.\n", id, priv->status_type->name);
+							   "not supported.\n", attr->id, priv->status_type->name);
 			/* Skip over the data and move on to the next attribute */
-			l = l->next;
 			continue;
 		}
 
-		specified_attr_ids = g_list_prepend(specified_attr_ids, (gpointer)id);
+		specified_attr_ids = g_list_prepend(specified_attr_ids, (gpointer)attr->id);
 
 		if (G_VALUE_TYPE(value) == G_TYPE_STRING)
 		{
-			const gchar *string_data = l->data;
-			l = l->next;
+			const gchar *string_data = attr->data;
 			if (purple_strequal(string_data, g_value_get_string(value)))
 				continue;
-			status_set_attr_string(status, id, string_data);
+			status_set_attr_string(status, attr->id, string_data);
 			changed = TRUE;
 		}
 		else if (G_VALUE_TYPE(value) == G_TYPE_INT)
 		{
-			int int_data = GPOINTER_TO_INT(l->data);
-			l = l->next;
+			int int_data = GPOINTER_TO_INT(attr->data);
 			if (int_data == g_value_get_int(value))
 				continue;
-			status_set_attr_int(status, id, int_data);
+			status_set_attr_int(status, attr->id, int_data);
 			changed = TRUE;
 		}
 		else if (G_VALUE_TYPE(value) == G_TYPE_BOOLEAN)
 		{
-			gboolean boolean_data = GPOINTER_TO_INT(l->data);
-			l = l->next;
+			gboolean boolean_data = GPOINTER_TO_INT(attr->data);
 			if (boolean_data == g_value_get_boolean(value))
 				continue;
-			status_set_attr_boolean(status, id, boolean_data);
+			status_set_attr_boolean(status, attr->id, boolean_data);
 			changed = TRUE;
-		}
-		else
-		{
-			/* We don't know what the data is--skip over it */
-			l = l->next;
 		}
 	}
 
@@ -1368,4 +1348,36 @@ void
 purple_statuses_uninit(void)
 {
 	purple_prefs_disconnect_by_handle(purple_prefs_get_handle());
+}
+
+/**************************************************************************/
+/* PurpleAttr helpers                                                     */
+/**************************************************************************/
+PurpleAttr *
+purple_attr_new(const char *id, gpointer data)
+{
+	PurpleAttr *attr;
+
+	attr = g_new0(PurpleAttr, 1);
+	attr->id = id;
+	attr->data = data;
+
+	return attr;
+}
+
+GList *
+purple_attr_list_from_vargs(va_list args)
+{
+	GList *attrs = NULL;
+	const gchar *id;
+
+	while ((id = va_arg(args, const char *)) != NULL)
+	{
+		gpointer data = va_arg(args, gpointer);
+		PurpleAttr *attr = purple_attr_new(id, data);
+
+		attrs = g_list_append(attrs, attr);
+	}
+
+	return attrs;
 }

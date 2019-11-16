@@ -1793,19 +1793,12 @@ purple_account_set_status(PurpleAccount *account, const char *status_id,
 						gboolean active, ...)
 {
 	GList *attrs = NULL;
-	const gchar *id;
-	gpointer data;
 	va_list args;
 
 	va_start(args, active);
-	while ((id = va_arg(args, const char *)) != NULL)
-	{
-		attrs = g_list_append(attrs, (char *)id);
-		data = va_arg(args, void *);
-		attrs = g_list_append(attrs, data);
-	}
+	attrs = purple_attr_list_from_vargs(args);
 	purple_account_set_status_list(account, status_id, active, attrs);
-	g_list_free(attrs);
+	g_list_free_full(attrs, g_free);
 	va_end(args);
 }
 
