@@ -48,7 +48,6 @@
 #include "gtkconn.h"
 #include "gtkconv.h"
 #include "gtkdialogs.h"
-#include "gtkdocklet.h"
 #include "gtkxfer.h"
 #include "gtkidle.h"
 #include "gtkmedia.h"
@@ -244,7 +243,6 @@ pidgin_ui_init(void)
 	pidgin_xfers_init();
 	pidgin_roomlist_init();
 	pidgin_log_init();
-	pidgin_docklet_init();
 	_pidgin_smiley_theme_init();
 	pidgin_medias_init();
 	pidgin_notify_init();
@@ -262,7 +260,6 @@ pidgin_quit(void)
 	_pidgin_smiley_theme_uninit();
 	pidgin_conversations_uninit();
 	pidgin_status_uninit();
-	pidgin_docklet_uninit();
 	pidgin_blist_uninit();
 	pidgin_request_uninit();
 	pidgin_connection_uninit();

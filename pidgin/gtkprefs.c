@@ -105,7 +105,6 @@ struct _PidginPrefsWindow {
 
 	/* Interface page */
 	struct {
-		PidginPrefCombo docklet;
 		struct {
 			PidginPrefCombo hide_new;
 		} im;
@@ -1686,10 +1685,6 @@ bind_interface_page(PidginPrefsWindow *win)
 	GList *names = NULL;
 
 	/* System Tray */
-	win->iface.docklet.type = PURPLE_PREF_STRING;
-	win->iface.docklet.key = PIDGIN_PREFS_ROOT "/docklet/show";
-	pidgin_prefs_bind_dropdown(&win->iface.docklet);
-
 	win->iface.im.hide_new.type = PURPLE_PREF_STRING;
 	win->iface.im.hide_new.key = PIDGIN_PREFS_ROOT "/conversations/im/hide_new";
 	pidgin_prefs_bind_dropdown(&win->iface.im.hide_new);
@@ -3481,9 +3476,6 @@ pidgin_prefs_window_class_init(PidginPrefsWindowClass *klass)
 	gtk_widget_class_bind_template_callback(widget_class, delete_prefs);
 
 	/* Interface page */
-	gtk_widget_class_bind_template_child(
-			widget_class, PidginPrefsWindow,
-			iface.docklet.combo);
 	gtk_widget_class_bind_template_child(
 			widget_class, PidginPrefsWindow,
 			iface.im.hide_new.combo);
