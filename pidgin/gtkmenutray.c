@@ -65,7 +65,7 @@ G_DEFINE_TYPE(PidginMenuTray, pidgin_menu_tray, GTK_TYPE_MENU_ITEM);
 
 static void
 pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
-								GParamSpec *pspec)
+                              GParamSpec *pspec)
 {
 	PidginMenuTray *menu_tray = PIDGIN_MENU_TRAY(obj);
 
@@ -80,16 +80,14 @@ pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
 }
 
 static void
-pidgin_menu_tray_map(GtkWidget *widget)
-{
+pidgin_menu_tray_map(GtkWidget *widget) {
 	GTK_WIDGET_CLASS(pidgin_menu_tray_parent_class)->map(widget);
-	gtk_container_add(GTK_CONTAINER(widget),
-			PIDGIN_MENU_TRAY(widget)->tray);
+
+	gtk_container_add(GTK_CONTAINER(widget), PIDGIN_MENU_TRAY(widget)->tray);
 }
 
 static void
-pidgin_menu_tray_finalize(GObject *obj)
-{
+pidgin_menu_tray_finalize(GObject *obj) {
 #if 0
 	PidginMenuTray *tray = PIDGIN_MENU_TRAY(obj);
 
@@ -139,8 +137,9 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	gtk_menu_item_set_right_justified(GTK_MENU_ITEM(menu_tray), TRUE);
 G_GNUC_END_IGNORE_DEPRECATIONS
 
-	if(!GTK_IS_WIDGET(menu_tray->tray))
+	if(!GTK_IS_WIDGET(menu_tray->tray)) {
 		menu_tray->tray = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	}
 
 	settings =
 		gtk_settings_get_for_screen(gtk_widget_get_screen(widget));
@@ -165,6 +164,7 @@ pidgin_menu_tray_new() {
 GtkWidget *
 pidgin_menu_tray_get_box(PidginMenuTray *menu_tray) {
 	g_return_val_if_fail(PIDGIN_IS_MENU_TRAY(menu_tray), NULL);
+
 	return menu_tray->tray;
 }
 
@@ -175,8 +175,7 @@ pidgin_menu_tray_add(PidginMenuTray *menu_tray, GtkWidget *widget,
 	g_return_if_fail(PIDGIN_IS_MENU_TRAY(menu_tray));
 	g_return_if_fail(GTK_IS_WIDGET(widget));
 
-	if (!gtk_widget_get_has_window(widget))
-	{
+	if (!gtk_widget_get_has_window(widget)) {
 		GtkWidget *event;
 
 		event = gtk_event_box_new();
@@ -187,26 +186,30 @@ pidgin_menu_tray_add(PidginMenuTray *menu_tray, GtkWidget *widget,
 
 	pidgin_menu_tray_set_tooltip(menu_tray, widget, tooltip);
 
-	if (prepend)
+	if (prepend) {
 		gtk_box_pack_start(GTK_BOX(menu_tray->tray), widget, FALSE, FALSE, 0);
-	else
+	} else {
 		gtk_box_pack_end(GTK_BOX(menu_tray->tray), widget, FALSE, FALSE, 0);
+	}
 }
 
 void
-pidgin_menu_tray_append(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
+pidgin_menu_tray_append(PidginMenuTray *menu_tray, GtkWidget *widget,
+                        const char *tooltip)
 {
 	pidgin_menu_tray_add(menu_tray, widget, tooltip, FALSE);
 }
 
 void
-pidgin_menu_tray_prepend(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
+pidgin_menu_tray_prepend(PidginMenuTray *menu_tray, GtkWidget *widget,
+                         const char *tooltip)
 {
 	pidgin_menu_tray_add(menu_tray, widget, tooltip, TRUE);
 }
 
 void
-pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
+pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget,
+                             const char *tooltip)
 {
 	/* Should we check whether widget is a child of menu_tray? */
 
@@ -217,8 +220,10 @@ pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget, const
 	 * case, we want to set the tooltip on the widget's parent,
 	 * not on the widget itself.
 	 */
-	if (!gtk_widget_get_has_window(widget))
+	if (!gtk_widget_get_has_window(widget)) {
 		widget = gtk_widget_get_parent(widget);
+	}
 
 	gtk_widget_set_tooltip_text(widget, tooltip);
 }
+
