@@ -19,6 +19,7 @@
 
 #ifndef PIDGIN_MENU_TRAY_H
 #define PIDGIN_MENU_TRAY_H
+
 /**
  * SECTION:gtkmenutray
  * @section_id: pidgin-gtkmenutray
@@ -28,44 +29,17 @@
 
 #include <gtk/gtk.h>
 
-#define PIDGIN_TYPE_MENU_TRAY            (pidgin_menu_tray_get_type())
-#define PIDGIN_MENU_TRAY(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_MENU_TRAY, PidginMenuTray))
-#define PIDGIN_MENU_TRAY_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PIDGIN_TYPE_MENU_TRAY, PidginMenuTrayClass))
-#define PIDGIN_IS_MENU_TRAY(obj)         (G_TYPE_CHECK_INSTANCE_TYPE((obj), PIDGIN_TYPE_MENU_TRAY))
-#define PIDGIN_IS_MENU_TRAY_CLASS(klass) (G_TYPE_CHECK_CLASS_TYPE((klass), PIDGIN_TYPE_MENU_TRAY))
-#define PIDGIN_MENU_TRAY_GET_CLASS(obj)  (G_TYPE_INSTANCE_GET_CLASS((obj), PIDGIN_TYPE_MENU_TRAY, PidginMenuTrayClass))
+G_BEGIN_DECLS
 
-typedef struct _PidginMenuTray				PidginMenuTray;
-typedef struct _PidginMenuTrayClass		PidginMenuTrayClass;
+#define PIDGIN_TYPE_MENU_TRAY (pidgin_menu_tray_get_type())
+G_DECLARE_FINAL_TYPE(PidginMenuTray, pidgin_menu_tray, PIDGIN, MENU_TRAY, GtkMenuItem)
 
 /**
  * PidginMenuTray:
- * @tray: The tray
  *
- * A PidginMenuTray
+ * A PidginMenuTray is a #GtkMenuItem that allows you to pack icons into it
+ * similar to a system notification area but in a windows menu bar.
  */
-struct _PidginMenuTray {
-	GtkMenuItem gparent;
-
-	/*< public >*/
-	GtkWidget *tray;
-};
-
-struct _PidginMenuTrayClass {
-	GtkMenuItemClass gparent;
-};
-
-G_BEGIN_DECLS
-
-/**
- * pidgin_menu_tray_get_type:
- *
- * Registers the PidginMenuTray class if necessary and returns the
- * type ID assigned to it.
- *
- * Returns: The PidginMenuTray type ID
- */
-GType pidgin_menu_tray_get_type(void);
 
 /**
  * pidgin_menu_tray_new:

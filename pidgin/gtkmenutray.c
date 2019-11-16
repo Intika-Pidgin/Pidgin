@@ -23,21 +23,22 @@
 
 #include "gtkmenutray.h"
 
-/******************************************************************************
- * Enums
- *****************************************************************************/
+struct _PidginMenuTray {
+	GtkMenuItem parent;
+
+	GtkWidget *tray;
+};
+
 enum {
 	PROP_ZERO = 0,
-	PROP_BOX
+	PROP_BOX,
+	N_PROPERTIES
 };
 
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static GObjectClass *parent_class = NULL;
-/******************************************************************************
- * Internal Stuff
- *****************************************************************************/
+static GParamSpec *properties[N_PROPERTIES] = {NULL, };
 
 /******************************************************************************
  * Item Stuff
@@ -58,8 +59,10 @@ pidgin_menu_tray_deselect(GtkMenuItem *widget) {
 }
 
 /******************************************************************************
- * Object Stuff
+ * GObject Implementation
  *****************************************************************************/
+G_DEFINE_TYPE(PidginMenuTray, pidgin_menu_tray, GTK_TYPE_MENU_ITEM);
+
 static void
 pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
 								GParamSpec *pspec)
@@ -79,7 +82,7 @@ pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
 static void
 pidgin_menu_tray_map(GtkWidget *widget)
 {
-	GTK_WIDGET_CLASS(parent_class)->map(widget);
+	GTK_WIDGET_CLASS(pidgin_menu_tray_parent_class)->map(widget);
 	gtk_container_add(GTK_CONTAINER(widget),
 			PIDGIN_MENU_TRAY(widget)->tray);
 }
@@ -100,31 +103,28 @@ pidgin_menu_tray_finalize(GObject *obj)
 		gtk_widget_destroy(GTK_WIDGET(tray->tray));
 #endif
 
-	G_OBJECT_CLASS(parent_class)->finalize(obj);
+	G_OBJECT_CLASS(pidgin_menu_tray_parent_class)->finalize(obj);
 }
 
 static void
 pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
-	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	GtkMenuItemClass *menu_item_class = GTK_MENU_ITEM_CLASS(klass);
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
-	GParamSpec *pspec;
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	object_class->finalize = pidgin_menu_tray_finalize;
-	object_class->get_property = pidgin_menu_tray_get_property;
+	obj_class->finalize = pidgin_menu_tray_finalize;
+	obj_class->get_property = pidgin_menu_tray_get_property;
 
 	menu_item_class->select = pidgin_menu_tray_select;
 	menu_item_class->deselect = pidgin_menu_tray_deselect;
 
 	widget_class->map = pidgin_menu_tray_map;
 
-	pspec = g_param_spec_object("box", "The box",
-								"The box",
-								GTK_TYPE_BOX,
-								G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-	g_object_class_install_property(object_class, PROP_BOX, pspec);
+	properties[PROP_BOX] = g_param_spec_object("box", "The box", "The box",
+	                                           GTK_TYPE_BOX,
+	                                           G_PARAM_READABLE);
+
+	g_object_class_install_properties(obj_class, N_PROPERTIES, properties);
 }
 
 static void
@@ -157,32 +157,6 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 /******************************************************************************
  * API
  *****************************************************************************/
-GType
-pidgin_menu_tray_get_type(void) {
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PidginMenuTrayClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)pidgin_menu_tray_class_init,
-			NULL,
-			NULL,
-			sizeof(PidginMenuTray),
-			0,
-			(GInstanceInitFunc)pidgin_menu_tray_init,
-			NULL
-		};
-
-		type = g_type_register_static(GTK_TYPE_MENU_ITEM,
-									  "PidginMenuTray",
-									  &info, 0);
-	}
-
-	return type;
-}
-
 GtkWidget *
 pidgin_menu_tray_new() {
 	return g_object_new(PIDGIN_TYPE_MENU_TRAY, NULL);
