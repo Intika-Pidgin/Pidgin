@@ -45,6 +45,17 @@
  */
 typedef struct _PurpleKeyValuePair PurpleKeyValuePair;
 
+/**
+ * PurpleNamedValue:
+ * @name: The name
+ * @value: The value
+ *
+ * A name-value pair.
+ *
+ * Similar to PurpleKeyValuePair except it doesn't allocate memory for @value.
+ */
+typedef struct _PurpleNamedValue   PurpleNamedValue;
+
 #include "account.h"
 #include "signals.h"
 #include "xmlnode.h"
@@ -58,7 +69,12 @@ struct _PurpleKeyValuePair
 {
 	gchar *key;
 	void *value;
+};
 
+struct _PurpleNamedValue
+{
+	gchar *name;
+	gpointer value;
 };
 
 G_BEGIN_DECLS
@@ -93,8 +109,33 @@ char * purple_util_format_song_info(const char *title, const char *artist,
  * @kvp:  The PurpleKeyValuePair to free.
  *
  * Frees a PurpleKeyValuePair.
+ *
+ * Since: 3.0.0
  */
 void purple_key_value_pair_free(PurpleKeyValuePair *kvp);
+
+/**
+ * purple_named_value_new:
+ * @name:  The name part of PurpleNamedValue
+ * @value:  The value part of PurpleNamedValue
+ *
+ * Creates a new PurpleNamedValue.
+ *
+ * Returns:  The created PurpleNamedValue
+ *
+ * Since: 3.0.0
+ */
+PurpleNamedValue *purple_named_value_new(const char *name, gpointer value);
+
+/**
+ * purple_named_value_free:
+ * @named_value:  The PurpleNamedValue to free.
+ *
+ * Frees a PurpleNamedValue.
+ *
+ * Since: 3.0.0
+ */
+void purple_named_value_free(PurpleNamedValue *named_value);
 
 /**************************************************************************/
 /* Utility Subsystem                                                      */

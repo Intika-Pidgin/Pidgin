@@ -1223,8 +1223,7 @@ create_choice_field(PurpleRequestField *field,
 {
 	GtkWidget *widget;
 	GList *elements = purple_request_field_choice_get_elements(field);
-	int num_labels = g_list_length(elements) / 2;
-	GList *l;
+	guint num_labels = g_list_length(elements);
 	gpointer *values = g_new(gpointer, num_labels);
 	gpointer default_value;
 	gboolean default_found = FALSE;
@@ -1237,23 +1236,16 @@ create_choice_field(PurpleRequestField *field,
 		widget = gtk_combo_box_text_new();
 
 		i = 0;
-		l = elements;
-		while (l != NULL)
+		for (GList *l = elements; l != NULL; l = g_list_next(l))
 		{
-			const char *text;
-			gpointer *value;
+			PurpleNamedValue *choice = l->data;
 
-			text = l->data;
-			l = g_list_next(l);
-			value = l->data;
-			l = g_list_next(l);
-
-			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), text);
-			if (value == default_value) {
+			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), choice->name);
+			if (choice->value == default_value) {
 				default_index = i;
 				default_found = TRUE;
 			}
-			values[i++] = value;
+			values[i++] = choice->value;
 		}
 
 		gtk_combo_box_set_active(GTK_COMBO_BOX(widget), default_index);
@@ -1279,29 +1271,22 @@ create_choice_field(PurpleRequestField *field,
 		gtk_widget_set_tooltip_text(widget, purple_request_field_get_tooltip(field));
 
 		i = 0;
-		l = elements;
-		while (l != NULL)
+		for (GList *l = elements; l != NULL; l = g_list_next(l))
 		{
-			const char *text;
-			gpointer *value;
-
-			text = l->data;
-			l = g_list_next(l);
-			value = l->data;
-			l = g_list_next(l);
+			PurpleNamedValue *choice = l->data;
 
 			radio = gtk_radio_button_new_with_label_from_widget(
-				GTK_RADIO_BUTTON(first_radio), text);
+				GTK_RADIO_BUTTON(first_radio), choice->name);
 			g_object_set_data(G_OBJECT(radio), "box", box);
 
 			if (first_radio == NULL)
 				first_radio = radio;
 
-			if (value == default_value) {
+			if (choice->value == default_value) {
 				gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(radio), TRUE);
 				default_found = TRUE;
 			}
-			values[i++] = value;
+			values[i++] = choice->value;
 
 			gtk_box_pack_start(GTK_BOX(box), radio, TRUE, TRUE, 0);
 			gtk_widget_show(radio);
@@ -1889,8 +1874,8 @@ pidgin_request_fields(const char *title, const char *primary,
 	char *label_text;
 	char *primary_esc, *secondary_esc;
 	const gboolean compact = purple_request_cpar_is_compact(cpar);
-	GSList *extra_actions, *it;
-	size_t extra_actions_count, i;
+	GSList *extra_actions;
+	size_t i;
 	const gchar **tab_names;
 	guint tab_count;
 	gboolean ok_btn = (ok_text != NULL);
@@ -1903,7 +1888,6 @@ pidgin_request_fields(const char *title, const char *primary,
 	purple_request_fields_set_ui_data(fields, data);
 
 	extra_actions = purple_request_cpar_get_extra_actions(cpar);
-	extra_actions_count = g_slist_length(extra_actions) / 2;
 
 	data->cb_count = 2;
 	data->cbs = g_new0(GCallback, 2);
@@ -1934,14 +1918,12 @@ pidgin_request_fields(const char *title, const char *primary,
 
 	pidgin_request_add_help(GTK_DIALOG(win), cpar);
 
-	it = extra_actions;
-	for (i = 0; i < extra_actions_count; i++, it = it->next->next) {
-		const gchar *label = it->data;
-		PurpleRequestFieldsCb *cb = it->next->data;
+	for (GSList *it = extra_actions; it != NULL; it = it->next) {
+		PurpleNamedValue *extra_action = it->data;
 
-		button = pidgin_dialog_add_button(GTK_DIALOG(win), label,
+		button = pidgin_dialog_add_button(GTK_DIALOG(win), extra_action->name,
 				G_CALLBACK(multifield_extra_cb), data);
-		g_object_set_data(G_OBJECT(button), "extra-cb", cb);
+		g_object_set_data(G_OBJECT(button), "extra-cb", extra_action->value);
 	}
 
 	/* Cancel button */

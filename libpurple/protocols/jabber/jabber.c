@@ -3377,7 +3377,7 @@ jabber_initiate_media(PurpleAccount *account, const char *who,
 		}
 
 		if (g_list_length(purple_request_field_choice_get_elements(
-				field)) <= 2) {
+				field)) <= 1) {
 			gchar *name;
 			gboolean result;
 			purple_request_field_destroy(field);

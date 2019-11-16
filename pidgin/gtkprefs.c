@@ -484,7 +484,6 @@ pidgin_prefs_dropdown_from_list_with_cb(GtkWidget *box, const gchar *title,
 {
 	GtkWidget *dropdown;
 	GtkWidget *label = NULL;
-	gchar *text;
 	GtkListStore *store = NULL;
 	GtkTreeIter iter;
 	GtkTreeIter active;
@@ -509,33 +508,35 @@ pidgin_prefs_dropdown_from_list_with_cb(GtkWidget *box, const gchar *title,
 		*dropdown_out = GTK_COMBO_BOX(dropdown);
 	g_object_set_data(G_OBJECT(dropdown), "type", GINT_TO_POINTER(initial.type));
 
-	while (menuitems != NULL && (text = (char *)menuitems->data) != NULL) {
+	for (; menuitems != NULL; menuitems = g_list_next(menuitems)) {
+		const PurpleNamedValue *menu_item = menuitems->data;
 		int int_value  = 0;
 		const char *str_value  = NULL;
 		gboolean bool_value = FALSE;
 
-		menuitems = g_list_next(menuitems);
-		g_return_val_if_fail(menuitems != NULL, NULL);
+		if (menu_item->name == NULL) {
+			break;
+		}
 
 		gtk_list_store_append(store, &iter);
 		gtk_list_store_set(store, &iter,
-		                   PREF_DROPDOWN_TEXT, text,
+				   PREF_DROPDOWN_TEXT, menu_item->name,
 		                   -1);
 
 		if (initial.type == PURPLE_PREF_INT) {
-			int_value = GPOINTER_TO_INT(menuitems->data);
+			int_value = GPOINTER_TO_INT(menu_item->value);
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, int_value,
 			                   -1);
 		}
 		else if (initial.type == PURPLE_PREF_STRING) {
-			str_value = (const char *)menuitems->data;
+			str_value = (const char *)menu_item->value;
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, str_value,
 			                   -1);
 		}
 		else if (initial.type == PURPLE_PREF_BOOLEAN) {
-			bool_value = (gboolean)GPOINTER_TO_INT(menuitems->data);
+			bool_value = (gboolean)GPOINTER_TO_INT(menu_item->value);
 			gtk_list_store_set(store, &iter,
 			                   PREF_DROPDOWN_VALUE, bool_value,
 			                   -1);
@@ -550,8 +551,6 @@ pidgin_prefs_dropdown_from_list_with_cb(GtkWidget *box, const gchar *title,
 
 			active = iter;
 		}
-
-		menuitems = g_list_next(menuitems);
 	}
 
 	renderer = gtk_cell_renderer_text_new();

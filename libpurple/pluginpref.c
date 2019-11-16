@@ -141,18 +141,11 @@ purple_plugin_pref_new_with_name_and_label(const char *name, const char *label)
 void
 purple_plugin_pref_destroy(PurplePluginPref *pref)
 {
-	GList *tmp;
 	g_return_if_fail(pref != NULL);
 
 	g_free(pref->name);
 	g_free(pref->label);
-	tmp = pref->choices;
-	while(tmp) {
-		g_free(tmp->data);
-		/* Remove the string, and the data entries */
-		tmp = g_list_delete_link(tmp, tmp);
-		tmp = g_list_delete_link(tmp, tmp);
-	}
+	g_list_free_full(pref->choices, (GDestroyNotify)purple_named_value_free);
 	g_free(pref);
 }
 
@@ -255,12 +248,15 @@ purple_plugin_pref_get_pref_type(PurplePluginPref *pref)
 void
 purple_plugin_pref_add_choice(PurplePluginPref *pref, const char *label, gpointer choice)
 {
+	PurpleNamedValue *pref_choice;
+
 	g_return_if_fail(pref  != NULL);
 	g_return_if_fail(label != NULL);
 	g_return_if_fail(choice || purple_prefs_get_pref_type(pref->name) == PURPLE_PREF_INT);
 
-	pref->choices = g_list_append(pref->choices, g_strdup(label));
-	pref->choices = g_list_append(pref->choices, choice);
+	pref_choice = purple_named_value_new(label, choice);
+
+	pref->choices = g_list_append(pref->choices, pref_choice);
 }
 
 GList *
