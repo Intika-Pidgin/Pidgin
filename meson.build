@@ -1,7 +1,7 @@
 # UPDATING VERSION NUMBERS FOR RELEASES
 #
 # The version number is:
-#   <major>.<minor>.<micro><suffix>
+#   <major>.<minor>.<micro><extra>
 #
 # micro += 1
 #
@@ -15,7 +15,7 @@
 #   major += 1
 #   purple_soversion += 1
 #
-# suffix should be similar to one of the following:
+# extra should be similar to one of the following:
 #   For beta releases:          '-beta2'
 #   For code under development: '-devel'
 #   For production releases:    ''
@@ -27,9 +27,9 @@ purple_soversion = 20
 
 parts = meson.project_version().split('-')
 if parts.length() > 1
-  purple_version_suffix = parts[1]
+  purple_extra_version = parts[1]
 else
-  purple_version_suffix = ''
+  purple_extra_version = ''
 endif
 
 parts = parts[0].split('.')
@@ -46,10 +46,12 @@ conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE_NAME', meson.project_name())
 conf.set_quoted('VERSION', meson.project_version())
+conf.set_quoted('DISPLAY_VERSION', meson.project_version())
 
 version_conf.set('PURPLE_MAJOR_VERSION', purple_major_version)
 version_conf.set('PURPLE_MINOR_VERSION', purple_minor_version)
 version_conf.set('PURPLE_MICRO_VERSION', purple_micro_version)
+version_conf.set('PURPLE_EXTRA_VERSION', purple_extra_version)
 version_conf.set('PURPLE_VERSION', meson.project_version())
 version_conf.set('PURPLE_API_VERSION', purple_soversion)
 
@@ -279,14 +281,6 @@ gio = dependency('gio-2.0')
 gobject = dependency('gobject-2.0')
 gthread = dependency('gthread-2.0')
 gnome = import('gnome')
-
-if get_option('extraversion') != ''
-	DISPLAY_VERSION = '@0@-@1@'.format(meson.project_version(),
-	                                   get_option('extraversion'))
-else
-	DISPLAY_VERSION = meson.project_version()
-endif
-conf.set_quoted('DISPLAY_VERSION', DISPLAY_VERSION)
 
 #######################################################################
 # Check for GObject Introspection
