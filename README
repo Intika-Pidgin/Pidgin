@@ -13,7 +13,7 @@ Finch is a text-based IM client written in C which uses the ncurses
 toolkit.
 
 These programs are not endorsed by, nor affiliated with, any
-proprietary instant messagin company in any way.
+proprietary instant messaging company in any way.
 
 ## BUILD
 
