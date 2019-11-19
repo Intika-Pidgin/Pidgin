@@ -33,7 +33,6 @@
 #include "sound.h"
 #include "util.h"
 
-#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtkdialogs.h"
 #include "gtkpounce.h"

@@ -34,8 +34,6 @@
 
 #include <libsoup/soup.h>
 
-#include "gtk3compat.h"
-
 typedef struct
 {
 	PurpleSmiley *smiley;

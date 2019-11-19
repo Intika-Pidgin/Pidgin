@@ -27,7 +27,6 @@
 #include "pidgin.h"
 #include "whiteboard.h"
 
-#include "gtk3compat.h"
 #include "gtkwhiteboard.h"
 #include "gtkutils.h"
 

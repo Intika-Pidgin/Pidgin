@@ -9,7 +9,6 @@ libpidgin_SOURCES = [
 	'gtkconv.c',
 	'gtkdialogs.c',
 	'gtkdnd-hints.c',
-	'gtkdocklet.c',
 	'gtkicon-theme.c',
 	'gtkicon-theme-loader.c',
 	'gtkidle.c',
@@ -60,7 +59,6 @@ libpidgin_headers = [
 	'gtkconvwin.h',
 	'gtkdialogs.h',
 	'gtkdnd-hints.h',
-	'gtkdocklet.h',
 	'gtkicon-theme.h',
 	'gtkicon-theme-loader.h',
 	'gtkidle.h',
@@ -119,11 +117,6 @@ if IS_WIN32
 		'win32/gtkwin32dep.c',
 		'win32/untar.c'
 	]
-
-	# Files that looks like obsolete (were used in Pidgin2):
-	#	win32/gtkdocklet-win32.c
-	#	win32/MinimizeToTray.c
-	#	win32/MinimizeToTray.h
 
 	pidgin_exe_rc = configure_file(
 	    input : 'win32/pidgin_exe_rc.rc.in',

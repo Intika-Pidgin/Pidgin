@@ -217,8 +217,9 @@ im_mime_parse(const char *data)
 static char *
 im_mime_content_id(void)
 {
-	return g_strdup_printf("%03x@%05xmeanwhile",
-			g_random_int() & 0xfff, g_random_int() & 0xfffff);
+	gint id = g_random_int();
+	return g_strdup_printf("%03x@%05xmeanwhile", (id & 0xfff00000) >> 20,
+	                       id & 0xfffff);
 }
 
 
@@ -226,8 +227,9 @@ im_mime_content_id(void)
 static char *
 im_mime_boundary(void)
 {
-	return g_strdup_printf("related_MW%03x_%04x",
-			g_random_int() & 0xfff, g_random_int() & 0xffff);
+	gint id = g_random_int();
+	return g_strdup_printf("related_MW%03x_%04x", (id & 0xfff0000) >> 16,
+	                       id & 0xffff);
 }
 
 /** create MIME image from purple image */

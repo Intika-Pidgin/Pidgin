@@ -2,8 +2,9 @@
 See AUTHORS and COPYRIGHT for the list of contributors.
 
 libpurple is a library intended to be used by programmers seeking
-to write an IM client that connects to many IM networks.  It supports
-AIM, ICQ, and XMPP, among others.
+to write an IM client that connects to many IM networks.  It comes
+with support for Bonjour, IRC, XMPP, among others, and there are
+many more networks supported via third party protocols.
 
 Pidgin is a graphical IM client written in C which uses the GTK+
 toolkit.
@@ -11,8 +12,8 @@ toolkit.
 Finch is a text-based IM client written in C which uses the ncurses
 toolkit.
 
-These programs are not endorsed by, nor affiliated with, AOL nor any
-other company in any way.
+These programs are not endorsed by, nor affiliated with, any
+proprietary instant messaging company in any way.
 
 ## BUILD
 
@@ -23,7 +24,7 @@ You can quickly build Pidgin with the following commands
     meson build
     cd build
     ninja
-    sudo ninja install
+    ninja install
 
 There are quite a few options for the build that you can view by looking at `meson_options.txt`.  You can specify the options when running meson like the following:
 
@@ -38,7 +39,7 @@ If you've already ran meson you can use `meson configure`
 
 Currently Pidgin can not be run from a build directory which means you must
 install it first.  Once you've done that, you only need to run 'pidgin' or
-'finch'.
+'finch'.  If it fails to launch you may need to run `ldconfig` as root.
 
 To get started, simply add a new account.
 

@@ -24,7 +24,6 @@
 #include "debug.h"
 #include "version.h"
 
-#include "gtk3compat.h"
 #include "gtkconv.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
