@@ -101,7 +101,7 @@ pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
 
 	properties[PROP_BOX] = g_param_spec_object("box", "The box", "The box",
 	                                           GTK_TYPE_BOX,
-	                                           G_PARAM_READABLE);
+	                                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, N_PROPERTIES, properties);
 }
