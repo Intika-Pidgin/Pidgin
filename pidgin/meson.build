@@ -118,10 +118,6 @@ if IS_WIN32
 		'win32/untar.c'
 	]
 
-	# Files that looks like obsolete (were used in Pidgin2):
-	#	win32/MinimizeToTray.c
-	#	win32/MinimizeToTray.h
-
 	pidgin_exe_rc = configure_file(
 	    input : 'win32/pidgin_exe_rc.rc.in',
 	    output : 'pidgin_exe_rc.rc',
