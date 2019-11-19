@@ -21,7 +21,7 @@
 
 #include "debug.h"
 
-#include "gtkmenutray.h"
+#include "pidginmenutray.h"
 
 struct _PidginMenuTray {
 	GtkMenuItem parent;
