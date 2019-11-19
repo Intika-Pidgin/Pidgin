@@ -20,7 +20,6 @@
 
 #include "internal.h"
 #include "pidgin.h"
-#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
 #include "prefs.h"

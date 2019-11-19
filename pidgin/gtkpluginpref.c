@@ -30,7 +30,6 @@
 #include "pluginpref.h"
 #include "prefs.h"
 
-#include "gtk3compat.h"
 #include "gtkpluginpref.h"
 #include "gtkprefs.h"
 #include "gtkutils.h"
