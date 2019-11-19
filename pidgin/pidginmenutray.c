@@ -21,23 +21,24 @@
 
 #include "debug.h"
 
-#include "gtkmenutray.h"
+#include "pidginmenutray.h"
 
-/******************************************************************************
- * Enums
- *****************************************************************************/
+struct _PidginMenuTray {
+	GtkMenuItem parent;
+
+	GtkWidget *tray;
+};
+
 enum {
 	PROP_ZERO = 0,
-	PROP_BOX
+	PROP_BOX,
+	N_PROPERTIES
 };
 
 /******************************************************************************
  * Globals
  *****************************************************************************/
-static GObjectClass *parent_class = NULL;
-/******************************************************************************
- * Internal Stuff
- *****************************************************************************/
+static GParamSpec *properties[N_PROPERTIES] = {NULL, };
 
 /******************************************************************************
  * Item Stuff
@@ -58,11 +59,13 @@ pidgin_menu_tray_deselect(GtkMenuItem *widget) {
 }
 
 /******************************************************************************
- * Object Stuff
+ * GObject Implementation
  *****************************************************************************/
+G_DEFINE_TYPE(PidginMenuTray, pidgin_menu_tray, GTK_TYPE_MENU_ITEM);
+
 static void
 pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
-								GParamSpec *pspec)
+                              GParamSpec *pspec)
 {
 	PidginMenuTray *menu_tray = PIDGIN_MENU_TRAY(obj);
 
@@ -77,60 +80,35 @@ pidgin_menu_tray_get_property(GObject *obj, guint param_id, GValue *value,
 }
 
 static void
-pidgin_menu_tray_map(GtkWidget *widget)
-{
-	GTK_WIDGET_CLASS(parent_class)->map(widget);
-	gtk_container_add(GTK_CONTAINER(widget),
-			PIDGIN_MENU_TRAY(widget)->tray);
-}
+pidgin_menu_tray_map(GtkWidget *widget) {
+	GTK_WIDGET_CLASS(pidgin_menu_tray_parent_class)->map(widget);
 
-static void
-pidgin_menu_tray_finalize(GObject *obj)
-{
-#if 0
-	PidginMenuTray *tray = PIDGIN_MENU_TRAY(obj);
-
-	/* This _might_ be leaking, but I have a sneaking suspicion that the widget is
-	 * getting destroyed in GtkContainer's finalize function.  But if were are
-	 * leaking here, be sure to figure out why this causes a crash.
-	 *	-- Gary
-	 */
-
-	if(GTK_IS_WIDGET(tray->tray))
-		gtk_widget_destroy(GTK_WIDGET(tray->tray));
-#endif
-
-	G_OBJECT_CLASS(parent_class)->finalize(obj);
+	gtk_container_add(GTK_CONTAINER(widget), PIDGIN_MENU_TRAY(widget)->tray);
 }
 
 static void
 pidgin_menu_tray_class_init(PidginMenuTrayClass *klass) {
-	GObjectClass *object_class = G_OBJECT_CLASS(klass);
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	GtkMenuItemClass *menu_item_class = GTK_MENU_ITEM_CLASS(klass);
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
-	GParamSpec *pspec;
 
-	parent_class = g_type_class_peek_parent(klass);
-
-	object_class->finalize = pidgin_menu_tray_finalize;
-	object_class->get_property = pidgin_menu_tray_get_property;
+	obj_class->get_property = pidgin_menu_tray_get_property;
 
 	menu_item_class->select = pidgin_menu_tray_select;
 	menu_item_class->deselect = pidgin_menu_tray_deselect;
 
 	widget_class->map = pidgin_menu_tray_map;
 
-	pspec = g_param_spec_object("box", "The box",
-								"The box",
-								GTK_TYPE_BOX,
-								G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-	g_object_class_install_property(object_class, PROP_BOX, pspec);
+	properties[PROP_BOX] = g_param_spec_object("box", "The box", "The box",
+	                                           GTK_TYPE_BOX,
+	                                           G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties(obj_class, N_PROPERTIES, properties);
 }
 
 static void
 pidgin_menu_tray_init(PidginMenuTray *menu_tray) {
 	GtkWidget *widget = GTK_WIDGET(menu_tray);
-	GtkSettings *settings;
 	gint height = -1;
 
 G_GNUC_BEGIN_IGNORE_DEPRECATIONS
@@ -139,15 +117,11 @@ G_GNUC_BEGIN_IGNORE_DEPRECATIONS
 	gtk_menu_item_set_right_justified(GTK_MENU_ITEM(menu_tray), TRUE);
 G_GNUC_END_IGNORE_DEPRECATIONS
 
-	if(!GTK_IS_WIDGET(menu_tray->tray))
+	if(!GTK_IS_WIDGET(menu_tray->tray)) {
 		menu_tray->tray = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
+	}
 
-	settings =
-		gtk_settings_get_for_screen(gtk_widget_get_screen(widget));
-
-	if(gtk_icon_size_lookup_for_settings(settings, GTK_ICON_SIZE_MENU,
-										 NULL, &height))
-	{
+	if(gtk_icon_size_lookup(GTK_ICON_SIZE_MENU, NULL, &height)) {
 		gtk_widget_set_size_request(widget, -1, height);
 	}
 
@@ -157,32 +131,6 @@ G_GNUC_END_IGNORE_DEPRECATIONS
 /******************************************************************************
  * API
  *****************************************************************************/
-GType
-pidgin_menu_tray_get_type(void) {
-	static GType type = 0;
-
-	if(type == 0) {
-		static const GTypeInfo info = {
-			sizeof(PidginMenuTrayClass),
-			NULL,
-			NULL,
-			(GClassInitFunc)pidgin_menu_tray_class_init,
-			NULL,
-			NULL,
-			sizeof(PidginMenuTray),
-			0,
-			(GInstanceInitFunc)pidgin_menu_tray_init,
-			NULL
-		};
-
-		type = g_type_register_static(GTK_TYPE_MENU_ITEM,
-									  "PidginMenuTray",
-									  &info, 0);
-	}
-
-	return type;
-}
-
 GtkWidget *
 pidgin_menu_tray_new() {
 	return g_object_new(PIDGIN_TYPE_MENU_TRAY, NULL);
@@ -191,6 +139,7 @@ pidgin_menu_tray_new() {
 GtkWidget *
 pidgin_menu_tray_get_box(PidginMenuTray *menu_tray) {
 	g_return_val_if_fail(PIDGIN_IS_MENU_TRAY(menu_tray), NULL);
+
 	return menu_tray->tray;
 }
 
@@ -201,8 +150,7 @@ pidgin_menu_tray_add(PidginMenuTray *menu_tray, GtkWidget *widget,
 	g_return_if_fail(PIDGIN_IS_MENU_TRAY(menu_tray));
 	g_return_if_fail(GTK_IS_WIDGET(widget));
 
-	if (!gtk_widget_get_has_window(widget))
-	{
+	if (!gtk_widget_get_has_window(widget)) {
 		GtkWidget *event;
 
 		event = gtk_event_box_new();
@@ -213,26 +161,30 @@ pidgin_menu_tray_add(PidginMenuTray *menu_tray, GtkWidget *widget,
 
 	pidgin_menu_tray_set_tooltip(menu_tray, widget, tooltip);
 
-	if (prepend)
+	if (prepend) {
 		gtk_box_pack_start(GTK_BOX(menu_tray->tray), widget, FALSE, FALSE, 0);
-	else
+	} else {
 		gtk_box_pack_end(GTK_BOX(menu_tray->tray), widget, FALSE, FALSE, 0);
+	}
 }
 
 void
-pidgin_menu_tray_append(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
+pidgin_menu_tray_append(PidginMenuTray *menu_tray, GtkWidget *widget,
+                        const char *tooltip)
 {
 	pidgin_menu_tray_add(menu_tray, widget, tooltip, FALSE);
 }
 
 void
-pidgin_menu_tray_prepend(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
+pidgin_menu_tray_prepend(PidginMenuTray *menu_tray, GtkWidget *widget,
+                         const char *tooltip)
 {
 	pidgin_menu_tray_add(menu_tray, widget, tooltip, TRUE);
 }
 
 void
-pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget, const char *tooltip)
+pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget,
+                             const char *tooltip)
 {
 	/* Should we check whether widget is a child of menu_tray? */
 
@@ -243,8 +195,10 @@ pidgin_menu_tray_set_tooltip(PidginMenuTray *menu_tray, GtkWidget *widget, const
 	 * case, we want to set the tooltip on the widget's parent,
 	 * not on the widget itself.
 	 */
-	if (!gtk_widget_get_has_window(widget))
+	if (!gtk_widget_get_has_window(widget)) {
 		widget = gtk_widget_get_parent(widget);
+	}
 
 	gtk_widget_set_tooltip_text(widget, tooltip);
 }
+
