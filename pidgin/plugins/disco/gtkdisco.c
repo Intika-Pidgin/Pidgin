@@ -32,7 +32,6 @@
 #include "pidginaccountchooser.h"
 #include "pidgintooltip.h"
 
-#include "gtk3compat.h"
 #include "gtkdisco.h"
 #include "xmppdisco.h"
 

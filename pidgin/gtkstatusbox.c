@@ -55,8 +55,6 @@
 #include "gtkutils.h"
 #include "pidgingdkpixbuf.h"
 
-#include "gtk3compat.h"
-
 /* Timeout for typing notifications in seconds */
 #define TYPING_TIMEOUT 4
 

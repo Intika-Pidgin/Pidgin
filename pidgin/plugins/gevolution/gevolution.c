@@ -29,7 +29,6 @@
 #include "util.h"
 #include "version.h"
 
-#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkplugin.h"

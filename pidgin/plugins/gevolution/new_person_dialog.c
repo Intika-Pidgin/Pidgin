@@ -21,7 +21,6 @@
 #include "internal.h"
 #include "pidgin.h"
 
-#include "gtk3compat.h"
 #include "gtkutils.h"
 #include "pidginaccountchooser.h"
 

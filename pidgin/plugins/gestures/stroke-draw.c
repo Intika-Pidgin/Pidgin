@@ -19,8 +19,6 @@
 #include <X11/Xlib.h>
 #include <X11/Xutil.h>
 
-#include "gtk3compat.h"
-
 static void gstroke_invisible_window_init (GtkWidget *widget);
 /*FIXME: Maybe these should be put in a structure, and not static...*/
 static Display * gstroke_disp = NULL;

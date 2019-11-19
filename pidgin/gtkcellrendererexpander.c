@@ -26,8 +26,6 @@
 
 #include "gtkcellrendererexpander.h"
 
-#include "gtk3compat.h"
-
 struct _PidginCellRendererExpander {
 	GtkCellRenderer parent;
 
