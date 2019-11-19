@@ -46,8 +46,6 @@
 #include <gst/gst.h>
 #endif
 
-#include "gtk3compat.h"
-
 static GList *dialogwindows = NULL;
 
 struct _PidginGroupMergeObject {

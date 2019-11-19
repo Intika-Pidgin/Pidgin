@@ -52,9 +52,6 @@
 #include "gtkutils.h"
 #include "pidgin/minidialog.h"
 
-#include "gtk3compat.h"
-
-
 /******************************************************************************
  * Enums
  *****************************************************************************/
@@ -1013,36 +1010,9 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	}
 }
 
-
-#if !GTK_CHECK_VERSION(3,22,0)
-static void
-pidgin_treeview_popup_menu_position_func(GtkMenu *menu,
-										   gint *x,
-										   gint *y,
-										   gboolean *push_in,
-										   gpointer data)
-{
-	GtkWidget *widget = GTK_WIDGET(data);
-	GtkTreeView *tv = GTK_TREE_VIEW(data);
-	GtkTreePath *path;
-	GtkTreeViewColumn *col;
-	GdkRectangle rect;
-
-	gdk_window_get_origin (gtk_widget_get_window(widget), x, y);
-	gtk_tree_view_get_cursor (tv, &path, &col);
-	gtk_tree_view_get_cell_area (tv, path, col, &rect);
-
-	*x += rect.x+rect.width;
-	*y += rect.y + rect.height;
-	pidgin_menu_position_func_helper(menu, x, y, push_in, data);
-}
-#endif
-
-
 void
 pidgin_menu_popup_at_treeview_selection(GtkWidget *menu, GtkWidget *treeview)
 {
-#if GTK_CHECK_VERSION(3,22,0)
 	GtkTreePath *path;
 	GtkTreeViewColumn *column;
 	GdkWindow *bin_window;
@@ -1059,11 +1029,6 @@ pidgin_menu_popup_at_treeview_selection(GtkWidget *menu, GtkWidget *treeview)
 	                       NULL);
 
 	gtk_tree_path_free(path);
-#else
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL,
-	               pidgin_treeview_popup_menu_position_func, treeview,
-	               0, GDK_CURRENT_TIME);
-#endif
 }
 
 

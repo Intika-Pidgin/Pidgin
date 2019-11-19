@@ -43,8 +43,6 @@
 #include "pidginstock.h"
 #include "minidialog.h"
 
-#include "gtk3compat.h"
-
 enum
 {
 	COLUMN_ICON,

@@ -35,8 +35,6 @@
 #include "gtkutils.h"
 #include "pidginlog.h"
 
-#include "gtk3compat.h"
-
 #define PIDGIN_TYPE_LOG_VIEWER pidgin_log_viewer_get_type()
 /**
  * PidginLogViewer:

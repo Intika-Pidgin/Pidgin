@@ -45,8 +45,6 @@
 #endif
 #include <gdk/gdkkeysyms.h>
 
-#include "gtk3compat.h"
-
 #define PIDGIN_TYPE_MEDIA            (pidgin_media_get_type())
 #define PIDGIN_MEDIA(obj)            (G_TYPE_CHECK_INSTANCE_CAST((obj), PIDGIN_TYPE_MEDIA, PidginMedia))
 #define PIDGIN_MEDIA_CLASS(klass)    (G_TYPE_CHECK_CLASS_CAST((klass), PIDGIN_TYPE_MEDIA, PidginMediaClass))

@@ -21,8 +21,6 @@
 
 #include "gtkscrollbook.h"
 
-#include "gtk3compat.h"
-
 static void pidgin_scroll_book_init (PidginScrollBook *scroll_book);
 static void pidgin_scroll_book_class_init (PidginScrollBookClass *klass);
 static void pidgin_scroll_book_forall (GtkContainer *c,

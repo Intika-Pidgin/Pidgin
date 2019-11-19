@@ -70,7 +70,6 @@
 #include "gtknickcolors.h"
 
 #define GTK_TOOLTIPS_VAR gtkconv->tooltips
-#include "gtk3compat.h"
 
 #define ADD_MESSAGE_HISTORY_AT_ONCE 100
 
