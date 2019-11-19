@@ -328,7 +328,6 @@ pidgin/gtkicon-theme.c
 pidgin/gtkicon-theme-loader.c
 pidgin/gtkidle.c
 pidgin/gtkmedia.c
-pidgin/gtkmenutray.c
 pidgin/gtknotify.c
 pidgin/gtkplugin.c
 pidgin/gtkpluginpref.c
@@ -358,6 +357,7 @@ pidgin/pidgindebugplugininfo.c
 pidgin/pidgingdkpixbuf.c
 pidgin/pidgininvitedialog.c
 pidgin/pidginlog.c
+pidgin/pidginmenutray.c
 pidgin/pidginmessage.c
 pidgin/pidginstock.c
 pidgin/pidgintalkatu.c

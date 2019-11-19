@@ -54,7 +54,6 @@
 #include "gtkconv.h"
 #include "gtkconvwin.h"
 #include "gtkdialogs.h"
-#include "gtkmenutray.h"
 #include "gtkpounce.h"
 #include "gtkprefs.h"
 #include "gtkprivacy.h"
@@ -63,6 +62,7 @@
 #include "pidgingdkpixbuf.h"
 #include "pidgininvitedialog.h"
 #include "pidginlog.h"
+#include "pidginmenutray.h"
 #include "pidginmessage.h"
 #include "pidginstock.h"
 #include "pidgintooltip.h"
@@ -6962,11 +6962,11 @@ pidgin_conversation_get_type(void)
 #include "gtkblist.h"
 #include "gtkconv.h"
 #include "gtkdialogs.h"
-#include "gtkmenutray.h"
 #include "gtkpounce.h"
 #include "gtkprefs.h"
 #include "gtkprivacy.h"
 #include "gtkutils.h"
+#include "pidginmenutray.h"
 #include "pidginstock.h"
 
 static void
