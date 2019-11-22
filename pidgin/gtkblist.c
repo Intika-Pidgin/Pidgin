@@ -59,7 +59,6 @@
 #include "pidgin/pidginabout.h"
 #include "pidgin/pidginaccountchooser.h"
 #include "pidgin/pidgindebug.h"
-#include "pidgin/pidgindebugplugininfo.h"
 #include "pidgin/pidgingdkpixbuf.h"
 #include "pidgin/pidginlog.h"
 #include "pidgin/pidginplugininfo.h"
@@ -3672,7 +3671,6 @@ static const GtkActionEntry blist_menu_entries[] = {
 	{ "HelpMenu", NULL, N_("_Help"), NULL, NULL, NULL },
 	{ "OnlineHelp", GTK_STOCK_HELP, N_("Online _Help"), "F1", NULL, gtk_blist_show_onlinehelp_cb },
 	{ "DebugWindow", NULL, N_("_Debug Window"), NULL, NULL, toggle_debug },
-	{ "PluginInformation", NULL, N_("_Plugin Information"), NULL, NULL, pidgin_debug_plugin_info_show },
 	{ "About", GTK_STOCK_ABOUT, N_("_About"), NULL, NULL, G_CALLBACK(_pidgin_about_cb) },
 };
 
@@ -3735,7 +3733,6 @@ static const char *blist_menu =
 			"<menuitem action='OnlineHelp'/>"
 			"<separator/>"
 			"<menuitem action='DebugWindow'/>"
-			"<menuitem action='PluginInformation'/>"
 			"<separator/>"
 			"<menuitem action='About'/>"
 		"</menu>"
