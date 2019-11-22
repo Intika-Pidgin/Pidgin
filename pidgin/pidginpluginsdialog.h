@@ -38,6 +38,15 @@ G_BEGIN_DECLS
 G_DECLARE_FINAL_TYPE(PidginPluginsDialog, pidgin_plugins_dialog, PIDGIN,
 		PLUGINS_DIALOG, GtkDialog)
 
+/**
+ * pidgin_plugins_dialog_new:
+ *
+ * Creates a new instance of #PidginPluginsDialog.
+ *
+ * Returns: (transfer full): The new #PidginPluginsDialog.
+ *
+ * Since: 3.0.0
+ */
 GtkWidget *pidgin_plugins_dialog_new(void);
 
 G_END_DECLS

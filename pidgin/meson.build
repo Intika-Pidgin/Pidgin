@@ -198,7 +198,7 @@ if ENABLE_GTK
 	    filebase : 'pidgin-3',
 	    subdirs : 'pidgin-3',
 	    libraries : [libpidgin],
-	    requires : ['gtk+-3.0', 'purple-3', 'talkatu'],
+	    requires : ['gtk+-3.0', 'purple-3', 'talkatu', 'gplugin-gtk'],
 	    variables : ['plugindir=${libdir}/pidgin-@0@'.format(purple_major_version)])
 
 	if INSTALL_I18N
@@ -228,7 +228,7 @@ if ENABLE_GTK
 
 		gnome.generate_gir(libpidgin,
 			sources : introspection_sources,
-			includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], talkatu_gir, gplugin_gir],
+			includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], talkatu_gir, gplugin_gir, gplugin_gtk_gir],
 			namespace : 'Pidgin',
 			symbol_prefix : 'pidgin',
 			identifier_prefix : 'Pidgin',
