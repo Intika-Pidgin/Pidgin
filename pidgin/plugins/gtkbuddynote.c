@@ -19,7 +19,7 @@
 #include "internal.h"
 
 #include <gtkblist.h>
-#include <gtkplugin.h>
+#include <pidginplugininfo.h>
 
 #include <debug.h>
 #include <version.h>
