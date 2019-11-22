@@ -1200,6 +1200,8 @@ GList *purple_uri_list_extract_filenames(const gchar *uri_list);
  *
  * Returns: A newly allocated string with any shell metacharacters replaced
  *          with their escaped equivalents.
+ *
+ * Since: 2.13.0
  */
 char *purple_uri_escape_for_open(const char *unescaped);
 
