@@ -656,6 +656,8 @@ G_DECLARE_FINAL_TYPE(PurpleChatUser, purple_chat_user, PURPLE, CHAT_USER,
  * @chat:	The chat conversation that the buddy belongs to.
  *
  * Set the chat conversation associated with this chat user.
+ *
+ * Since: 3.0.0
  */
 void purple_chat_user_set_chat(PurpleChatUser *cb,
 		PurpleChatConversation *chat);
@@ -668,6 +670,8 @@ void purple_chat_user_set_chat(PurpleChatUser *cb,
  *
  * Returns: (transfer none):
  *          The chat conversation that the buddy belongs to.
+ *
+ * Since: 3.0.0
  */
 PurpleChatConversation *purple_chat_user_get_chat(PurpleChatUser *cb);
 
@@ -691,6 +695,8 @@ PurpleChatUser *purple_chat_user_new(PurpleChatConversation *chat,
  * @ui_data:		A pointer to associate with this chat user.
  *
  * Set the UI data associated with this chat user.
+ *
+ * Since: 3.0.0
  */
 void purple_chat_user_set_ui_data(PurpleChatUser *cb, gpointer ui_data);
 
@@ -704,6 +710,8 @@ void purple_chat_user_set_ui_data(PurpleChatUser *cb, gpointer ui_data);
  *         The UI data associated with this chat user.  This is a
  *         convenience field provided to the UIs--it is not
  *         used by the libpurple core.
+ *
+ * Since: 3.0.0
  */
 gpointer purple_chat_user_get_ui_data(PurpleChatUser *cb);
 
@@ -714,6 +722,8 @@ gpointer purple_chat_user_get_ui_data(PurpleChatUser *cb);
  * Get the alias of a chat user
  *
  * Returns: The alias of the chat user.
+ *
+ * Since: 3.0.0
  */
 const char *purple_chat_user_get_alias(PurpleChatUser *cb);
 
@@ -743,6 +753,8 @@ void purple_chat_user_set_flags(PurpleChatUser *cb, PurpleChatUserFlags flags);
  * Get the flags of a chat user.
  *
  * Returns: The flags of the chat user.
+ *
+ * Since: 3.0.0
  */
 PurpleChatUserFlags purple_chat_user_get_flags(PurpleChatUser *cb);
 
@@ -753,6 +765,8 @@ PurpleChatUserFlags purple_chat_user_get_flags(PurpleChatUser *cb);
  * Indicates if this chat user is on the buddy list.
  *
  * Returns: TRUE if the chat user is on the buddy list.
+ *
+ * Since: 3.0.0
  */
 gboolean purple_chat_user_is_buddy(PurpleChatUser *cb);
 

@@ -336,6 +336,8 @@ PurpleNotifySearchColumn *purple_notify_searchresults_column_new(const char *tit
  * Returns the title of the column
  *
  * Returns: The title of the column
+ *
+ * Since: 3.0.0
  */
 const char *purple_notify_searchresult_column_get_title(const PurpleNotifySearchColumn *column);
 
@@ -345,6 +347,8 @@ const char *purple_notify_searchresult_column_get_title(const PurpleNotifySearch
  * @visible: TRUE if visible, or FALSE if not.
  *
  * Sets whether or not a search result column is visible.
+ *
+ * Since: 3.0.0
  */
 void purple_notify_searchresult_column_set_visible(PurpleNotifySearchColumn *column, gboolean visible);
 
@@ -355,6 +359,8 @@ void purple_notify_searchresult_column_set_visible(PurpleNotifySearchColumn *col
  * Returns whether or not a search result column is visible.
  *
  * Returns: TRUE if the search result column is visible. FALSE otherwise.
+ *
+ * Since: 3.0.0
  */
 gboolean purple_notify_searchresult_column_is_visible(const PurpleNotifySearchColumn *column);
 
@@ -595,6 +601,8 @@ void purple_notify_user_info_prepend_pair_html(PurpleNotifyUserInfo *user_info, 
  *
  * Like purple_notify_user_info_prepend_pair_html, but value should be plaintext
  * and will be escaped using g_markup_escape_text().
+ *
+ * Since: 3.0.0
  */
 void purple_notify_user_info_prepend_pair_plaintext(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
@@ -637,6 +645,8 @@ PurpleNotifyUserInfoEntry *purple_notify_user_info_entry_new(const char *label, 
  * @user_info_entry:  The PurpleNotifyUserInfoEntry
  *
  * Destroy a PurpleNotifyUserInfoEntry
+ *
+ * Since: 3.0.0
  */
 void purple_notify_user_info_entry_destroy(PurpleNotifyUserInfoEntry *user_info_entry);
 

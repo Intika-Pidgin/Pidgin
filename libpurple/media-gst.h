@@ -165,6 +165,8 @@ GstElement *purple_media_manager_get_element(PurpleMediaManager *manager,
  *
  * Returns: (transfer container) (element-type PurpleMediaElementInfo): A #GList of registered #PurpleMediaElementInfo instances that match
  * @type.
+ *
+ * Since: 3.0.0
  */
 GList *purple_media_manager_enumerate_elements(PurpleMediaManager *manager,
 		PurpleMediaElementType type);
