@@ -14,57 +14,6 @@ version 3.0.0 (??/??/????):
 	libpurple:
 		Added:
 		* displaying-emails-clear signal (notification signal)
-		* purple_account_is_disconnecting
-		* purple_account_get_ui_data
-		* purple_account_set_ui_data
-		* purple_account_privacy_get_denied
-		* purple_account_privacy_get_permitted
-		* PurpleAccountPresence and PurpleBuddyPresence inherit PurplePresence
-		* purple_account_presence_new
-		* purple_buddy_presence_new
-		* purple_account_register_completed
-		* purple_blist_get_default_root
-		* purple_blist_node_is_transient
-		* purple_blist_node_set_transient
-		* purple_certificate_get_der_data
-		* purple_certificate_get_display_string
-		* purple_chat_user_get_alias
-		* purple_chat_user_get_chat
-		* purple_chat_user_get_flags
-		* purple_chat_user_is_buddy
-		* purple_chat_user_get_ui_data
-		* purple_chat_user_set_ui_data
-		* purple_chat_user_set_chat
-		* purple_connection_get_active_chats
-		* purple_connection_get_error_info
-		* purple_connection_get_flags
-		* purple_connection_set_flags
-		* purple_connection_update_last_received
-		* purple_conversation_get_ui_data
-		* purple_conversation_set_ui_data
-		* purple_conversation_message_get_alias
-		* purple_conversation_message_get_conv
-		* PurpleCountingNode, inherits PurpleBlistNode
-		* purple_counting_node_get_*
-		* purple_counting_node_change_*
-		* purple_counting_node_set_*
-		* PurpleIMConversation and PurpleChatConversation inherit
-		  PurpleConversation
-		* purple_notify_emails_pending
-		* purple_notify_emails_present
-		* purple_notify_searchresult_column_get_title
-		* purple_notify_searchresult_column_is_visible
-		* purple_notify_searchresult_column_set_visible
-		* purple_notify_user_info_entry_destroy
-		* purple_notify_user_info_prepend_pair_plaintext
-		* purple_media_manager_enumerate_elements
-		* purple_menu_action_get_callback
-		* purple_menu_action_get_children
-		* purple_menu_action_get_data
-		* purple_menu_action_set_label
-		* purple_menu_action_set_data
-		* purple_menu_action_set_callback
-		* purple_menu_action_set_children
 		* PurplePluginInfoFlags (PURPLE_PLUGIN_INFO_FLAGS_INTERNAL and
 		  PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD)
 		* purple_plugin_get_dependent_plugins
@@ -380,9 +329,7 @@ version 3.0.0 (??/??/????):
 		* PurpleAccoun->ui_data
 		* purple_account_add_buddies_with_invite
 		* purple_account_add_buddy_with_invite
-		* purple_account_get_ui_data
 		* purple_account_set_current_error
-		* purple_account_set_ui_data
 		* purple_base64_*. Use g_base64_* instead
 		* purple_blist_get_ui_data
 		* purple_blist_load

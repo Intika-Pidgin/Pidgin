@@ -147,6 +147,8 @@ void purple_account_register(PurpleAccount *account);
  *
  * Registration of the account was completed.
  * Calls the registration call-back set with purple_account_set_register_callback().
+ *
+ * Since: 3.0.0
  */
 void purple_account_register_completed(PurpleAccount *account, gboolean succeeded);
 
@@ -176,6 +178,8 @@ void purple_account_disconnect(PurpleAccount *account);
  * Indicates if the account is currently being disconnected.
  *
  * Returns: TRUE if the account is being disconnected.
+ *
+ * Since: 3.0.0
  */
 gboolean purple_account_is_disconnecting(PurpleAccount *account);
 
@@ -890,6 +894,8 @@ void purple_account_privacy_deny(PurpleAccount *account, const char *who);
  * Returns the account's permit list.
  *
  * Returns: (transfer none) (element-type utf8): A list of the permitted users
+ *
+ * Since: 3.0.0
  */
 GSList *purple_account_privacy_get_permitted(PurpleAccount *account);
 
@@ -900,6 +906,8 @@ GSList *purple_account_privacy_get_permitted(PurpleAccount *account);
  * Returns the account's deny list.
  *
  * Returns: (transfer none) (element-type utf8): A list of the denied users
+ *
+ * Since: 3.0.0
  */
 GSList *purple_account_privacy_get_denied(PurpleAccount *account);
 

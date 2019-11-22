@@ -583,6 +583,8 @@ void purple_conversation_clear_message_history(PurpleConversation *conv);
  * @ui_data:		A pointer to associate with this conversation.
  *
  * Set the UI data associated with this conversation.
+ *
+ * Since: 3.0.0
  */
 void purple_conversation_set_ui_data(PurpleConversation *conv, gpointer ui_data);
 
@@ -595,6 +597,8 @@ void purple_conversation_set_ui_data(PurpleConversation *conv, gpointer ui_data)
  * Returns: (transfer none): The UI data associated with this conversation.
  *         This is a convenience field provided to the UIs--it is not
  *         used by the libpurple core.
+ *
+ * Since: 3.0.0
  */
 gpointer purple_conversation_get_ui_data(const PurpleConversation *conv);
 

@@ -306,6 +306,8 @@ void purple_connection_set_state(PurpleConnection *gc, PurpleConnectionState sta
  * @flags: The flags.
  *
  * Sets the connection flags.
+ *
+ * Since: 3.0.0
  */
 void purple_connection_set_flags(PurpleConnection *gc, PurpleConnectionFlags flags);
 
@@ -344,6 +346,8 @@ PurpleConnectionState purple_connection_get_state(PurpleConnection *gc);
  * Returns the connection flags.
  *
  * Returns: The connection flags.
+ *
+ * Since: 3.0.0
  */
 PurpleConnectionFlags purple_connection_get_flags(PurpleConnection *gc);
 
@@ -406,6 +410,8 @@ const char *purple_connection_get_password(PurpleConnection *gc);
  *
  * Returns: (element-type PurpleChatConversation) (transfer none): The active
  *          chats on the connection.
+ *
+ * Since: 3.0.0
  */
 GSList *purple_connection_get_active_chats(PurpleConnection *gc);
 
@@ -472,7 +478,9 @@ purple_connection_error(PurpleConnection *gc,
  * error exists.
  *
  * Returns: The #PurpleConnectionErrorInfo instance of the connection if an
- *         error exists, %NULL otherwise.
+ *          error exists, %NULL otherwise.
+ *
+ * Since: 3.0.0
  */
 PurpleConnectionErrorInfo *
 purple_connection_get_error_info(PurpleConnection *gc);
@@ -548,6 +556,8 @@ purple_connection_error_is_fatal (PurpleConnectionError reason);
  *
  * Indicate that a packet was received on the connection.
  * Set by the protocol to avoid sending unneeded keepalives.
+ *
+ * Since: 3.0.0
  */
 void purple_connection_update_last_received(PurpleConnection *gc);
 

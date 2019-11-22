@@ -276,6 +276,8 @@ G_DECLARE_FINAL_TYPE(PurpleAccountPresence, purple_account_presence,
  * Creates a presence for an account.
  *
  * Returns: The new presence.
+ *
+ * Since: 3.0.0
  */
 PurpleAccountPresence *purple_account_presence_new(PurpleAccount *account);
 
@@ -310,6 +312,8 @@ G_DECLARE_FINAL_TYPE(PurpleBuddyPresence, purple_buddy_presence, PURPLE,
  * Creates a presence for a buddy.
  *
  * Returns: The new presence.
+ *
+ * Since: 3.0.0
  */
 PurpleBuddyPresence *purple_buddy_presence_new(PurpleBuddy *buddy);
 
