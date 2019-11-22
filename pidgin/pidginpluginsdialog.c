@@ -169,6 +169,8 @@ pidgin_plugins_dialog_selection_cb(GtkTreeSelection *sel, gpointer data) {
 		GTK_WIDGET(dialog->configure_plugin_button),
 		pidgin_plugins_dialog_plugin_has_config(plugin)
 	);
+
+	g_object_unref(G_OBJECT(plugin));
 }
 
 static void
@@ -202,6 +204,7 @@ pidgin_plugins_dialog_config_plugin_cb(GtkWidget *button, gpointer data) {
 	info = PURPLE_PLUGIN_INFO(ginfo);
 
 	if(purple_plugin_info_get_ui_data(info)) {
+		g_object_unref(G_OBJECT(plugin));
 		return;
 	}
 
@@ -218,8 +221,9 @@ pidgin_plugins_dialog_config_plugin_cb(GtkWidget *button, gpointer data) {
 		ui_data->u.frame.pref_frame = pref_frame_cb(plugin);
 	}
 
-	if (pref_request_cb)
+	if (pref_request_cb) {
 		prefs_count++;
+	}
 
 	if (prefs_count > 1) {
 		purple_debug_warning("gtkplugin",
@@ -251,6 +255,7 @@ pidgin_plugins_dialog_config_plugin_cb(GtkWidget *button, gpointer data) {
 				"Failed to display prefs frame");
 			g_free(ui_data);
 			purple_plugin_info_set_ui_data(info, NULL);
+			g_object_unref(G_OBJECT(plugin));
 			return;
 		}
 		gtk_widget_set_vexpand(box, TRUE);
@@ -282,6 +287,7 @@ pidgin_plugins_dialog_config_plugin_cb(GtkWidget *button, gpointer data) {
 		                             GPLUGIN_PLUGIN_INFO(info))));
 		gtk_widget_show_all(pdialog);
 	}
+	g_object_unref(G_OBJECT(plugin));
 }
 
 /******************************************************************************

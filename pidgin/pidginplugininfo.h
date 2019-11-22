@@ -51,6 +51,8 @@ G_DECLARE_FINAL_TYPE(PidginPluginInfo, pidgin_plugin_info, PIDGIN, PLUGIN_INFO, 
  * See purple_plugin_info_new().
  *
  * Returns: A new #PidginPluginInfo instance.
+ *
+ * Since: 3.0.0
  */
 PidginPluginInfo *pidgin_plugin_info_new(const char *first_property, ...)
                   G_GNUC_NULL_TERMINATED;
