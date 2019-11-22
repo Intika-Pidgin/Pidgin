@@ -22,9 +22,9 @@
 #ifndef PIDGIN_ACCOUNT_CHOOSER_H
 #define PIDGIN_ACCOUNT_CHOOSER_H
 /**
- * SECTION:pidgin-account-chooser
+ * SECTION:pidginaccountchooser
  * @section_id: pidgin-account-chooser
- * @short_description: <filename>pidginaccountchooser.h</filename>
+ * @short_description: A #GtkComboBox for choosing accounts
  * @title: Pidgin Account Chooser Combo Box Widget
  */
 

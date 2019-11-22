@@ -56,8 +56,12 @@
       <xi:include href="xml/minidialog.xml" />
       <xi:include href="xml/pidgin.xml" />
       <xi:include href="xml/pidginabout.xml" />
+      <xi:include href="xml/pidginaccountchooser.xml" />
+      <xi:include href="xml/pidgincontactcompletion.xml" />
       <xi:include href="xml/pidgindebug.xml" />
       <xi:include href="xml/pidgingdkpixbuf.xml" />
+      <xi:include href="xml/pidginicon.xml" />
+      <xi:include href="xml/pidgininvitedialog.xml" />
       <xi:include href="xml/pidginlog.xml" />
       <xi:include href="xml/pidginmenutray.xml" />
       <xi:include href="xml/pidginmessage.xml" />

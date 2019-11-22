@@ -21,9 +21,9 @@
 #define PIDGIN_MENU_TRAY_H
 
 /**
- * SECTION:gtkmenutray
- * @section_id: pidgin-gtkmenutray
- * @short_description: <filename>gtkmenutray.h</filename>
+ * SECTION:pidginmenutray
+ * @section_id: pidgin-menu-tray
+ * @short_description: <filename>pidginmenutray.h</filename>
  * @title: Tray Menu Item
  */
 
