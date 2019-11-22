@@ -441,6 +441,7 @@ version 3.0.0 (??/??/????):
 		* purple_request_field_list_add
 		* purple_srv_cancel
 		* purple_srv_resolve_account
+		* purple_srv_txt_query_destroy
 		* purple_ssl_connect_fd
 		* purple_status_set_attr_boolean
 		* purple_status_set_attr_int
@@ -596,51 +597,6 @@ version 2.11.0:
 		Added:
 		* account-status-changing signal (account signals)
 		* buddy-removed-from-group signal (blist signals)
-
-version 2.10.12:
-	* No changes
-
-version 2.10.11:
-	* No changes
-
-version 2.10.10:
-	* No changes
-
-version 2.10.9:
-	* No changes
-
-version 2.10.8:
-	* No changes
-
-version 2.10.7:
-	* No changes
-
-version 2.10.6:
-	* No changes
-
-version 2.10.5:
-	* No changes
-
-version 2.10.4:
-	* No changes
-
-version 2.10.3:
-	* No changes
-
-version 2.10.2:
-	* No changes
-
-version 2.10.1:
-	* No changes
-
-version 2.10.0:
-	libpurple:
-		Added:
-		* purple_srv_txt_query_destroy (accidentally left out of 2.8.0)
-
-	Pidgin:
-		Added:
-		* pidgin_dialogs_plugins_info (should not be used by anything but Pidgin)
 
 version 2.9.0:
 	libpurple:
