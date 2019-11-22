@@ -30,7 +30,7 @@
 #include "gtkaccount.h"
 #include "gtkblist.h"
 #include "gtkconv.h"
-#include "gtkplugin.h"
+#include "pidginplugininfo.h"
 
 /**************************************************************************
  * Account subsystem signal callbacks
