@@ -127,6 +127,7 @@ typedef enum
  * @PURPLE_MESSAGE_INVISIBLE:   Message should not be displayed
  * @PURPLE_MESSAGE_REMOTE_SEND: Message sent from another location,
  *                              not an echo of a local one
+ *                              Since: 2.12.0
  *
  * Flags applicable to a message. Most will have send, recv or system.
  */

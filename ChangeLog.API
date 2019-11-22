@@ -342,10 +342,13 @@ version 3.0.0 (??/??/????):
 		* purple_buddy_icons_find_custom_icon
 		* purple_buddy_icons_set_custom_icon
 		* purple_build_dir. Use g_mkdir_with_parents instead
-		* purple_certificate_check_signature_chain_with_failing. Use
-		  purple_certificate_check_signature_chain, instead
-		* purple_certificate_display_x509. Use purple_request_certificate,
-		  instead
+		* PurpleCertificateScheme
+		* PURPLE_CERTIFICATE_SCHEME_HAS_FUNC
+		* purple_certificate_check_signature_chain
+		* purple_certificate_check_signature_chain_with_failing
+		* purple_certificate_compare_pubkeys
+		* purple_certificate_display_x509
+		* purple_certificate_get_fingerprint_sha256
 		* Purple Cipher API (PurpleCipherContext and friends).
 		  Use GLib's GHmac or GChecksum instead.
 		* purple_connection_error_reason
@@ -433,6 +436,7 @@ version 3.0.0 (??/??/????):
 		* PurplePluginProtocolInfo
 		* purple_proxy_connect_socks5
 		* purple_quotedp_decode. See the GMime library if needed.
+		* purple_request_certificate
 		* purple_request_field_list_add
 		* purple_srv_cancel
 		* purple_srv_resolve_account
@@ -585,17 +589,6 @@ version 3.0.0 (??/??/????):
 		* _GntProgressBarOrientation
 		* _GntTreeColumnFlag
 		* _GntWidgetFlags
-
-version 2.12.0:
-	libpurple:
-		Added:
-		* PURPLE_MESSAGE_REMOTE_SEND in PurpleMessageFlags, to specify
-		messages like _SEND that were sent from another location.
-		* purple_certificate_get_fingerprint_sha256
-		* purple_certificate_compare_pubkeys
-		* PurpleCertificateScheme.get_fingerprint_sha256
-		* PurpleCertificateScheme.compare_pubkeys
-		* PURPLE_CERTIFICATE_SCHEME_HAS_FUNC
 
 version 2.11.0:
 	libpurple:
