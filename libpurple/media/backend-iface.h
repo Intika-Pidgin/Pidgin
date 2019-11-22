@@ -288,7 +288,7 @@ const gchar **purple_media_backend_get_available_params(PurpleMediaBackend *self
  *
  * Returns: True if set successfully, otherwise False.
  *
- * @since 2.11.0
+ * Since: 2.11.0
  */
 gboolean purple_media_backend_set_send_rtcp_mux(PurpleMediaBackend *self,
 		const gchar *sess_id, const gchar *participant, gboolean send_rtcp_mux);

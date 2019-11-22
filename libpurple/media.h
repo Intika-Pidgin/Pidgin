@@ -383,6 +383,8 @@ gboolean purple_media_set_send_codec(PurpleMedia *media, const gchar *sess_id, P
  * @key_len: Byte length of the encryption key.
  *
  * Sets the encryption parameters of our media in the session.
+ *
+ * Since: 2.11.0
  */
 gboolean purple_media_set_encryption_parameters(PurpleMedia *media,
 		const gchar *sess_id, const gchar *cipher,
@@ -401,6 +403,8 @@ gboolean purple_media_set_encryption_parameters(PurpleMedia *media,
  * @key_len: Byte length of the decryption key.
  *
  * Sets the decryption parameters for a session participant's media.
+ *
+ * Since: 2.11.0
  */
 gboolean purple_media_set_decryption_parameters(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant,
@@ -429,7 +433,7 @@ gboolean purple_media_codecs_ready(PurpleMedia *media, const gchar *sess_id);
  *
  * Returns: %TRUE RTCP-Mux was set successfully, or %FALSE otherwise.
  *
- * @since 2.11.0
+ * Since: 2.11.0
  */
 gboolean purple_media_set_send_rtcp_mux(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant, gboolean send_rtcp_mux);
