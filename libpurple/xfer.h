@@ -611,6 +611,8 @@ gssize purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size);
  * Writes chunk of received file.
  *
  * Returns: TRUE on success, FALSE otherwise.
+ *
+ * Since: 2.11.0
  */
 gboolean
 purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size);
@@ -625,6 +627,8 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size);
  *
  * Returns: Number of bytes written (0 means, the device is busy), or -1 on
  *         failure.
+ *
+ * Since: 2.11.0
  */
 gssize
 purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size);

@@ -160,6 +160,8 @@ typedef enum {
  *
  * See <link linkend="chapter-ui-ops">List of <literal>UiOps</literal>
  * Structures</link>
+ *
+ * Since: 2.11.0
  */
 typedef struct {
 	void (*register_command)(const gchar *name, PurpleCmdPriority priority,
