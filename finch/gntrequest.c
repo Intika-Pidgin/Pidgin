@@ -475,9 +475,9 @@ create_choice_field(PurpleRequestField *field)
 
 	for (GList *it = purple_request_field_choice_get_elements(field); it != NULL; it = g_list_next(it))
 	{
-		PurpleNamedValue *choice = it->data;
+		PurpleKeyValuePair *choice = it->data;
 
-		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), choice->value, choice->name);
+		gnt_combo_box_add_data(GNT_COMBO_BOX(combo), choice->value, choice->key);
 	}
 	gnt_combo_box_set_selected(GNT_COMBO_BOX(combo),
 		purple_request_field_choice_get_default_value(field));
@@ -682,9 +682,9 @@ finch_request_fields(const char *title, const char *primary,
 
 	extra_actions = purple_request_cpar_get_extra_actions(cpar);
 	for (GSList *it = extra_actions; it; it = it->next) {
-		PurpleNamedValue *extra_action = it->data;
+		PurpleKeyValuePair *extra_action = it->data;
 
-		GntWidget *button = gnt_button_new(extra_action->name);
+		GntWidget *button = gnt_button_new(extra_action->key);
 		gnt_box_add_widget_in_front(GNT_BOX(box), button);
 		g_object_set_data(G_OBJECT(button), "ui-handle", window);
 		g_object_set_data(G_OBJECT(button), "extra-cb", extra_action->value);

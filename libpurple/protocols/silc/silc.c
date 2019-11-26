@@ -2171,9 +2171,7 @@ silcpurple_protocol_init(SilcProtocol *self)
 	protocol->account_options = g_list_append(protocol->account_options, option);
 
 	for (i = 0; silc_default_ciphers[i].name; i++) {
-		kvp = g_new0(PurpleKeyValuePair, 1);
-		kvp->key = g_strdup(silc_default_ciphers[i].name);
-		kvp->value = g_strdup(silc_default_ciphers[i].name);
+	        kvp = purple_key_value_pair_new(silc_default_ciphers[i].name, g_strdup(silc_default_ciphers[i].name));
 		list = g_list_append(list, kvp);
 	}
 	option = purple_account_option_list_new(_("Cipher"), "cipher", list);
@@ -2181,9 +2179,7 @@ silcpurple_protocol_init(SilcProtocol *self)
 
 	list = NULL;
 	for (i = 0; silc_default_hmacs[i].name; i++) {
-		kvp = g_new0(PurpleKeyValuePair, 1);
-		kvp->key = g_strdup(silc_default_hmacs[i].name);
-		kvp->value = g_strdup(silc_default_hmacs[i].name);
+	        kvp = purple_key_value_pair_new(silc_default_hmacs[i].name, g_strdup(silc_default_hmacs[i].name));
 		list = g_list_append(list, kvp);
 	}
 	option = purple_account_option_list_new(_("HMAC"), "hmac", list);

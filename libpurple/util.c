@@ -3782,34 +3782,34 @@ char * purple_util_format_song_info(const char *title, const char *artist, const
 	return g_string_free(string, FALSE);
 }
 
-void purple_key_value_pair_free(PurpleKeyValuePair *kvp)
+PurpleKeyValuePair *
+purple_key_value_pair_new(const char *key, gpointer value)
+{
+	PurpleKeyValuePair *kvp;
+
+	kvp = g_new0(PurpleKeyValuePair, 1);
+	kvp->key = g_strdup(key);
+	kvp->value = value;
+
+	return kvp;
+}
+
+void
+purple_key_value_pair_free(PurpleKeyValuePair *kvp)
 {
 	g_return_if_fail(kvp != NULL);
 
-	g_free(kvp->value);
 	g_free(kvp->key);
 	g_free(kvp);
 }
 
-PurpleNamedValue *
-purple_named_value_new(const char *name, gpointer value)
-{
-	PurpleNamedValue *named_value;
-
-	named_value = g_new0(PurpleNamedValue, 1);
-	named_value->name = g_strdup(name);
-	named_value->value = value;
-
-	return named_value;
-}
-
 void
-purple_named_value_free(PurpleNamedValue *named_value)
+purple_key_value_pair_free_full(PurpleKeyValuePair *kvp)
 {
-	g_return_if_fail(named_value != NULL);
+	g_return_if_fail(kvp != NULL);
 
-	g_free(named_value->name);
-	g_free(named_value);
+	g_free(kvp->value);
+	purple_key_value_pair_free(kvp);
 }
 
 gchar *

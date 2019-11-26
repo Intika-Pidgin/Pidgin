@@ -586,7 +586,7 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 			field = purple_request_field_list_new(name, label);
 			purple_request_field_list_set_multi_select(field, FALSE);
 			for (GList *list = purple_plugin_pref_get_choices(pref); list != NULL; list = list->next) {
-				const PurpleNamedValue *choice = list->data;
+				const PurpleKeyValuePair *choice = list->data;
 				char *value = NULL;
 				switch(type) {
 					case PURPLE_PREF_BOOLEAN:
@@ -602,9 +602,9 @@ process_pref_frame(PurplePluginPrefFrame *frame)
 						break;
 				}
 				stringlist = g_list_prepend(stringlist, value);
-				purple_request_field_list_add_icon(field, choice->name, NULL, value);
+				purple_request_field_list_add_icon(field, choice->key, NULL, value);
 				if (purple_strequal(value, current_value))
-					purple_request_field_list_add_selected(field, choice->name);
+					purple_request_field_list_add_selected(field, choice->key);
 			}
 			g_free(current_value);
 		} else {

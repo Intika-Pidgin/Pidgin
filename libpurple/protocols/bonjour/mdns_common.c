@@ -73,9 +73,8 @@ get_max_txt_record_value(const char *key, const char *value)
 static inline GSList *
 _add_txt_record(GSList *list, const gchar *key, const gchar *value)
 {
-	PurpleKeyValuePair *kvp = g_new0(PurpleKeyValuePair, 1);
-	kvp->key = g_strdup(key);
-	kvp->value = g_strdup(get_max_txt_record_value(key, value));
+	const char *max_value = get_max_txt_record_value(key, value);
+	PurpleKeyValuePair *kvp = purple_key_value_pair_new(key, g_strdup(max_value));
 	return g_slist_prepend(list, kvp);
 }
 
@@ -143,7 +142,7 @@ static gboolean publish_presence(BonjourDnsSd *data, PublishType type) {
 
 	txt_records = generate_presence_txt_records(data);
 	ret = _mdns_publish(data, type, txt_records);
-	g_slist_free_full(txt_records, (GDestroyNotify)purple_key_value_pair_free);
+	g_slist_free_full(txt_records, (GDestroyNotify)purple_key_value_pair_free_full);
 
 	return ret;
 }
