@@ -145,7 +145,7 @@ purple_plugin_pref_destroy(PurplePluginPref *pref)
 
 	g_free(pref->name);
 	g_free(pref->label);
-	g_list_free_full(pref->choices, (GDestroyNotify)purple_named_value_free);
+	g_list_free_full(pref->choices, (GDestroyNotify)purple_key_value_pair_free);
 	g_free(pref);
 }
 
@@ -248,13 +248,13 @@ purple_plugin_pref_get_pref_type(PurplePluginPref *pref)
 void
 purple_plugin_pref_add_choice(PurplePluginPref *pref, const char *label, gpointer choice)
 {
-	PurpleNamedValue *pref_choice;
+	PurpleKeyValuePair *pref_choice;
 
 	g_return_if_fail(pref  != NULL);
 	g_return_if_fail(label != NULL);
 	g_return_if_fail(choice || purple_prefs_get_pref_type(pref->name) == PURPLE_PREF_INT);
 
-	pref_choice = purple_named_value_new(label, choice);
+	pref_choice = purple_key_value_pair_new(label, choice);
 
 	pref->choices = g_list_append(pref->choices, pref_choice);
 }

@@ -1238,9 +1238,9 @@ create_choice_field(PurpleRequestField *field,
 		i = 0;
 		for (GList *l = elements; l != NULL; l = g_list_next(l))
 		{
-			PurpleNamedValue *choice = l->data;
+			PurpleKeyValuePair *choice = l->data;
 
-			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), choice->name);
+			gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(widget), choice->key);
 			if (choice->value == default_value) {
 				default_index = i;
 				default_found = TRUE;
@@ -1273,10 +1273,10 @@ create_choice_field(PurpleRequestField *field,
 		i = 0;
 		for (GList *l = elements; l != NULL; l = g_list_next(l))
 		{
-			PurpleNamedValue *choice = l->data;
+			PurpleKeyValuePair *choice = l->data;
 
 			radio = gtk_radio_button_new_with_label_from_widget(
-				GTK_RADIO_BUTTON(first_radio), choice->name);
+				GTK_RADIO_BUTTON(first_radio), choice->key);
 			g_object_set_data(G_OBJECT(radio), "box", box);
 
 			if (first_radio == NULL)
@@ -1919,9 +1919,9 @@ pidgin_request_fields(const char *title, const char *primary,
 	pidgin_request_add_help(GTK_DIALOG(win), cpar);
 
 	for (GSList *it = extra_actions; it != NULL; it = it->next) {
-		PurpleNamedValue *extra_action = it->data;
+		PurpleKeyValuePair *extra_action = it->data;
 
-		button = pidgin_dialog_add_button(GTK_DIALOG(win), extra_action->name,
+		button = pidgin_dialog_add_button(GTK_DIALOG(win), extra_action->key,
 				G_CALLBACK(multifield_extra_cb), data);
 		g_object_set_data(G_OBJECT(button), "extra-cb", extra_action->value);
 	}

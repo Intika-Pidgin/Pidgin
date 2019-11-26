@@ -185,7 +185,7 @@ purple_account_option_destroy(PurpleAccountOption *option)
 	else if (option->type == PURPLE_PREF_STRING_LIST)
 	{
 		g_list_free_full(option->default_value.list,
-		                 (GDestroyNotify)purple_key_value_pair_free);
+				 (GDestroyNotify)purple_key_value_pair_free_full);
 	}
 
 	g_free(option);
@@ -247,7 +247,7 @@ purple_account_option_set_list(PurpleAccountOption *option, GList *values)
 	g_return_if_fail(option->type == PURPLE_PREF_STRING_LIST);
 
 	g_list_free_full(option->default_value.list,
-	                 (GDestroyNotify)purple_key_value_pair_free);
+			 (GDestroyNotify)purple_key_value_pair_free_full);
 
 	option->default_value.list = values;
 }
@@ -263,9 +263,7 @@ purple_account_option_add_list_item(PurpleAccountOption *option,
 	g_return_if_fail(value  != NULL);
 	g_return_if_fail(option->type == PURPLE_PREF_STRING_LIST);
 
-	kvp = g_new0(PurpleKeyValuePair, 1);
-	kvp->key = g_strdup(key);
-	kvp->value = g_strdup(value);
+	kvp = purple_key_value_pair_new(key, g_strdup(value));
 
 	option->default_value.list = g_list_append(option->default_value.list,
 											   kvp);

@@ -509,18 +509,18 @@ pidgin_prefs_dropdown_from_list_with_cb(GtkWidget *box, const gchar *title,
 	g_object_set_data(G_OBJECT(dropdown), "type", GINT_TO_POINTER(initial.type));
 
 	for (; menuitems != NULL; menuitems = g_list_next(menuitems)) {
-		const PurpleNamedValue *menu_item = menuitems->data;
+		const PurpleKeyValuePair *menu_item = menuitems->data;
 		int int_value  = 0;
 		const char *str_value  = NULL;
 		gboolean bool_value = FALSE;
 
-		if (menu_item->name == NULL) {
+		if (menu_item->key == NULL) {
 			break;
 		}
 
 		gtk_list_store_append(store, &iter);
 		gtk_list_store_set(store, &iter,
-				   PREF_DROPDOWN_TEXT, menu_item->name,
+				   PREF_DROPDOWN_TEXT, menu_item->key,
 		                   -1);
 
 		if (initial.type == PURPLE_PREF_INT) {

@@ -397,21 +397,21 @@ purple_request_cpar_set_extra_actions(PurpleRequestCommonParameters *cpar, ...)
 	va_list args;
 	GSList *extra = NULL;
 
-	g_slist_free_full(cpar->extra_actions, (GDestroyNotify)purple_named_value_free);
+	g_slist_free_full(cpar->extra_actions, (GDestroyNotify)purple_key_value_pair_free);
 
 	va_start(args, cpar);
 
 	while (TRUE) {
 		const gchar *label;
 		PurpleRequestFieldsCb cb;
-		PurpleNamedValue *extra_action;
+		PurpleKeyValuePair *extra_action;
 
 		label = va_arg(args, const gchar*);
 		if (label == NULL)
 			break;
 		cb = va_arg(args, PurpleRequestFieldsCb);
 
-		extra_action = purple_named_value_new(label, cb);
+		extra_action = purple_key_value_pair_new(label, cb);
 
 		extra = g_slist_append(extra, extra_action);
 	}
@@ -940,11 +940,11 @@ purple_request_field_destroy(PurpleRequestField *field)
 	else if (field->type == PURPLE_REQUEST_FIELD_CHOICE)
 	{
 		for (GList *it = field->u.choice.elements; it != NULL; it = g_list_next(it)) {
-			PurpleNamedValue *choice = it->data;
+			PurpleKeyValuePair *choice = it->data;
 
 			if (choice->value && field->u.choice.data_destroy)
 				field->u.choice.data_destroy(choice->value);
-			purple_named_value_free(choice);
+			purple_key_value_pair_free(choice);
 		}
 		g_list_free(field->u.choice.elements);
 	}
@@ -1462,13 +1462,13 @@ void
 purple_request_field_choice_add(PurpleRequestField *field, const char *label,
 	gpointer value)
 {
-	PurpleNamedValue *choice;
+	PurpleKeyValuePair *choice;
 
 	g_return_if_fail(field != NULL);
 	g_return_if_fail(label != NULL);
 	g_return_if_fail(field->type == PURPLE_REQUEST_FIELD_CHOICE);
 
-	choice = purple_named_value_new(label, value);
+	choice = purple_key_value_pair_new(label, value);
 
 	field->u.choice.elements = g_list_append(field->u.choice.elements,
 		choice);
