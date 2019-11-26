@@ -245,7 +245,7 @@ void purple_plugin_pref_add_choice(PurplePluginPref *pref, const char *label, gp
  *
  * Get the choices for a choices plugin pref
  *
- * Returns: (element-type PurpleNamedValue) (transfer none): GList of the choices
+ * Returns: (element-type PurpleKeyValuePair) (transfer none): GList of the choices
  */
 GList *purple_plugin_pref_get_choices(PurplePluginPref *pref);
 
