@@ -1792,19 +1792,19 @@ void
 purple_account_set_status(PurpleAccount *account, const char *status_id,
 						gboolean active, ...)
 {
-	GList *attrs = NULL;
+	GHashTable *attrs;
 	va_list args;
 
 	va_start(args, active);
-	attrs = purple_attr_list_from_vargs(args);
+	attrs = purple_attrs_from_vargs(args);
 	purple_account_set_status_list(account, status_id, active, attrs);
-	g_list_free_full(attrs, g_free);
+	g_hash_table_destroy(attrs);
 	va_end(args);
 }
 
 void
 purple_account_set_status_list(PurpleAccount *account, const char *status_id,
-							 gboolean active, GList *attrs)
+							 gboolean active, GHashTable *attrs)
 {
 	PurpleStatus *status;
 
