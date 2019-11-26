@@ -3558,7 +3558,6 @@ New themes can be installed by dragging and dropping them onto the theme list.</
   </object>
   <object class="GtkSizeGroup" id="iface.sg">
     <widgets>
-      <widget name="label1"/>
       <widget name="label2"/>
       <widget name="label3"/>
       <widget name="label4"/>
