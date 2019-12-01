@@ -55,7 +55,7 @@ gtalk_protocol_init(GTalkProtocol *self)
 	protocol->user_splits = g_list_append(protocol->user_splits, split);
 
 #define ADD_VALUE(list, desc, v) { \
-	PurpleKeyValuePair *kvp = purple_key_value_pair_new((desc), g_strdup((v))); \
+	PurpleKeyValuePair *kvp = purple_key_value_pair_new_full((desc), g_strdup((v)), g_free); \
 	list = g_list_prepend(list, kvp); \
 }
 
