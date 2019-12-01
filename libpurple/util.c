@@ -3790,6 +3790,17 @@ purple_key_value_pair_new(const char *key, gpointer value)
 	kvp = g_new0(PurpleKeyValuePair, 1);
 	kvp->key = g_strdup(key);
 	kvp->value = value;
+	kvp->value_destroy_func = NULL;
+
+	return kvp;
+}
+
+PurpleKeyValuePair *
+purple_key_value_pair_new_full(const char *key, gpointer value, GDestroyNotify value_destroy_func)
+{
+	PurpleKeyValuePair *kvp = purple_key_value_pair_new(key, value);
+
+	kvp->value_destroy_func = value_destroy_func;
 
 	return kvp;
 }
@@ -3800,16 +3811,12 @@ purple_key_value_pair_free(PurpleKeyValuePair *kvp)
 	g_return_if_fail(kvp != NULL);
 
 	g_free(kvp->key);
+
+	if (kvp->value_destroy_func) {
+		kvp->value_destroy_func(kvp->value);
+	}
+
 	g_free(kvp);
-}
-
-void
-purple_key_value_pair_free_full(PurpleKeyValuePair *kvp)
-{
-	g_return_if_fail(kvp != NULL);
-
-	g_free(kvp->value);
-	purple_key_value_pair_free(kvp);
 }
 
 gchar *
