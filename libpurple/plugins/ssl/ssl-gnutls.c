@@ -403,6 +403,10 @@ ssl_gnutls_connect(PurpleSslConnection *gsc)
 
 	gnutls_transport_set_ptr(gnutls_data->session, GINT_TO_POINTER(gsc->fd));
 
+	/* SNI support. */
+	if (gsc->host && !g_hostname_is_ip_address(gsc->host))
+		gnutls_server_name_set(gnutls_data->session, GNUTLS_NAME_DNS, gsc->host, strlen(gsc->host));
+
 	gnutls_data->handshake_handler = purple_input_add(gsc->fd,
 		PURPLE_INPUT_READ, ssl_gnutls_handshake_cb, gsc);
 
