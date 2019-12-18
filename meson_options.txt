@@ -1,0 +1,106 @@
+##############################################################################
+# General Options
+
+option('extraversion', type : 'string',
+       description : 'extra version number to be displayed in Help->About and --help (for packagers)')
+
+option('doc', type : 'boolean', value : false,
+       description : 'build documentation with gtk-doc')
+
+option('glib-errors-trace', type : 'boolean', value : false,
+       description : 'print backtraces for glib errors')
+
+option('introspection', type : 'feature',
+       description : 'build introspection data')
+
+option('nettle', type : 'feature',
+       description : 'enable Nettle support')
+
+option('nls', type : 'boolean', value : true,
+       description : 'enable installation of translation files')
+
+option('pixmaps-install', type : 'boolean', value : true,
+       description : 'enable installation of pixmap files - Pidgin still needs them!')
+
+##############################################################################
+# Libpurple Options
+
+option('farstream', type : 'feature',
+       description : 'compile with farstream support')
+
+option('gstreamer', type : 'feature',
+       description : 'compile with GStreamer audio support')
+
+option('gstreamer-video', type : 'feature',
+       description : 'compile with GStreamer 1.0 Video Overlay support')
+
+option('kwallet', type : 'feature',
+       description : 'enable KWallet support')
+
+option('plugins', type : 'boolean', value : true,
+       description : 'compile plugins')
+
+option('secret-service', type : 'feature',
+       description : 'enable Secret Service support')
+
+option('vv', type : 'feature',
+       description : 'compile with voice and video support')
+
+##############################################################################
+# Protocol Plugins
+
+option('dynamic-prpls', type : 'string', value: 'all',
+       description : 'specify which protocols to build dynamically')
+
+option('avahi', type : 'feature',
+       description : 'compile with avahi (required for Bonjour support)')
+
+option('cyrus-sasl', type : 'feature',
+       description : 'enable Cyrus SASL support for XMPP/IRC')
+
+option('idn', type : 'feature',
+       description : 'compile with IDN support')
+
+option('krb4', type : 'boolean', value : false,
+       description : 'compile Zephyr plugin with Kerberos 4 support')
+
+option('libgadu', type : 'feature',
+       description : 'compile with libgadu (required for GaduGadu support)')
+
+option('meanwhile', type : 'feature',
+       description : 'compile with meanwhile')
+
+option('silc', type : 'feature',
+       description : 'compile with SILC plugin')
+
+option('zephyr', type : 'feature',
+       description : 'compile Zephyr plugin against external libzephyr')
+
+##############################################################################
+# Pidgin Options
+
+option('gtkui', type : 'boolean', value : true,
+       description : 'compile with GTK+ user interface')
+
+option('cap', type : 'boolean', value : false,
+       description : 'compile with Contact Availability Prediction plugin')
+
+option('console-logging', type : 'boolean', value : false,
+       description : 'compile with console logging support')
+
+option('gestures', type : 'boolean', value : true,
+       description : 'compile with the gestures plugin')
+
+option('gevolution', type : 'feature',
+       description : 'compile with the Evolution plugin')
+
+option('unity-integration', type : 'feature',
+       description : 'compile with support for unity integration plugin')
+
+##############################################################################
+# Finch Options
+
+option('consoleui', type : 'boolean', value : true,
+       description : 'compile with console user interface')
+
+option('x', type : 'boolean', value : true)
