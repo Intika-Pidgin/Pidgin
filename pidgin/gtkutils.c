@@ -1463,9 +1463,9 @@ menu_action_cb(GtkMenuItem *item, gpointer object)
 		callback(object, data);
 }
 
-GtkWidget *
-pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
-                            gpointer object)
+static GtkWidget *
+do_pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
+				    gpointer object)
 {
 	GtkWidget *menuitem;
 	GList *list;
@@ -1522,11 +1522,17 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 		for (l = list; l; l = l->next) {
 			PurpleActionMenu *act = (PurpleActionMenu *)l->data;
 
-			pidgin_append_menu_action(submenu, act, object);
+			do_pidgin_append_menu_action(submenu, act, object);
 		}
-		g_list_free(list);
-		purple_action_menu_set_children(act, NULL);
 	}
+	return menuitem;
+}
+
+GtkWidget *
+pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
+                            gpointer object)
+{
+	GtkWidget *menuitem = do_pidgin_append_menu_action(menu, act, object);
 	purple_action_menu_free(act);
 	return menuitem;
 }
