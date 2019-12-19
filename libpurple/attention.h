@@ -198,6 +198,10 @@ G_DECLARE_INTERFACE(PurpleProtocolAttention, purple_protocol_attention, PURPLE,
 
 /**
  * PurpleProtocolAttentionInterface:
+ * @send: Called to send an attention message. See
+ *        purple_protocol_attention_send().
+ * @get_types: Called to list the protocol's attention types. See
+ *             purple_protocol_attention_get_types().
  *
  * The protocol attention interface.
  *
