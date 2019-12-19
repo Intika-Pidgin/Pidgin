@@ -258,10 +258,10 @@ gboolean purple_media_backend_set_decryption_parameters(PurpleMediaBackend *self
 
 /**
  * purple_media_backend_set_require_encryption:
- * @self The media object to find the session in.
- * @sess_id The id of the session to set parameters of.
- * @participant The participant of the session to set parameters of.
- * @require_encryption TRUE if the media requires encryption.
+ * @self: The media object to find the session in.
+ * @sess_id: The id of the session to set parameters of.
+ * @participant: The participant of the session to set parameters of.
+ * @require_encryption: TRUE if the media requires encryption.
  *
  * Sets whether a session participant's media requires encryption.
  */
