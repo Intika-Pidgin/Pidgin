@@ -1599,8 +1599,18 @@ void jabber_close(PurpleConnection *gc)
 		jabber_bosh_connection_destroy(js->bosh);
 		js->bosh = NULL;
 	} else if (js->output != NULL) {
-		jabber_send_raw(js, "</stream:stream>", -1);
-
+		/* We should emit the stream termination message here
+		 * normally, but since we destroy the jabber stream just
+		 * after, it has no way to effectively go out on the
+		 * wire. Moreover, it causes a connection lost error in
+		 * the output queued stream that triggers an
+		 * heap-use-after-free error in jabber_push_bytes_cb().
+		 *
+		 * This case happens when disabling the jabber account
+		 * from the dialog box.
+		 *
+		 * jabber_send_raw(js, "</stream:stream>", -1);
+		 */
 		if(js->inpa) {
 			g_source_remove(js->inpa);
 			js->inpa = 0;
