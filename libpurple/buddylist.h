@@ -68,6 +68,12 @@ typedef void (*PurpleBlistWalkFunc)(PurpleBlistNode *node, gpointer data);
  * @update:       This will update a node in the buddy list.
  * @remove:       This removes a node from the list
  * @set_visible:  Hides or unhides the buddy list.
+ * @request_add_buddy: Called when information is needed to add a buddy to the
+ *                     buddy list. See purple_blist_request_add_buddy().
+ * @request_add_chat: Called when information is needed to add a chat to the
+ *                    buddy list. See purple_blist_request_add_chat().
+ * @request_add_group: Called when information is needed to add a group to the
+ *                     buddy list. See purple_blist_request_add_group().
  * @save_node:    This is called when a node has been modified and should be
  *                saved.
  *                <sbr/>Implementation of this method is
