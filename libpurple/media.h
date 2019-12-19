@@ -412,14 +412,15 @@ gboolean purple_media_set_decryption_parameters(PurpleMedia *media,
 		const gchar *key, gsize key_len);
 
 /**
+ * purple_media_set_require_encryption:
+ * @media: The media object to find the session in.
+ * @sess_id: The id of the session to set parameters of.
+ * @participant: The participant of the session to set parameters of.
+ * @require_encryption: TRUE if the media requires encryption.
+ *
  * Sets whether a session participant's media requires encryption.
  *
- * @param media The media object to find the session in.
- * @param sess_id The id of the session to set parameters of.
- * @param participant The participant of the session to set parameters of.
- * @param require_encryption TRUE if the media requires encryption.
- *
- * @since 2.14.0
+ * Since: 2.14.0
  */
 gboolean purple_media_set_require_encryption(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant,
