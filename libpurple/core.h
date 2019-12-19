@@ -44,7 +44,7 @@ typedef struct _PurpleCoreUiOps PurpleCoreUiOps;
  *                 needs to be in place when other subsystems are initialized.
  * @debug_ui_init: Called just after the debug subsystem is initialized, but
  *                 before just about every other component's initialization. The
- *                 UI should use this hook to call purple_debug_set_ui_ops() so
+ *                 UI should use this hook to call purple_debug_set_ui() so
  *                 that debugging information for other components can be logged
  *                 during their initialization.
  * @ui_init:       Called after all of libpurple has been initialized. The UI
