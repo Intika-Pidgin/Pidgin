@@ -62,13 +62,18 @@ typedef enum
 
 /**
  * PurpleDebugUiInterface:
+ * @print: Called to output a debug string to the UI.
+ * @is_enabled: Returns if debug printing is enabled in the UI for a @level and
+ *              @category.
  *
  * Debug UI operations.
  */
 struct _PurpleDebugUiInterface
 {
+	/*< private >*/
 	GTypeInterface parent_iface;
 
+	/*< public >*/
 	void (*print)(PurpleDebugUi *self,
 	              PurpleDebugLevel level, const char *category,
 	              const char *arg_s);

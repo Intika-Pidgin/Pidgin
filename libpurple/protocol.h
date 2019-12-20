@@ -257,7 +257,7 @@ typedef struct _PurpleProtocolServerInterface PurpleProtocolServerInterface;
  *                   protocol's active connections. You'd want to do this if you
  *                   need to repeatedly send some kind of keepalive packet to
  *                   the server to avoid being disconnected. ("Regularly" is
- *                   defined to be 30 unless get_keepalive_interval() is
+ *                   defined to be 30 unless @get_keepalive_interval is
  *                   implemented to override it).
  *                   <filename>libpurple/connection.c</filename>.)
  * @get_keepalive_interval: If implemented, this will override the default
@@ -606,8 +606,6 @@ typedef struct _PurpleProtocolFactoryInterface PurpleProtocolFactoryInterface;
  *                  inherits #PurpleRoomlist.
  * @whiteboard_new: Creates a new protocol-specific whiteboard object that
  *                  inherits #PurpleWhiteboard.
- * @xfer_new:       Creates a new protocol-specific file transfer object that
- *                  inherits #PurpleXfer.
  *
  * The protocol factory interface.
  *
