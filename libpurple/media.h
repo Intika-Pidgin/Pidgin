@@ -110,7 +110,7 @@ GList *purple_media_get_session_ids(PurpleMedia *media);
  *
  * Gets the PurpleAccount this media session is on.
  *
- * Returns: (transfer none): The account retrieved.
+ * Returns: (transfer full): The account retrieved.
  */
 PurpleAccount *purple_media_get_account(PurpleMedia *media);
 
