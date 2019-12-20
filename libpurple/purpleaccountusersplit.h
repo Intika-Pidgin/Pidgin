@@ -23,7 +23,7 @@
 #define PURPLE_ACCOUNT_USER_SPLIT_H
 
 /**
- * SECTION:accountusersplit
+ * SECTION:purpleaccountusersplit
  * @section_id: libpurple-account-user-split
  * @short_description: Username splitting
  * @title: Account Username Splitting API

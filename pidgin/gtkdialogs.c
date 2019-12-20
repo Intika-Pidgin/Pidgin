@@ -270,13 +270,15 @@ pidgin_dialogs_im_name_validator(PurpleRequestField *field, gchar **errmsg,
 	PurpleAccount *account;
 	PurpleProtocol *protocol;
 	const char *username;
-	gboolean valid;
+	gboolean valid = FALSE;
 
 	account = purple_request_fields_get_account(fields, "account");
 	protocol = purple_protocols_find(purple_account_get_protocol_id(account));
 	username = purple_request_fields_get_string(fields, "screenname");
 
-	valid = purple_validate(protocol, username);
+	if (username) {
+		valid = purple_validate(protocol, username);
+	}
 
 	if (errmsg && !valid)
 		*errmsg = g_strdup(_("Invalid username"));
