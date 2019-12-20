@@ -804,9 +804,6 @@ void purple_blist_set_visible(gboolean show)
 {
 	PurpleBuddyListClass *klass = NULL;
 
-	if (!purplebuddylist)
-		return NULL;
-
 	g_return_if_fail(PURPLE_IS_BUDDY_LIST(purplebuddylist));
 	klass = PURPLE_BUDDY_LIST_GET_CLASS(purplebuddylist);
 
