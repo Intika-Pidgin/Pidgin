@@ -107,32 +107,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
  *                local end.
  * @cancel_remote: UI op that's called when a transfer has been cancelled on
  *                 the remote end.
- * @ui_write: UI op to write data received from the protocol. The UI must deal
- *            with the entire buffer and return size, or it is treated as an
- *            error.
- *            <sbr/>@xfer:   The file transfer structure
- *            <sbr/>@buffer: The buffer to write
- *            <sbr/>@size:   The size of the buffer
- *            <sbr/>Returns: size if the write was successful, or a value
- *                           between 0 and size on error.
- * @ui_read: UI op to read data to send to the protocol for a file transfer.
- *           <sbr/>@xfer:   The file transfer structure
- *           <sbr/>@buffer: A pointer to a buffer. The UI must allocate this
- *                          buffer. libpurple will free the data.
- *           <sbr/>@size:   The maximum amount of data to put in the buffer.
- *           <sbr/>Returns: The amount of data in the buffer, 0 if nothing is
- *                          available, and a negative value if an error occurred
- *                          and the transfer should be cancelled (libpurple will
- *                          cancel).
- * @data_not_sent: Op to notify the UI that not all the data read in was
- *                 written. The UI should re-enqueue this data and return it the
- *                 next time read is called.
- *                 <sbr/>This <emphasis>MUST</emphasis> be implemented if read
- *                 and write are implemented.
- *                 <sbr/>@xfer:   The file transfer structure
- *                 <sbr/>@buffer: A pointer to the beginning of the unwritten
- *                                data.
- *                 <sbr/>@size:   The amount of unwritten data.
  * @add_thumbnail: Op to create a thumbnail image for a file transfer
  *
  * File transfer UI operations.
@@ -148,9 +122,6 @@ struct _PurpleXferUiOps
 	void (*update_progress)(PurpleXfer *xfer, double percent);
 	void (*cancel_local)(PurpleXfer *xfer);
 	void (*cancel_remote)(PurpleXfer *xfer);
-	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
-	gssize (*ui_read)(PurpleXfer *xfer, guchar **buffer, gssize size);
-	void (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer, gsize size);
 	void (*add_thumbnail)(PurpleXfer *xfer, const gchar *formats);
 };
 
@@ -166,6 +137,11 @@ struct _PurpleXferUiOps
  * @read: Called when reading data from the file transfer.
  * @write: Called when writing data to the file transfer.
  * @ack: Called when a file transfer is acknowledged.
+ * @open_local: The vfunc for PurpleXfer::open-local. Since: 3.0.0
+ * @query_local: The vfunc for PurpleXfer::query-local. Since: 3.0.0
+ * @read_local: The vfunc for PurpleXfer::read-local. Since: 3.0.0
+ * @write_local: The vfunc for PurpleXfer::write-local. Since: 3.0.0
+ * @data_not_sent: The vfunc for PurpleXfer::data-not-sent. Since: 3.0.0
  *
  * Base class for all #PurpleXfer's
  */
@@ -182,6 +158,13 @@ struct _PurpleXferClass
 	gssize (*read)(PurpleXfer *xfer, guchar **buffer, gsize size);
 	gssize (*write)(PurpleXfer *xfer, const guchar *buffer, gsize size);
 	void (*ack)(PurpleXfer *xfer, const guchar *buffer, gsize size);
+
+	gboolean (*open_local)(PurpleXfer *xfer);
+	gboolean (*query_local)(PurpleXfer *xfer, const gchar *filename);
+	gssize (*read_local)(PurpleXfer *xfer, guchar *buffer, gssize size);
+	gssize (*write_local)(PurpleXfer *xfer, const guchar *buffer, gssize size);
+	gboolean (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer,
+	                          gsize size);
 
 	/*< private >*/
 	gpointer reserved[4];

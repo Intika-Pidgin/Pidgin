@@ -1021,9 +1021,6 @@ static PurpleXferUiOps ops =
 	pidgin_xfer_update_progress,
 	pidgin_xfer_cancel_local,
 	pidgin_xfer_cancel_remote,
-	NULL,
-	NULL,
-	NULL,
 	pidgin_xfer_add_thumbnail
 };
 
