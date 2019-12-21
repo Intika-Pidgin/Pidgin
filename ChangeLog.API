@@ -475,6 +475,10 @@ version 3.0.0 (??/??/????):
 		* PurplePluginProtocolInfo.add_buddies_with_invite
 		* PurplePluginProtocolInfo.get_cb_away
 		* PurpleValue, use GValue instead.
+		* PurpleXferUiOps.data_not_sent. Use PurpleXfer::data-not-sent
+		  instead.
+		* PurpleXferUiOps.ui_read. Use PurpleXfer::read-local instead.
+		* PurpleXferUiOps.ui_write. Use PurpleXfer::write-local instead.
 		* serv_got_attention
 		* serv_send_attention
 		* struct _PurpleAttentionType
