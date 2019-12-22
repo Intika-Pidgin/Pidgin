@@ -81,7 +81,6 @@ typedef struct
 {
 	GtkTreeIter iter;
 	gint64 last_updated_time;
-	gboolean in_list;
 } PidginXferUiData;
 
 static PidginXferDialog *xfer_dialog = NULL;
@@ -692,7 +691,6 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	g_object_ref(xfer);
 
 	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
-	data->in_list = TRUE;
 
 	pidgin_xfer_dialog_show(dialog);
 
@@ -743,10 +741,11 @@ pidgin_xfer_dialog_remove_xfer(PidginXferDialog *dialog,
 	if (data == NULL)
 		return;
 
-	if (!data->in_list)
+	if (!purple_xfer_get_visible(xfer)) {
 		return;
+	}
 
-	data->in_list = FALSE;
+	purple_xfer_set_visible(xfer, FALSE);
 
 	gtk_list_store_remove(GTK_LIST_STORE(dialog->model), &data->iter);
 
@@ -771,8 +770,9 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 	if (data == NULL)
 		return;
 
-	if (!data->in_list)
+	if (!purple_xfer_get_visible(xfer)) {
 		return;
+	}
 
 	if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_CANCEL_LOCAL &&
 	    gtk_toggle_button_get_active(
@@ -813,7 +813,7 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 	g_return_if_fail(xfer != NULL);
 
 	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
-	if (data == NULL || data->in_list == FALSE) {
+	if (data == NULL || !purple_xfer_get_visible(xfer)) {
 		return;
 	}
 
@@ -954,19 +954,6 @@ pidgin_xfer_add_thumbnail(PurpleXfer *xfer, const gchar *formats,
 }
 
 static void
-pidgin_xfer_new_xfer(PurpleXfer *xfer)
-{
-	PidginXferUiData *data;
-
-	/* This is where we're setting xfer's "ui_data" for the first time. */
-	data = g_new0(PidginXferUiData, 1);
-	g_object_set_data_full(G_OBJECT(xfer), UI_DATA, data, g_free);
-
-	g_signal_connect(xfer, "add-thumbnail",
-	                 G_CALLBACK(pidgin_xfer_add_thumbnail), NULL);
-}
-
-static void
 pidgin_xfer_progress_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
                             G_GNUC_UNUSED gpointer data)
 {
@@ -985,25 +972,43 @@ pidgin_xfer_status_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
 }
 
 static void
-pidgin_xfer_add_xfer(PurpleXfer *xfer)
+pidgin_xfer_visible_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                           G_GNUC_UNUSED gpointer data)
 {
+	if (!purple_xfer_get_visible(xfer)) {
+		return;
+	}
+
 	if (xfer_dialog == NULL) {
 		xfer_dialog = pidgin_xfer_dialog_new();
 	}
 
 	pidgin_xfer_dialog_add_xfer(xfer_dialog, xfer);
+}
 
+static void
+pidgin_xfer_new_xfer(PurpleXfer *xfer)
+{
+	PidginXferUiData *data;
+
+	/* This is where we're setting xfer's "ui_data" for the first time. */
+	data = g_new0(PidginXferUiData, 1);
+	g_object_set_data_full(G_OBJECT(xfer), UI_DATA, data, g_free);
+
+	g_signal_connect(xfer, "add-thumbnail",
+	                 G_CALLBACK(pidgin_xfer_add_thumbnail), NULL);
 	g_signal_connect(xfer, "notify::progress",
 	                 G_CALLBACK(pidgin_xfer_progress_notify), NULL);
 	g_signal_connect(xfer, "notify::status",
 	                 G_CALLBACK(pidgin_xfer_status_notify), NULL);
+	g_signal_connect(xfer, "notify::visible",
+	                 G_CALLBACK(pidgin_xfer_visible_notify), NULL);
 }
 
 static PurpleXferUiOps ops =
 {
 	pidgin_xfer_new_xfer,
-	NULL,
-	pidgin_xfer_add_xfer
+	NULL
 };
 
 /**************************************************************************

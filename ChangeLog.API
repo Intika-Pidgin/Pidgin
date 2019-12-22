@@ -473,6 +473,7 @@ version 3.0.0 (??/??/????):
 		* purple_util_get_image_checksum.  Use
 		  g_compute_checksum_for_data(G_CHECKSUM_SHA1, ...), instead.
 		* purple_uts35_to_str
+		* purple_xfer_add
 		* purple_xfer_get_ui_data and purple_xfer_set_ui_data. Use
 		  GObject data functions instead.
 		* purple_xfer_update_progress
@@ -484,6 +485,8 @@ version 3.0.0 (??/??/????):
 		* PurpleValue, use GValue instead.
 		* PurpleXferUiOps.add_thumbnail. Use PurpleXfer::add-thumbnail
 		  instead.
+		* PurpleXferUiOps.add_xfer. Use notify::visible on #PurpleXfer
+		  objects instead.
 		* PurpleXferUiOps.cancel_local and
 		  PurpleXferUiOps.cancel_remote. Use notify::status on
 		  #PurpleXfer objects instead.

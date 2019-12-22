@@ -92,7 +92,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
  * PurpleXferUiOps:
  * @new_xfer: UI op that's called after a new transfer is created.
  * @destroy: UI op that's called when a transfer is being destroyed.
- * @add_xfer: UI op that's called when a transfer should be added to the UI.
  *
  * File transfer UI operations.
  *
@@ -103,7 +102,6 @@ struct _PurpleXferUiOps
 {
 	void (*new_xfer)(PurpleXfer *xfer);
 	void (*destroy)(PurpleXfer *xfer);
-	void (*add_xfer)(PurpleXfer *xfer);
 };
 
 /**
@@ -266,6 +264,20 @@ const char *purple_xfer_get_remote_user(PurpleXfer *xfer);
  * Returns: The status.
  */
 PurpleXferStatus purple_xfer_get_status(PurpleXfer *xfer);
+
+/**
+ * purple_xfer_get_visible:
+ * @xfer: The file transfer.
+ *
+ * Returns whether the UI should show the file transfer in its listing.
+ *
+ * Note, this is just a hint for UIs and has no effect internally.
+ *
+ * Returns: The visibility.
+ *
+ * Since: 3.0.0
+ */
+gboolean purple_xfer_get_visible(PurpleXfer *xfer);
 
 /**
  * purple_xfer_is_cancelled:
@@ -436,6 +448,19 @@ void purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed);
 void purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatus status);
 
 /**
+ * purple_xfer_set_visible:
+ * @xfer: The file transfer.
+ * @visible: The visibility.
+ *
+ * Sets whether the UI should show the file transfer in its listing.
+ *
+ * Note, this is just a hint for UIs and has no effect internally.
+ *
+ * Since: 3.0.0
+ */
+void purple_xfer_set_visible(PurpleXfer *xfer, gboolean visible);
+
+/**
  * purple_xfer_set_message:
  * @xfer:     The file transfer.
  * @message: The message.
@@ -595,15 +620,6 @@ void purple_xfer_start(PurpleXfer *xfer, int fd, const char *ip, guint16 port);
  * Ends a file transfer.
  */
 void purple_xfer_end(PurpleXfer *xfer);
-
-/**
- * purple_xfer_add:
- * @xfer: The file transfer.
- *
- * Adds a new file transfer to the list of file transfers. Call this only
- * if you are not using purple_xfer_start.
- */
-void purple_xfer_add(PurpleXfer *xfer);
 
 /**
  * purple_xfer_cancel_local:
