@@ -924,18 +924,22 @@ pidgin_xfer_destroy(PurpleXfer *xfer)
 }
 
 static void
+pidgin_xfer_progress_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                            G_GNUC_UNUSED gpointer data)
+{
+	pidgin_xfer_dialog_update_xfer(xfer_dialog, xfer);
+}
+
+static void
 pidgin_xfer_add_xfer(PurpleXfer *xfer)
 {
 	if (xfer_dialog == NULL)
 		xfer_dialog = pidgin_xfer_dialog_new();
 
 	pidgin_xfer_dialog_add_xfer(xfer_dialog, xfer);
-}
 
-static void
-pidgin_xfer_update_progress(PurpleXfer *xfer, double percent)
-{
-	pidgin_xfer_dialog_update_xfer(xfer_dialog, xfer);
+	g_signal_connect(xfer, "notify::progress",
+	                 G_CALLBACK(pidgin_xfer_progress_notify), NULL);
 }
 
 static void
@@ -1018,7 +1022,6 @@ static PurpleXferUiOps ops =
 	pidgin_xfer_new_xfer,
 	pidgin_xfer_destroy,
 	pidgin_xfer_add_xfer,
-	pidgin_xfer_update_progress,
 	pidgin_xfer_cancel_local,
 	pidgin_xfer_cancel_remote,
 	pidgin_xfer_add_thumbnail

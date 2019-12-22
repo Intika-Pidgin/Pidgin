@@ -101,8 +101,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
  * @new_xfer: UI op that's called after a new transfer is created.
  * @destroy: UI op that's called when a transfer is being destroyed.
  * @add_xfer: UI op that's called when a transfer should be added to the UI.
- * @update_progress: UI op that's called when a transfer's progress has been
- *                   updated.
  * @cancel_local: UI op that's called when a transfer has been cancelled on the
  *                local end.
  * @cancel_remote: UI op that's called when a transfer has been cancelled on
@@ -119,7 +117,6 @@ struct _PurpleXferUiOps
 	void (*new_xfer)(PurpleXfer *xfer);
 	void (*destroy)(PurpleXfer *xfer);
 	void (*add_xfer)(PurpleXfer *xfer);
-	void (*update_progress)(PurpleXfer *xfer, double percent);
 	void (*cancel_local)(PurpleXfer *xfer);
 	void (*cancel_remote)(PurpleXfer *xfer);
 	void (*add_thumbnail)(PurpleXfer *xfer, const gchar *formats);
@@ -681,14 +678,6 @@ void purple_xfer_cancel_remote(PurpleXfer *xfer);
  * "File Transfer from <literal>user</literal> failed").
  */
 void purple_xfer_error(PurpleXferType type, PurpleAccount *account, const char *who, const char *msg);
-
-/**
- * purple_xfer_update_progress:
- * @xfer:      The file transfer.
- *
- * Updates file transfer progress.
- */
-void purple_xfer_update_progress(PurpleXfer *xfer);
 
 /**
  * purple_xfer_conversation_write:
