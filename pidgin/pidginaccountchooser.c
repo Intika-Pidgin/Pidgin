@@ -289,8 +289,10 @@ pidgin_account_chooser_init(PidginAccountChooser *chooser)
 {
 	gtk_widget_init_template(GTK_WIDGET(chooser));
 
-	g_signal_connect(chooser, "changed", pidgin_account_chooser_changed_cb,
-	                 NULL);
+	set_account_menu(chooser, NULL);
+
+	g_signal_connect(chooser, "changed",
+	                 G_CALLBACK(pidgin_account_chooser_changed_cb), NULL);
 
 	/* Register the purple sign on/off event callbacks. */
 	purple_signal_connect(
@@ -317,7 +319,6 @@ pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all)
 
 	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, "account",
 	                       default_account, "show-all", show_all, NULL);
-	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account);
 
 	return GTK_WIDGET(chooser);
 }
