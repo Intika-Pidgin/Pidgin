@@ -526,8 +526,7 @@ static PurpleXferUiOps ops =
 {
 	finch_xfer_new_xfer,
 	finch_xfer_destroy,
-	finch_xfer_add_xfer,
-	NULL  /* add_thumbnail */
+	finch_xfer_add_xfer
 };
 
 /**************************************************************************
