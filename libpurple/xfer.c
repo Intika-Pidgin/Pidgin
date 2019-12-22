@@ -181,44 +181,6 @@ purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatus status)
 	priv->status = status;
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_STATUS]);
-
-	if(priv->type == PURPLE_XFER_TYPE_SEND) {
-		switch(status) {
-			case PURPLE_XFER_STATUS_ACCEPTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-accept", xfer);
-				break;
-			case PURPLE_XFER_STATUS_STARTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-start", xfer);
-				break;
-			case PURPLE_XFER_STATUS_DONE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-complete", xfer);
-				break;
-			case PURPLE_XFER_STATUS_CANCEL_LOCAL:
-			case PURPLE_XFER_STATUS_CANCEL_REMOTE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-cancel", xfer);
-				break;
-			default:
-				break;
-		}
-	} else if(priv->type == PURPLE_XFER_TYPE_RECEIVE) {
-		switch(status) {
-			case PURPLE_XFER_STATUS_ACCEPTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-accept", xfer);
-				break;
-			case PURPLE_XFER_STATUS_STARTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-start", xfer);
-				break;
-			case PURPLE_XFER_STATUS_DONE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-complete", xfer);
-				break;
-			case PURPLE_XFER_STATUS_CANCEL_LOCAL:
-			case PURPLE_XFER_STATUS_CANCEL_REMOTE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-cancel", xfer);
-				break;
-			default:
-				break;
-		}
-	}
 }
 
 static void
@@ -2497,30 +2459,6 @@ purple_xfers_init(void) {
 	void *handle = purple_xfers_get_handle();
 
 	/* register signals */
-	purple_signal_register(handle, "file-recv-accept",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-accept",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-recv-start",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-start",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-cancel",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-recv-cancel",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-complete",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-recv-complete",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-recv-request",
 	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
 	                     PURPLE_TYPE_XFER);
