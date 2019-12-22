@@ -31,18 +31,10 @@
 
 #define PURPLE_TYPE_XFER_UI_OPS      (purple_xfer_ui_ops_get_type())
 
-#define PURPLE_TYPE_PROTOCOL_XFER           (purple_protocol_xfer_get_type())
-#define PURPLE_PROTOCOL_XFER(obj)           (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXfer))
-#define PURPLE_IS_PROTOCOL_XFER(obj)        (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_XFER))
-#define PURPLE_PROTOCOL_XFER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXferInterface))
-
 /**************************************************************************/
 /* Data Structures                                                        */
 /**************************************************************************/
 typedef struct _PurpleXferUiOps PurpleXferUiOps;
-
-typedef struct _PurpleProtocolXfer PurpleProtocolXfer;
-typedef struct _PurpleProtocolXferInterface PurpleProtocolXferInterface;
 
 #include <glib.h>
 #include <stdio.h>
@@ -157,33 +149,6 @@ struct _PurpleXferClass
 
 	/*< private >*/
 	gpointer reserved[4];
-};
-
-/**
- * PurpleProtocolXferInterface:
- * @can_receive: A method to determine if we can receive a file.
- * @send_file: A method to determine if we can send a file.
- * @new_xfer: A method to create a new file transfer.
- *
- * The protocol file transfer interface.
- *
- * This interface provides file transfer callbacks for the protocol.
- */
-struct _PurpleProtocolXferInterface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer,
-			PurpleConnection *connection, const gchar *who);
-
-	void (*send_file)(PurpleProtocolXfer *prplxfer,
-			PurpleConnection *connection, const gchar *who,
-			const gchar *filename);
-
-	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer,
-			PurpleConnection *connection, const gchar *who);
 };
 
 /**************************************************************************/
@@ -813,13 +778,41 @@ PurpleXferUiOps *purple_xfers_get_ui_ops(void);
 /******************************************************************************
  * Protocol Interface
  *****************************************************************************/
+#define PURPLE_TYPE_PROTOCOL_XFER (purple_protocol_xfer_get_type())
 
 /**
  * purple_protocol_xfer_get_type:
  *
  * Returns: The #GType for the protocol xfer interface.
  */
-GType purple_protocol_xfer_get_type(void);
+G_DECLARE_INTERFACE(PurpleProtocolXfer, purple_protocol_xfer, PURPLE,
+                    PROTOCOL_XFER, GObject)
+
+/**
+ * PurpleProtocolXferInterface:
+ * @can_receive: A method to determine if we can receive a file.
+ * @send_file: A method to determine if we can send a file.
+ * @new_xfer: A method to create a new file transfer.
+ *
+ * The protocol file transfer interface.
+ *
+ * This interface provides file transfer callbacks for the protocol.
+ */
+struct _PurpleProtocolXferInterface {
+	/*< private >*/
+	GTypeInterface parent_iface;
+
+	/*< public >*/
+	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer,
+	                        PurpleConnection *connection, const gchar *who);
+
+	void (*send_file)(PurpleProtocolXfer *prplxfer,
+	                  PurpleConnection *connection, const gchar *who,
+	                  const gchar *filename);
+
+	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer,
+	                        PurpleConnection *connection, const gchar *who);
+};
 
 /**
  * purple_protocol_xfer_can_receive:
