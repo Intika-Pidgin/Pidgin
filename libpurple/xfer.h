@@ -101,7 +101,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
  * @new_xfer: UI op that's called after a new transfer is created.
  * @destroy: UI op that's called when a transfer is being destroyed.
  * @add_xfer: UI op that's called when a transfer should be added to the UI.
- * @add_thumbnail: Op to create a thumbnail image for a file transfer
  *
  * File transfer UI operations.
  *
@@ -113,7 +112,6 @@ struct _PurpleXferUiOps
 	void (*new_xfer)(PurpleXfer *xfer);
 	void (*destroy)(PurpleXfer *xfer);
 	void (*add_xfer)(PurpleXfer *xfer);
-	void (*add_thumbnail)(PurpleXfer *xfer, const gchar *formats);
 };
 
 /**

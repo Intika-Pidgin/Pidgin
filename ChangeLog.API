@@ -480,6 +480,8 @@ version 3.0.0 (??/??/????):
 		* PurplePluginProtocolInfo.add_buddies_with_invite
 		* PurplePluginProtocolInfo.get_cb_away
 		* PurpleValue, use GValue instead.
+		* PurpleXferUiOps.add_thumbnail. Use PurpleXfer::add-thumbnail
+		  instead.
 		* PurpleXferUiOps.cancel_local and
 		  PurpleXferUiOps.cancel_remote. Use notify::status on
 		  #PurpleXfer objects instead.

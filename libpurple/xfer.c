@@ -130,6 +130,7 @@ enum
 	SIG_READ_LOCAL,
 	SIG_WRITE_LOCAL,
 	SIG_DATA_NOT_SENT,
+	SIG_ADD_THUMBNAIL,
 	SIG_LAST
 };
 static guint signals[SIG_LAST] = {0};
@@ -1923,14 +1924,9 @@ purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
 void
 purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats)
 {
-	PurpleXferUiOps *ui_ops;
-
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-	if (ui_ops && ui_ops->add_thumbnail) {
-		ui_ops->add_thumbnail(xfer, formats);
-	}
+	g_signal_emit(xfer, signals[SIG_ADD_THUMBNAIL], 0, formats, NULL);
 }
 
 void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data)
@@ -2378,6 +2374,18 @@ purple_xfer_class_init(PurpleXferClass *klass)
 	        G_STRUCT_OFFSET(PurpleXferClass, data_not_sent),
 	        g_signal_accumulator_first_wins, NULL, NULL, G_TYPE_BOOLEAN, 2,
 	        G_TYPE_POINTER, G_TYPE_ULONG);
+
+	/**
+	 * PurpleXfer::add-thumbnail:
+	 * @formats: A comma-separated string of allowed image formats.
+	 *
+	 * Request that a thumbnail be added to a file transfer.
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_ADD_THUMBNAIL] = g_signal_new(
+	        "add-thumbnail", G_TYPE_FROM_CLASS(klass), G_SIGNAL_ACTION, 0, NULL,
+	        NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
 PurpleXfer *
