@@ -59,7 +59,6 @@ static PurpleGntXferDialog *xfer_dialog = NULL;
 typedef struct
 {
 	gint64 last_updated_time;
-	gboolean in_list;
 
 	gboolean notified;   /* Has the completion of the transfer been notified? */
 
@@ -256,8 +255,7 @@ finch_xfer_dialog_new(void)
 
 	for (iter = purple_xfers_get_all(); iter; iter = iter->next) {
 		PurpleXfer *xfer = (PurpleXfer *)iter->data;
-		PurpleGntXferUiData *data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
-		if (data->in_list) {
+		if (purple_xfer_get_visible(xfer)) {
 			finch_xfer_dialog_add_xfer(xfer);
 			finch_xfer_dialog_update_xfer(xfer);
 			gnt_tree_set_selected(GNT_TREE(tree), xfer);
@@ -297,7 +295,6 @@ finch_xfer_dialog_add_xfer(PurpleXfer *xfer)
 	g_object_ref(xfer);
 
 	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
-	data->in_list = TRUE;
 
 	finch_xfer_dialog_show();
 
@@ -329,20 +326,14 @@ finch_xfer_dialog_add_xfer(PurpleXfer *xfer)
 void
 finch_xfer_dialog_remove_xfer(PurpleXfer *xfer)
 {
-	PurpleGntXferUiData *data;
-
 	g_return_if_fail(xfer_dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
-
-	if (data == NULL)
+	if (!purple_xfer_get_visible(xfer)) {
 		return;
+	}
 
-	if (!data->in_list)
-		return;
-
-	data->in_list = FALSE;
+	purple_xfer_set_visible(xfer, FALSE);
 
 	gnt_tree_remove(GNT_TREE(xfer_dialog->tree), xfer);
 
@@ -369,8 +360,9 @@ finch_xfer_dialog_cancel_xfer(PurpleXfer *xfer)
 	if (data == NULL)
 		return;
 
-	if (!data->in_list)
+	if (!purple_xfer_get_visible(xfer)) {
 		return;
+	}
 
 	if ((purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_CANCEL_LOCAL) && (xfer_dialog->auto_clear)) {
 		finch_xfer_dialog_remove_xfer(xfer);
@@ -415,7 +407,7 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
 	g_return_if_fail(xfer != NULL);
 
 	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
-	if (data == NULL || !data->in_list || data->notified) {
+	if (data == NULL || !purple_xfer_get_visible(xfer) || data->notified) {
 		return;
 	}
 
@@ -464,16 +456,6 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
  * File Transfer UI Ops
  **************************************************************************/
 static void
-finch_xfer_new_xfer(PurpleXfer *xfer)
-{
-	PurpleGntXferUiData *data;
-
-	/* This is where we're setting xfer's "ui_data" for the first time. */
-	data = g_new0(PurpleGntXferUiData, 1);
-	g_object_set_data_full(G_OBJECT(xfer), UI_DATA, data, g_free);
-}
-
-static void
 finch_xfer_progress_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
                            G_GNUC_UNUSED gpointer data)
 {
@@ -494,25 +476,41 @@ finch_xfer_status_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
 }
 
 static void
-finch_xfer_add_xfer(PurpleXfer *xfer)
+finch_xfer_visible_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                          G_GNUC_UNUSED gpointer data)
 {
+	if (!purple_xfer_get_visible(xfer)) {
+		return;
+	}
+
 	if (!xfer_dialog)
 		finch_xfer_dialog_new();
 
 	finch_xfer_dialog_add_xfer(xfer);
 	gnt_tree_set_selected(GNT_TREE(xfer_dialog->tree), xfer);
+}
+
+static void
+finch_xfer_new_xfer(PurpleXfer *xfer)
+{
+	PurpleGntXferUiData *data;
+
+	/* This is where we're setting xfer's "ui_data" for the first time. */
+	data = g_new0(PurpleGntXferUiData, 1);
+	g_object_set_data_full(G_OBJECT(xfer), UI_DATA, data, g_free);
 
 	g_signal_connect(xfer, "notify::progress",
 	                 G_CALLBACK(finch_xfer_progress_notify), NULL);
 	g_signal_connect(xfer, "notify::status",
 	                 G_CALLBACK(finch_xfer_status_notify), NULL);
+	g_signal_connect(xfer, "notify::visible",
+	                 G_CALLBACK(finch_xfer_visible_notify), NULL);
 }
 
 static PurpleXferUiOps ops =
 {
 	finch_xfer_new_xfer,
-	NULL,
-	finch_xfer_add_xfer
+	NULL
 };
 
 /**************************************************************************

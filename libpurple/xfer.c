@@ -73,6 +73,8 @@ struct _PurpleXferPrivate {
 
 	PurpleXferStatus status;     /* File Transfer's status.             */
 
+	gboolean visible;            /* Hint the UI that the transfer should
+	                                be visible or not. */
 	PurpleXferUiOps *ui_ops;     /* UI-specific operations.             */
 
 	/*
@@ -115,6 +117,7 @@ enum
 	PROP_END_TIME,
 	PROP_STATUS,
 	PROP_PROGRESS,
+	PROP_VISIBLE,
 	PROP_LAST
 };
 
@@ -181,6 +184,19 @@ purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatus status)
 	priv->status = status;
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_STATUS]);
+}
+
+void
+purple_xfer_set_visible(PurpleXfer *xfer, gboolean visible)
+{
+	PurpleXferPrivate *priv = NULL;
+
+	g_return_if_fail(PURPLE_IS_XFER(xfer));
+
+	priv = purple_xfer_get_instance_private(xfer);
+	priv->visible = visible;
+
+	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_VISIBLE]);
 }
 
 static void
@@ -642,7 +658,7 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const gchar *filename)
 		g_free(msg);
 	}
 
-	purple_xfer_add(xfer);
+	purple_xfer_set_visible(xfer, TRUE);
 
 	klass->init(xfer);
 }
@@ -741,6 +757,17 @@ purple_xfer_get_status(PurpleXfer *xfer)
 
 	priv = purple_xfer_get_instance_private(xfer);
 	return priv->status;
+}
+
+gboolean
+purple_xfer_get_visible(PurpleXfer *xfer)
+{
+	PurpleXferPrivate *priv = NULL;
+
+	g_return_val_if_fail(PURPLE_IS_XFER(xfer), FALSE);
+
+	priv = purple_xfer_get_instance_private(xfer);
+	return priv->visible;
 }
 
 gboolean
@@ -1688,19 +1715,6 @@ purple_xfer_end(PurpleXfer *xfer)
 }
 
 void
-purple_xfer_add(PurpleXfer *xfer)
-{
-	PurpleXferUiOps *ui_ops;
-
-	g_return_if_fail(PURPLE_IS_XFER(xfer));
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->add_xfer != NULL)
-		ui_ops->add_xfer(xfer);
-}
-
-void
 purple_xfer_cancel_local(PurpleXfer *xfer)
 {
 	PurpleXferClass *klass = NULL;
@@ -1974,6 +1988,9 @@ purple_xfer_set_property(GObject *obj, guint param_id, const GValue *value,
 		case PROP_STATUS:
 			purple_xfer_set_status(xfer, g_value_get_enum(value));
 			break;
+		case PROP_VISIBLE:
+			purple_xfer_set_visible(xfer, g_value_get_boolean(value));
+			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
 			break;
@@ -2037,6 +2054,9 @@ purple_xfer_get_property(GObject *obj, guint param_id, GValue *value,
 			break;
 		case PROP_PROGRESS:
 			g_value_set_double(value, purple_xfer_get_progress(xfer));
+			break;
+		case PROP_VISIBLE:
+			g_value_set_boolean(value, purple_xfer_get_visible(xfer));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -2216,6 +2236,11 @@ purple_xfer_class_init(PurpleXferClass *klass)
 	        "progress", "Progress",
 	        "The current progress of the file transfer.", -1.0, 1.0, -1.0,
 	        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_VISIBLE] = g_param_spec_boolean(
+	        "visible", "Visible",
+	        "Hint for UIs whether this transfer should be visible.", FALSE,
+	        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
 
