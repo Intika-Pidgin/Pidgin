@@ -1706,7 +1706,6 @@ purple_xfer_cancel_local(PurpleXfer *xfer)
 {
 	PurpleXferClass *klass = NULL;
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 	char *msg = NULL;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
@@ -1770,12 +1769,6 @@ purple_xfer_cancel_local(PurpleXfer *xfer)
 		priv->dest_fp = NULL;
 	}
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->cancel_local != NULL) {
-		ui_ops->cancel_local(xfer);
-	}
-
 	g_object_unref(xfer);
 }
 
@@ -1784,7 +1777,6 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 {
 	PurpleXferClass *klass = NULL;
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 	gchar *msg;
 	PurpleAccount *account;
 	PurpleBuddy *buddy;
@@ -1839,11 +1831,6 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 		fclose(priv->dest_fp);
 		priv->dest_fp = NULL;
 	}
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->cancel_remote != NULL)
-		ui_ops->cancel_remote(xfer);
 
 	g_object_unref(xfer);
 }
