@@ -497,6 +497,17 @@ finch_xfer_progress_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
 }
 
 static void
+finch_xfer_status_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                         G_GNUC_UNUSED gpointer data)
+{
+	if (xfer_dialog) {
+		if (purple_xfer_is_cancelled(xfer)) {
+			finch_xfer_dialog_cancel_xfer(xfer);
+		}
+	}
+}
+
+static void
 finch_xfer_add_xfer(PurpleXfer *xfer)
 {
 	if (!xfer_dialog)
@@ -507,20 +518,8 @@ finch_xfer_add_xfer(PurpleXfer *xfer)
 
 	g_signal_connect(xfer, "notify::progress",
 	                 G_CALLBACK(finch_xfer_progress_notify), NULL);
-}
-
-static void
-finch_xfer_cancel_local(PurpleXfer *xfer)
-{
-	if (xfer_dialog)
-		finch_xfer_dialog_cancel_xfer(xfer);
-}
-
-static void
-finch_xfer_cancel_remote(PurpleXfer *xfer)
-{
-	if (xfer_dialog)
-		finch_xfer_dialog_cancel_xfer(xfer);
+	g_signal_connect(xfer, "notify::status",
+	                 G_CALLBACK(finch_xfer_status_notify), NULL);
 }
 
 static PurpleXferUiOps ops =
@@ -528,8 +527,6 @@ static PurpleXferUiOps ops =
 	finch_xfer_new_xfer,
 	finch_xfer_destroy,
 	finch_xfer_add_xfer,
-	finch_xfer_cancel_local,
-	finch_xfer_cancel_remote,
 	NULL  /* add_thumbnail */
 };
 
