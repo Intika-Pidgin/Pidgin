@@ -115,6 +115,7 @@ enum
 	PROP_START_TIME,
 	PROP_END_TIME,
 	PROP_STATUS,
+	PROP_PROGRESS,
 	PROP_UI_DATA,
 	PROP_LAST
 };
@@ -913,7 +914,6 @@ void
 purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 {
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
@@ -954,10 +954,7 @@ purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 		g_free(msg);
 	}
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->update_progress != NULL)
-		ui_ops->update_progress(xfer, purple_xfer_get_progress(xfer));
+	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_PROGRESS]);
 }
 
 void
@@ -1033,6 +1030,7 @@ purple_xfer_set_size(PurpleXfer *xfer, goffset size)
 	priv->size = size;
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_FILE_SIZE]);
+	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_PROGRESS]);
 }
 
 void
@@ -1059,6 +1057,7 @@ purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent)
 	priv->bytes_sent = bytes_sent;
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_BYTES_SENT]);
+	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_PROGRESS]);
 }
 
 PurpleXferUiOps *
@@ -1300,11 +1299,8 @@ static void
 do_transfer(PurpleXfer *xfer)
 {
 	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
-	PurpleXferUiOps *ui_ops;
 	guchar *buffer = NULL;
 	gssize r = 0;
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
 
 	if (priv->type == PURPLE_XFER_TYPE_RECEIVE) {
 		r = purple_xfer_read(xfer, &buffer);
@@ -1423,10 +1419,6 @@ do_transfer(PurpleXfer *xfer)
 
 		if (klass && klass->ack)
 			klass->ack(xfer, buffer, r);
-
-		if (ui_ops != NULL && ui_ops->update_progress != NULL)
-			ui_ops->update_progress(xfer,
-				purple_xfer_get_progress(xfer));
 	}
 
 	g_free(buffer);
@@ -1882,19 +1874,6 @@ purple_xfer_error(PurpleXferType type, PurpleAccount *account, const gchar *who,
 	g_free(title);
 }
 
-void
-purple_xfer_update_progress(PurpleXfer *xfer)
-{
-	PurpleXferUiOps *ui_ops;
-
-	g_return_if_fail(PURPLE_IS_XFER(xfer));
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-	if (ui_ops != NULL && ui_ops->update_progress != NULL) {
-		ui_ops->update_progress(xfer, purple_xfer_get_progress(xfer));
-	}
-}
-
 gconstpointer
 purple_xfer_get_thumbnail(PurpleXfer *xfer, gsize *len)
 {
@@ -2102,6 +2081,9 @@ purple_xfer_get_property(GObject *obj, guint param_id, GValue *value,
 		case PROP_STATUS:
 			g_value_set_enum(value, purple_xfer_get_status(xfer));
 			break;
+		case PROP_PROGRESS:
+			g_value_set_double(value, purple_xfer_get_progress(xfer));
+			break;
 		case PROP_UI_DATA:
 			g_value_set_pointer(value, purple_xfer_get_ui_data(xfer));
 			break;
@@ -2278,6 +2260,11 @@ purple_xfer_class_init(PurpleXferClass *klass)
 				"The current status for the file transfer.",
 				PURPLE_TYPE_XFER_STATUS, PURPLE_XFER_STATUS_UNKNOWN,
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_PROGRESS] = g_param_spec_double(
+	        "progress", "Progress",
+	        "The current progress of the file transfer.", -1.0, 1.0, -1.0,
+	        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
 
 	properties[PROP_UI_DATA] = g_param_spec_pointer("ui-data", "UI Data",
 				"The UI specific data for this xfer",

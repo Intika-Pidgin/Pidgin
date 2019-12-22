@@ -473,6 +473,7 @@ version 3.0.0 (??/??/????):
 		* purple_util_get_image_checksum.  Use
 		  g_compute_checksum_for_data(G_CHECKSUM_SHA1, ...), instead.
 		* purple_uts35_to_str
+		* purple_xfer_update_progress
 		* PurpleCertificateVerificationStatus.PURPLE_CERTIFICATE_INVALID
 		* PurpleConnectionUiOps.report_disconnect_reason
 		* PurplePluginProtocolInfo.add_buddy_with_invite
@@ -483,6 +484,8 @@ version 3.0.0 (??/??/????):
 		  instead.
 		* PurpleXferUiOps.ui_read. Use PurpleXfer::read-local instead.
 		* PurpleXferUiOps.ui_write. Use PurpleXfer::write-local instead.
+		* PurpleXferUiOps.update_progress. Use notify::progress on
+		  #PurpleXfer objects instead.
 		* serv_got_attention
 		* serv_send_attention
 		* struct _PurpleAttentionType
