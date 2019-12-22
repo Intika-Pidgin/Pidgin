@@ -543,49 +543,6 @@ uri_handler(const char *proto, const char *cmd, GHashTable *params)
 }
 
 /**************************************************************************
- * File transfer signal callbacks
- **************************************************************************/
-static void
-ft_recv_accept_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file receive accepted\n");
-}
-
-static void
-ft_send_accept_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file send accepted\n");
-}
-
-static void
-ft_recv_start_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file receive started\n");
-}
-
-static void
-ft_send_start_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file send started\n");
-}
-
-static void
-ft_recv_cancel_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file receive cancelled\n");
-}
-
-static void
-ft_send_cancel_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file send cancelled\n");
-}
-
-static void
-ft_recv_complete_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file receive completed\n");
-}
-
-static void
-ft_send_complete_cb(PurpleXfer *xfer, gpointer data) {
-	purple_debug_misc("signals test", "file send completed\n");
-}
-
-/**************************************************************************
  * Sound signal callbacks
  **************************************************************************/
 static int
@@ -716,7 +673,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 	void *conn_handle     = purple_connections_get_handle();
 	void *conv_handle     = purple_conversations_get_handle();
 	void *accounts_handle = purple_accounts_get_handle();
-	void *ft_handle       = purple_xfers_get_handle();
 	void *sound_handle    = purple_sounds_get_handle();
 	void *notify_handle   = purple_notify_get_handle();
 	void *jabber_handle   = purple_protocols_find("prpl-jabber");
@@ -832,24 +788,6 @@ plugin_load(PurplePlugin *plugin, GError **error)
 						plugin, PURPLE_CALLBACK(quitting_cb), NULL);
 	purple_signal_connect(core_handle, "uri-handler",
 						plugin,	PURPLE_CALLBACK(uri_handler), NULL);
-
-	/* File transfer signals */
-	purple_signal_connect(ft_handle, "file-recv-accept",
-						plugin, PURPLE_CALLBACK(ft_recv_accept_cb), NULL);
-	purple_signal_connect(ft_handle, "file-recv-start",
-						plugin, PURPLE_CALLBACK(ft_recv_start_cb), NULL);
-	purple_signal_connect(ft_handle, "file-recv-cancel",
-						plugin, PURPLE_CALLBACK(ft_recv_cancel_cb), NULL);
-	purple_signal_connect(ft_handle, "file-recv-complete",
-						plugin, PURPLE_CALLBACK(ft_recv_complete_cb), NULL);
-	purple_signal_connect(ft_handle, "file-send-accept",
-						plugin, PURPLE_CALLBACK(ft_send_accept_cb), NULL);
-	purple_signal_connect(ft_handle, "file-send-start",
-						plugin, PURPLE_CALLBACK(ft_send_start_cb), NULL);
-	purple_signal_connect(ft_handle, "file-send-cancel",
-						plugin, PURPLE_CALLBACK(ft_send_cancel_cb), NULL);
-	purple_signal_connect(ft_handle, "file-send-complete",
-						plugin, PURPLE_CALLBACK(ft_send_complete_cb), NULL);
 
 	/* Sound signals */
 	purple_signal_connect(sound_handle, "playing-sound-event", plugin,

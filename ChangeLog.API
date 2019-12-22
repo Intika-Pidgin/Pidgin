@@ -325,6 +325,10 @@ version 3.0.0 (??/??/????):
 		* _PurpleSoundEventID
 		* _XMLNodeType
 		* account-authorization-requested-with-message signal
+		* file-recv-accept, file-recv-cancel, file-recv-complete,
+		  file-recv-start, file-send-accept, file-send-cancel,
+		  file-send-complete, file-send-start signals. Use
+		  notify::status on #PurpleXfer objects instead.
 		* network-configuration-changed signal
 		* PurpleAccount->ui_data
 		* PurpleAccountPrefsUiOps
