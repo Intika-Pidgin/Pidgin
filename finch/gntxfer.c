@@ -55,12 +55,12 @@ typedef struct
 
 static PurpleGntXferDialog *xfer_dialog = NULL;
 
+#define UI_DATA "finch-ui-data"
 typedef struct
 {
 	gint64 last_updated_time;
 	gboolean in_list;
 
-	char *name;
 	gboolean notified;   /* Has the completion of the transfer been notified? */
 
 } PurpleGntXferUiData;
@@ -256,7 +256,7 @@ finch_xfer_dialog_new(void)
 
 	for (iter = purple_xfers_get_all(); iter; iter = iter->next) {
 		PurpleXfer *xfer = (PurpleXfer *)iter->data;
-		PurpleGntXferUiData *data = purple_xfer_get_ui_data(xfer);
+		PurpleGntXferUiData *data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 		if (data->in_list) {
 			finch_xfer_dialog_add_xfer(xfer);
 			finch_xfer_dialog_update_xfer(xfer);
@@ -296,7 +296,7 @@ finch_xfer_dialog_add_xfer(PurpleXfer *xfer)
 
 	g_object_ref(xfer);
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 	data->in_list = TRUE;
 
 	finch_xfer_dialog_show();
@@ -334,7 +334,7 @@ finch_xfer_dialog_remove_xfer(PurpleXfer *xfer)
 	g_return_if_fail(xfer_dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	if (data == NULL)
 		return;
@@ -364,7 +364,7 @@ finch_xfer_dialog_cancel_xfer(PurpleXfer *xfer)
 	g_return_if_fail(xfer_dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	if (data == NULL)
 		return;
@@ -414,11 +414,10 @@ finch_xfer_dialog_update_xfer(PurpleXfer *xfer)
 	g_return_if_fail(xfer_dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	if ((data = purple_xfer_get_ui_data(xfer)) == NULL)
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
+	if (data == NULL || !data->in_list || data->notified) {
 		return;
-
-	if (data->in_list == FALSE || data->notified)
-		return;
+	}
 
 	current_time = g_get_monotonic_time();
 	if (((current_time - data->last_updated_time) < G_USEC_PER_SEC) &&
@@ -471,20 +470,7 @@ finch_xfer_new_xfer(PurpleXfer *xfer)
 
 	/* This is where we're setting xfer's "ui_data" for the first time. */
 	data = g_new0(PurpleGntXferUiData, 1);
-	purple_xfer_set_ui_data(xfer, data);
-}
-
-static void
-finch_xfer_destroy(PurpleXfer *xfer)
-{
-	PurpleGntXferUiData *data;
-
-	data = purple_xfer_get_ui_data(xfer);
-	if (data) {
-		g_free(data->name);
-		g_free(data);
-		purple_xfer_set_ui_data(xfer, NULL);
-	}
+	g_object_set_data_full(G_OBJECT(xfer), UI_DATA, data, g_free);
 }
 
 static void
@@ -525,7 +511,7 @@ finch_xfer_add_xfer(PurpleXfer *xfer)
 static PurpleXferUiOps ops =
 {
 	finch_xfer_new_xfer,
-	finch_xfer_destroy,
+	NULL,
 	finch_xfer_add_xfer
 };
 

@@ -749,27 +749,6 @@ void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
  */
 void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
 
-/**
- * purple_xfer_set_ui_data:
- * @xfer:			The file transfer.
- * @ui_data:		A pointer to associate with this file transfer.
- *
- * Set the UI data associated with this file transfer.
- */
-void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data);
-
-/**
- * purple_xfer_get_ui_data:
- * @xfer:			The file transfer.
- *
- * Get the UI data associated with this file transfer.
- *
- * Returns: The UI data associated with this file transfer.  This is a
- *         convenience field provided to the UIs--it is not
- *         used by the libpurple core.
- */
-gpointer purple_xfer_get_ui_data(PurpleXfer *xfer);
-
 /**************************************************************************/
 /* File Transfer Subsystem API                                            */
 /**************************************************************************/

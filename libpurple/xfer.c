@@ -73,7 +73,6 @@ struct _PurpleXferPrivate {
 
 	PurpleXferStatus status;     /* File Transfer's status.             */
 
-	gpointer ui_data;            /* UI-specific data                    */
 	PurpleXferUiOps *ui_ops;     /* UI-specific operations.             */
 
 	/*
@@ -116,7 +115,6 @@ enum
 	PROP_END_TIME,
 	PROP_STATUS,
 	PROP_PROGRESS,
-	PROP_UI_DATA,
 	PROP_LAST
 };
 
@@ -1929,30 +1927,6 @@ purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats)
 	g_signal_emit(xfer, signals[SIG_ADD_THUMBNAIL], 0, formats, NULL);
 }
 
-void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data)
-{
-	PurpleXferPrivate *priv = NULL;
-
-	g_return_if_fail(PURPLE_IS_XFER(xfer));
-
-	priv = purple_xfer_get_instance_private(xfer);
-
-	priv->ui_data = ui_data;
-
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_UI_DATA]);
-}
-
-gpointer purple_xfer_get_ui_data(PurpleXfer *xfer)
-{
-	PurpleXferPrivate *priv = NULL;
-
-	g_return_val_if_fail(PURPLE_IS_XFER(xfer), NULL);
-
-	priv = purple_xfer_get_instance_private(xfer);
-
-	return priv->ui_data;
-}
-
 /**************************************************************************
  * GObject code
  **************************************************************************/
@@ -1999,9 +1973,6 @@ purple_xfer_set_property(GObject *obj, guint param_id, const GValue *value,
 			break;
 		case PROP_STATUS:
 			purple_xfer_set_status(xfer, g_value_get_enum(value));
-			break;
-		case PROP_UI_DATA:
-			purple_xfer_set_ui_data(xfer, g_value_get_pointer(value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -2066,9 +2037,6 @@ purple_xfer_get_property(GObject *obj, guint param_id, GValue *value,
 			break;
 		case PROP_PROGRESS:
 			g_value_set_double(value, purple_xfer_get_progress(xfer));
-			break;
-		case PROP_UI_DATA:
-			g_value_set_pointer(value, purple_xfer_get_ui_data(xfer));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -2248,10 +2216,6 @@ purple_xfer_class_init(PurpleXferClass *klass)
 	        "progress", "Progress",
 	        "The current progress of the file transfer.", -1.0, 1.0, -1.0,
 	        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
-
-	properties[PROP_UI_DATA] = g_param_spec_pointer("ui-data", "UI Data",
-				"The UI specific data for this xfer",
-				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
 
