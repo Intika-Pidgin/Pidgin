@@ -36,6 +36,14 @@ enum
 	AOP_COLUMN_COUNT
 };
 
+enum
+{
+	PROP_0,
+	PROP_ACCOUNT,
+	PROP_SHOW_ALL,
+	PROP_LAST
+};
+
 /******************************************************************************
  * Structs
  *****************************************************************************/
@@ -52,6 +60,8 @@ struct _PidginAccountChooser {
 /******************************************************************************
  * Code
  *****************************************************************************/
+static GParamSpec *properties[PROP_LAST] = {NULL};
+
 G_DEFINE_TYPE(PidginAccountChooser, pidgin_account_chooser, GTK_TYPE_COMBO_BOX)
 
 static gpointer
@@ -192,13 +202,77 @@ account_menu_destroyed_cb(GtkWidget *chooser, GdkEvent *event, void *user_data)
 	return FALSE;
 }
 
+static void
+pidgin_account_chooser_changed_cb(GtkComboBox *widget, gpointer user_data)
+{
+	g_object_notify_by_pspec(G_OBJECT(widget), properties[PROP_ACCOUNT]);
+}
+
 /******************************************************************************
  * GObject implementation
  *****************************************************************************/
 static void
+pidgin_account_chooser_get_property(GObject *object, guint prop_id,
+                                    GValue *value, GParamSpec *pspec)
+{
+	PidginAccountChooser *chooser = PIDGIN_ACCOUNT_CHOOSER(object);
+
+	switch (prop_id) {
+		case PROP_ACCOUNT:
+			g_value_set_object(value, account_chooser_get_selected(chooser));
+			break;
+		case PROP_SHOW_ALL:
+			g_value_set_boolean(value, chooser->show_all);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
+pidgin_account_chooser_set_property(GObject *object, guint prop_id,
+                                    const GValue *value, GParamSpec *pspec)
+{
+	PidginAccountChooser *chooser = PIDGIN_ACCOUNT_CHOOSER(object);
+
+	switch (prop_id) {
+		case PROP_ACCOUNT:
+			account_chooser_select_by_data(GTK_WIDGET(chooser),
+			                               g_value_get_object(value));
+			break;
+		case PROP_SHOW_ALL:
+			chooser->show_all = g_value_get_boolean(value);
+			break;
+		default:
+			G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
+			break;
+	}
+}
+
+static void
 pidgin_account_chooser_class_init(PidginAccountChooserClass *klass)
 {
+	GObjectClass *obj_class = G_OBJECT_CLASS(klass);
 	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	/* Properties */
+	obj_class->get_property = pidgin_account_chooser_get_property;
+	obj_class->set_property = pidgin_account_chooser_set_property;
+
+	properties[PROP_ACCOUNT] = g_param_spec_object(
+	        "account", "Account", "The account that is currently selected.",
+	        PURPLE_TYPE_ACCOUNT, G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_SHOW_ALL] = g_param_spec_boolean(
+	        "show-all", "Show all",
+	        "Whether to show all accounts, or just online ones.", FALSE,
+	        G_PARAM_READWRITE | G_PARAM_CONSTRUCT_ONLY |
+	                G_PARAM_STATIC_STRINGS);
+
+	g_object_class_install_properties(obj_class, PROP_LAST, properties);
+
+	/* Widget template */
 
 	gtk_widget_class_set_template_from_resource(
 	        widget_class, "/im/pidgin/Pidgin/Accounts/chooser.ui");
@@ -214,6 +288,9 @@ static void
 pidgin_account_chooser_init(PidginAccountChooser *chooser)
 {
 	gtk_widget_init_template(GTK_WIDGET(chooser));
+
+	g_signal_connect(chooser, "changed", pidgin_account_chooser_changed_cb,
+	                 NULL);
 
 	/* Register the purple sign on/off event callbacks. */
 	purple_signal_connect(
@@ -238,8 +315,8 @@ pidgin_account_chooser_new(PurpleAccount *default_account, gboolean show_all)
 {
 	PidginAccountChooser *chooser = NULL;
 
-	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, NULL);
-	chooser->show_all = show_all;
+	chooser = g_object_new(PIDGIN_TYPE_ACCOUNT_CHOOSER, "account",
+	                       default_account, "show-all", show_all, NULL);
 	set_account_menu(PIDGIN_ACCOUNT_CHOOSER(chooser), default_account);
 
 	return GTK_WIDGET(chooser);
@@ -270,4 +347,14 @@ pidgin_account_chooser_set_selected(GtkWidget *chooser, PurpleAccount *account)
 	g_return_if_fail(PIDGIN_IS_ACCOUNT_CHOOSER(chooser));
 
 	account_chooser_select_by_data(chooser, account);
+
+	/* NOTE: Property notification occurs in 'changed' signal callback. */
+}
+
+gboolean
+pidgin_account_chooser_get_show_all(GtkWidget *chooser)
+{
+	g_return_val_if_fail(PIDGIN_IS_ACCOUNT_CHOOSER(chooser), FALSE);
+
+	return PIDGIN_ACCOUNT_CHOOSER(chooser)->show_all;
 }

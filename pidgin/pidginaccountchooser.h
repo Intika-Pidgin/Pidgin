@@ -93,6 +93,18 @@ PurpleAccount *pidgin_account_chooser_get_selected(GtkWidget *chooser);
 void pidgin_account_chooser_set_selected(GtkWidget *chooser,
                                          PurpleAccount *account);
 
+/**
+ * pidgin_account_chooser_get_show_all:
+ * @chooser: The chooser created by pidgin_account_chooser_new().
+ *
+ * Returns whether to show all accounts.
+ *
+ * Returns: Whether or not to show all accounts, or just active accounts.
+ *
+ * Since: 3.0.0
+ */
+gboolean pidgin_account_chooser_get_show_all(GtkWidget *chooser);
+
 G_END_DECLS
 
 #endif /* PIDGIN_ACCOUNT_CHOOSER_H */
