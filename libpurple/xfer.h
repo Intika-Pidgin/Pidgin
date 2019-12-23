@@ -91,7 +91,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
 /**
  * PurpleXferUiOps:
  * @new_xfer: UI op that's called after a new transfer is created.
- * @destroy: UI op that's called when a transfer is being destroyed.
  *
  * File transfer UI operations.
  *
@@ -101,7 +100,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
 struct _PurpleXferUiOps
 {
 	void (*new_xfer)(PurpleXfer *xfer);
-	void (*destroy)(PurpleXfer *xfer);
 };
 
 /**

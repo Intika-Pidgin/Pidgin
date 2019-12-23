@@ -2097,19 +2097,12 @@ purple_xfer_finalize(GObject *object)
 {
 	PurpleXfer *xfer = PURPLE_XFER(object);
 	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
-	PurpleXferUiOps *ui_ops;
 
 	/* Close the file browser, if it's open */
 	purple_request_close_with_handle(xfer);
 
 	if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_STARTED) {
 		purple_xfer_cancel_local(xfer);
-	}
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->destroy != NULL) {
-		ui_ops->destroy(xfer);
 	}
 
 	xfers = g_list_remove(xfers, xfer);
