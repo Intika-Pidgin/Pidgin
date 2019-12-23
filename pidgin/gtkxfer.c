@@ -1007,8 +1007,7 @@ pidgin_xfer_new_xfer(PurpleXfer *xfer)
 
 static PurpleXferUiOps ops =
 {
-	pidgin_xfer_new_xfer,
-	NULL
+	pidgin_xfer_new_xfer
 };
 
 /**************************************************************************

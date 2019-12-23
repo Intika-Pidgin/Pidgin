@@ -509,8 +509,7 @@ finch_xfer_new_xfer(PurpleXfer *xfer)
 
 static PurpleXferUiOps ops =
 {
-	finch_xfer_new_xfer,
-	NULL
+	finch_xfer_new_xfer
 };
 
 /**************************************************************************
