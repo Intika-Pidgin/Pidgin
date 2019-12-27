@@ -1049,14 +1049,18 @@ void
 purple_xfer_set_size(PurpleXfer *xfer, goffset size)
 {
 	PurpleXferPrivate *priv = NULL;
+	GObject *obj;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
 	priv = purple_xfer_get_instance_private(xfer);
 	priv->size = size;
 
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_FILE_SIZE]);
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_PROGRESS]);
+	obj = G_OBJECT(xfer);
+	g_object_freeze_notify(obj);
+	g_object_notify_by_pspec(obj, properties[PROP_FILE_SIZE]);
+	g_object_notify_by_pspec(obj, properties[PROP_PROGRESS]);
+	g_object_thaw_notify(obj);
 }
 
 void
@@ -1076,14 +1080,18 @@ void
 purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent)
 {
 	PurpleXferPrivate *priv = NULL;
+	GObject *obj;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
 	priv = purple_xfer_get_instance_private(xfer);
 	priv->bytes_sent = bytes_sent;
 
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_BYTES_SENT]);
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_PROGRESS]);
+	obj = G_OBJECT(xfer);
+	g_object_freeze_notify(obj);
+	g_object_notify_by_pspec(obj, properties[PROP_BYTES_SENT]);
+	g_object_notify_by_pspec(obj, properties[PROP_PROGRESS]);
+	g_object_thaw_notify(obj);
 }
 
 PurpleXferUiOps *
