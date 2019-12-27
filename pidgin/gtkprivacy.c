@@ -46,7 +46,6 @@ struct _PidginPrivacyDialog {
 	GtkWidget *removeall_button;
 	GtkWidget *close_button;
 
-	GtkWidget *button_box;
 	GtkWidget *allow_widget;
 	GtkWidget *block_widget;
 
@@ -165,27 +164,32 @@ type_changed_cb(GtkComboBox *combo, PidginPrivacyDialog *dialog)
 {
 	PurpleAccountPrivacyType new_type =
 		menu_entries[gtk_combo_box_get_active(combo)].type;
+	gboolean buttons_sensitive;
 
 	purple_account_set_privacy_type(dialog->account, new_type);
 	purple_serv_set_permit_deny(purple_account_get_connection(dialog->account));
 
 	gtk_widget_hide(dialog->allow_widget);
 	gtk_widget_hide(dialog->block_widget);
-	gtk_widget_hide(dialog->button_box);
+	buttons_sensitive = FALSE;
 
 	if (new_type == PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS) {
 		gtk_widget_show(dialog->allow_widget);
-		gtk_widget_show_all(dialog->button_box);
+		buttons_sensitive = TRUE;
 		dialog->in_allow_list = TRUE;
 	}
 	else if (new_type == PURPLE_ACCOUNT_PRIVACY_DENY_USERS) {
 		gtk_widget_show(dialog->block_widget);
-		gtk_widget_show_all(dialog->button_box);
+		buttons_sensitive = TRUE;
 		dialog->in_allow_list = FALSE;
 	}
 
+	gtk_widget_set_sensitive(dialog->add_button, buttons_sensitive);
+	/* dialog->remove_button is enabled when a user is selected. */
+	gtk_widget_set_sensitive(dialog->remove_button, FALSE);
+	gtk_widget_set_sensitive(dialog->removeall_button, buttons_sensitive);
+
 	gtk_widget_show_all(dialog->close_button);
-	gtk_widget_show(dialog->button_box);
 
 	purple_blist_schedule_save();
 	pidgin_blist_refresh(purple_blist_get_default());
@@ -282,8 +286,6 @@ pidgin_privacy_dialog_class_init(PidginPrivacyDialogClass *klass)
 	gtk_widget_class_bind_template_child(widget_class, PidginPrivacyDialog,
 	                                     block_widget);
 	gtk_widget_class_bind_template_child(widget_class, PidginPrivacyDialog,
-	                                     button_box);
-	gtk_widget_class_bind_template_child(widget_class, PidginPrivacyDialog,
 	                                     close_button);
 	gtk_widget_class_bind_template_child(widget_class, PidginPrivacyDialog,
 	                                     remove_button);
@@ -326,18 +328,6 @@ pidgin_privacy_dialog_init(PidginPrivacyDialog *dialog)
 	rebuild_block_list(dialog);
 
 	type_changed_cb(GTK_COMBO_BOX(dialog->type_menu), dialog);
-#if 0
-	if (purple_account_get_privacy_type(dialog->account) == PURPLE_ACCOUNT_PRIVACY_ALLOW_USERS) {
-		gtk_widget_show(dialog->allow_widget);
-		gtk_widget_show(dialog->button_box);
-		dialog->in_allow_list = TRUE;
-	}
-	else if (purple_account_get_privacy_type(dialog->account) == PURPLE_ACCOUNT_PRIVACY_DENY_USERS) {
-		gtk_widget_show(dialog->block_widget);
-		gtk_widget_show(dialog->button_box);
-		dialog->in_allow_list = FALSE;
-	}
-#endif
 }
 
 void
