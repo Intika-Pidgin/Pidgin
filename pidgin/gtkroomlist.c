@@ -33,8 +33,13 @@
 
 #include "gtkroomlist.h"
 
-typedef struct {
-	GtkWidget *window;
+#define PIDGIN_TYPE_ROOMLIST_DIALOG (pidgin_roomlist_dialog_get_type())
+G_DECLARE_FINAL_TYPE(PidginRoomlistDialog, pidgin_roomlist_dialog, PIDGIN,
+                     ROOMLIST_DIALOG, GtkDialog)
+
+struct _PidginRoomlistDialog {
+	GtkDialog parent;
+
 	GtkWidget *account_widget;
 	GtkWidget *progress;
 	GtkWidget *sw;
@@ -50,7 +55,9 @@ typedef struct {
 
 	gboolean pg_needs_pulse;
 	guint pg_update_to;
-} PidginRoomlistDialog;
+};
+
+G_DEFINE_TYPE(PidginRoomlistDialog, pidgin_roomlist_dialog, GTK_TYPE_DIALOG)
 
 typedef struct {
 	PidginRoomlistDialog *dialog;
@@ -78,7 +85,7 @@ static GList *roomlists = NULL;
 
 static gint delete_win_cb(GtkWidget *w, GdkEventAny *e, gpointer d)
 {
-	PidginRoomlistDialog *dialog = d;
+	PidginRoomlistDialog *dialog = PIDGIN_ROOMLIST_DIALOG(w);
 
 	if (dialog->roomlist && purple_roomlist_get_in_progress(dialog->roomlist))
 		purple_roomlist_cancel_get_list(dialog->roomlist);
@@ -99,7 +106,6 @@ static gint delete_win_cb(GtkWidget *w, GdkEventAny *e, gpointer d)
 	}
 
 	dialog->progress = NULL;
-	g_free(dialog);
 
 	return FALSE;
 }
@@ -144,8 +150,7 @@ static void list_button_cb(GtkButton *button, PidginRoomlistDialog *dialog)
 	rl = purple_roomlist_get_ui_data(dialog->roomlist);
 	rl->dialog = dialog;
 
-	if (dialog->account_widget)
-		gtk_widget_set_sensitive(dialog->account_widget, FALSE);
+	gtk_widget_set_sensitive(dialog->account_widget, FALSE);
 
 	gtk_container_add(GTK_CONTAINER(dialog->sw), rl->tree);
 
@@ -166,21 +171,12 @@ static void stop_button_cb(GtkButton *button, PidginRoomlistDialog *dialog)
 {
 	purple_roomlist_cancel_get_list(dialog->roomlist);
 
-	if (dialog->account_widget)
-		gtk_widget_set_sensitive(dialog->account_widget, TRUE);
+	gtk_widget_set_sensitive(dialog->account_widget, TRUE);
 
 	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
 	gtk_widget_set_sensitive(dialog->list_button, TRUE);
 	gtk_widget_set_sensitive(dialog->add_button, FALSE);
 	gtk_widget_set_sensitive(dialog->join_button, FALSE);
-}
-
-static void close_button_cb(GtkButton *button, PidginRoomlistDialog *dialog)
-{
-	GtkWidget *window = dialog->window;
-
-	delete_win_cb(NULL, NULL, dialog);
-	gtk_widget_destroy(window);
 }
 
 struct _menu_cb_info {
@@ -523,93 +519,71 @@ pidgin_roomlist_is_showable()
 	return FALSE;
 }
 
+static void
+pidgin_roomlist_dialog_class_init(PidginRoomlistDialogClass *klass)
+{
+	GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
+
+	gtk_widget_class_set_template_from_resource(
+	        widget_class, "/im/pidgin/Pidgin/Roomlist/roomlist.ui");
+
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     account_widget);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     add_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     close_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     join_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     list_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     progress);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     stop_button);
+	gtk_widget_class_bind_template_child(widget_class, PidginRoomlistDialog,
+	                                     sw);
+
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        add_room_to_blist_cb);
+	gtk_widget_class_bind_template_callback(widget_class, delete_win_cb);
+	gtk_widget_class_bind_template_callback(widget_class,
+	                                        dialog_select_account_cb);
+	gtk_widget_class_bind_template_callback(widget_class, join_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, list_button_cb);
+	gtk_widget_class_bind_template_callback(widget_class, stop_button_cb);
+}
+
+static void
+pidgin_roomlist_dialog_init(PidginRoomlistDialog *self)
+{
+	gtk_widget_init_template(GTK_WIDGET(self));
+
+	pidgin_account_chooser_set_filter_func(
+	        PIDGIN_ACCOUNT_CHOOSER(self->account_widget),
+	        account_filter_func);
+}
+
 static PidginRoomlistDialog *
 pidgin_roomlist_dialog_new_with_account(PurpleAccount *account)
 {
 	PidginRoomlistDialog *dialog;
-	GtkWidget *window, *vbox, *vbox2, *bbox;
 
-	dialog = g_new0(PidginRoomlistDialog, 1);
+	dialog = g_object_new(PIDGIN_TYPE_ROOMLIST_DIALOG, NULL);
 	dialog->account = account;
 
-	/* Create the window. */
-	dialog->window = window = pidgin_create_dialog(_("Room List"), 0, "room list", TRUE);
-
-	g_signal_connect(G_OBJECT(window), "delete_event",
-					 G_CALLBACK(delete_win_cb), dialog);
-
-	/* Create the parent vbox for everything. */
-	vbox = pidgin_dialog_get_vbox_with_properties(GTK_DIALOG(window), FALSE, PIDGIN_HIG_BORDER);
-
-	vbox2 = gtk_box_new(GTK_ORIENTATION_VERTICAL, PIDGIN_HIG_BORDER);
-	gtk_container_add(GTK_CONTAINER(vbox), vbox2);
-	gtk_widget_show(vbox2);
-
-	/* accounts dropdown list */
-	dialog->account_widget =
-	        pidgin_account_chooser_new(dialog->account, FALSE);
-	pidgin_account_chooser_set_filter_func(
-	        PIDGIN_ACCOUNT_CHOOSER(dialog->account_widget),
-	        account_filter_func);
-	g_signal_connect(dialog->account_widget, "changed",
-	                 G_CALLBACK(dialog_select_account_cb), dialog);
-	if (!dialog->account) /* this is normally null, and we normally don't care what the first selected item is */
+	if (!account) {
+		/* This is normally NULL, and we normally don't care what the
+		 * first selected item is */
 		dialog->account = pidgin_account_chooser_get_selected(
 		        dialog->account_widget);
-	pidgin_add_widget_to_vbox(GTK_BOX(vbox2), _("_Account:"), NULL, dialog->account_widget, TRUE, NULL);
-
-	/* scrolled window */
-	dialog->sw = pidgin_make_scrollable(NULL, GTK_POLICY_AUTOMATIC, GTK_POLICY_AUTOMATIC, GTK_SHADOW_IN, -1, 250);
-	gtk_box_pack_start(GTK_BOX(vbox2), dialog->sw, TRUE, TRUE, 0);
-
-	/* progress bar */
-	dialog->progress = gtk_progress_bar_new();
-	gtk_progress_bar_set_pulse_step(GTK_PROGRESS_BAR(dialog->progress), 0.1);
-	gtk_box_pack_start(GTK_BOX(vbox2), dialog->progress, FALSE, FALSE, 0);
-	gtk_widget_show(dialog->progress);
-
-	/* button box */
-	bbox = pidgin_dialog_get_action_area(GTK_DIALOG(window));
-	gtk_box_set_spacing(GTK_BOX(bbox), PIDGIN_HIG_BOX_SPACE);
-	gtk_button_box_set_layout(GTK_BUTTON_BOX(bbox), GTK_BUTTONBOX_END);
-
-	/* stop button */
-	dialog->stop_button = pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_STOP,
-	                 G_CALLBACK(stop_button_cb), dialog);
-	gtk_widget_set_sensitive(dialog->stop_button, FALSE);
-
-	/* list button */
-	dialog->list_button = pidgin_pixbuf_button_from_stock(_("_Get List"), GTK_STOCK_REFRESH,
-	                                                    PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->list_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->list_button), "clicked",
-	                 G_CALLBACK(list_button_cb), dialog);
-	gtk_widget_show(dialog->list_button);
-
-	/* add button */
-	dialog->add_button = pidgin_pixbuf_button_from_stock(_("_Add Chat"), GTK_STOCK_ADD,
-	                                                    PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->add_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->add_button), "clicked",
-	                 G_CALLBACK(add_room_to_blist_cb), dialog);
-	gtk_widget_set_sensitive(dialog->add_button, FALSE);
-	gtk_widget_show(dialog->add_button);
-
-	/* join button */
-	dialog->join_button = pidgin_pixbuf_button_from_stock(_("_Join"), PIDGIN_STOCK_CHAT,
-	                                                    PIDGIN_BUTTON_HORIZONTAL);
-	gtk_box_pack_start(GTK_BOX(bbox), dialog->join_button, FALSE, FALSE, 0);
-	g_signal_connect(G_OBJECT(dialog->join_button), "clicked",
-					 G_CALLBACK(join_button_cb), dialog);
-	gtk_widget_set_sensitive(dialog->join_button, FALSE);
-	gtk_widget_show(dialog->join_button);
-
-	/* close button */
-	dialog->close_button = pidgin_dialog_add_button(GTK_DIALOG(window), GTK_STOCK_CLOSE,
-					 G_CALLBACK(close_button_cb), dialog);
+	} else {
+		pidgin_account_chooser_set_selected(dialog->account_widget,
+		                                    account);
+	}
 
 	/* show the dialog window and return the dialog */
-	gtk_widget_show(dialog->window);
+	gtk_widget_show(GTK_WIDGET(dialog));
 
 	return dialog;
 }
