@@ -648,7 +648,6 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 	GstElement *parent = GST_ELEMENT_PARENT(pad);
 	GstIterator *iter;
 	GValue tmp = G_VALUE_INIT;
-	GstPad *remaining_pad;
 	GstIteratorResult result;
 
 	gst_element_release_request_pad(parent, pad);
@@ -662,7 +661,6 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 		gst_element_set_state(parent, GST_STATE_NULL);
 		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(parent)), parent);
 	} else if (result == GST_ITERATOR_OK) {
-		remaining_pad = g_value_get_object(&tmp);
 		g_value_reset(&tmp);
 	}
 
