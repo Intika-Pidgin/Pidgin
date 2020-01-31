@@ -349,6 +349,12 @@ if libxml.version().version_compare('<2.6.18')
 endif
 
 #######################################################################
+# Check for libidn (required)
+#######################################################################
+
+idn = dependency('libidn', version : '>= 0.0.0')
+
+#######################################################################
 # Check for JSON-GLib (required)
 #######################################################################
 
@@ -796,7 +802,6 @@ message('Protocols to build dynamically : @0@'.format(DYNAMIC_PRPLS))
 message('')
 message('Build with GStreamer support.. : ' + gstreamer.found().to_string())
 message('Build with voice and video.... : ' + enable_vv.to_string())
-message('Build with GNU Libidn......... : ' + idn.found().to_string())
 message('Build with Nettle support..... : ' + nettle.found().to_string())
 message('Build with Cyrus SASL support. : ' + sasl.found().to_string())
 message('Use external libzephyr........ : ' + EXTERNAL_LIBZEPHYR.to_string())

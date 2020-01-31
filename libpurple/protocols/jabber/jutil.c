@@ -32,13 +32,10 @@
 #include "presence.h"
 #include "jutil.h"
 
-#ifdef USE_IDN
 #include <idna.h>
 #include <stringprep.h>
 static char idn_buffer[1024];
-#endif
 
-#ifdef USE_IDN
 static gboolean jabber_nodeprep(char *str, size_t buflen)
 {
 	return stringprep_xmpp_nodeprep(str, buflen) == STRINGPREP_OK;
@@ -169,15 +166,9 @@ out:
 	return jid;
 }
 
-#endif /* USE_IDN */
-
 gboolean jabber_nodeprep_validate(const char *str)
 {
-#ifdef USE_IDN
 	gboolean result;
-#else
-	const char *c;
-#endif
 
 	if(!str)
 		return TRUE;
@@ -185,24 +176,10 @@ gboolean jabber_nodeprep_validate(const char *str)
 	if(strlen(str) > 1023)
 		return FALSE;
 
-#ifdef USE_IDN
 	strncpy(idn_buffer, str, sizeof(idn_buffer) - 1);
 	idn_buffer[sizeof(idn_buffer) - 1] = '\0';
 	result = jabber_nodeprep(idn_buffer, sizeof(idn_buffer));
 	return result;
-#else /* USE_IDN */
-	c = str;
-	while(c && *c) {
-		gunichar ch = g_utf8_get_char(c);
-		if(ch == '\"' || ch == '&' || ch == '\'' || ch == '/' || ch == ':' ||
-				ch == '<' || ch == '>' || ch == '@' || !g_unichar_isgraph(ch)) {
-			return FALSE;
-		}
-		c = g_utf8_next_char(c);
-	}
-
-	return TRUE;
-#endif /* USE_IDN */
 }
 
 gboolean jabber_domain_validate(const char *str)
@@ -258,11 +235,7 @@ gboolean jabber_domain_validate(const char *str)
 
 gboolean jabber_resourceprep_validate(const char *str)
 {
-#ifdef USE_IDN
 	gboolean result;
-#else
-	const char *c;
-#endif
 
 	if(!str)
 		return TRUE;
@@ -270,28 +243,14 @@ gboolean jabber_resourceprep_validate(const char *str)
 	if(strlen(str) > 1023)
 		return FALSE;
 
-#ifdef USE_IDN
 	strncpy(idn_buffer, str, sizeof(idn_buffer) - 1);
 	idn_buffer[sizeof(idn_buffer) - 1] = '\0';
 	result = jabber_resourceprep(idn_buffer, sizeof(idn_buffer));
 	return result;
-#else /* USE_IDN */
-	c = str;
-	while(c && *c) {
-		gunichar ch = g_utf8_get_char(c);
-		if(!g_unichar_isgraph(ch) && ch != ' ')
-			return FALSE;
-
-		c = g_utf8_next_char(c);
-	}
-
-	return TRUE;
-#endif /* USE_IDN */
 }
 
 char *jabber_saslprep(const char *in)
 {
-#ifdef USE_IDN
 	char *out;
 
 	g_return_val_if_fail(in != NULL, NULL);
@@ -309,22 +268,6 @@ char *jabber_saslprep(const char *in)
 	out = g_strdup(idn_buffer);
 	memset(idn_buffer, 0, sizeof(idn_buffer));
 	return out;
-#else /* USE_IDN */
-	/* TODO: Something better than disallowing all non-ASCII characters */
-	/* TODO: Is this even correct? */
-	const guchar *c;
-
-	c = (const guchar *)in;
-	for ( ; *c; ++c) {
-		if (*c > 0x7f || /* Non-ASCII characters */
-				*c == 0x7f || /* ASCII Delete character */
-				(*c < 0x20 && *c != '\t' && *c != '\n' && *c != '\r'))
-					/* ASCII control characters */
-			return NULL;
-	}
-
-	return g_strdup(in);
-#endif /* USE_IDN */
 }
 
 static JabberID*
@@ -334,10 +277,6 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 	const char *slash = NULL;
 	const char *c;
 	gboolean needs_validation = FALSE;
-#ifndef USE_IDN
-	char *node = NULL;
-	char *domain;
-#endif
 	JabberID *jid;
 
 	if (!str)
@@ -431,52 +370,7 @@ jabber_id_new_internal(const char *str, gboolean allow_terminating_slash)
 	if (!g_utf8_validate(str, -1, NULL))
 		return NULL;
 
-#ifdef USE_IDN
 	return jabber_idn_validate(str, at, slash, c /* points to the null */);
-#else /* USE_IDN */
-
-	jid = g_new0(JabberID, 1);
-
-	/* normalization */
-	if(at) {
-		node = g_utf8_casefold(str, at-str);
-		if(slash) {
-			domain = g_utf8_casefold(at+1, slash-(at+1));
-			if (*(slash + 1))
-				jid->resource = g_utf8_normalize(slash+1, -1, G_NORMALIZE_NFKC);
-		} else {
-			domain = g_utf8_casefold(at+1, -1);
-		}
-	} else {
-		if(slash) {
-			domain = g_utf8_casefold(str, slash-str);
-			if (*(slash + 1))
-				jid->resource = g_utf8_normalize(slash+1, -1, G_NORMALIZE_NFKC);
-		} else {
-			domain = g_utf8_casefold(str, -1);
-		}
-	}
-
-	if (node) {
-		jid->node = g_utf8_normalize(node, -1, G_NORMALIZE_NFKC);
-		g_free(node);
-	}
-
-	if (domain) {
-		jid->domain = g_utf8_normalize(domain, -1, G_NORMALIZE_NFKC);
-		g_free(domain);
-	}
-
-	/* and finally the jabber nodeprep */
-	if(!jabber_nodeprep_validate(jid->node) ||
-			!jabber_domain_validate(jid->domain) ||
-			!jabber_resourceprep_validate(jid->resource)) {
-		jabber_id_free(jid);
-		return NULL;
-	}
-
-	return jid;
-#endif /* USE_IDN */
 }
 
 void

@@ -2,13 +2,6 @@
 # Check for Internationalized Domain Name support
 #######################################################################
 
-idn = dependency('libidn', version : '>= 0.0.0', required : get_option('idn'))
-if idn.found()
-	use_idn = [ '-DUSE_IDN' ]
-else
-	use_idn = []
-endif
-
 JABBERSOURCES = [
 	'adhoccommands.c',
 	'adhoccommands.h',
@@ -115,7 +108,6 @@ endif
 
 if DYNAMIC_JABBER
 	jabber_prpl = shared_library('jabber', JABBERSOURCES,
-	    c_args : use_idn,
 	    link_args : jabber_link_args,
 	    dependencies : [gstreamer, idn, libxml, sasl, libpurple_dep, libsoup, glib, gio, math, ws2_32],
 	    install : true, install_dir : PURPLE_PLUGINDIR)
