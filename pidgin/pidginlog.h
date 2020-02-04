@@ -26,7 +26,7 @@
  * @section_id: pidgin-log
  * @short_description: <filename>pidginlog.h</filename>
  * @title: Log Viewer
- * @see_also: <link linkend="chapter-signals-pidginlog">Log signals</link>
+ * @see_also: <link linkend="chapter-signals-gtklog">Log signals</link>
  */
 
 #include "pidgin.h"

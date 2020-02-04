@@ -89,7 +89,6 @@ silcpurple_ftp_monitor(SilcClient client,
 			"during file transfer"), _("Remote disconnected"),
 			purple_request_cpar_from_connection(gc));
 		purple_xfer_set_status(xfer->xfer, PURPLE_XFER_STATUS_CANCEL_REMOTE);
-		purple_xfer_update_progress(xfer->xfer);
 		silc_client_file_close(client, conn, session_id);
 		return;
 	}
@@ -131,7 +130,6 @@ silcpurple_ftp_monitor(SilcClient client,
 				purple_request_cpar_from_connection(gc));
 		}
 		purple_xfer_set_status(xfer->xfer, PURPLE_XFER_STATUS_CANCEL_REMOTE);
-		purple_xfer_update_progress(xfer->xfer);
 		silc_client_file_close(client, conn, session_id);
 		return;
 	}
@@ -142,7 +140,6 @@ silcpurple_ftp_monitor(SilcClient client,
 	if (offset && filesize) {
 		purple_xfer_set_bytes_sent(xfer->xfer, offset);
 	}
-	purple_xfer_update_progress(xfer->xfer);
 
 	if (status == SILC_CLIENT_FILE_MONITOR_SEND ||
 	    status == SILC_CLIENT_FILE_MONITOR_RECEIVE) {
