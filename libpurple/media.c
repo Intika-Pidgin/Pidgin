@@ -1237,6 +1237,19 @@ purple_media_set_decryption_parameters(PurpleMedia *media, const gchar *sess_id,
 }
 
 gboolean
+purple_media_set_require_encryption(PurpleMedia *media, const gchar *sess_id,
+                const gchar *participant, gboolean require_encryption)
+{
+#ifdef USE_VV
+	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
+	return purple_media_backend_set_require_encryption(media->priv->backend,
+			sess_id, participant, require_encryption);
+#else
+	return FALSE;
+#endif
+}
+
+gboolean
 purple_media_codecs_ready(PurpleMedia *media, const gchar *sess_id)
 {
 #ifdef USE_VV
