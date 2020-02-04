@@ -36,11 +36,6 @@
 
 /**
  * PurpleAttentionType:
- * @name: The name to show in GUI elements.
- * @incoming_description: Shown when received.
- * @outgoing_description: Shown when sent.
- * @icon_name: Optional name of the icon to display.
- * @unlocalized_name: An unlocalized name for UIs that would rather use that.
  *
  * Represents "nudges" and "buzzes" that you may send to a buddy to attract
  * their attention (or vice-versa).
@@ -203,6 +198,10 @@ G_DECLARE_INTERFACE(PurpleProtocolAttention, purple_protocol_attention, PURPLE,
 
 /**
  * PurpleProtocolAttentionInterface:
+ * @send: Called to send an attention message. See
+ *        purple_protocol_attention_send().
+ * @get_types: Called to list the protocol's attention types. See
+ *             purple_protocol_attention_get_types().
  *
  * The protocol attention interface.
  *

@@ -182,9 +182,19 @@ struct _PurpleNotifySearchButton
 	char *label;
 };
 
-
 /**
  * PurpleNotifyUiOps:
+ * @notify_message: UI op for purple_notify_message().
+ * @notify_email: UI op for purple_notify_email().
+ * @notify_emails: UI op for purple_notify_emails().
+ * @notify_formatted: UI op for purple_notify_formatted().
+ * @notify_searchresults: UI op for purple_notify_searchresults().
+ * @notify_searchresults_new_rows: UI op for
+ *                                 purple_notify_searchresults_new_rows().
+ * @notify_userinfo: UI op for purple_notify_userinfo().
+ * @notify_uri: UI op for purple_notify_uri().
+ * @close_notify: UI op for purple_notify_close() and
+ *                purple_notify_close_with_handle().
  *
  * Notification UI operations.
  */
@@ -562,45 +572,72 @@ char *purple_notify_user_info_get_text_with_newline(PurpleNotifyUserInfo *user_i
 
 /**
  * purple_notify_user_info_add_pair_html:
- * @user_info:  The PurpleNotifyUserInfo
- * @label:      A label, which for example might be displayed by a
- *                   UI with a colon after it ("Status:"). Do not include
- *                   a colon.  If NULL, value will be displayed without a
- *                   label.
- * @value:      The value, which might be displayed by a UI after
- *                   the label.  This should be valid HTML.  If you want
- *                   to insert plaintext then use
- *                   purple_notify_user_info_add_pair_plaintext(), instead.
- *                   If this is NULL the label will still be displayed;
- *                   the UI should treat label as independent and not
- *                   include a colon if it would otherwise.
+ * @user_info: The PurpleNotifyUserInfo
+ * @label: A label, which for example might be displayed by a UI with a colon
+ *         after it ("Status:"). Do not include a colon. If %NULL, value will be
+ *         displayed without a label.
+ * @value: The value, which might be displayed by a UI after the label. This
+ *         should be valid HTML. If you want to insert plaintext then use
+ *         purple_notify_user_info_add_pair_plaintext(), instead. If this is
+ *         %NULL the label will still be displayed; the UI should treat label as
+ *         independent and not include a colon if it would otherwise.
  *
- * Add a label/value pair to a PurpleNotifyUserInfo object.
- * PurpleNotifyUserInfo keeps track of the order in which pairs are added.
+ * Add a label/value pair to a #PurpleNotifyUserInfo object.
+ * #PurpleNotifyUserInfo keeps track of the order in which pairs are added.
  */
 void purple_notify_user_info_add_pair_html(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
  * purple_notify_user_info_add_pair_plaintext:
+ * @user_info: The PurpleNotifyUserInfo
+ * @label: A label, which for example might be displayed by a UI with a colon
+ *         after it ("Status:"). Do not include a colon. If %NULL, value will be
+ *         displayed without a label.
+ * @value: The value, which might be displayed by a UI after the label. This
+ *         will be escaped to produce valid HTML. If you want to insert HTML
+ *         then use purple_notify_user_info_add_pair_html(), instead. If this is
+ *         %NULL the label will still be displayed; the UI should treat label as
+ *         independent and not include a colon if it would otherwise.
  *
- * Like purple_notify_user_info_add_pair_html, but value should be plaintext
+ * Add a label/value pair to a #PurpleNotifyUserInfo object.
+ * #PurpleNotifyUserInfo keeps track of the order in which pairs are added.
+ *
+ * Like purple_notify_user_info_add_pair_html(), but value should be plaintext
  * and will be escaped using g_markup_escape_text().
  */
 void purple_notify_user_info_add_pair_plaintext(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
  * purple_notify_user_info_prepend_pair_html:
+ * @user_info: The PurpleNotifyUserInfo
+ * @label: A label, which for example might be displayed by a UI with a colon
+ *         after it ("Status:"). Do not include a colon. If %NULL, value will be
+ *         displayed without a label.
+ * @value: The value, which might be displayed by a UI after the label. This
+ *         should be valid HTML. If you want to insert plaintext then use
+ *         purple_notify_user_info_prepend_pair_plaintext(), instead. If this is
+ *         %NULL the label will still be displayed; the UI should treat label as
+ *         independent and not include a colon if it would otherwise.
  *
- * Like purple_notify_user_info_add_pair_html, but the pair is inserted
+ * Like purple_notify_user_info_add_pair_html(), but the pair is inserted
  * at the beginning of the list.
  */
 void purple_notify_user_info_prepend_pair_html(PurpleNotifyUserInfo *user_info, const char *label, const char *value);
 
 /**
  * purple_notify_user_info_prepend_pair_plaintext:
+ * @user_info: The PurpleNotifyUserInfo
+ * @label: A label, which for example might be displayed by a UI with a colon
+ *         after it ("Status:"). Do not include a colon. If %NULL, value will be
+ *         displayed without a label.
+ * @value: The value, which might be displayed by a UI after the label. This
+ *         will be escaped to produce valid HTML. If you want to insert HTML
+ *         then use purple_notify_user_info_prepend_pair_html(), instead. If
+ *         this is %NULL the label will still be displayed; the UI should treat
+ *         label as independent and not include a colon if it would otherwise.
  *
- * Like purple_notify_user_info_prepend_pair_html, but value should be plaintext
- * and will be escaped using g_markup_escape_text().
+ * Like purple_notify_user_info_prepend_pair_html(), but value should be
+ * plaintext and will be escaped using g_markup_escape_text().
  *
  * Since: 3.0.0
  */
@@ -688,6 +725,7 @@ void purple_notify_user_info_prepend_section_header(PurpleNotifyUserInfo *user_i
 
 /**
  * purple_notify_user_info_remove_last_item:
+ * @user_info: The PurpleNotifyUserInfo
  *
  * Remove the last item which was added to a PurpleNotifyUserInfo. This
  * could be used to remove a section header which is not needed.
@@ -802,8 +840,14 @@ void purple_notify_close_with_handle(void *handle);
 
 /**
  * purple_notify_info:
+ * @handle: The plugin or connection handle.
+ * @title: The title of the message.
+ * @primary: The main point of the message.
+ * @secondary: The secondary information.
+ * @cpar: The #PurpleRequestCommonParameters associated with this request, or
+ *        %NULL if none is.
  *
- * A wrapper for purple_notify_message that displays an information message.
+ * A wrapper for purple_notify_message() that displays an information message.
  */
 #define purple_notify_info(handle, title, primary, secondary, cpar) \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_INFO, (title), \
@@ -811,8 +855,14 @@ void purple_notify_close_with_handle(void *handle);
 
 /**
  * purple_notify_warning:
+ * @handle: The plugin or connection handle.
+ * @title: The title of the message.
+ * @primary: The main point of the message.
+ * @secondary: The secondary information.
+ * @cpar: The #PurpleRequestCommonParameters associated with this request, or
+ *        %NULL if none is.
  *
- * A wrapper for purple_notify_message that displays a warning message.
+ * A wrapper for purple_notify_message() that displays a warning message.
  */
 #define purple_notify_warning(handle, title, primary, secondary, cpar) \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_WARNING, (title), \
@@ -820,8 +870,14 @@ void purple_notify_close_with_handle(void *handle);
 
 /**
  * purple_notify_error:
+ * @handle: The plugin or connection handle.
+ * @title: The title of the message.
+ * @primary: The main point of the message.
+ * @secondary: The secondary information.
+ * @cpar: The #PurpleRequestCommonParameters associated with this request, or
+ *        %NULL if none is.
  *
- * A wrapper for purple_notify_message that displays an error message.
+ * A wrapper for purple_notify_message() that displays an error message.
  */
 #define purple_notify_error(handle, title, primary, secondary, cpar) \
 	purple_notify_message((handle), PURPLE_NOTIFY_MSG_ERROR, (title), \

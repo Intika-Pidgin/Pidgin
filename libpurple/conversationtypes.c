@@ -95,7 +95,6 @@ G_DEFINE_TYPE_WITH_PRIVATE(PurpleChatConversation, purple_chat_conversation,
 
 /**
  * PurpleChatUser:
- * @ui_data: The UI data associated with this chat user.
  *
  * Structure representing a chat user instance.
  */
@@ -103,7 +102,6 @@ struct _PurpleChatUser
 {
 	GObject gparent;
 
-	/*< public >*/
 	gpointer ui_data;
 };
 
