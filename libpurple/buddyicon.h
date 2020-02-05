@@ -488,6 +488,11 @@ PurpleBuddyIconSpec *purple_buddy_icon_spec_new(char *format, int min_width,
 
 /**
  * purple_buddy_icon_spec_get_scaled_size:
+ * @spec: The buddy icon spec.
+ * @width: (inout): On input, the suggested width. On output, the width
+ *                  constrained by the spec.
+ * @height: (inout): On input, the suggested height. On output, the height
+ *                   constrained by the spec.
  *
  * Gets display size for a buddy icon
  */

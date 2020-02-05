@@ -20,30 +20,30 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 -->
 <interface>
-  <requires lib="gtk+" version="3.18"/>
+  <requires lib="gtk+" version="3.20"/>
   <requires lib="pidgin" version="3.0"/>
   <!-- interface-license-type gplv2 -->
   <!-- interface-name Pidgin -->
   <!-- interface-description Internet Messenger -->
   <!-- interface-copyright Pidgin Developers <devel@pidgin.im> -->
-  <object class="GtkTreeStore" id="model">
+  <object class="GtkListStore" id="allow_store">
     <columns>
-      <!-- column-name pixbuf -->
-      <column type="GdkPixbuf"/>
-      <!-- column-name name -->
+      <!-- column-name column1 -->
       <column type="gchararray"/>
-      <!-- column-name description -->
-      <column type="gchararray"/>
-      <!-- column-name service -->
-      <column type="gpointer"/>
     </columns>
   </object>
-  <template class="PidginDiscoDialog" parent="GtkDialog">
+  <object class="GtkListStore" id="block_store">
+    <columns>
+      <!-- column-name column1 -->
+      <column type="gchararray"/>
+    </columns>
+  </object>
+  <template class="PidginPrivacyDialog" parent="GtkDialog">
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Service Discovery</property>
-    <property name="role">service discovery</property>
+    <property name="title" translatable="yes">Privacy</property>
+    <property name="role">privacy</property>
     <property name="type_hint">dialog</property>
-    <signal name="destroy" handler="destroy_win_cb" swapped="no"/>
+    <signal name="close" handler="gtk_widget_destroy" swapped="no"/>
     <child>
       <placeholder/>
     </child>
@@ -57,14 +57,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             <property name="can_focus">False</property>
             <property name="layout_style">end</property>
             <child>
-              <object class="GtkButton" id="stop_button">
-                <property name="label" translatable="yes">_Stop</property>
+              <object class="GtkButton" id="add_button">
+                <property name="label">gtk-add</property>
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_underline">True</property>
-                <signal name="clicked" handler="stop_button_cb" object="PidginDiscoDialog" swapped="no"/>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="add_cb" object="PidginPrivacyDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -73,13 +72,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="browse_button">
-                <property name="label" translatable="yes">_Browse</property>
+              <object class="GtkButton" id="remove_button">
+                <property name="label">gtk-remove</property>
                 <property name="visible">True</property>
+                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_underline">True</property>
-                <signal name="clicked" handler="browse_button_cb" object="PidginDiscoDialog" swapped="no"/>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="remove_cb" object="PidginPrivacyDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -88,13 +88,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="register_button">
-                <property name="label" translatable="yes">Register</property>
+              <object class="GtkButton" id="removeall_button">
+                <property name="label" translatable="yes">Remove Al_l</property>
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="register_button_cb" object="PidginDiscoDialog" swapped="no"/>
+                <property name="use_underline">True</property>
+                <signal name="clicked" handler="removeall_cb" object="PidginPrivacyDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -103,34 +103,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="add_button">
-                <property name="label" translatable="yes">_Add</property>
+              <object class="GtkButton" id="close_button">
+                <property name="label">gtk-close</property>
                 <property name="visible">True</property>
-                <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_underline">True</property>
-                <signal name="clicked" handler="add_to_blist_cb" object="PidginDiscoDialog" swapped="no"/>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="gtk_widget_destroy" object="PidginPrivacyDialog" swapped="yes"/>
               </object>
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
                 <property name="position">3</property>
-              </packing>
-            </child>
-            <child>
-              <object class="GtkButton" id="close_button">
-                <property name="label" translatable="yes">_Close</property>
-                <property name="visible">True</property>
-                <property name="can_focus">True</property>
-                <property name="receives_default">True</property>
-                <property name="use_underline">True</property>
-                <signal name="clicked" handler="close_button_cb" swapped="no"/>
-              </object>
-              <packing>
-                <property name="expand">True</property>
-                <property name="fill">True</property>
-                <property name="position">4</property>
               </packing>
             </child>
           </object>
@@ -145,22 +129,39 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
+            <property name="spacing">6</property>
+            <child>
+              <object class="GtkLabel">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <property name="label" translatable="yes">Changes to privacy settings take effect immediately.</property>
+                <property name="xalign">0</property>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">0</property>
+              </packing>
+            </child>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="spacing">6</property>
+                <property name="spacing">5</property>
                 <child>
-                  <object class="GtkLabel">
+                  <object class="GtkLabel" id="label1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <property name="label" translatable="yes">_Account:</property>
+                    <property name="label" translatable="yes">Set privacy for:</property>
                     <property name="use_underline">True</property>
-                    <property name="xalign">0</property>
+                    <property name="mnemonic_widget">account_chooser</property>
+                    <accessibility>
+                      <relation type="label-for" target="account_chooser"/>
+                    </accessibility>
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="fill">True</property>
+                    <property name="fill">False</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
@@ -168,10 +169,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
                   <object class="PidginAccountChooser" id="account_chooser">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <signal name="changed" handler="dialog_select_account_cb" object="PidginDiscoDialog" swapped="no"/>
+                    <signal name="changed" handler="select_account_cb" object="PidginPrivacyDialog" swapped="no"/>
+                    <accessibility>
+                      <relation type="labelled-by" target="label1"/>
+                    </accessibility>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
+                    <property name="expand">True</property>
                     <property name="fill">True</property>
                     <property name="position">1</property>
                   </packing>
@@ -180,60 +184,47 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               <packing>
                 <property name="expand">False</property>
                 <property name="fill">True</property>
-                <property name="position">0</property>
+                <property name="position">1</property>
               </packing>
             </child>
             <child>
-              <object class="GtkScrolledWindow">
+              <object class="GtkComboBoxText" id="type_menu">
+                <property name="visible">True</property>
+                <property name="can_focus">False</property>
+                <signal name="changed" handler="type_changed_cb" object="PidginPrivacyDialog" swapped="no"/>
+              </object>
+              <packing>
+                <property name="expand">False</property>
+                <property name="fill">False</property>
+                <property name="position">2</property>
+              </packing>
+            </child>
+            <child>
+              <object class="GtkScrolledWindow" id="allow_widget">
+                <property name="height_request">200</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="hscrollbar_policy">always</property>
-                <property name="vscrollbar_policy">always</property>
                 <property name="shadow_type">in</property>
-                <property name="min_content_height">250</property>
                 <child>
-                  <object class="GtkTreeView" id="tree">
+                  <object class="GtkTreeView" id="allow_list">
                     <property name="visible">True</property>
                     <property name="can_focus">True</property>
-                    <property name="model">model</property>
-                    <signal name="button-press-event" handler="service_click_cb" object="PidginDiscoDialog" swapped="no"/>
-                    <signal name="row-activated" handler="row_activated_cb" object="PidginDiscoDialog" swapped="no"/>
-                    <signal name="row-expanded" handler="row_expanded_cb" object="PidginDiscoDialog" swapped="no"/>
+                    <property name="model">allow_store</property>
+                    <property name="headers_visible">False</property>
+                    <property name="search_column">0</property>
                     <child internal-child="selection">
                       <object class="GtkTreeSelection">
-                        <signal name="changed" handler="selection_changed_cb" swapped="no"/>
+                        <signal name="changed" handler="user_selected_cb" object="PidginPrivacyDialog" swapped="no"/>
                       </object>
                     </child>
                     <child>
                       <object class="GtkTreeViewColumn">
-                        <property name="resizable">True</property>
-                        <property name="title" translatable="yes">Name</property>
-                        <property name="reorderable">True</property>
-                        <property name="sort_column_id">1</property>
-                        <child>
-                          <object class="GtkCellRendererPixbuf"/>
-                          <attributes>
-                            <attribute name="pixbuf">0</attribute>
-                          </attributes>
-                        </child>
+                        <property name="clickable">True</property>
+                        <property name="sort_column_id">0</property>
                         <child>
                           <object class="GtkCellRendererText"/>
                           <attributes>
-                            <attribute name="text">1</attribute>
-                          </attributes>
-                        </child>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn">
-                        <property name="resizable">True</property>
-                        <property name="title" translatable="yes">Description</property>
-                        <property name="reorderable">True</property>
-                        <property name="sort_column_id">2</property>
-                        <child>
-                          <object class="GtkCellRendererText"/>
-                          <attributes>
-                            <attribute name="text">2</attribute>
+                            <attribute name="text">0</attribute>
                           </attributes>
                         </child>
                       </object>
@@ -244,23 +235,50 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               <packing>
                 <property name="expand">True</property>
                 <property name="fill">True</property>
-                <property name="position">1</property>
+                <property name="position">3</property>
               </packing>
             </child>
             <child>
-              <object class="GtkProgressBar" id="progress">
+              <object class="GtkScrolledWindow" id="block_widget">
+                <property name="height_request">200</property>
                 <property name="visible">True</property>
-                <property name="can_focus">False</property>
+                <property name="can_focus">True</property>
+                <property name="shadow_type">in</property>
+                <child>
+                  <object class="GtkTreeView" id="block_list">
+                    <property name="visible">True</property>
+                    <property name="can_focus">True</property>
+                    <property name="model">block_store</property>
+                    <property name="headers_visible">False</property>
+                    <child internal-child="selection">
+                      <object class="GtkTreeSelection">
+                        <signal name="changed" handler="user_selected_cb" object="PidginPrivacyDialog" swapped="no"/>
+                      </object>
+                    </child>
+                    <child>
+                      <object class="GtkTreeViewColumn">
+                        <property name="clickable">True</property>
+                        <property name="sort_column_id">0</property>
+                        <child>
+                          <object class="GtkCellRendererText"/>
+                          <attributes>
+                            <attribute name="text">0</attribute>
+                          </attributes>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                </child>
               </object>
               <packing>
-                <property name="expand">False</property>
-                <property name="fill">False</property>
-                <property name="position">2</property>
+                <property name="expand">True</property>
+                <property name="fill">True</property>
+                <property name="position">4</property>
               </packing>
             </child>
           </object>
           <packing>
-            <property name="expand">True</property>
+            <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">1</property>
           </packing>

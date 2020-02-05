@@ -325,6 +325,10 @@ version 3.0.0 (??/??/????):
 		* _PurpleSoundEventID
 		* _XMLNodeType
 		* account-authorization-requested-with-message signal
+		* file-recv-accept, file-recv-cancel, file-recv-complete,
+		  file-recv-start, file-send-accept, file-send-cancel,
+		  file-send-complete, file-send-start signals. Use
+		  notify::status on #PurpleXfer objects instead.
 		* network-configuration-changed signal
 		* PurpleAccount->ui_data
 		* PurpleAccountPrefsUiOps
@@ -469,12 +473,30 @@ version 3.0.0 (??/??/????):
 		* purple_util_get_image_checksum.  Use
 		  g_compute_checksum_for_data(G_CHECKSUM_SHA1, ...), instead.
 		* purple_uts35_to_str
+		* purple_xfer_add
+		* purple_xfer_get_ui_data and purple_xfer_set_ui_data. Use
+		  GObject data functions instead.
+		* purple_xfer_update_progress
 		* PurpleCertificateVerificationStatus.PURPLE_CERTIFICATE_INVALID
 		* PurpleConnectionUiOps.report_disconnect_reason
 		* PurplePluginProtocolInfo.add_buddy_with_invite
 		* PurplePluginProtocolInfo.add_buddies_with_invite
 		* PurplePluginProtocolInfo.get_cb_away
 		* PurpleValue, use GValue instead.
+		* PurpleXferUiOps.add_thumbnail. Use PurpleXfer::add-thumbnail
+		  instead.
+		* PurpleXferUiOps.add_xfer. Use notify::visible on #PurpleXfer
+		  objects instead.
+		* PurpleXferUiOps.cancel_local and
+		  PurpleXferUiOps.cancel_remote. Use notify::status on
+		  #PurpleXfer objects instead.
+		* PurpleXferUiOps.data_not_sent. Use PurpleXfer::data-not-sent
+		  instead.
+		* PurpleXferUiOps.destroy
+		* PurpleXferUiOps.ui_read. Use PurpleXfer::read-local instead.
+		* PurpleXferUiOps.ui_write. Use PurpleXfer::write-local instead.
+		* PurpleXferUiOps.update_progress. Use notify::progress on
+		  #PurpleXfer objects instead.
 		* serv_got_attention
 		* serv_send_attention
 		* struct _PurpleAttentionType

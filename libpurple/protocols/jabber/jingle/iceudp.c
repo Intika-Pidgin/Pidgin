@@ -70,6 +70,7 @@ jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, g
 	gchar *ip;
 	gchar *username;
 	gchar *password;
+	gchar *foundation;
 	JingleIceUdpCandidate *iceudp_candidate;
 	GList *iter;
 
@@ -77,11 +78,11 @@ jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, g
 	username = purple_media_candidate_get_username(candidate);
 	password = purple_media_candidate_get_password(candidate);
 	type = purple_media_candidate_get_candidate_type(candidate);
+	foundation = purple_media_candidate_get_foundation(candidate);
 
 	iceudp_candidate = jingle_iceudp_candidate_new(id,
 			purple_media_candidate_get_component_id(candidate),
-			purple_media_candidate_get_foundation(candidate),
-			generation, ip, 0,
+			foundation, generation, ip, 0,
 			purple_media_candidate_get_port(candidate),
 			purple_media_candidate_get_priority(candidate), "udp",
 			type == PURPLE_MEDIA_CANDIDATE_TYPE_HOST ? "host" :
@@ -94,6 +95,7 @@ jingle_iceudp_add_local_candidate(JingleTransport *transport, const gchar *id, g
 
 	g_free(password);
 	g_free(username);
+	g_free(foundation);
 	g_free(ip);
 
 	for (iter = priv->local_candidates; iter; iter = g_list_next(iter)) {
@@ -364,12 +366,22 @@ jingle_iceudp_init (JingleIceUdp *iceudp)
 }
 
 static void
-jingle_iceudp_finalize (GObject *iceudp)
+jingle_iceudp_candidate_free(JingleIceUdpCandidate *candidate);
+
+static void
+jingle_iceudp_finalize (GObject *object)
 {
-/*	JingleIceUdpPrivate *priv = JINGLE_ICEUDP_GET_PRIVATE(iceudp); */
+	JingleIceUdp *iceudp = JINGLE_ICEUDP(object);
+	JingleIceUdpPrivate *priv = jingle_iceudp_get_instance_private(iceudp);
+
 	purple_debug_info("jingle","jingle_iceudp_finalize\n");
 
-	G_OBJECT_CLASS(jingle_iceudp_parent_class)->finalize(iceudp);
+	g_list_free_full(priv->local_candidates,
+			(GDestroyNotify)jingle_iceudp_candidate_free);
+	g_list_free_full(priv->remote_candidates,
+			(GDestroyNotify)jingle_iceudp_candidate_free);
+
+	G_OBJECT_CLASS(jingle_iceudp_parent_class)->finalize(object);
 }
 
 static void
@@ -444,6 +456,7 @@ jingle_iceudp_candidate_free(JingleIceUdpCandidate *candidate)
 
 	g_free(candidate->username);
 	g_free(candidate->password);
+	g_free(candidate);
 }
 
 G_DEFINE_BOXED_TYPE(JingleIceUdpCandidate, jingle_iceudp_candidate,

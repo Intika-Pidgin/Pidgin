@@ -219,6 +219,24 @@ purple_media_backend_set_decryption_parameters(PurpleMediaBackend *self,
 			sess_id, participant, cipher, auth, key, key_len);
 }
 
+gboolean
+purple_media_backend_set_require_encryption(PurpleMediaBackend *self,
+		const gchar *sess_id, const gchar *participant,
+		gboolean require_encryption)
+{
+	PurpleMediaBackendInterface *backend_iface;
+
+	g_return_val_if_fail(PURPLE_IS_MEDIA_BACKEND(self), FALSE);
+	backend_iface = PURPLE_MEDIA_BACKEND_GET_INTERFACE(self);
+
+	if (!backend_iface->set_require_encryption) {
+		return FALSE;
+	}
+
+	return backend_iface->set_require_encryption(self,
+			sess_id, participant, require_encryption);
+}
+
 void
 purple_media_backend_set_params(PurpleMediaBackend *self,
 		guint num_params, GParameter *params)

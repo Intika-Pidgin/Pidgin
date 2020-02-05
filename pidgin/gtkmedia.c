@@ -491,6 +491,11 @@ pidgin_media_dispose(GObject *media)
 		gtkmedia->priv->remote_videos = NULL;
 	}
 
+	if (gtkmedia->priv->screenname) {
+		g_free(gtkmedia->priv->screenname);
+		gtkmedia->priv->screenname = NULL;
+	}
+
 	G_OBJECT_CLASS(pidgin_media_parent_class)->dispose(media);
 }
 
@@ -506,11 +511,13 @@ pidgin_media_finalize(GObject *media)
 static void
 pidgin_media_emit_message(PidginMedia *gtkmedia, const char *msg)
 {
+	PurpleAccount *account = purple_media_get_account(
+			gtkmedia->priv->media);
 	PurpleConversation *conv = purple_conversations_find_with_account(
-			gtkmedia->priv->screenname,
-			purple_media_get_account(gtkmedia->priv->media));
+			gtkmedia->priv->screenname, account);
 	if (conv != NULL)
 		purple_conversation_write_system_message(conv, msg, 0);
+	g_object_unref(account);
 }
 
 typedef struct
@@ -578,9 +585,10 @@ realize_cb(GtkWidget *widget, PidginMediaRealizeData *data)
 static void
 pidgin_media_error_cb(PidginMedia *media, const char *error, PidginMedia *gtkmedia)
 {
+	PurpleAccount *account = purple_media_get_account(
+			gtkmedia->priv->media);
 	PurpleConversation *conv = purple_conversations_find_with_account(
-			gtkmedia->priv->screenname,
-			purple_media_get_account(gtkmedia->priv->media));
+			gtkmedia->priv->screenname, account);
 	if (conv != NULL) {
 		purple_conversation_write_system_message(
 			conv, error, PURPLE_MESSAGE_ERROR);
@@ -591,6 +599,7 @@ pidgin_media_error_cb(PidginMedia *media, const char *error, PidginMedia *gtkmed
 
 	gtk_statusbar_push(GTK_STATUSBAR(gtkmedia->priv->statusbar),
 			0, error);
+	g_object_unref(account);
 }
 
 static void
@@ -649,6 +658,7 @@ pidgin_request_timeout_cb(PidginMedia *gtkmedia)
 	}
 	pidgin_media_emit_message(gtkmedia, message);
 	g_free(message);
+	g_object_unref(account);
 	return FALSE;
 }
 

@@ -363,7 +363,7 @@ PurpleConnectionFlags purple_connection_get_flags(PurpleConnection *gc);
 
 /**
  * purple_connection_is_disconnecting:
- * @param gc The connection.
+ * @gc: The connection.
  *
  * Checks, if connection is in disconnecting state.
  *
@@ -487,6 +487,8 @@ purple_connection_get_error_info(PurpleConnection *gc);
 
 /**
  * purple_connection_ssl_error:
+ * @gc: The connection.
+ * @ssl_error: The SSL error type.
  *
  * Closes a connection due to an SSL error; this is basically a shortcut to
  * turning the #PurpleSslErrorType into a #PurpleConnectionError and a
@@ -531,18 +533,22 @@ purple_connection_take_error(PurpleConnection *pc,
 
 /**
  * purple_connection_error_is_fatal:
+ * @reason: The connection error to check.
  *
  * Reports whether a disconnection reason is fatal (in which case the account
  * should probably not be automatically reconnected) or transient (so
  * auto-reconnection is a good idea).
+ *
  * For instance, #PURPLE_CONNECTION_ERROR_NETWORK_ERROR is a temporary error,
- * which might be caused by losing the network connection, so <literal>
- * purple_connection_error_is_fatal (PURPLE_CONNECTION_ERROR_NETWORK_ERROR)</literal>
- * is %FALSE.  On the other hand,
- * #PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED probably indicates a
- * misconfiguration of the account which needs the user to go fix it up, so
- * <literal> purple_connection_error_is_fatal
- * (PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED)</literal> is %TRUE.
+ * which might be caused by losing the network connection, so <code>
+ * purple_connection_error_is_fatal(PURPLE_CONNECTION_ERROR_NETWORK_ERROR)
+ * </code> is %FALSE.
+ *
+ * On the other hand, #PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED probably
+ * indicates a misconfiguration of the account which needs the user to go fix
+ * it up, so <code>
+ * purple_connection_error_is_fatal(PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED)
+ * </code> is %TRUE.
  *
  * Returns: %TRUE if the account should not be automatically reconnected, and
  *         %FALSE otherwise.

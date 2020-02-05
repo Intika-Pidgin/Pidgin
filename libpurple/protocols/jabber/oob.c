@@ -87,7 +87,6 @@ jabber_oob_xfer_got_content_length(SoupMessage *msg, gpointer user_data)
 	total = soup_message_headers_get_content_length(msg->response_headers);
 
 	purple_xfer_set_size(xfer, total);
-	purple_xfer_update_progress(xfer);
 }
 
 static void

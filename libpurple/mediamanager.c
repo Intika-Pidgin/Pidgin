@@ -429,6 +429,7 @@ get_media_by_account(PurpleMediaManager *manager,
 #ifdef USE_VV
 	GList *media = NULL;
 	GList *iter;
+	PurpleAccount *media_account;
 
 	g_return_val_if_fail(PURPLE_IS_MEDIA_MANAGER(manager), NULL);
 
@@ -437,9 +438,11 @@ get_media_by_account(PurpleMediaManager *manager,
 	else
 		iter = manager->priv->medias;
 	for (; iter; iter = g_list_next(iter)) {
-		if (purple_media_get_account(iter->data) == account) {
+		media_account = purple_media_get_account(iter->data);
+		if (media_account == account) {
 			media = g_list_prepend(media, iter->data);
 		}
+		g_object_unref (media_account);
 	}
 
 	return media;
@@ -648,7 +651,6 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 	GstElement *parent = GST_ELEMENT_PARENT(pad);
 	GstIterator *iter;
 	GValue tmp = G_VALUE_INIT;
-	GstPad *remaining_pad;
 	GstIteratorResult result;
 
 	gst_element_release_request_pad(parent, pad);
@@ -662,9 +664,7 @@ request_pad_unlinked_cb(GstPad *pad, GstPad *peer, gpointer user_data)
 		gst_element_set_state(parent, GST_STATE_NULL);
 		gst_bin_remove(GST_BIN(GST_ELEMENT_PARENT(parent)), parent);
 	} else if (result == GST_ITERATOR_OK) {
-		remaining_pad = g_value_get_object(&tmp);
 		g_value_reset(&tmp);
-		gst_object_unref(remaining_pad);
 	}
 
 	gst_iterator_free(iter);
