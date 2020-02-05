@@ -2574,7 +2574,7 @@ GList *jabber_get_actions(PurpleConnection *gc)
 	                             jabber_user_search_begin);
 	m = g_list_append(m, act);
 
-	purple_debug_info("jabber", "jabber_get_actions: have pep: %s\n", js->pep?"YES":"NO");
+	purple_debug_info("jabber", "jabber_get_actions: have pep: %s\n", js->pep ? "YES" : "NO");
 
 	if(js->pep)
 		jabber_pep_init_actions(&m);
