@@ -3706,7 +3706,7 @@ jabber_register_commands(PurpleProtocol *protocol)
 	id = purple_cmd_register("buzz", "w", PURPLE_CMD_P_PROTOCOL,
 		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PROTOCOL_ONLY |
 		PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, proto_id, jabber_cmd_buzz,
-		_("buzz: Buzz a user to get their attention"), NULL);
+		_("buzz: Buzz a user to get their attention."), NULL);
 	commands = g_slist_prepend(commands, GUINT_TO_POINTER(id));
 
 	id = purple_cmd_register("mood", "ws", PURPLE_CMD_P_PROTOCOL,
