@@ -107,7 +107,8 @@ void jabber_message_free(JabberMessage *jm)
 
 static void handle_chat(JabberMessage *jm)
 {
-	JabberID *jid = jabber_id_new(jm->from);
+	gchar *contact = jm->from;
+	JabberID *jid = jabber_id_new(contact);
 
 	PurpleConnection *gc;
 	PurpleAccount *account;
@@ -121,7 +122,7 @@ static void handle_chat(JabberMessage *jm)
 	gc = jm->js->gc;
 	account = purple_connection_get_account(gc);
 
-	jb = jabber_buddy_find(jm->js, jm->from, TRUE);
+	jb = jabber_buddy_find(jm->js, contact, TRUE);
 	jbr = jabber_buddy_find_resource(jb, jid->resource);
 
 	if (jbr && jm->chat_state != JM_STATE_NONE)
@@ -129,14 +130,14 @@ static void handle_chat(JabberMessage *jm)
 
 	switch(jm->chat_state) {
 		case JM_STATE_COMPOSING:
-			purple_serv_got_typing(gc, jm->from, 0, PURPLE_IM_TYPING);
+			purple_serv_got_typing(gc, contact, 0, PURPLE_IM_TYPING);
 			break;
 		case JM_STATE_PAUSED:
-			purple_serv_got_typing(gc, jm->from, 0, PURPLE_IM_TYPED);
+			purple_serv_got_typing(gc, contact, 0, PURPLE_IM_TYPED);
 			break;
 		case JM_STATE_GONE: {
 			PurpleIMConversation *im = purple_conversations_find_im_with_account(
-					jm->from, account);
+					contact, account);
 			if (im && jid->node && jid->domain) {
 				char buf[256];
 				PurpleBuddy *buddy;
@@ -161,11 +162,11 @@ static void handle_chat(JabberMessage *jm)
 						PURPLE_CONVERSATION(im), buf, 0);
 				}
 			}
-			purple_serv_got_typing_stopped(gc, jm->from);
+			purple_serv_got_typing_stopped(gc, contact);
 			break;
 		}
 		default:
-			purple_serv_got_typing_stopped(gc, jm->from);
+			purple_serv_got_typing_stopped(gc, contact);
 	}
 
 	if (jm->js->googletalk && jm->body && jm->xhtml == NULL) {
@@ -189,12 +190,12 @@ static void handle_chat(JabberMessage *jm)
 			 */
 			PurpleIMConversation *im;
 
-			im = purple_conversations_find_im_with_account(jm->from, account);
-			if (im && !purple_strequal(jm->from,
+			im = purple_conversations_find_im_with_account(contact, account);
+			if (im && !purple_strequal(contact,
 					purple_conversation_get_name(PURPLE_CONVERSATION(im)))) {
 				purple_debug_info("jabber", "Binding conversation to %s\n",
-				                  jm->from);
-				purple_conversation_set_name(PURPLE_CONVERSATION(im), jm->from);
+				                  contact);
+				purple_conversation_set_name(PURPLE_CONVERSATION(im), contact);
 			}
 		}
 
@@ -211,7 +212,7 @@ static void handle_chat(JabberMessage *jm)
 			jbr->thread_id = g_strdup(jm->thread_id);
 		}
 
-		purple_serv_got_im(gc, jm->from, body->str, 0, jm->sent);
+		purple_serv_got_im(gc, contact, body->str, 0, jm->sent);
 	}
 
 	jabber_id_free(jid);
