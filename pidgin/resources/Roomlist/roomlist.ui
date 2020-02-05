@@ -20,30 +20,33 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 -->
 <interface>
-  <requires lib="gtk+" version="3.18"/>
+  <requires lib="gtk+" version="3.20"/>
   <requires lib="pidgin" version="3.0"/>
   <!-- interface-license-type gplv2 -->
   <!-- interface-name Pidgin -->
   <!-- interface-description Internet Messenger -->
   <!-- interface-copyright Pidgin Developers <devel@pidgin.im> -->
-  <object class="GtkTreeStore" id="model">
-    <columns>
-      <!-- column-name pixbuf -->
-      <column type="GdkPixbuf"/>
-      <!-- column-name name -->
-      <column type="gchararray"/>
-      <!-- column-name description -->
-      <column type="gchararray"/>
-      <!-- column-name service -->
-      <column type="gpointer"/>
-    </columns>
-  </object>
-  <template class="PidginDiscoDialog" parent="GtkDialog">
+  <object class="GtkImage" id="add_image">
+    <property name="visible">True</property>
     <property name="can_focus">False</property>
-    <property name="title" translatable="yes">Service Discovery</property>
-    <property name="role">service discovery</property>
+    <property name="stock">gtk-add</property>
+  </object>
+  <object class="GtkImage" id="join_image">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">pidgin-chat</property>
+  </object>
+  <object class="GtkImage" id="refresh_image">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="stock">gtk-refresh</property>
+  </object>
+  <template class="PidginRoomlistDialog" parent="GtkDialog">
+    <property name="can_focus">False</property>
+    <property name="title" translatable="yes">Room List</property>
+    <property name="role">room list</property>
     <property name="type_hint">dialog</property>
-    <signal name="destroy" handler="destroy_win_cb" swapped="no"/>
+    <signal name="delete-event" handler="delete_win_cb" swapped="no"/>
     <child>
       <placeholder/>
     </child>
@@ -58,13 +61,13 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             <property name="layout_style">end</property>
             <child>
               <object class="GtkButton" id="stop_button">
-                <property name="label" translatable="yes">_Stop</property>
+                <property name="label">gtk-stop</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_underline">True</property>
-                <signal name="clicked" handler="stop_button_cb" object="PidginDiscoDialog" swapped="no"/>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="stop_button_cb" object="PidginRoomlistDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -73,13 +76,14 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="browse_button">
-                <property name="label" translatable="yes">_Browse</property>
+              <object class="GtkButton" id="list_button">
+                <property name="label" translatable="yes">_Get List</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="image">refresh_image</property>
                 <property name="use_underline">True</property>
-                <signal name="clicked" handler="browse_button_cb" object="PidginDiscoDialog" swapped="no"/>
+                <signal name="clicked" handler="list_button_cb" object="PidginRoomlistDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -88,13 +92,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="register_button">
-                <property name="label" translatable="yes">Register</property>
+              <object class="GtkButton" id="add_button">
+                <property name="label" translatable="yes">_Add Chat</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <signal name="clicked" handler="register_button_cb" object="PidginDiscoDialog" swapped="no"/>
+                <property name="image">add_image</property>
+                <property name="use_underline">True</property>
+                <signal name="clicked" handler="add_room_to_blist_cb" object="PidginRoomlistDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -103,14 +109,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </packing>
             </child>
             <child>
-              <object class="GtkButton" id="add_button">
-                <property name="label" translatable="yes">_Add</property>
+              <object class="GtkButton" id="join_button">
+                <property name="label" translatable="yes">_Join</property>
                 <property name="visible">True</property>
                 <property name="sensitive">False</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
+                <property name="image">join_image</property>
                 <property name="use_underline">True</property>
-                <signal name="clicked" handler="add_to_blist_cb" object="PidginDiscoDialog" swapped="no"/>
+                <signal name="clicked" handler="join_button_cb" object="PidginRoomlistDialog" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -120,12 +127,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             </child>
             <child>
               <object class="GtkButton" id="close_button">
-                <property name="label" translatable="yes">_Close</property>
+                <property name="label">gtk-close</property>
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
                 <property name="receives_default">True</property>
-                <property name="use_underline">True</property>
-                <signal name="clicked" handler="close_button_cb" swapped="no"/>
+                <property name="use_stock">True</property>
+                <signal name="clicked" handler="gtk_widget_destroy" object="PidginRoomlistDialog" swapped="yes"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -145,33 +152,40 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             <property name="visible">True</property>
             <property name="can_focus">False</property>
             <property name="orientation">vertical</property>
+            <property name="spacing">12</property>
             <child>
               <object class="GtkBox">
                 <property name="visible">True</property>
                 <property name="can_focus">False</property>
-                <property name="spacing">6</property>
+                <property name="spacing">5</property>
                 <child>
-                  <object class="GtkLabel">
+                  <object class="GtkLabel" id="label1">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
                     <property name="label" translatable="yes">_Account:</property>
                     <property name="use_underline">True</property>
-                    <property name="xalign">0</property>
+                    <property name="mnemonic_widget">account_widget</property>
+                    <accessibility>
+                      <relation type="label-for" target="account_widget"/>
+                    </accessibility>
                   </object>
                   <packing>
                     <property name="expand">False</property>
-                    <property name="fill">True</property>
+                    <property name="fill">False</property>
                     <property name="position">0</property>
                   </packing>
                 </child>
                 <child>
-                  <object class="PidginAccountChooser" id="account_chooser">
+                  <object class="PidginAccountChooser" id="account_widget">
                     <property name="visible">True</property>
                     <property name="can_focus">False</property>
-                    <signal name="changed" handler="dialog_select_account_cb" object="PidginDiscoDialog" swapped="no"/>
+                    <signal name="changed" handler="dialog_select_account_cb" object="PidginRoomlistDialog" swapped="no"/>
+                    <accessibility>
+                      <relation type="labelled-by" target="label1"/>
+                    </accessibility>
                   </object>
                   <packing>
-                    <property name="expand">False</property>
+                    <property name="expand">True</property>
                     <property name="fill">True</property>
                     <property name="position">1</property>
                   </packing>
@@ -179,66 +193,18 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
               </object>
               <packing>
                 <property name="expand">False</property>
-                <property name="fill">True</property>
+                <property name="fill">False</property>
                 <property name="position">0</property>
               </packing>
             </child>
             <child>
-              <object class="GtkScrolledWindow">
+              <object class="GtkScrolledWindow" id="sw">
                 <property name="visible">True</property>
                 <property name="can_focus">True</property>
-                <property name="hscrollbar_policy">always</property>
-                <property name="vscrollbar_policy">always</property>
                 <property name="shadow_type">in</property>
                 <property name="min_content_height">250</property>
                 <child>
-                  <object class="GtkTreeView" id="tree">
-                    <property name="visible">True</property>
-                    <property name="can_focus">True</property>
-                    <property name="model">model</property>
-                    <signal name="button-press-event" handler="service_click_cb" object="PidginDiscoDialog" swapped="no"/>
-                    <signal name="row-activated" handler="row_activated_cb" object="PidginDiscoDialog" swapped="no"/>
-                    <signal name="row-expanded" handler="row_expanded_cb" object="PidginDiscoDialog" swapped="no"/>
-                    <child internal-child="selection">
-                      <object class="GtkTreeSelection">
-                        <signal name="changed" handler="selection_changed_cb" swapped="no"/>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn">
-                        <property name="resizable">True</property>
-                        <property name="title" translatable="yes">Name</property>
-                        <property name="reorderable">True</property>
-                        <property name="sort_column_id">1</property>
-                        <child>
-                          <object class="GtkCellRendererPixbuf"/>
-                          <attributes>
-                            <attribute name="pixbuf">0</attribute>
-                          </attributes>
-                        </child>
-                        <child>
-                          <object class="GtkCellRendererText"/>
-                          <attributes>
-                            <attribute name="text">1</attribute>
-                          </attributes>
-                        </child>
-                      </object>
-                    </child>
-                    <child>
-                      <object class="GtkTreeViewColumn">
-                        <property name="resizable">True</property>
-                        <property name="title" translatable="yes">Description</property>
-                        <property name="reorderable">True</property>
-                        <property name="sort_column_id">2</property>
-                        <child>
-                          <object class="GtkCellRendererText"/>
-                          <attributes>
-                            <attribute name="text">2</attribute>
-                          </attributes>
-                        </child>
-                      </object>
-                    </child>
-                  </object>
+                  <placeholder/>
                 </child>
               </object>
               <packing>
@@ -260,7 +226,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
             </child>
           </object>
           <packing>
-            <property name="expand">True</property>
+            <property name="expand">False</property>
             <property name="fill">True</property>
             <property name="position">1</property>
           </packing>

@@ -94,13 +94,15 @@ plugin_loading_cb(GObject *manager, PurplePlugin *plugin, GError **error,
 	priv = purple_plugin_info_get_instance_private(info);
 
 	if (priv->error) {
+		gchar *filename = gplugin_plugin_get_filename(plugin);
 		purple_debug_error("plugins", "Failed to load plugin %s: %s",
-		                   gplugin_plugin_get_filename(plugin),
+		                   filename,
 		                   priv->error);
 
 		g_set_error(error, PURPLE_PLUGINS_DOMAIN, 0,
 				    "Plugin is not loadable: %s", priv->error);
 
+		g_free(filename);
 		return FALSE;
 	}
 
@@ -111,6 +113,7 @@ static void
 plugin_loaded_cb(GObject *manager, PurplePlugin *plugin)
 {
 	PurplePluginInfo *info;
+	gchar *filename;
 
 	g_return_if_fail(PURPLE_IS_PLUGIN(plugin));
 
@@ -119,11 +122,12 @@ plugin_loaded_cb(GObject *manager, PurplePlugin *plugin)
 		return; /* a GPlugin internal plugin */
 
 	loaded_plugins = g_list_prepend(loaded_plugins, plugin);
+	filename = gplugin_plugin_get_filename(plugin);
 
-	purple_debug_info("plugins", "Loaded plugin %s\n",
-	                  gplugin_plugin_get_filename(plugin));
+	purple_debug_info("plugins", "Loaded plugin %s\n", filename);
 
 	purple_signal_emit(purple_plugins_get_handle(), "plugin-load", plugin);
+	g_free(filename);
 }
 
 static gboolean
@@ -131,13 +135,16 @@ plugin_unloading_cb(GObject *manager, PurplePlugin *plugin, GError **error,
                     gpointer data)
 {
 	PurplePluginInfo *info;
+	gchar *filename;
 
 	g_return_val_if_fail(PURPLE_IS_PLUGIN(plugin), FALSE);
 
 	info = purple_plugin_get_info(plugin);
 	if (info) {
+		filename = gplugin_plugin_get_filename(plugin);
 		purple_debug_info("plugins", "Unloading plugin %s\n",
-		                  gplugin_plugin_get_filename(plugin));
+		                  filename);
+		g_free(filename);
 	}
 
 	return TRUE;
@@ -178,6 +185,7 @@ gboolean
 purple_plugin_load(PurplePlugin *plugin, GError **error)
 {
 	GError *err = NULL;
+	gchar *filename;
 
 	g_return_val_if_fail(plugin != NULL, FALSE);
 
@@ -185,14 +193,15 @@ purple_plugin_load(PurplePlugin *plugin, GError **error)
 		return TRUE;
 
 	if (!gplugin_manager_load_plugin(plugin, &err)) {
+	        filename = gplugin_plugin_get_filename(plugin);
 		purple_debug_error("plugins", "Failed to load plugin %s: %s",
-		                   gplugin_plugin_get_filename(plugin),
+		                   filename,
 		                   err ? err->message : "Unknown reason");
 
 		if (error)
 			*error = g_error_copy(err);
 		g_error_free(err);
-
+		g_free(filename);
 		return FALSE;
 	}
 
@@ -203,6 +212,7 @@ gboolean
 purple_plugin_unload(PurplePlugin *plugin, GError **error)
 {
 	GError *err = NULL;
+	gchar *filename;
 
 	g_return_val_if_fail(plugin != NULL, FALSE);
 
@@ -210,13 +220,15 @@ purple_plugin_unload(PurplePlugin *plugin, GError **error)
 		return TRUE;
 
 	if (!gplugin_manager_unload_plugin(plugin, &err)) {
+	        filename = gplugin_plugin_get_filename(plugin);
 		purple_debug_error("plugins", "Failed to unload plugin %s: %s",
-		                   gplugin_plugin_get_filename(plugin),
+		                   filename,
 		                   err ? err->message : "Unknown reason");
 
 		if (error)
 			*error = g_error_copy(err);
 		g_error_free(err);
+		g_free(filename);
 
 		return FALSE;
 	}
@@ -669,9 +681,11 @@ purple_plugins_refresh(void)
 
 		if (!priv->unloaded && purple_plugin_info_get_flags(info) &
 				PURPLE_PLUGIN_INFO_FLAGS_AUTO_LOAD) {
+			gchar *filename = gplugin_plugin_get_filename(plugin);
 			purple_debug_info("plugins", "Auto-loading plugin %s\n",
-			                  gplugin_plugin_get_filename(plugin));
+			                  filename);
 			purple_plugin_load(plugin, NULL);
+			g_free(filename);
 		}
 	}
 
@@ -710,12 +724,14 @@ purple_plugins_find_by_filename(const char *filename)
 
 	for (l = plugins; l != NULL; l = l->next) {
 		PurplePlugin *plugin = PURPLE_PLUGIN(l->data);
+		gchar *plugin_filename = gplugin_plugin_get_filename(plugin);
 
-		if (purple_strequal(gplugin_plugin_get_filename(plugin),
-		                    filename)) {
+		if (purple_strequal(plugin_filename, filename)) {
 			g_list_free(plugins);
+			g_free(plugin_filename);
 			return plugin;
 		}
+		g_free(plugin_filename);
 	}
 	g_list_free(plugins);
 
@@ -747,7 +763,7 @@ purple_plugins_save_loaded(const char *key)
 	}
 
 	purple_prefs_set_path_list(key, files);
-	g_list_free(files);
+	g_list_free_full(files, g_free);
 }
 
 void

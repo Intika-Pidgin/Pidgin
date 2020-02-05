@@ -31,18 +31,10 @@
 
 #define PURPLE_TYPE_XFER_UI_OPS      (purple_xfer_ui_ops_get_type())
 
-#define PURPLE_TYPE_PROTOCOL_XFER           (purple_protocol_xfer_get_type())
-#define PURPLE_PROTOCOL_XFER(obj)           (G_TYPE_CHECK_INSTANCE_CAST((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXfer))
-#define PURPLE_IS_PROTOCOL_XFER(obj)        (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_XFER))
-#define PURPLE_PROTOCOL_XFER_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_XFER, PurpleProtocolXferInterface))
-
 /**************************************************************************/
 /* Data Structures                                                        */
 /**************************************************************************/
 typedef struct _PurpleXferUiOps PurpleXferUiOps;
-
-typedef struct _PurpleProtocolXfer PurpleProtocolXfer;
-typedef struct _PurpleProtocolXferInterface PurpleProtocolXferInterface;
 
 #include <glib.h>
 #include <stdio.h>
@@ -99,41 +91,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
 /**
  * PurpleXferUiOps:
  * @new_xfer: UI op that's called after a new transfer is created.
- * @destroy: UI op that's called when a transfer is being destroyed.
- * @add_xfer: UI op that's called when a transfer should be added to the UI.
- * @update_progress: UI op that's called when a transfer's progress has been
- *                   updated.
- * @cancel_local: UI op that's called when a transfer has been cancelled on the
- *                local end.
- * @cancel_remote: UI op that's called when a transfer has been cancelled on
- *                 the remote end.
- * @ui_write: UI op to write data received from the protocol. The UI must deal
- *            with the entire buffer and return size, or it is treated as an
- *            error.
- *            <sbr/>@xfer:   The file transfer structure
- *            <sbr/>@buffer: The buffer to write
- *            <sbr/>@size:   The size of the buffer
- *            <sbr/>Returns: size if the write was successful, or a value
- *                           between 0 and size on error.
- * @ui_read: UI op to read data to send to the protocol for a file transfer.
- *           <sbr/>@xfer:   The file transfer structure
- *           <sbr/>@buffer: A pointer to a buffer. The UI must allocate this
- *                          buffer. libpurple will free the data.
- *           <sbr/>@size:   The maximum amount of data to put in the buffer.
- *           <sbr/>Returns: The amount of data in the buffer, 0 if nothing is
- *                          available, and a negative value if an error occurred
- *                          and the transfer should be cancelled (libpurple will
- *                          cancel).
- * @data_not_sent: Op to notify the UI that not all the data read in was
- *                 written. The UI should re-enqueue this data and return it the
- *                 next time read is called.
- *                 <sbr/>This <emphasis>MUST</emphasis> be implemented if read
- *                 and write are implemented.
- *                 <sbr/>@xfer:   The file transfer structure
- *                 <sbr/>@buffer: A pointer to the beginning of the unwritten
- *                                data.
- *                 <sbr/>@size:   The amount of unwritten data.
- * @add_thumbnail: Op to create a thumbnail image for a file transfer
  *
  * File transfer UI operations.
  *
@@ -143,15 +100,6 @@ G_DECLARE_DERIVABLE_TYPE(PurpleXfer, purple_xfer, PURPLE, XFER, GObject)
 struct _PurpleXferUiOps
 {
 	void (*new_xfer)(PurpleXfer *xfer);
-	void (*destroy)(PurpleXfer *xfer);
-	void (*add_xfer)(PurpleXfer *xfer);
-	void (*update_progress)(PurpleXfer *xfer, double percent);
-	void (*cancel_local)(PurpleXfer *xfer);
-	void (*cancel_remote)(PurpleXfer *xfer);
-	gssize (*ui_write)(PurpleXfer *xfer, const guchar *buffer, gssize size);
-	gssize (*ui_read)(PurpleXfer *xfer, guchar **buffer, gssize size);
-	void (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer, gsize size);
-	void (*add_thumbnail)(PurpleXfer *xfer, const gchar *formats);
 };
 
 /**
@@ -166,6 +114,11 @@ struct _PurpleXferUiOps
  * @read: Called when reading data from the file transfer.
  * @write: Called when writing data to the file transfer.
  * @ack: Called when a file transfer is acknowledged.
+ * @open_local: The vfunc for PurpleXfer::open-local. Since: 3.0.0
+ * @query_local: The vfunc for PurpleXfer::query-local. Since: 3.0.0
+ * @read_local: The vfunc for PurpleXfer::read-local. Since: 3.0.0
+ * @write_local: The vfunc for PurpleXfer::write-local. Since: 3.0.0
+ * @data_not_sent: The vfunc for PurpleXfer::data-not-sent. Since: 3.0.0
  *
  * Base class for all #PurpleXfer's
  */
@@ -183,35 +136,15 @@ struct _PurpleXferClass
 	gssize (*write)(PurpleXfer *xfer, const guchar *buffer, gsize size);
 	void (*ack)(PurpleXfer *xfer, const guchar *buffer, gsize size);
 
+	gboolean (*open_local)(PurpleXfer *xfer);
+	gboolean (*query_local)(PurpleXfer *xfer, const gchar *filename);
+	gssize (*read_local)(PurpleXfer *xfer, guchar *buffer, gssize size);
+	gssize (*write_local)(PurpleXfer *xfer, const guchar *buffer, gssize size);
+	gboolean (*data_not_sent)(PurpleXfer *xfer, const guchar *buffer,
+	                          gsize size);
+
 	/*< private >*/
 	gpointer reserved[4];
-};
-
-/**
- * PurpleProtocolXferInterface:
- * @can_receive: A method to determine if we can receive a file.
- * @send_file: A method to determine if we can send a file.
- * @new_xfer: A method to create a new file transfer.
- *
- * The protocol file transfer interface.
- *
- * This interface provides file transfer callbacks for the protocol.
- */
-struct _PurpleProtocolXferInterface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer,
-			PurpleConnection *connection, const gchar *who);
-
-	void (*send_file)(PurpleProtocolXfer *prplxfer,
-			PurpleConnection *connection, const gchar *who,
-			const gchar *filename);
-
-	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer,
-			PurpleConnection *connection, const gchar *who);
 };
 
 /**************************************************************************/
@@ -329,6 +262,20 @@ const char *purple_xfer_get_remote_user(PurpleXfer *xfer);
  * Returns: The status.
  */
 PurpleXferStatus purple_xfer_get_status(PurpleXfer *xfer);
+
+/**
+ * purple_xfer_get_visible:
+ * @xfer: The file transfer.
+ *
+ * Returns whether the UI should show the file transfer in its listing.
+ *
+ * Note, this is just a hint for UIs and has no effect internally.
+ *
+ * Returns: The visibility.
+ *
+ * Since: 3.0.0
+ */
+gboolean purple_xfer_get_visible(PurpleXfer *xfer);
 
 /**
  * purple_xfer_is_cancelled:
@@ -499,6 +446,19 @@ void purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed);
 void purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatus status);
 
 /**
+ * purple_xfer_set_visible:
+ * @xfer: The file transfer.
+ * @visible: The visibility.
+ *
+ * Sets whether the UI should show the file transfer in its listing.
+ *
+ * Note, this is just a hint for UIs and has no effect internally.
+ *
+ * Since: 3.0.0
+ */
+void purple_xfer_set_visible(PurpleXfer *xfer, gboolean visible);
+
+/**
  * purple_xfer_set_message:
  * @xfer:     The file transfer.
  * @message: The message.
@@ -660,15 +620,6 @@ void purple_xfer_start(PurpleXfer *xfer, int fd, const char *ip, guint16 port);
 void purple_xfer_end(PurpleXfer *xfer);
 
 /**
- * purple_xfer_add:
- * @xfer: The file transfer.
- *
- * Adds a new file transfer to the list of file transfers. Call this only
- * if you are not using purple_xfer_start.
- */
-void purple_xfer_add(PurpleXfer *xfer);
-
-/**
  * purple_xfer_cancel_local:
  * @xfer: The file transfer.
  *
@@ -698,14 +649,6 @@ void purple_xfer_cancel_remote(PurpleXfer *xfer);
  * "File Transfer from <literal>user</literal> failed").
  */
 void purple_xfer_error(PurpleXferType type, PurpleAccount *account, const char *who, const char *msg);
-
-/**
- * purple_xfer_update_progress:
- * @xfer:      The file transfer.
- *
- * Updates file transfer progress.
- */
-void purple_xfer_update_progress(PurpleXfer *xfer);
 
 /**
  * purple_xfer_conversation_write:
@@ -785,27 +728,6 @@ void purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
  */
 void purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats);
 
-/**
- * purple_xfer_set_ui_data:
- * @xfer:			The file transfer.
- * @ui_data:		A pointer to associate with this file transfer.
- *
- * Set the UI data associated with this file transfer.
- */
-void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data);
-
-/**
- * purple_xfer_get_ui_data:
- * @xfer:			The file transfer.
- *
- * Get the UI data associated with this file transfer.
- *
- * Returns: The UI data associated with this file transfer.  This is a
- *         convenience field provided to the UIs--it is not
- *         used by the libpurple core.
- */
-gpointer purple_xfer_get_ui_data(PurpleXfer *xfer);
-
 /**************************************************************************/
 /* File Transfer Subsystem API                                            */
 /**************************************************************************/
@@ -870,13 +792,41 @@ PurpleXferUiOps *purple_xfers_get_ui_ops(void);
 /******************************************************************************
  * Protocol Interface
  *****************************************************************************/
+#define PURPLE_TYPE_PROTOCOL_XFER (purple_protocol_xfer_get_type())
 
 /**
  * purple_protocol_xfer_get_type:
  *
  * Returns: The #GType for the protocol xfer interface.
  */
-GType purple_protocol_xfer_get_type(void);
+G_DECLARE_INTERFACE(PurpleProtocolXfer, purple_protocol_xfer, PURPLE,
+                    PROTOCOL_XFER, GObject)
+
+/**
+ * PurpleProtocolXferInterface:
+ * @can_receive: A method to determine if we can receive a file.
+ * @send_file: A method to determine if we can send a file.
+ * @new_xfer: A method to create a new file transfer.
+ *
+ * The protocol file transfer interface.
+ *
+ * This interface provides file transfer callbacks for the protocol.
+ */
+struct _PurpleProtocolXferInterface {
+	/*< private >*/
+	GTypeInterface parent_iface;
+
+	/*< public >*/
+	gboolean (*can_receive)(PurpleProtocolXfer *prplxfer,
+	                        PurpleConnection *connection, const gchar *who);
+
+	void (*send_file)(PurpleProtocolXfer *prplxfer,
+	                  PurpleConnection *connection, const gchar *who,
+	                  const gchar *filename);
+
+	PurpleXfer *(*new_xfer)(PurpleProtocolXfer *prplxfer,
+	                        PurpleConnection *connection, const gchar *who);
+};
 
 /**
  * purple_protocol_xfer_can_receive:

@@ -73,7 +73,8 @@ struct _PurpleXferPrivate {
 
 	PurpleXferStatus status;     /* File Transfer's status.             */
 
-	gpointer ui_data;            /* UI-specific data                    */
+	gboolean visible;            /* Hint the UI that the transfer should
+	                                be visible or not. */
 	PurpleXferUiOps *ui_ops;     /* UI-specific operations.             */
 
 	/*
@@ -115,11 +116,25 @@ enum
 	PROP_START_TIME,
 	PROP_END_TIME,
 	PROP_STATUS,
-	PROP_UI_DATA,
+	PROP_PROGRESS,
+	PROP_VISIBLE,
 	PROP_LAST
 };
 
 static GParamSpec *properties[PROP_LAST];
+
+/* GObject signal enums */
+enum
+{
+	SIG_OPEN_LOCAL,
+	SIG_QUERY_LOCAL,
+	SIG_READ_LOCAL,
+	SIG_WRITE_LOCAL,
+	SIG_DATA_NOT_SENT,
+	SIG_ADD_THUMBNAIL,
+	SIG_LAST
+};
+static guint signals[SIG_LAST] = {0};
 
 G_DEFINE_TYPE_WITH_PRIVATE(PurpleXfer, purple_xfer, G_TYPE_OBJECT);
 
@@ -169,44 +184,19 @@ purple_xfer_set_status(PurpleXfer *xfer, PurpleXferStatus status)
 	priv->status = status;
 
 	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_STATUS]);
+}
 
-	if(priv->type == PURPLE_XFER_TYPE_SEND) {
-		switch(status) {
-			case PURPLE_XFER_STATUS_ACCEPTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-accept", xfer);
-				break;
-			case PURPLE_XFER_STATUS_STARTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-start", xfer);
-				break;
-			case PURPLE_XFER_STATUS_DONE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-complete", xfer);
-				break;
-			case PURPLE_XFER_STATUS_CANCEL_LOCAL:
-			case PURPLE_XFER_STATUS_CANCEL_REMOTE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-send-cancel", xfer);
-				break;
-			default:
-				break;
-		}
-	} else if(priv->type == PURPLE_XFER_TYPE_RECEIVE) {
-		switch(status) {
-			case PURPLE_XFER_STATUS_ACCEPTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-accept", xfer);
-				break;
-			case PURPLE_XFER_STATUS_STARTED:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-start", xfer);
-				break;
-			case PURPLE_XFER_STATUS_DONE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-complete", xfer);
-				break;
-			case PURPLE_XFER_STATUS_CANCEL_LOCAL:
-			case PURPLE_XFER_STATUS_CANCEL_REMOTE:
-				purple_signal_emit(purple_xfers_get_handle(), "file-recv-cancel", xfer);
-				break;
-			default:
-				break;
-		}
-	}
+void
+purple_xfer_set_visible(PurpleXfer *xfer, gboolean visible)
+{
+	PurpleXferPrivate *priv = NULL;
+
+	g_return_if_fail(PURPLE_IS_XFER(xfer));
+
+	priv = purple_xfer_get_instance_private(xfer);
+	priv->visible = visible;
+
+	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_VISIBLE]);
 }
 
 static void
@@ -571,12 +561,25 @@ purple_xfer_request(PurpleXfer *xfer)
 	}
 }
 
+static gboolean
+do_query_local(PurpleXfer *xfer, const gchar *filename)
+{
+	GStatBuf st;
+
+	if (g_stat(filename, &st) == -1) {
+		purple_xfer_show_file_error(xfer, filename);
+		return FALSE;
+	}
+
+	purple_xfer_set_size(xfer, st.st_size);
+	return TRUE;
+}
+
 void
 purple_xfer_request_accepted(PurpleXfer *xfer, const gchar *filename)
 {
 	PurpleXferClass *klass = NULL;
 	PurpleXferPrivate *priv = NULL;
-	GStatBuf st;
 	gchar *msg, *utf8, *base;
 	PurpleBuddy *buddy;
 
@@ -606,8 +609,7 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const gchar *filename)
 	if (priv->type == PURPLE_XFER_TYPE_SEND) {
 		/* Sending a file */
 		/* Check the filename. */
-		PurpleXferUiOps *ui_ops;
-		ui_ops = purple_xfer_get_ui_ops(xfer);
+		gboolean query_status;
 
 #ifdef _WIN32
 		if (g_strrstr(filename, "../") || g_strrstr(filename, "..\\"))
@@ -626,18 +628,13 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const gchar *filename)
 			return;
 		}
 
-		if (ui_ops == NULL || (ui_ops->ui_read == NULL && ui_ops->ui_write == NULL)) {
-			if (g_stat(filename, &st) == -1) {
-				purple_xfer_show_file_error(xfer, filename);
-				g_object_unref(xfer);
-				return;
-			}
-
-			purple_xfer_set_local_filename(xfer, filename);
-			purple_xfer_set_size(xfer, st.st_size);
-		} else {
-			purple_xfer_set_local_filename(xfer, filename);
+		g_signal_emit(xfer, signals[SIG_QUERY_LOCAL], 0, filename,
+		              &query_status);
+		if (!query_status) {
+			g_object_unref(xfer);
+			return;
 		}
+		purple_xfer_set_local_filename(xfer, filename);
 
 		base = g_path_get_basename(filename);
 		utf8 = g_filename_to_utf8(base, -1, NULL, NULL, NULL);
@@ -661,7 +658,7 @@ purple_xfer_request_accepted(PurpleXfer *xfer, const gchar *filename)
 		g_free(msg);
 	}
 
-	purple_xfer_add(xfer);
+	purple_xfer_set_visible(xfer, TRUE);
 
 	klass->init(xfer);
 }
@@ -760,6 +757,17 @@ purple_xfer_get_status(PurpleXfer *xfer)
 
 	priv = purple_xfer_get_instance_private(xfer);
 	return priv->status;
+}
+
+gboolean
+purple_xfer_get_visible(PurpleXfer *xfer)
+{
+	PurpleXferPrivate *priv = NULL;
+
+	g_return_val_if_fail(PURPLE_IS_XFER(xfer), FALSE);
+
+	priv = purple_xfer_get_instance_private(xfer);
+	return priv->visible;
 }
 
 gboolean
@@ -932,7 +940,6 @@ void
 purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 {
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
@@ -973,10 +980,7 @@ purple_xfer_set_completed(PurpleXfer *xfer, gboolean completed)
 		g_free(msg);
 	}
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->update_progress != NULL)
-		ui_ops->update_progress(xfer, purple_xfer_get_progress(xfer));
+	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_PROGRESS]);
 }
 
 void
@@ -1045,13 +1049,18 @@ void
 purple_xfer_set_size(PurpleXfer *xfer, goffset size)
 {
 	PurpleXferPrivate *priv = NULL;
+	GObject *obj;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
 	priv = purple_xfer_get_instance_private(xfer);
 	priv->size = size;
 
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_FILE_SIZE]);
+	obj = G_OBJECT(xfer);
+	g_object_freeze_notify(obj);
+	g_object_notify_by_pspec(obj, properties[PROP_FILE_SIZE]);
+	g_object_notify_by_pspec(obj, properties[PROP_PROGRESS]);
+	g_object_thaw_notify(obj);
 }
 
 void
@@ -1071,13 +1080,18 @@ void
 purple_xfer_set_bytes_sent(PurpleXfer *xfer, goffset bytes_sent)
 {
 	PurpleXferPrivate *priv = NULL;
+	GObject *obj;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
 	priv = purple_xfer_get_instance_private(xfer);
 	priv->bytes_sent = bytes_sent;
 
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_BYTES_SENT]);
+	obj = G_OBJECT(xfer);
+	g_object_freeze_notify(obj);
+	g_object_notify_by_pspec(obj, properties[PROP_BYTES_SENT]);
+	g_object_notify_by_pspec(obj, properties[PROP_PROGRESS]);
+	g_object_thaw_notify(obj);
 }
 
 PurpleXferUiOps *
@@ -1206,11 +1220,23 @@ purple_xfer_write(PurpleXfer *xfer, const guchar *buffer, gsize size)
 	return do_write(xfer, buffer, s);
 }
 
+static gssize
+do_write_local(PurpleXfer *xfer, const guchar *buffer, gssize size)
+{
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
+
+	if (priv->dest_fp == NULL) {
+		purple_debug_error("xfer", "File is not opened for writing");
+		return -1;
+	}
+
+	return fwrite(buffer, 1, size, priv->dest_fp);
+}
+
 gboolean
 purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 {
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 	gsize wc;
 	goffset remaining;
 	gboolean fs_known;
@@ -1220,7 +1246,6 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 
 	priv = purple_xfer_get_instance_private(xfer);
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
 	fs_known = (priv->size > 0);
 
 	remaining = purple_xfer_get_bytes_remaining(xfer);
@@ -1231,17 +1256,7 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 		size = remaining;
 	}
 
-	if (ui_ops && ui_ops->ui_write) {
-		wc = ui_ops->ui_write(xfer, buffer, size);
-	} else {
-		if (priv->dest_fp == NULL) {
-			purple_debug_error("xfer",
-				"File is not opened for writing\n");
-			purple_xfer_cancel_local(xfer);
-			return FALSE;
-		}
-		wc = fwrite(buffer, 1, size, priv->dest_fp);
-	}
+	g_signal_emit(xfer, signals[SIG_WRITE_LOCAL], 0, buffer, size, &wc);
 
 	if (wc != size) {
 		purple_debug_error("xfer",
@@ -1258,51 +1273,39 @@ purple_xfer_write_file(PurpleXfer *xfer, const guchar *buffer, gsize size)
 	return TRUE;
 }
 
+static gssize
+do_read_local(PurpleXfer *xfer, guchar *buffer, gssize size)
+{
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
+	gssize got_len;
+
+	if (priv->dest_fp == NULL) {
+		purple_debug_error("xfer", "File is not opened for reading");
+		return -1;
+	}
+
+	got_len = fread(buffer, 1, size, priv->dest_fp);
+	if ((got_len < 0 || got_len != size) && ferror(priv->dest_fp)) {
+		purple_debug_error("xfer", "Unable to read file.");
+		return -1;
+	}
+
+	return got_len;
+}
+
 gssize
 purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 {
-	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 	gssize got_len;
 
 	g_return_val_if_fail(PURPLE_IS_XFER(xfer), 0);
 	g_return_val_if_fail(buffer != NULL, 0);
 
-	priv = purple_xfer_get_instance_private(xfer);
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops && ui_ops->ui_read) {
-		guchar *buffer_got = NULL;
-
-		got_len = ui_ops->ui_read(xfer, &buffer_got, size);
-
-		if (got_len >= 0 && (gsize)got_len > size) {
-			g_free(buffer_got);
-			purple_debug_error("xfer",
-				"Got too much data from UI.\n");
-			purple_xfer_cancel_local(xfer);
-			return -1;
-		}
-
-		if (got_len > 0)
-			memcpy(buffer, buffer_got, got_len);
-		g_free(buffer_got);
-	} else {
-		if (priv->dest_fp == NULL) {
-			purple_debug_error("xfer",
-				"File is not opened for reading\n");
-			purple_xfer_cancel_local(xfer);
-			return -1;
-		}
-		got_len = fread(buffer, 1, size, priv->dest_fp);
-		if ((got_len < 0 || (gsize)got_len != size) &&
-			ferror(priv->dest_fp))
-		{
-			purple_debug_error("xfer",
-				"Unable to read file.\n");
-			purple_xfer_cancel_local(xfer);
-			return -1;
-		}
+	g_signal_emit(xfer, signals[SIG_READ_LOCAL], 0, buffer, size, &got_len);
+	if (got_len < 0 || got_len > size) {
+		purple_debug_error("xfer", "Unable to read file.");
+		purple_xfer_cancel_local(xfer);
+		return -1;
 	}
 
 	if (got_len > 0) {
@@ -1313,15 +1316,25 @@ purple_xfer_read_file(PurpleXfer *xfer, guchar *buffer, gsize size)
 	return got_len;
 }
 
+static gboolean
+do_data_not_sent(PurpleXfer *xfer, const guchar *buffer, gsize size)
+{
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
+
+	if (priv->buffer == NULL) {
+		priv->buffer = g_byte_array_sized_new(FT_INITIAL_BUFFER_SIZE);
+		g_byte_array_append(priv->buffer, buffer, size);
+	}
+
+	return TRUE;
+}
+
 static void
 do_transfer(PurpleXfer *xfer)
 {
 	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
-	PurpleXferUiOps *ui_ops;
 	guchar *buffer = NULL;
 	gssize r = 0;
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
 
 	if (priv->type == PURPLE_XFER_TYPE_RECEIVE) {
 		r = purple_xfer_read(xfer, &buffer);
@@ -1342,7 +1355,8 @@ do_transfer(PurpleXfer *xfer)
 			(gsize)purple_xfer_get_bytes_remaining(xfer),
 			(gsize)priv->current_buffer_size
 		);
-		gboolean read = TRUE;
+		gboolean read_more = TRUE;
+		gboolean existing_buffer = FALSE;
 
 		/* this is so the protocol can keep the connection open
 		   if it needs to for some odd reason. */
@@ -1355,15 +1369,16 @@ do_transfer(PurpleXfer *xfer)
 		}
 
 		if (priv->buffer) {
+			existing_buffer = TRUE;
 			if (priv->buffer->len < s) {
 				s -= priv->buffer->len;
-				read = TRUE;
+				read_more = TRUE;
 			} else {
-				read = FALSE;
+				read_more = FALSE;
 			}
 		}
 
-		if (read) {
+		if (read_more) {
 			buffer = g_new(guchar, s);
 			result = purple_xfer_read_file(xfer, buffer, s);
 			if (result == 0) {
@@ -1414,11 +1429,15 @@ do_transfer(PurpleXfer *xfer)
 			 */
 			purple_xfer_increase_buffer_size(xfer);
 		} else {
-			if (ui_ops && ui_ops->data_not_sent)
-				ui_ops->data_not_sent(xfer, buffer + r, result - r);
+			gboolean result;
+			g_signal_emit(xfer, signals[SIG_DATA_NOT_SENT], 0, buffer + r,
+			              result - r, &result);
+			if (!result) {
+				purple_xfer_cancel_local(xfer);
+			}
 		}
 
-		if (priv->buffer) {
+		if (existing_buffer && priv->buffer) {
 			/*
 			 * Remove what we wrote
 			 * If we wrote the whole buffer the byte array will be empty
@@ -1434,10 +1453,6 @@ do_transfer(PurpleXfer *xfer)
 
 		if (klass && klass->ack)
 			klass->ack(xfer, buffer, r);
-
-		if (ui_ops != NULL && ui_ops->update_progress != NULL)
-			ui_ops->update_progress(xfer,
-				purple_xfer_get_progress(xfer));
 	}
 
 	g_free(buffer);
@@ -1479,34 +1494,44 @@ transfer_cb(gpointer data, gint source, PurpleInputCondition condition)
 	do_transfer(xfer);
 }
 
+static gboolean
+do_open_local(PurpleXfer *xfer)
+{
+	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
+
+	priv->dest_fp =
+	        g_fopen(purple_xfer_get_local_filename(xfer),
+	                priv->type == PURPLE_XFER_TYPE_RECEIVE ? "wb" : "rb");
+
+	if (priv->dest_fp == NULL) {
+		purple_xfer_show_file_error(xfer, purple_xfer_get_local_filename(xfer));
+		return FALSE;
+	}
+
+	if (fseek(priv->dest_fp, priv->bytes_sent, SEEK_SET) != 0) {
+		purple_debug_error("xfer", "couldn't seek");
+		purple_xfer_show_file_error(xfer, purple_xfer_get_local_filename(xfer));
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
 static void
 begin_transfer(PurpleXfer *xfer, PurpleInputCondition cond)
 {
 	PurpleXferClass *klass = PURPLE_XFER_GET_CLASS(xfer);
 	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
-	PurpleXferUiOps *ui_ops = purple_xfer_get_ui_ops(xfer);
+	gboolean open_status = FALSE;
 
 	if (priv->start_time != 0) {
 		purple_debug_error("xfer", "Transfer is being started multiple times\n");
 		g_return_if_reached();
 	}
 
-	if (ui_ops == NULL || (ui_ops->ui_read == NULL && ui_ops->ui_write == NULL)) {
-		priv->dest_fp = g_fopen(purple_xfer_get_local_filename(xfer),
-		                        priv->type == PURPLE_XFER_TYPE_RECEIVE ? "wb" : "rb");
-
-		if (priv->dest_fp == NULL) {
-			purple_xfer_show_file_error(xfer, purple_xfer_get_local_filename(xfer));
-			purple_xfer_cancel_local(xfer);
-			return;
-		}
-
-		if (fseek(priv->dest_fp, priv->bytes_sent, SEEK_SET) != 0) {
-			purple_debug_error("xfer", "couldn't seek\n");
-			purple_xfer_show_file_error(xfer, purple_xfer_get_local_filename(xfer));
-			purple_xfer_cancel_local(xfer);
-			return;
-		}
+	g_signal_emit(xfer, signals[SIG_OPEN_LOCAL], 0, &open_status);
+	if (!open_status) {
+		purple_xfer_cancel_local(xfer);
 	}
 
 	if (priv->fd != -1) {
@@ -1698,24 +1723,10 @@ purple_xfer_end(PurpleXfer *xfer)
 }
 
 void
-purple_xfer_add(PurpleXfer *xfer)
-{
-	PurpleXferUiOps *ui_ops;
-
-	g_return_if_fail(PURPLE_IS_XFER(xfer));
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->add_xfer != NULL)
-		ui_ops->add_xfer(xfer);
-}
-
-void
 purple_xfer_cancel_local(PurpleXfer *xfer)
 {
 	PurpleXferClass *klass = NULL;
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 	char *msg = NULL;
 
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
@@ -1779,12 +1790,6 @@ purple_xfer_cancel_local(PurpleXfer *xfer)
 		priv->dest_fp = NULL;
 	}
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->cancel_local != NULL) {
-		ui_ops->cancel_local(xfer);
-	}
-
 	g_object_unref(xfer);
 }
 
@@ -1793,7 +1798,6 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 {
 	PurpleXferClass *klass = NULL;
 	PurpleXferPrivate *priv = NULL;
-	PurpleXferUiOps *ui_ops;
 	gchar *msg;
 	PurpleAccount *account;
 	PurpleBuddy *buddy;
@@ -1849,11 +1853,6 @@ purple_xfer_cancel_remote(PurpleXfer *xfer)
 		priv->dest_fp = NULL;
 	}
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->cancel_remote != NULL)
-		ui_ops->cancel_remote(xfer);
-
 	g_object_unref(xfer);
 }
 
@@ -1881,19 +1880,6 @@ purple_xfer_error(PurpleXferType type, PurpleAccount *account, const gchar *who,
 		purple_request_cpar_from_account(account));
 
 	g_free(title);
-}
-
-void
-purple_xfer_update_progress(PurpleXfer *xfer)
-{
-	PurpleXferUiOps *ui_ops;
-
-	g_return_if_fail(PURPLE_IS_XFER(xfer));
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-	if (ui_ops != NULL && ui_ops->update_progress != NULL) {
-		ui_ops->update_progress(xfer, purple_xfer_get_progress(xfer));
-	}
 }
 
 gconstpointer
@@ -1958,38 +1944,9 @@ purple_xfer_set_thumbnail(PurpleXfer *xfer, gconstpointer thumbnail,
 void
 purple_xfer_prepare_thumbnail(PurpleXfer *xfer, const gchar *formats)
 {
-	PurpleXferUiOps *ui_ops;
-
 	g_return_if_fail(PURPLE_IS_XFER(xfer));
 
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-	if (ui_ops && ui_ops->add_thumbnail) {
-		ui_ops->add_thumbnail(xfer, formats);
-	}
-}
-
-void purple_xfer_set_ui_data(PurpleXfer *xfer, gpointer ui_data)
-{
-	PurpleXferPrivate *priv = NULL;
-
-	g_return_if_fail(PURPLE_IS_XFER(xfer));
-
-	priv = purple_xfer_get_instance_private(xfer);
-
-	priv->ui_data = ui_data;
-
-	g_object_notify_by_pspec(G_OBJECT(xfer), properties[PROP_UI_DATA]);
-}
-
-gpointer purple_xfer_get_ui_data(PurpleXfer *xfer)
-{
-	PurpleXferPrivate *priv = NULL;
-
-	g_return_val_if_fail(PURPLE_IS_XFER(xfer), NULL);
-
-	priv = purple_xfer_get_instance_private(xfer);
-
-	return priv->ui_data;
+	g_signal_emit(xfer, signals[SIG_ADD_THUMBNAIL], 0, formats, NULL);
 }
 
 /**************************************************************************
@@ -2039,8 +1996,8 @@ purple_xfer_set_property(GObject *obj, guint param_id, const GValue *value,
 		case PROP_STATUS:
 			purple_xfer_set_status(xfer, g_value_get_enum(value));
 			break;
-		case PROP_UI_DATA:
-			purple_xfer_set_ui_data(xfer, g_value_get_pointer(value));
+		case PROP_VISIBLE:
+			purple_xfer_set_visible(xfer, g_value_get_boolean(value));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -2103,8 +2060,11 @@ purple_xfer_get_property(GObject *obj, guint param_id, GValue *value,
 		case PROP_STATUS:
 			g_value_set_enum(value, purple_xfer_get_status(xfer));
 			break;
-		case PROP_UI_DATA:
-			g_value_set_pointer(value, purple_xfer_get_ui_data(xfer));
+		case PROP_PROGRESS:
+			g_value_set_double(value, purple_xfer_get_progress(xfer));
+			break;
+		case PROP_VISIBLE:
+			g_value_set_boolean(value, purple_xfer_get_visible(xfer));
 			break;
 		default:
 			G_OBJECT_WARN_INVALID_PROPERTY_ID(obj, param_id, pspec);
@@ -2127,19 +2087,11 @@ static void
 purple_xfer_constructed(GObject *object)
 {
 	PurpleXfer *xfer = PURPLE_XFER(object);
-	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
 	PurpleXferUiOps *ui_ops;
 
 	G_OBJECT_CLASS(purple_xfer_parent_class)->constructed(object);
 
 	ui_ops = purple_xfers_get_ui_ops();
-
-	if (ui_ops && ui_ops->data_not_sent) {
-		/* If the ui will handle unsent data no need for buffer */
-		priv->buffer = NULL;
-	} else {
-		priv->buffer = g_byte_array_sized_new(FT_INITIAL_BUFFER_SIZE);
-	}
 
 	if (ui_ops != NULL && ui_ops->new_xfer != NULL) {
 		ui_ops->new_xfer(xfer);
@@ -2153,19 +2105,12 @@ purple_xfer_finalize(GObject *object)
 {
 	PurpleXfer *xfer = PURPLE_XFER(object);
 	PurpleXferPrivate *priv = purple_xfer_get_instance_private(xfer);
-	PurpleXferUiOps *ui_ops;
 
 	/* Close the file browser, if it's open */
 	purple_request_close_with_handle(xfer);
 
 	if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_STARTED) {
 		purple_xfer_cancel_local(xfer);
-	}
-
-	ui_ops = purple_xfer_get_ui_ops(xfer);
-
-	if (ui_ops != NULL && ui_ops->destroy != NULL) {
-		ui_ops->destroy(xfer);
 	}
 
 	xfers = g_list_remove(xfers, xfer);
@@ -2198,6 +2143,14 @@ purple_xfer_class_init(PurpleXferClass *klass)
 
 	klass->write = do_write;
 	klass->read = do_read;
+
+	klass->open_local = do_open_local;
+	klass->query_local = do_query_local;
+	klass->read_local = do_read_local;
+	klass->write_local = do_write_local;
+	klass->data_not_sent = do_data_not_sent;
+
+	/* Properties */
 
 	properties[PROP_TYPE] = g_param_spec_enum("type", "Transfer type",
 				"The type of file transfer.", PURPLE_TYPE_XFER_TYPE,
@@ -2280,11 +2233,149 @@ purple_xfer_class_init(PurpleXferClass *klass)
 				PURPLE_TYPE_XFER_STATUS, PURPLE_XFER_STATUS_UNKNOWN,
 				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
-	properties[PROP_UI_DATA] = g_param_spec_pointer("ui-data", "UI Data",
-				"The UI specific data for this xfer",
-				G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
+	properties[PROP_PROGRESS] = g_param_spec_double(
+	        "progress", "Progress",
+	        "The current progress of the file transfer.", -1.0, 1.0, -1.0,
+	        G_PARAM_READABLE | G_PARAM_STATIC_STRINGS);
+
+	properties[PROP_VISIBLE] = g_param_spec_boolean(
+	        "visible", "Visible",
+	        "Hint for UIs whether this transfer should be visible.", FALSE,
+	        G_PARAM_READWRITE | G_PARAM_STATIC_STRINGS);
 
 	g_object_class_install_properties(obj_class, PROP_LAST, properties);
+
+	/* Signals */
+
+	/**
+	 * PurpleXfer::open-local:
+	 *
+	 * Open a file locally for a file transfer.
+	 *
+	 * The default class handler will open a file using standard library
+	 * functions. If you connect to this signal, you should connect to
+	 * PurpleXfer::query-local, PurpleXfer::read-local, PurpleXfer::write-local
+	 * and PurpleXfer::data-not-sent as well.
+	 *
+	 * Returns: %TRUE if the file was opened successfully, or %FALSE otherwise,
+	 *          and the transfer should be cancelled (libpurple will cancel).
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_OPEN_LOCAL] = g_signal_new(
+	        "open-local", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST,
+	        G_STRUCT_OFFSET(PurpleXferClass, open_local),
+	        g_signal_accumulator_first_wins, NULL, NULL, G_TYPE_BOOLEAN, 0);
+
+	/**
+	 * PurpleXfer::query-local:
+	 * @filename: The filename of the transfer.
+	 *
+	 * Query a file's properties locally.
+	 *
+	 * The default class handler will query a file using standard library
+	 * functions, and set the transfer's size. If you connect to this signal,
+	 * you should try to do the same, but it is not necessarily an error if you
+	 * cannot. If you connect to this signal, you must connect to
+	 * PurpleXfer::open-local, PurpleXfer::read-local, PurpleXfer::write-local
+	 * and PurpleXfer::data-not-sent as well.
+	 *
+	 * Returns: %TRUE if the properties were queried successfully, or %FALSE
+	 *          otherwise, and the transfer should be cancelled (libpurple will
+	 *          cancel).
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_QUERY_LOCAL] = g_signal_new(
+	        "query-local", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST,
+	        G_STRUCT_OFFSET(PurpleXferClass, query_local),
+	        g_signal_accumulator_first_wins, NULL, NULL, G_TYPE_BOOLEAN, 1,
+	        G_TYPE_STRING);
+
+	/**
+	 * PurpleXfer::read-local:
+	 * @buffer: (out): A pointer to a buffer to fill.
+	 * @size: The maximum amount of data to put in the buffer.
+	 *
+	 * Read data locally to send to the protocol for a file transfer.
+	 *
+	 * The default class handler will read from a file using standard library
+	 * functions. If you connect to this signal, you must connect to
+	 * PurpleXfer::open-local, PurpleXfer::query-local, PurpleXfer::write-local
+	 * and PurpleXfer::data-not-sent as well.
+	 *
+	 * Returns: The amount of data in the buffer, 0 if nothing is available,
+	 *          and a negative value if an error occurred and the transfer
+	 *          should be cancelled (libpurple will cancel).
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_READ_LOCAL] = g_signal_new(
+	        "read-local", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST,
+	        G_STRUCT_OFFSET(PurpleXferClass, read_local),
+	        g_signal_accumulator_first_wins, NULL, NULL, G_TYPE_LONG, 2,
+	        G_TYPE_POINTER, G_TYPE_LONG);
+
+	/**
+	 * PurpleXfer::write-local:
+	 * @buffer: The buffer to write.
+	 * @size: The size of the buffer.
+	 *
+	 * Write data received from the protocol locally. The signal handler must
+	 * deal with the entire buffer and return size, or it is treated as an
+	 * error.
+	 *
+	 * The default class handler will write to a file using standard library
+	 * functions. If you connect to this signal, you must connect to
+	 * PurpleXfer::open-local, PurpleXfer::query-local, PurpleXfer::read-local
+	 * and PurpleXfer::data-not-sent as well.
+	 *
+	 * Returns: @size if the write was successful, or a value between 0 and
+	 *          @size on error.
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_WRITE_LOCAL] = g_signal_new(
+	        "write-local", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST,
+	        G_STRUCT_OFFSET(PurpleXferClass, write_local),
+	        g_signal_accumulator_first_wins, NULL, NULL, G_TYPE_LONG, 2,
+	        G_TYPE_POINTER, G_TYPE_LONG);
+
+	/**
+	 * PurpleXfer::data-not-sent:
+	 * @buffer: A pointer to the beginning of the unwritten data.
+	 * @size: The amount of unwritten data.
+	 *
+	 * Notify the UI that not all the data read in was written. The UI should
+	 * re-enqueue this data and return it the next time read is called.
+	 *
+	 * If you connect to this signal, you must connect to
+	 * PurpleXfer::open-local, PurpleXfer::query-local, PurpleXfer::read-local
+	 * and PurpleXfer::write-local as well.
+	 *
+	 * Returns: %TRUE if the data was re-enqueued successfully, or %FALSE
+	 *          otherwise, and the transfer should be cancelled (libpurple
+	 *          will cancel).
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_DATA_NOT_SENT] = g_signal_new(
+	        "data-not-sent", G_TYPE_FROM_CLASS(klass), G_SIGNAL_RUN_LAST,
+	        G_STRUCT_OFFSET(PurpleXferClass, data_not_sent),
+	        g_signal_accumulator_first_wins, NULL, NULL, G_TYPE_BOOLEAN, 2,
+	        G_TYPE_POINTER, G_TYPE_ULONG);
+
+	/**
+	 * PurpleXfer::add-thumbnail:
+	 * @formats: A comma-separated string of allowed image formats.
+	 *
+	 * Request that a thumbnail be added to a file transfer.
+	 *
+	 * Since: 3.0.0
+	 */
+	signals[SIG_ADD_THUMBNAIL] = g_signal_new(
+	        "add-thumbnail", G_TYPE_FROM_CLASS(klass), G_SIGNAL_ACTION, 0, NULL,
+	        NULL, NULL, G_TYPE_NONE, 1, G_TYPE_STRING);
 }
 
 PurpleXfer *
@@ -2340,30 +2431,6 @@ purple_xfers_init(void) {
 	void *handle = purple_xfers_get_handle();
 
 	/* register signals */
-	purple_signal_register(handle, "file-recv-accept",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-accept",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-recv-start",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-start",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-cancel",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-recv-cancel",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-send-complete",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
-	purple_signal_register(handle, "file-recv-complete",
-	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
-	                     PURPLE_TYPE_XFER);
 	purple_signal_register(handle, "file-recv-request",
 	                     purple_marshal_VOID__POINTER, G_TYPE_NONE, 1,
 	                     PURPLE_TYPE_XFER);

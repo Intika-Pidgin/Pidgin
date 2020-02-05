@@ -46,8 +46,6 @@ struct _PidginXferDialog
 	GtkWidget *keep_open;
 	GtkWidget *auto_clear;
 
-	gint num_transfers;
-
 	PurpleXfer *selected_xfer;
 
 	GtkWidget *tree;
@@ -78,14 +76,11 @@ struct _PidginXferDialog
 
 G_DEFINE_TYPE(PidginXferDialog, pidgin_xfer_dialog, GTK_TYPE_DIALOG);
 
+#define UI_DATA "pidgin-ui-data"
 typedef struct
 {
 	GtkTreeIter iter;
 	gint64 last_updated_time;
-	gboolean in_list;
-
-	char *name;
-
 } PidginXferUiData;
 
 static PidginXferDialog *xfer_dialog = NULL;
@@ -237,7 +232,7 @@ update_detailed_info(PidginXferDialog *dialog, PurpleXfer *xfer)
 	if (dialog == NULL || xfer == NULL)
 		return;
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	get_xfer_info_strings(xfer, &kbsec, &time_elapsed, &time_remaining);
 
@@ -695,8 +690,7 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 
 	g_object_ref(xfer);
 
-	data = purple_xfer_get_ui_data(xfer);
-	data->in_list = TRUE;
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	pidgin_xfer_dialog_show(dialog);
 
@@ -729,8 +723,6 @@ pidgin_xfer_dialog_add_xfer(PidginXferDialog *dialog, PurpleXfer *xfer)
 	g_free(size_str);
 	g_free(remaining_str);
 
-	dialog->num_transfers++;
-
 	ensure_row_selected(dialog);
 	update_title_progress(dialog);
 }
@@ -744,19 +736,18 @@ pidgin_xfer_dialog_remove_xfer(PidginXferDialog *dialog,
 	g_return_if_fail(dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	if (data == NULL)
 		return;
 
-	if (!data->in_list)
+	if (!purple_xfer_get_visible(xfer)) {
 		return;
+	}
 
-	data->in_list = FALSE;
+	purple_xfer_set_visible(xfer, FALSE);
 
 	gtk_list_store_remove(GTK_LIST_STORE(dialog->model), &data->iter);
-
-	dialog->num_transfers--;
 
 	ensure_row_selected(dialog);
 
@@ -774,13 +765,14 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 	g_return_if_fail(dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	if (data == NULL)
 		return;
 
-	if (!data->in_list)
+	if (!purple_xfer_get_visible(xfer)) {
 		return;
+	}
 
 	if (purple_xfer_get_status(xfer) == PURPLE_XFER_STATUS_CANCEL_LOCAL &&
 	    gtk_toggle_button_get_active(
@@ -789,7 +781,7 @@ pidgin_xfer_dialog_cancel_xfer(PidginXferDialog *dialog,
 		return;
 	}
 
-	data = purple_xfer_get_ui_data(xfer);
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
 
 	update_detailed_info(dialog, xfer);
 	update_title_progress(dialog);
@@ -820,11 +812,10 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
 	g_return_if_fail(dialog != NULL);
 	g_return_if_fail(xfer != NULL);
 
-	if ((data = purple_xfer_get_ui_data(xfer)) == NULL)
+	data = g_object_get_data(G_OBJECT(xfer), UI_DATA);
+	if (data == NULL || !purple_xfer_get_visible(xfer)) {
 		return;
-
-	if (data->in_list == FALSE)
-		return;
+	}
 
 	current_time = g_get_monotonic_time();
 	if (((current_time - data->last_updated_time) < G_USEC_PER_SEC) &&
@@ -901,59 +892,8 @@ pidgin_xfer_dialog_update_xfer(PidginXferDialog *dialog,
  * File Transfer UI Ops
  **************************************************************************/
 static void
-pidgin_xfer_new_xfer(PurpleXfer *xfer)
-{
-	PidginXferUiData *data;
-
-	/* This is where we're setting xfer's "ui_data" for the first time. */
-	data = g_new0(PidginXferUiData, 1);
-	purple_xfer_set_ui_data(xfer, data);
-}
-
-static void
-pidgin_xfer_destroy(PurpleXfer *xfer)
-{
-	PidginXferUiData *data;
-
-	data = purple_xfer_get_ui_data(xfer);
-	if (data) {
-		g_free(data->name);
-		g_free(data);
-		purple_xfer_set_ui_data(xfer, NULL);
-	}
-}
-
-static void
-pidgin_xfer_add_xfer(PurpleXfer *xfer)
-{
-	if (xfer_dialog == NULL)
-		xfer_dialog = pidgin_xfer_dialog_new();
-
-	pidgin_xfer_dialog_add_xfer(xfer_dialog, xfer);
-}
-
-static void
-pidgin_xfer_update_progress(PurpleXfer *xfer, double percent)
-{
-	pidgin_xfer_dialog_update_xfer(xfer_dialog, xfer);
-}
-
-static void
-pidgin_xfer_cancel_local(PurpleXfer *xfer)
-{
-	if (xfer_dialog)
-		pidgin_xfer_dialog_cancel_xfer(xfer_dialog, xfer);
-}
-
-static void
-pidgin_xfer_cancel_remote(PurpleXfer *xfer)
-{
-	if (xfer_dialog)
-		pidgin_xfer_dialog_cancel_xfer(xfer_dialog, xfer);
-}
-
-static void
-pidgin_xfer_add_thumbnail(PurpleXfer *xfer, const gchar *formats)
+pidgin_xfer_add_thumbnail(PurpleXfer *xfer, const gchar *formats,
+                          G_GNUC_UNUSED gpointer data)
 {
 	purple_debug_info("xfer", "creating thumbnail for transfer\n");
 
@@ -1013,18 +953,61 @@ pidgin_xfer_add_thumbnail(PurpleXfer *xfer, const gchar *formats)
 	}
 }
 
+static void
+pidgin_xfer_progress_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                            G_GNUC_UNUSED gpointer data)
+{
+	pidgin_xfer_dialog_update_xfer(xfer_dialog, xfer);
+}
+
+static void
+pidgin_xfer_status_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                          G_GNUC_UNUSED gpointer data)
+{
+	if (xfer_dialog) {
+		if (purple_xfer_is_cancelled(xfer)) {
+			pidgin_xfer_dialog_cancel_xfer(xfer_dialog, xfer);
+		}
+	}
+}
+
+static void
+pidgin_xfer_visible_notify(PurpleXfer *xfer, G_GNUC_UNUSED GParamSpec *pspec,
+                           G_GNUC_UNUSED gpointer data)
+{
+	if (!purple_xfer_get_visible(xfer)) {
+		return;
+	}
+
+	if (xfer_dialog == NULL) {
+		xfer_dialog = pidgin_xfer_dialog_new();
+	}
+
+	pidgin_xfer_dialog_add_xfer(xfer_dialog, xfer);
+}
+
+static void
+pidgin_xfer_new_xfer(PurpleXfer *xfer)
+{
+	PidginXferUiData *data;
+
+	/* This is where we're setting xfer's "ui_data" for the first time. */
+	data = g_new0(PidginXferUiData, 1);
+	g_object_set_data_full(G_OBJECT(xfer), UI_DATA, data, g_free);
+
+	g_signal_connect(xfer, "add-thumbnail",
+	                 G_CALLBACK(pidgin_xfer_add_thumbnail), NULL);
+	g_signal_connect(xfer, "notify::progress",
+	                 G_CALLBACK(pidgin_xfer_progress_notify), NULL);
+	g_signal_connect(xfer, "notify::status",
+	                 G_CALLBACK(pidgin_xfer_status_notify), NULL);
+	g_signal_connect(xfer, "notify::visible",
+	                 G_CALLBACK(pidgin_xfer_visible_notify), NULL);
+}
+
 static PurpleXferUiOps ops =
 {
-	pidgin_xfer_new_xfer,
-	pidgin_xfer_destroy,
-	pidgin_xfer_add_xfer,
-	pidgin_xfer_update_progress,
-	pidgin_xfer_cancel_local,
-	pidgin_xfer_cancel_remote,
-	NULL,
-	NULL,
-	NULL,
-	pidgin_xfer_add_thumbnail
+	pidgin_xfer_new_xfer
 };
 
 /**************************************************************************

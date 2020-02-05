@@ -681,7 +681,7 @@ purple_network_set_turn_server(const gchar *turn_server)
 			                                turn_server,
 			                                NULL,
 			                                purple_network_ip_lookup_cb,
-			                                &turn_server);
+			                                &turn_ip);
 			g_object_unref(resolver);
 		} else {
 			purple_debug_info("network",
@@ -832,6 +832,7 @@ void
 purple_network_uninit(void)
 {
 	g_free(stun_ip);
+	g_free(turn_ip);
 
 	g_hash_table_destroy(upnp_port_mappings);
 	g_hash_table_destroy(nat_pmp_port_mappings);

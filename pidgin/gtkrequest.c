@@ -2492,7 +2492,7 @@ pidgin_window_detach_children(GtkWindow* win)
 
 	par = gtk_window_get_transient_for(win);
 	it = gtk_window_list_toplevels();
-	for (it = g_list_first(it); it != NULL; it = g_list_next(it)) {
+	for (it = g_list_first(it); it != NULL; it = g_list_delete_link(it, it)) {
 		GtkWindow *child = GTK_WINDOW(it->data);
 		if (gtk_window_get_transient_for(child) != win)
 			continue;
