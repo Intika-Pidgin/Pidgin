@@ -490,7 +490,7 @@ jabber_message_xml_to_string_strip_img_smileys(PurpleXmlNode *xhtml)
 
 static void
 jabber_message_add_remote_smileys(JabberStream *js, const gchar *who,
-    const PurpleXmlNode *message)
+	const PurpleXmlNode *message)
 {
 	PurpleXmlNode *data_tag;
 	for (data_tag = purple_xmlnode_get_child_with_namespace(message, "data", NS_BOB) ;
@@ -874,8 +874,7 @@ void jabber_message_parse(JabberStream *js, PurpleXmlNode *packet)
 
 static gboolean
 jabber_conv_support_custom_smileys(JabberStream *js,
-								   PurpleConversation *conv,
-								   const gchar *who)
+	PurpleConversation *conv, const gchar *who)
 {
 	JabberBuddy *jb;
 	JabberChat *chat;
@@ -1111,8 +1110,7 @@ void jabber_message_send(JabberMessage *jm)
  * FALSE.
  */
 static gboolean
-jabber_xhtml_plain_equal(const char *xhtml_escaped,
-                         const char *plain)
+jabber_xhtml_plain_equal(const char *xhtml_escaped, const char *plain)
 {
 	int i = 0;
 	int j = 0;
