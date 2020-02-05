@@ -345,11 +345,11 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 	name = (*packet)->name;
 	xmlns = purple_xmlnode_get_namespace(*packet);
 
-	if(purple_strequal((*packet)->name, "iq")) {
+	if (purple_strequal(name, "iq")) {
 		jabber_iq_parse(js, *packet);
-	} else if(purple_strequal((*packet)->name, "presence")) {
+	} else if (purple_strequal(name, "presence")) {
 		jabber_presence_parse(js, *packet);
-	} else if(purple_strequal((*packet)->name, "message")) {
+	} else if (purple_strequal(name, "message")) {
 		jabber_message_parse(js, *packet);
 	} else if (purple_strequal(xmlns, NS_XMPP_STREAMS)) {
 		if (purple_strequal(name, "features"))
@@ -377,7 +377,7 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 			/* TODO: Handle <failure/>, I guess? */
 		}
 	} else {
-		purple_debug_warning("jabber", "Unknown packet: %s\n", (*packet)->name);
+		purple_debug_warning("jabber", "Unknown packet: %s\n", name);
 	}
 }
 
