@@ -42,6 +42,7 @@
 #include "gtkstatusbox.h"
 #include "pidginstock.h"
 #include "minidialog.h"
+#include "pidginprotocolchooser.h"
 
 enum
 {
@@ -224,12 +225,15 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 }
 
 static void
-set_account_protocol_cb(GtkWidget *widget, const char *id,
-						AccountPrefsDialog *dialog)
+set_account_protocol_cb(GtkWidget *widget, AccountPrefsDialog *dialog)
 {
+	PidginProtocolChooser *chooser = PIDGIN_PROTOCOL_CHOOSER(widget);
 	PurpleProtocol *new_protocol;
+	gchar *id = NULL;
 
+	id = pidgin_protocol_chooser_get_selected(chooser);
 	new_protocol = purple_protocols_find(id);
+	g_free(id);
 
 	dialog->protocol = new_protocol;
 
@@ -478,10 +482,12 @@ add_login_options(AccountPrefsDialog *dialog, GtkWidget *parent)
 	gtk_widget_show(vbox);
 
 	/* Protocol */
-	if (dialog->protocol_menu == NULL)
-	{
-		dialog->protocol_menu = pidgin_protocol_option_menu_new(
-				dialog->protocol_id, G_CALLBACK(set_account_protocol_cb), dialog);
+	if(dialog->protocol_menu == NULL) {
+		dialog->protocol_menu = pidgin_protocol_chooser_new();
+		gtk_combo_box_set_active(GTK_COMBO_BOX(dialog->protocol_menu), 0);
+		g_signal_connect(G_OBJECT(dialog->protocol_menu), "changed",
+		                 G_CALLBACK(set_account_protocol_cb), dialog);
+		gtk_widget_show(dialog->protocol_menu);
 		g_object_ref(G_OBJECT(dialog->protocol_menu));
 	}
 

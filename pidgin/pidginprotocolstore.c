@@ -1,4 +1,6 @@
-/* pidgin
+/*
+ * Pidgin - Internet Messenger
+ * Copyright (C) Pidgin Developers <devel@pidgin.im>
  *
  * Pidgin is the legal property of its developers, whose names are too numerous
  * to list here.  Please refer to the COPYRIGHT file distributed with this
@@ -21,6 +23,8 @@
 
 #include "pidgin/pidginprotocolstore.h"
 
+#include "gtkutils.h"
+
 struct _PidginProtocolStore {
 	GtkListStore parent;
 };
@@ -33,6 +37,10 @@ pidgin_protocol_store_add_protocol(PidginProtocolStore *store,
                                    PurpleProtocol *protocol)
 {
 	GtkTreeIter iter;
+	GdkPixbuf *pixbuf = NULL;
+
+	pixbuf = pidgin_create_icon_from_protocol(protocol,
+	                                          PIDGIN_PROTOCOL_ICON_SMALL, NULL);
 
 	gtk_list_store_append(GTK_LIST_STORE(store), &iter);
 	gtk_list_store_set(
@@ -40,19 +48,25 @@ pidgin_protocol_store_add_protocol(PidginProtocolStore *store,
 		&iter,
 		PIDGIN_PROTOCOL_STORE_COLUMN_PROTOCOL, protocol,
 		PIDGIN_PROTOCOL_STORE_COLUMN_NAME, purple_protocol_get_name(protocol),
+		PIDGIN_PROTOCOL_STORE_COLUMN_ICON, pixbuf,
 		-1
 	);
+
+	g_clear_object(&pixbuf);
+}
+
+static void
+pidgin_protocol_store_add_protocol_helper(gpointer data, gpointer user_data) {
+	if(PURPLE_IS_PROTOCOL(data)) {
+		pidgin_protocol_store_add_protocol(PIDGIN_PROTOCOL_STORE(user_data),
+		                                   PURPLE_PROTOCOL(data));
+	}
 }
 
 static void
 pidgin_protocol_store_add_protocols(PidginProtocolStore *store) {
-	GList *protocols = purple_protocols_get_all(), *l;
-
-	for(l = protocols; l != NULL; l = l->data) {
-		if(PURPLE_IS_PROTOCOL(l->data)) {
-			pidgin_protocol_store_add_protocol(store, PURPLE_PROTOCOL(l->data));
-		}
-	}
+	g_list_foreach(purple_protocols_get_all(),
+	               pidgin_protocol_store_add_protocol_helper, store);
 }
 
 static void
@@ -117,6 +131,7 @@ pidgin_protocol_store_init(PidginProtocolStore *store) {
 	GType types[PIDGIN_PROTOCOL_STORE_N_COLUMNS] = {
 		PURPLE_TYPE_PROTOCOL,
 		G_TYPE_STRING,
+		GDK_TYPE_PIXBUF,
 	};
 
 	gtk_list_store_set_column_types(
