@@ -66,9 +66,24 @@ pidgin_protocol_chooser_new(void) {
 	return GTK_WIDGET(g_object_new(PIDGIN_TYPE_PROTOCOL_CHOOSER, NULL));
 }
 
+PurpleProtocol *
+pidgin_protocol_chooser_get_selected(PidginProtocolChooser *chooser) {
+	GtkTreeIter iter;
+	PurpleProtocol *protocol = NULL;
+
+	g_return_val_if_fail(PIDGIN_IS_PROTOCOL_CHOOSER(chooser), NULL);
+
+	if(gtk_combo_box_get_active_iter(GTK_COMBO_BOX(chooser), &iter)) {
+		gtk_tree_model_get(GTK_TREE_MODEL(chooser->model), &iter,
+		                   PIDGIN_PROTOCOL_STORE_COLUMN_PROTOCOL, &protocol,
+		                   -1);
+	}
+
+	return protocol;
+}
+
 gchar *
-pidgin_protocol_chooser_get_selected(PidginProtocolChooser *chooser)
-{
+pidgin_protocol_chooser_get_selected_name(PidginProtocolChooser *chooser) {
 	GtkTreeIter iter;
 	gchar *name = NULL;
 
@@ -84,8 +99,8 @@ pidgin_protocol_chooser_get_selected(PidginProtocolChooser *chooser)
 }
 
 void
-pidgin_protocol_chooser_set_selected(PidginProtocolChooser *chooser,
-                                     const gchar *name)
+pidgin_protocol_chooser_set_selected_name(PidginProtocolChooser *chooser,
+                                          const gchar *name)
 {
 	GtkTreeIter iter;
 	gchar *iter_name = NULL;

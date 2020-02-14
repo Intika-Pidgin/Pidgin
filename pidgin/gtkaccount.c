@@ -225,44 +225,34 @@ set_dialog_icon(AccountPrefsDialog *dialog, gpointer data, size_t len, gchar *ne
 }
 
 static void
-set_account_protocol_cb(GtkWidget *widget, AccountPrefsDialog *dialog)
-{
+set_account_protocol_cb(GtkWidget *widget, AccountPrefsDialog *dialog) {
 	PidginProtocolChooser *chooser = PIDGIN_PROTOCOL_CHOOSER(widget);
-	PurpleProtocol *new_protocol;
-	gchar *id = NULL;
+	PurpleProtocol *protocol = pidgin_protocol_chooser_get_selected(chooser);
 
-	id = pidgin_protocol_chooser_get_selected(chooser);
-	new_protocol = purple_protocols_find(id);
-	g_free(id);
+	if(g_set_object(&dialog->protocol, protocol)) {
+		g_clear_pointer(&dialog->protocol_id, g_free);
+	}
+	g_object_unref(G_OBJECT(protocol));
 
-	dialog->protocol = new_protocol;
-
-	if (dialog->protocol != NULL)
-	{
-		PurpleProtocol *old_protocol = NULL;
-
-		if (dialog->protocol_id)
-			old_protocol = purple_protocols_find(dialog->protocol_id);
-
-		if (old_protocol != new_protocol) {
-			g_free(dialog->protocol_id);
-			dialog->protocol_id = g_strdup(purple_protocol_get_id(dialog->protocol));
-		}
+	if(PURPLE_IS_PROTOCOL(dialog->protocol)) {
+		dialog->protocol_id = g_strdup(purple_protocol_get_id(dialog->protocol));
 	}
 
-	if (dialog->account != NULL)
+	if (dialog->account != NULL) {
 		purple_account_clear_settings(dialog->account);
+	}
 
-	add_login_options(dialog,    dialog->top_vbox);
-	add_user_options(dialog,     dialog->top_vbox);
+	add_login_options(dialog, dialog->top_vbox);
+	add_user_options(dialog, dialog->top_vbox);
 	add_account_options(dialog);
 	add_voice_options(dialog);
 
 	gtk_widget_grab_focus(dialog->protocol_menu);
 
-	if (!dialog->protocol || !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, SERVER, register_user)) {
-		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(
-			dialog->register_button), FALSE);
+	if (!dialog->protocol ||
+	    !PURPLE_PROTOCOL_IMPLEMENTS(dialog->protocol, SERVER, register_user))
+	{
+		gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(dialog->register_button), FALSE);
 		gtk_widget_hide(dialog->register_button);
 	} else {
 		if (purple_protocol_get_options(dialog->protocol) &
