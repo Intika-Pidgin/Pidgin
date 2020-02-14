@@ -457,6 +457,27 @@ void pidgin_buddy_icon_get_scale_size(GdkPixbuf *buf, PurpleBuddyIconSpec *spec,
 GdkPixbuf *pidgin_create_protocol_icon(PurpleAccount *account, PidginProtocolIconSize size);
 
 /**
+ * pidgin_create_icon_from_protocol:
+ * @protocol: The #PurpleProtocolInstance
+ * @size: The size of the icon to return.
+ * @account: (nullable): An optional #PurpleAccount to use.
+ *
+ * Returns the base image to represent @protocol based on the currently
+ * selected theme.  If @account is not %NULL then the returned icon will
+ * represent the account.
+ *
+ * Returns: (transfer full): A newly-created pixbuf with a reference count of 1,
+ *         or NULL if any of several error conditions occurred:
+ *         the file could not be opened, there was no loader
+ *         for the file's format, there was not enough memory
+ *         to allocate the image buffer, or the image file
+ *         contained invalid data.
+ *
+ * Since: 3.0.0
+ */
+GdkPixbuf *pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSize size, PurpleAccount *account);
+
+/**
  * pidgin_create_status_icon:
  * @primitive:  The status primitive
  * @w:          The widget to render this

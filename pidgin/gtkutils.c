@@ -458,7 +458,7 @@ aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
 	g_free(new_aop_menu);
 }
 
-static GdkPixbuf *
+GdkPixbuf *
 pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSize size, PurpleAccount *account)
 {
 	const char *protoname = NULL;
