@@ -259,20 +259,6 @@ GtkWidget *pidgin_pixbuf_toolbar_button_from_stock(const char *stock);
 GtkWidget *pidgin_make_frame(GtkWidget *parent, const char *title);
 
 /**
- * pidgin_protocol_option_menu_new:
- * @id: The protocol to select by default.
- * @cb: (scope call): The callback to call when a protocol is selected.
- * @user_data: Data to pass to the callback function.
- *
- * Creates a drop-down option menu filled with protocols.
- *
- * Returns: (transfer full): The drop-down option menu.
- */
-GtkWidget *pidgin_protocol_option_menu_new(const char *id,
-											 GCallback cb,
-											 gpointer user_data);
-
-/**
  * pidgin_protocol_option_menu_get_selected:
  * @optmenu: The drop-down option menu created by
  *           pidgin_protocol_option_menu_new().
