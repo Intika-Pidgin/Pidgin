@@ -86,10 +86,4 @@ if PLUGINS
 		    install : true, install_dir : PIDGIN_PLUGINDIR)
 	endif
 
-	widget_test = library('widget-test', 'widget-test.c',
-		dependencies : [libpurple_dep, libpidgin_dep, glib],
-		name_prefix : '',
-		build_by_default: false,
-		install : false, install_dir : PIDGIN_PLUGINDIR)
-
 endif # PLUGINS
