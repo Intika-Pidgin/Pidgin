@@ -25,7 +25,7 @@
 #define PIDGIN_PROTOCOL_CHOOSER_H
 
 /**
- * SECTION:pidginaccountchooser
+ * SECTION:pidginprotocolchooser
  * @section_id: pidgin-protocol-chooser
  * @short_description: A #GtkComboBox for choosing protocols
  * @title: Pidgin Protocol Chooser Combo Box Widget
