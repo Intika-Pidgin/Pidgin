@@ -107,7 +107,7 @@ void jabber_message_free(JabberMessage *jm)
 
 static void handle_chat(JabberMessage *jm)
 {
-	gchar *contact = jm->from;
+	const gchar *contact = jm->from;
 	JabberID *jid = jabber_id_new(contact);
 
 	PurpleConnection *gc;
