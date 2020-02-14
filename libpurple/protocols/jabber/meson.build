@@ -107,6 +107,8 @@ else
 endif
 
 if DYNAMIC_JABBER
+	idn = dependency('libidn', version : '>= 0.0.0')
+
 	jabber_prpl = shared_library('jabber', JABBERSOURCES,
 	    link_args : jabber_link_args,
 	    dependencies : [gstreamer, idn, libxml, sasl, libpurple_dep, libsoup, glib, gio, math, ws2_32],
