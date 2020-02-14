@@ -439,6 +439,7 @@ version 3.0.0 (??/??/????):
 		* purple_presence_new_for_buddy
 		* purple_print_utf8_to_console
 		* PurplePluginProtocolInfo
+		* pidgin_protocol_option_menu_new
 		* purple_proxy_connect_socks5
 		* purple_quotedp_decode. See the GMime library if needed.
 		* purple_request_certificate
