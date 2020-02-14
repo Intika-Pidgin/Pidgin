@@ -33,6 +33,8 @@
 
 #include <gtk/gtk.h>
 
+#include <purple.h>
+
 G_BEGIN_DECLS
 
 #define PIDGIN_TYPE_PROTOCOL_CHOOSER (pidgin_protocol_chooser_get_type())
@@ -55,25 +57,38 @@ GtkWidget *pidgin_protocol_chooser_new(void);
  * pidgin_protocol_chooser_get_selected:
  * @chooser: The #PidginProtocolChooser instance.
  *
- * Gets the name of the currently selected protocol from @chooser.
+ * Gets the currently selected protocol from @chooser.
  *
- * Returns: (transfer full): Returns the name of the currently selected
- *                           protocol.
+ * Returns: (transfer full): The selected #PurpleProtocol or %NULL if nothing
+ *                           is selected
  *
  * Since: 3.0.0
  */
-gchar *pidgin_protocol_chooser_get_selected(PidginProtocolChooser *chooser);
+PurpleProtocol *pidgin_protocol_chooser_get_selected(PidginProtocolChooser *chooser);
 
 /**
- * pidgin_protocol_chooser_set_selected:
+ * pidgin_protocol_chooser_get_selected_name:
  * @chooser: The #PidginProtocolChooser instance.
- * @protocol: The name of the protocol to select.
+ *
+ * Gets the name of the currently selected protocol from @chooser.
+ *
+ * Returns: (transfer full): The selected #PurpleProtocol or %NULL if nothing
+ *                           is selected
+ *
+ * Since: 3.0.0
+ */
+gchar *pidgin_protocol_chooser_get_selected_name(PidginProtocolChooser *chooser);
+
+/**
+ * pidgin_protocol_chooser_set_selected_name:
+ * @chooser: The #PidginProtocolChooser instance.
+ * @name: The name of the protocol to select.
  *
  * Sets the currently selected protocol of @chooser to @protocol.
  *
  * Since: 3.0.0
  */
-void pidgin_protocol_chooser_set_selected(PidginProtocolChooser *chooser, const gchar *protocol);
+void pidgin_protocol_chooser_set_selected_name(PidginProtocolChooser *chooser, const gchar *name);
 
 G_END_DECLS
 
