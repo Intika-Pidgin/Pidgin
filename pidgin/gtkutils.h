@@ -259,20 +259,6 @@ GtkWidget *pidgin_pixbuf_toolbar_button_from_stock(const char *stock);
 GtkWidget *pidgin_make_frame(GtkWidget *parent, const char *title);
 
 /**
- * pidgin_protocol_option_menu_new:
- * @id: The protocol to select by default.
- * @cb: (scope call): The callback to call when a protocol is selected.
- * @user_data: Data to pass to the callback function.
- *
- * Creates a drop-down option menu filled with protocols.
- *
- * Returns: (transfer full): The drop-down option menu.
- */
-GtkWidget *pidgin_protocol_option_menu_new(const char *id,
-											 GCallback cb,
-											 gpointer user_data);
-
-/**
  * pidgin_protocol_option_menu_get_selected:
  * @optmenu: The drop-down option menu created by
  *           pidgin_protocol_option_menu_new().
@@ -455,6 +441,27 @@ void pidgin_buddy_icon_get_scale_size(GdkPixbuf *buf, PurpleBuddyIconSpec *spec,
  *         contained invalid data.
  */
 GdkPixbuf *pidgin_create_protocol_icon(PurpleAccount *account, PidginProtocolIconSize size);
+
+/**
+ * pidgin_create_icon_from_protocol:
+ * @protocol: The #PurpleProtocol instance.
+ * @size: The size of the icon to return.
+ * @account: (nullable): An optional #PurpleAccount to use.
+ *
+ * Returns the base image to represent @protocol based on the currently
+ * selected theme.  If @account is not %NULL then the returned icon will
+ * represent the account.
+ *
+ * Returns: (transfer full): A newly-created pixbuf with a reference count of 1,
+ *         or NULL if any of several error conditions occurred:
+ *         the file could not be opened, there was no loader
+ *         for the file's format, there was not enough memory
+ *         to allocate the image buffer, or the image file
+ *         contained invalid data.
+ *
+ * Since: 3.0.0
+ */
+GdkPixbuf *pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSize size, PurpleAccount *account);
 
 /**
  * pidgin_create_status_icon:

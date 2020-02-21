@@ -440,25 +440,7 @@ aop_option_menu_get_selected(GtkWidget *optmenu)
 	return data;
 }
 
-static void
-aop_menu_cb(GtkWidget *optmenu, GCallback cb)
-{
-	if (cb != NULL) {
-		((void (*)(GtkWidget *, gpointer, gpointer))cb)(optmenu,
-			aop_option_menu_get_selected(optmenu),
-			g_object_get_data(G_OBJECT(optmenu), "user_data"));
-	}
-}
-
-static void
-aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
-{
-	gtk_combo_box_set_model(GTK_COMBO_BOX(optmenu), new_aop_menu->model);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(optmenu), new_aop_menu->default_item);
-	g_free(new_aop_menu);
-}
-
-static GdkPixbuf *
+GdkPixbuf *
 pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSize size, PurpleAccount *account)
 {
 	const char *protoname = NULL;
@@ -490,27 +472,6 @@ pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSiz
 	return pixbuf;
 }
 
-static GtkWidget *
-aop_option_menu_new(AopMenu *aop_menu, GCallback cb, gpointer user_data)
-{
-	GtkWidget *optmenu = NULL;
-	GtkCellRenderer *cr = NULL;
-
-	optmenu = gtk_combo_box_new();
-	gtk_widget_show(optmenu);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu), cr = gtk_cell_renderer_pixbuf_new(), FALSE);
-	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "pixbuf", AOP_ICON_COLUMN);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu), cr = gtk_cell_renderer_text_new(), TRUE);
-	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "text", AOP_NAME_COLUMN);
-
-	aop_option_menu_replace_menu(optmenu, aop_menu);
-	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
-
-	g_signal_connect(G_OBJECT(optmenu), "changed", G_CALLBACK(aop_menu_cb), cb);
-
-	return optmenu;
-}
-
 static void
 aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 {
@@ -527,58 +488,6 @@ aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 			}
 		} while (gtk_tree_model_iter_next(model, &iter));
 	}
-}
-
-static AopMenu *
-create_protocols_menu(const char *default_proto_id)
-{
-	AopMenu *aop_menu = NULL;
-	PurpleProtocol *protocol;
-	GdkPixbuf *pixbuf = NULL;
-	GtkTreeIter iter;
-	GtkListStore *ls;
-	GList *list, *p;
-	int i;
-
-	ls = gtk_list_store_new(AOP_COLUMN_COUNT, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
-
-	aop_menu = g_malloc0(sizeof(AopMenu));
-	aop_menu->default_item = 0;
-	aop_menu->model = GTK_TREE_MODEL(ls);
-
-	list = purple_protocols_get_all();
-
-	for (p = list, i = 0;
-		 p != NULL;
-		 p = p->next, i++) {
-
-		protocol = PURPLE_PROTOCOL(p->data);
-
-		pixbuf = pidgin_create_icon_from_protocol(protocol, PIDGIN_PROTOCOL_ICON_SMALL, NULL);
-
-		gtk_list_store_append(ls, &iter);
-		gtk_list_store_set(ls, &iter,
-		                   AOP_ICON_COLUMN, pixbuf,
-		                   AOP_NAME_COLUMN, purple_protocol_get_name(protocol),
-		                   AOP_DATA_COLUMN, purple_protocol_get_id(protocol),
-		                   -1);
-
-		if (pixbuf)
-			g_object_unref(pixbuf);
-
-		if (default_proto_id != NULL && purple_strequal(purple_protocol_get_id(protocol), default_proto_id))
-			aop_menu->default_item = i;
-	}
-	g_list_free(list);
-
-	return aop_menu;
-}
-
-GtkWidget *
-pidgin_protocol_option_menu_new(const char *id, GCallback cb,
-								  gpointer user_data)
-{
-	return aop_option_menu_new(create_protocols_menu(id), cb, user_data);
 }
 
 const char *
