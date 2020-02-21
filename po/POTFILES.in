@@ -44,7 +44,6 @@ libpurple/conversationtypes.c
 libpurple/core.c
 libpurple/countingnode.c
 libpurple/debug.c
-libpurple/e2ee.c
 libpurple/eventloop.c
 libpurple/example/nullclient.c
 libpurple/group.c

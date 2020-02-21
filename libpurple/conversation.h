@@ -65,8 +65,6 @@ typedef struct _PurpleConversationUiOps      PurpleConversationUiOps;
  * @PURPLE_CONVERSATION_UPDATE_LOGGING:  Logging for this conversation was
  *                                       enabled or disabled.
  * @PURPLE_CONVERSATION_UPDATE_TOPIC:    The topic for a chat was updated.
- * @PURPLE_CONVERSATION_UPDATE_E2EE:     The End-to-end encryption state was
- *                                       updated.
  * @PURPLE_CONVERSATION_ACCOUNT_ONLINE:  One of the user's accounts went online.
  * @PURPLE_CONVERSATION_ACCOUNT_OFFLINE: One of the user's accounts went
  *                                       offline.
@@ -88,7 +86,6 @@ typedef enum
 	PURPLE_CONVERSATION_UPDATE_UNSEEN,
 	PURPLE_CONVERSATION_UPDATE_LOGGING,
 	PURPLE_CONVERSATION_UPDATE_TOPIC,
-	PURPLE_CONVERSATION_UPDATE_E2EE,
 
 	/*
 	 * XXX These need to go when we implement a more generic core/UI event
@@ -201,7 +198,6 @@ struct _PurpleConversationClass {
 
 #include "account.h"
 #include "buddyicon.h"
-#include "e2ee.h"
 #include "log.h"
 #include "smiley-list.h"
 
@@ -421,28 +417,6 @@ void purple_conversation_set_name(PurpleConversation *conv, const char *name);
  *          PurpleBuddy, then it's the name of the PurpleBuddy.
  */
 const char *purple_conversation_get_name(PurpleConversation *conv);
-
-/**
- * purple_conversation_set_e2ee_state:
- * @conv:  The conversation.
- * @state: The E2EE state.
- *
- * Sets current E2EE state for the conversation.
- */
-void
-purple_conversation_set_e2ee_state(PurpleConversation *conv,
-	PurpleE2eeState *state);
-
-/**
- * purple_conversation_get_e2ee_state:
- * @conv: The conversation.
- *
- * Gets current conversation's E2EE state.
- *
- * Returns: (transfer none): Current E2EE state for conversation.
- */
-PurpleE2eeState *
-purple_conversation_get_e2ee_state(PurpleConversation *conv);
 
 /**
  * purple_conversation_set_logging:

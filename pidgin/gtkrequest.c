@@ -1524,9 +1524,6 @@ _pidgin_datasheet_stock_icon_get(const gchar *stock_name)
 			image = pidgin_create_protocol_icon(account,
 				PIDGIN_PROTOCOL_ICON_SMALL);
 		}
-	} else if (purple_strequal(domain, "e2ee")) {
-		image = pidgin_pixbuf_from_image(
-			_pidgin_e2ee_stock_icon_get(id));
 	} else {
 		purple_debug_error("gtkrequest", "Unknown domain: %s", domain);
 		g_free(domain);
