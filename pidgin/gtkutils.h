@@ -444,7 +444,7 @@ GdkPixbuf *pidgin_create_protocol_icon(PurpleAccount *account, PidginProtocolIco
 
 /**
  * pidgin_create_icon_from_protocol:
- * @protocol: The #PurpleProtocolInstance
+ * @protocol: The #PurpleProtocol instance.
  * @size: The size of the icon to return.
  * @account: (nullable): An optional #PurpleAccount to use.
  *
