@@ -53,8 +53,6 @@ struct _PurpleConversationPrivate
 	PurpleConnectionFlags features;   /* The supported features            */
 	GList *message_history; /* Message history, as a GList of PurpleMessages */
 
-	PurpleE2eeState *e2ee_state;      /* End-to-end encryption state.      */
-
 	/* The list of remote smileys. This should be per-buddy (PurpleBuddy),
 	 * but we don't have any class for people not on our buddy
 	 * list (PurpleDude?). So, if we have one, we should switch to it. */
@@ -414,60 +412,6 @@ purple_conversation_get_name(PurpleConversation *conv)
 
 	priv = purple_conversation_get_instance_private(conv);
 	return priv->name;
-}
-
-void
-purple_conversation_set_e2ee_state(PurpleConversation *conv,
-	PurpleE2eeState *state)
-{
-	PurpleConversationPrivate *priv = NULL;
-
-	g_return_if_fail(PURPLE_IS_CONVERSATION(conv));
-	priv = purple_conversation_get_instance_private(conv);
-
-	if (state != NULL && purple_e2ee_state_get_provider(state) !=
-		purple_e2ee_provider_get_main())
-	{
-		purple_debug_error("conversation",
-			"This is not the main e2ee provider");
-
-		return;
-	}
-
-	if (state == priv->e2ee_state)
-		return;
-
-	if (state)
-		purple_e2ee_state_ref(state);
-	purple_e2ee_state_unref(priv->e2ee_state);
-	priv->e2ee_state = state;
-
-	purple_conversation_update(conv, PURPLE_CONVERSATION_UPDATE_E2EE);
-}
-
-PurpleE2eeState *
-purple_conversation_get_e2ee_state(PurpleConversation *conv)
-{
-	PurpleConversationPrivate *priv = NULL;
-	PurpleE2eeProvider *provider;
-
-	g_return_val_if_fail(PURPLE_IS_CONVERSATION(conv), NULL);
-	priv = purple_conversation_get_instance_private(conv);
-
-	if (priv->e2ee_state == NULL)
-		return NULL;
-
-	provider = purple_e2ee_provider_get_main();
-	if (provider == NULL)
-		return NULL;
-
-	if (purple_e2ee_state_get_provider(priv->e2ee_state) != provider) {
-		purple_debug_warning("conversation",
-			"e2ee state has invalid provider set");
-		return NULL;
-	}
-
-	return priv->e2ee_state;
 }
 
 void
@@ -1029,10 +973,7 @@ purple_conversation_finalize(GObject *object)
 
 	purple_request_close_with_handle(conv);
 
-	purple_e2ee_state_unref(priv->e2ee_state);
-	priv->e2ee_state = NULL;
-
-	/* remove from conversations and im/chats lists prior to emit */
+ 	/* remove from conversations and im/chats lists prior to emit */
 	purple_conversations_remove(conv);
 
 	purple_signal_emit(purple_conversations_get_handle(),

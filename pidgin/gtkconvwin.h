@@ -69,7 +69,6 @@ struct _PidginConvWindowMenu
 	GtkAction *show_formatting_toolbar;
 
 	GtkWidget *send_to;
-	GtkWidget *e2ee;
 
 	GtkWidget *tray;
 
