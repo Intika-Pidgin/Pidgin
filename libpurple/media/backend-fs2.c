@@ -2421,7 +2421,6 @@ purple_media_backend_fs2_set_require_encryption(PurpleMediaBackend *self,
 		gboolean require_encryption)
 {
 	PurpleMediaBackendFs2Stream *stream;
-	gboolean result;
 
 	stream = get_stream(PURPLE_MEDIA_BACKEND_FS2(self), sess_id,
 			participant);
