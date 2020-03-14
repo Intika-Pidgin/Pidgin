@@ -641,7 +641,7 @@ purple_plugins_find_all(void)
 				ret = g_list_append(ret, plugin);
 		}
 
-		gplugin_manager_free_plugin_list(plugins);
+		g_slist_free_full(plugins, g_object_unref);
 	}
 	g_list_free(ids);
 
