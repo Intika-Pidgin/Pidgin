@@ -32,6 +32,8 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#include <libpurple/purpleuiinfo.h>
+
 #define PURPLE_TYPE_CORE_UI_OPS (purple_core_ui_ops_get_type())
 
 typedef struct PurpleCore PurpleCore;
@@ -66,13 +68,10 @@ struct _PurpleCoreUiOps
 
 	void (*quit)(void);
 
-	GHashTable* (*get_ui_info)(void);
+	PurpleUiInfo *(*get_ui_info)(void);
 
 	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
+	gpointer reserved[4];
 };
 
 G_BEGIN_DECLS
@@ -175,52 +174,20 @@ PurpleCoreUiOps *purple_core_get_ui_ops(void);
 /**
  * purple_core_get_ui_info:
  *
- * Returns a hash table containing various information about the UI.  The
- * following well-known entries may be in the table (along with any others the
- * UI might choose to include):
+ * Returns a #PurpleUiInfo that contains information about the user interface.
  *
- * <informaltable frame='none'>
- *   <tgroup cols='2'><tbody>
- *   <row>
- *     <entry><literal>name</literal></entry>
- *     <entry>the user-readable name for the UI.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>version</literal></entry>
- *     <entry>a user-readable description of the current version of the UI.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>website</literal></entry>
- *     <entry>the UI's website, such as https://pidgin.im.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>dev_website</literal></entry>
- *     <entry>the UI's development/support website, such as
- *       https://developer.pidgin.im.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>client_type</literal></entry>
- *     <entry>the type of UI. Possible values include 'pc', 'console', 'phone',
- *       'handheld', 'web', and 'bot'. These values are compared
- *       programmatically and should not be localized.</entry>
- *   </row>
- *   </tbody></tgroup>
- * </informaltable>
- *
- * Returns: (transfer none): A GHashTable with strings for keys and values.
- *          This hash table should not be modified.
- *
+ * Returns: (transfer full): A #PurpleUiInfo instance.
  */
-GHashTable* purple_core_get_ui_info(void);
+PurpleUiInfo* purple_core_get_ui_info(void);
 
 /**
  * purple_core_migrate_to_xdg_base_dirs:
- * 
- * Migrates from legacy directory for libpurple to location following 
+ *
+ * Migrates from legacy directory for libpurple to location following
  * XDG base dir spec. https://developer.pidgin.im/ticket/10029
  * NOTE This is not finished yet. Need to decide where other profile files
  * should be moved. Search for usages of purple_user_dir().
- * 
+ *
  * Returns: TRUE if migrated successfully, FALSE otherwise. On failure,
  *         the application must display an error to the user and then exit.
  */

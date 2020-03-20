@@ -61,13 +61,13 @@ static PurpleCore      *_core = NULL;
 static void
 purple_core_print_version(void)
 {
-	GHashTable *ui_info = purple_core_get_ui_info();
+	PurpleUiInfo *ui_info = purple_core_get_ui_info();
 	const gchar *ui_name;
 	const gchar *ui_version;
 	gchar *ui_full_name = NULL;
 
-	ui_name = ui_info ? g_hash_table_lookup(ui_info, "name") : NULL;
-	ui_version = ui_info ? g_hash_table_lookup(ui_info, "version") : NULL;
+	ui_name = ui_info ? purple_ui_info_get_name(ui_info) : NULL;
+	ui_version = ui_info ? purple_ui_info_get_version(ui_info) : NULL;
 
 	if (ui_name) {
 		if (ui_version) {
@@ -83,6 +83,7 @@ purple_core_print_version(void)
 		purple_core_get_version());
 
 	g_free(ui_full_name);
+	g_object_unref(G_OBJECT(ui_info));
 }
 
 gboolean
@@ -333,7 +334,7 @@ purple_core_get_ui_ops(void)
 	return _ops;
 }
 
-GHashTable* purple_core_get_ui_info() {
+PurpleUiInfo* purple_core_get_ui_info() {
 	PurpleCoreUiOps *ops = purple_core_get_ui_ops();
 
 	if(NULL == ops || NULL == ops->get_ui_info)

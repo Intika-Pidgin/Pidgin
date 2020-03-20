@@ -400,14 +400,18 @@ kwallet_get_handle(void)
 
 static const char *kwallet_get_ui_name(void)
 {
-	GHashTable *ui_info;
+	PurpleUiInfo *ui_info = NULL;
 	const char *ui_name = NULL;
 
 	ui_info = purple_core_get_ui_info();
-	if (ui_info != NULL)
-		ui_name = (const char*)g_hash_table_lookup(ui_info, "name");
-	if (ui_name == NULL)
+	if(PURPLE_IS_UI_INFO(ui_info)) {
+		ui_name = purple_ui_info_get_name(ui_info);
+		g_object_unref(G_OBJECT(ui_info));
+	}
+
+	if(ui_name == NULL) {
 		ui_name = KWALLET_APP_NAME;
+	}
 
 	return ui_name;
 }
