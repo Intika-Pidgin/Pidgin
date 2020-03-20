@@ -803,16 +803,14 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 {
 	GtkWidget *widget;
 	GtkRequisition requisition;
-	GdkScreen *screen;
+	GdkMonitor *m = NULL;
 	GdkRectangle monitor;
-	gint monitor_num;
 	gint space_left, space_right, space_above, space_below;
 	gboolean rtl;
 
 	g_return_if_fail(GTK_IS_MENU(menu));
 
 	widget     = GTK_WIDGET(menu);
-	screen     = gtk_widget_get_screen(widget);
 	rtl        = (gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL);
 
 	/*
@@ -823,7 +821,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	 */
 	gtk_widget_get_preferred_size(widget, NULL, &requisition);
 
-	monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
+	m = gdk_display_get_monitor_at_point(gdk_display_get_default(), *x, *y);
 
 	*push_in = FALSE;
 
@@ -846,7 +844,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	 * Positioning in the vertical direction is similar: first try below
 	 * mouse cursor, then above.
 	 */
-	gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+	gdk_monitor_get_geometry(m, &monitor);
 
 	space_left = *x - monitor.x;
 	space_right = monitor.x + monitor.width - *x - 1;

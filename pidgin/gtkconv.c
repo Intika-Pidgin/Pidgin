@@ -7811,6 +7811,8 @@ plugin_changed_cb(PurplePlugin *p, gpointer data)
 }
 
 static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gpointer data) {
+	GdkMonitor *monitor = NULL;
+	GdkRectangle geo;
 	int x, y;
 
 	if (gtk_widget_get_visible(w))
@@ -7823,12 +7825,17 @@ static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gp
 	if (gdk_window_get_state(gtk_widget_get_window(w)) & GDK_WINDOW_STATE_MAXIMIZED)
 		return FALSE;
 
-	/* don't save off-screen positioning */
-	if (x + event->width < 0 ||
-	    y + event->height < 0 ||
-	    x > gdk_screen_width() ||
-	    y > gdk_screen_height())
+	monitor = gdk_display_get_monitor_at_window(gdk_display_get_default(),
+	                                            event->window);
+	gdk_monitor_get_geometry(monitor, &geo);
+
+	/* don't save a window that's spanning monitoring */
+	if (x + event->width < geo.x ||
+	    y + event->height < geo.y ||
+	    x > geo.width ||
+	    y > geo.height) {
 		return FALSE; /* carry on normally */
+	}
 
 	/* store the position */
 	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/x", x);
@@ -8574,6 +8581,8 @@ static gboolean
 conv_placement_last_created_win_type_configured_cb(GtkWidget *w,
 		GdkEventConfigure *event, PidginConversation *conv)
 {
+	GdkMonitor *monitor = NULL;
+	GdkRectangle geo;
 	int x, y;
 	GList *all;
 
@@ -8587,12 +8596,17 @@ conv_placement_last_created_win_type_configured_cb(GtkWidget *w,
 	if (gdk_window_get_state(gtk_widget_get_window(w)) & GDK_WINDOW_STATE_MAXIMIZED)
 		return FALSE;
 
+	monitor = gdk_display_get_monitor_at_window(gdk_display_get_default(),
+	                                            event->window);
+	gdk_monitor_get_geometry(monitor, &geo);
+
 	/* don't save off-screen positioning */
-	if (x + event->width < 0 ||
-	    y + event->height < 0 ||
-	    x > gdk_screen_width() ||
-	    y > gdk_screen_height())
+	if (x + event->width < geo.x ||
+	    y + event->height < geo.y ||
+	    x > geo.width ||
+	    y > geo.height) {
 		return FALSE; /* carry on normally */
+	}
 
 	for (all = conv->convs; all != NULL; all = all->next) {
 		if (PURPLE_IS_IM_CONVERSATION(conv->active_conv) != PURPLE_IS_IM_CONVERSATION(all->data)) {
