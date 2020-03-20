@@ -24,6 +24,7 @@
 #include "account.h"
 #include "connection.h"
 #include "debug.h"
+#include "purpleprotocolfactory.h"
 #include "roomlist.h"
 #include "server.h"
 
@@ -393,13 +394,16 @@ PurpleRoomlist *purple_roomlist_new(PurpleAccount *account)
 
 	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), NULL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, roomlist_new))
-		list = purple_protocol_factory_iface_roomlist_new(protocol, account);
-	else
+	if(PURPLE_IS_PROTOCOL_FACTORY(protocol)) {
+		list = purple_protocol_factory_roomlist_new(
+			PURPLE_PROTOCOL_FACTORY(protocol), account);
+	}
+	else {
 		list = g_object_new(PURPLE_TYPE_ROOMLIST,
 			"account", account,
 			NULL
 		);
+	}
 
 	g_return_val_if_fail(list != NULL, NULL);
 

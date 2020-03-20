@@ -23,6 +23,7 @@
 
 #include "internal.h"
 #include "whiteboard.h"
+#include "purpleprotocolfactory.h"
 #include "protocol.h"
 
 typedef struct _PurpleWhiteboardPrivate  PurpleWhiteboardPrivate;
@@ -518,16 +519,17 @@ PurpleWhiteboard *purple_whiteboard_new(PurpleAccount *account, const char *who,
 
 	g_return_val_if_fail(PURPLE_IS_PROTOCOL(protocol), NULL);
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, whiteboard_new))
-		wb = purple_protocol_factory_iface_whiteboard_new(protocol, account,
-				who, state);
-	else
+	if(PURPLE_IS_PROTOCOL_FACTORY(protocol)) {
+		wb = purple_protocol_factory_whiteboard_new(
+			PURPLE_PROTOCOL_FACTORY(protocol), account, who, state);
+	} else {
 		wb = g_object_new(PURPLE_TYPE_WHITEBOARD,
 			"account", account,
 			"who",     who,
 			"state",   state,
 			NULL
 		);
+	}
 
 	g_return_val_if_fail(wb != NULL, NULL);
 

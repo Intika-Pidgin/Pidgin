@@ -66,6 +66,7 @@
       <xi:include href="xml/purple-gio.xml" />
       <xi:include href="xml/purpleaccountoption.xml" />
       <xi:include href="xml/purpleaccountusersplit.xml" />
+      <xi:include href="xml/purpleprotocolfactory.xml" />
       <xi:include href="xml/purpleuiinfo.xml" />
       <xi:include href="xml/queuedoutputstream.xml" />
       <xi:include href="xml/signals.xml" />

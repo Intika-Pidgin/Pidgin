@@ -594,44 +594,6 @@ struct _PurpleProtocolMediaInterface
 #define PURPLE_PROTOCOL_MEDIA_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_MEDIA, \
                                               PurpleProtocolMediaInterface))
 
-#define PURPLE_TYPE_PROTOCOL_FACTORY (purple_protocol_factory_iface_get_type())
-
-typedef struct _PurpleProtocolFactoryInterface PurpleProtocolFactoryInterface;
-
-/**
- * PurpleProtocolFactoryInterface:
- * @connection_new: Creates a new protocol-specific connection object that
- *                  inherits #PurpleConnection.
- * @roomlist_new:   Creates a new protocol-specific room list object that
- *                  inherits #PurpleRoomlist.
- * @whiteboard_new: Creates a new protocol-specific whiteboard object that
- *                  inherits #PurpleWhiteboard.
- *
- * The protocol factory interface.
- *
- * This interface provides callbacks for construction of protocol-specific
- * subclasses of some purple objects.
- */
-struct _PurpleProtocolFactoryInterface
-{
-	/*< private >*/
-	GTypeInterface parent_iface;
-
-	/*< public >*/
-	PurpleConnection *(*connection_new)(PurpleProtocol *protocol,
-	                                    PurpleAccount *account,
-	                                    const char *password);
-
-	PurpleRoomlist *(*roomlist_new)(PurpleAccount *account);
-
-	PurpleWhiteboard *(*whiteboard_new)(PurpleAccount *account,
-	                                    const char *who, int state);
-};
-
-#define PURPLE_IS_PROTOCOL_FACTORY(obj) (G_TYPE_CHECK_INSTANCE_TYPE((obj), PURPLE_TYPE_PROTOCOL_FACTORY))
-#define PURPLE_PROTOCOL_FACTORY_GET_IFACE(obj) (G_TYPE_INSTANCE_GET_INTERFACE((obj), PURPLE_TYPE_PROTOCOL_FACTORY, \
-                                                PurpleProtocolFactoryInterface))
-
 /**
  * PURPLE_PROTOCOL_IMPLEMENTS:
  * @protocol: The protocol in which to check
@@ -1258,35 +1220,6 @@ PurpleMediaCaps purple_protocol_media_iface_get_caps(PurpleProtocol *protocol,
  */
 gboolean purple_protocol_media_iface_send_dtmf(PurpleProtocol *protocol,
 		PurpleMedia *media, gchar dtmf, guint8 volume, guint8 duration);
-
-/**************************************************************************/
-/* Protocol Factory Interface API                                         */
-/**************************************************************************/
-
-/**
- * purple_protocol_factory_iface_get_type:
- *
- * Returns: The #GType for the protocol factory interface.
- */
-GType purple_protocol_factory_iface_get_type(void);
-
-/**
- * purple_protocol_factory_iface_connection_new: (skip)
- */
-PurpleConnection *purple_protocol_factory_iface_connection_new(PurpleProtocol *protocol,
-		PurpleAccount *account, const char *password);
-
-/**
- * purple_protocol_factory_iface_roomlist_new: (skip)
- */
-PurpleRoomlist *purple_protocol_factory_iface_roomlist_new(PurpleProtocol *protocol,
-		PurpleAccount *account);
-
-/**
- * purple_protocol_factory_iface_whiteboard_new: (skip)
- */
-PurpleWhiteboard *purple_protocol_factory_iface_whiteboard_new(PurpleProtocol *protocol,
-		PurpleAccount *account, const char *who, int state);
 
 G_END_DECLS
 
