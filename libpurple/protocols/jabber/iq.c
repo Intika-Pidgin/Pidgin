@@ -228,7 +228,7 @@ static void jabber_iq_version_parse(JabberStream *js, const char *from,
 	PurpleXmlNode *query;
 
 	if(type == JABBER_IQ_GET) {
-		GHashTable *ui_info;
+		PurpleUiInfo *ui_info;
 		const char *ui_name = NULL, *ui_version = NULL;
 
 		iq = jabber_iq_new_query(js, JABBER_IQ_RESULT, "jabber:iq:version");
@@ -240,9 +240,9 @@ static void jabber_iq_version_parse(JabberStream *js, const char *from,
 
 		ui_info = purple_core_get_ui_info();
 
-		if(NULL != ui_info) {
-			ui_name = g_hash_table_lookup(ui_info, "name");
-			ui_version = g_hash_table_lookup(ui_info, "version");
+		if(PURPLE_IS_UI_INFO(ui_info)) {
+			ui_name = purple_ui_info_get_name(ui_info);
+			ui_version = purple_ui_info_get_version(ui_info);
 		}
 
 		if(NULL != ui_name && NULL != ui_version) {
@@ -256,6 +256,10 @@ static void jabber_iq_version_parse(JabberStream *js, const char *from,
 		}
 
 		jabber_iq_send(iq);
+
+		if(PURPLE_IS_UI_INFO(ui_info)) {
+			g_object_unref(G_OBJECT(ui_info));
+		}
 	}
 }
 

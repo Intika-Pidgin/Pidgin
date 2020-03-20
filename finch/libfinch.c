@@ -56,48 +56,13 @@ debug_init(void)
 	purple_debug_set_ui(PURPLE_DEBUG_UI(ui));
 }
 
-static GHashTable *ui_info = NULL;
-static GHashTable *finch_ui_get_info(void)
+static PurpleUiInfo *ui_info = NULL;
+static PurpleUiInfo *
+finch_ui_get_info(void)
 {
-	if (ui_info == NULL) {
-		ui_info = g_hash_table_new(g_str_hash, g_str_equal);
-
-		g_hash_table_insert(ui_info, "name", (char*)_("Finch"));
-		g_hash_table_insert(ui_info, "version", VERSION);
-		g_hash_table_insert(ui_info, "website", "https://pidgin.im");
-		g_hash_table_insert(ui_info, "dev_website", "https://developer.pidgin.im");
-		g_hash_table_insert(ui_info, "client_type", "console");
-
-		/*
-		 * This is the client key for "Finch." Please don't use this
-		 * key for other applications.  You can not specify a client
-		 * key, in which case the default "libpurple" key will be used
-		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "ma18nmEklXMR7Cj_");
-
-		/*
-		 * This is the client key for "Pidgin."  It is owned by the AIM
-		 * account "markdoliner."  Please don't use this key for other
-		 * applications.  You can either not specify a client key, in
-		 * which case the default "libpurple" key will be used, or you
-		 * can try to register your own at the AIM or ICQ web sites
-		 * (although this functionality was removed at some point, it's
-		 * possible it has been re-added).  AOL's old key management
-		 * page is http://developer.aim.com/manageKeys.jsp
-		 *
-		 * We used to have a Finch-specific devId/clientkey
-		 * (ma19sqWV9ymU6UYc), but it stopped working, so we switched
-		 * to this one.
-		 */
-		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
-
-		/*
-		 * This is the distid for Finch, given to us by AOL.  Please
-		 * don't use this for other applications.  You can just not
-		 * specify a distid and libpurple will use a default.
-		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1718));
-		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1552));
+	if(!PURPLE_IS_UI_INFO(ui_info)) {
+		ui_info = purple_ui_info_new(_("Finch"), VERSION, "https://pidgin.im",
+		                             "https://developer.pidgin.im", "console");
 	}
 
 	return ui_info;
@@ -107,8 +72,7 @@ static void
 finch_quit(void)
 {
 	finch_ui_uninit();
-	if (ui_info)
-		g_hash_table_destroy(ui_info);
+	g_clear_object(&ui_info);
 }
 
 static PurpleCoreUiOps core_ops =
@@ -118,12 +82,6 @@ static PurpleCoreUiOps core_ops =
 	finch_ui_init,
 	finch_quit,
 	finch_ui_get_info,
-
-	/* padding */
-	NULL,
-	NULL,
-	NULL,
-	NULL
 };
 
 static PurpleCoreUiOps *
