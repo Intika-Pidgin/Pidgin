@@ -452,7 +452,7 @@ pidgin_sound_play_file(const char *filename)
 	if (purple_strequal(method, "none")) {
 		return;
 	} else if (purple_strequal(method, "beep")) {
-		gdk_beep();
+		gdk_display_beep(gdk_display_get_default());
 		return;
 	}
 #ifdef _WIN32
@@ -578,7 +578,7 @@ pidgin_sound_play_file(const char *filename)
 #else /* #ifdef USE_GSTREAMER */
 
 #ifndef _WIN32
-	gdk_beep();
+	gdk_display_beep(gdk_display_get_default());
 #else /* _WIN32 */
 	pidgin_sound_play_file_win32(filename);
 #endif /* _WIN32 */
