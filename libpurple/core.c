@@ -66,8 +66,10 @@ purple_core_print_version(void)
 	const gchar *ui_version;
 	gchar *ui_full_name = NULL;
 
-	ui_name = ui_info ? purple_ui_info_get_name(ui_info) : NULL;
-	ui_version = ui_info ? purple_ui_info_get_version(ui_info) : NULL;
+	if(PURPLE_IS_UI_INFO(ui_info)) {
+		ui_name = purple_ui_info_get_name(ui_info);
+		ui_version = purple_ui_info_get_version(ui_info);
+	}
 
 	if (ui_name) {
 		if (ui_version) {
@@ -83,7 +85,10 @@ purple_core_print_version(void)
 		purple_core_get_version());
 
 	g_free(ui_full_name);
-	g_object_unref(G_OBJECT(ui_info));
+
+	if(PURPLE_IS_UI_INFO(ui_info)) {
+		g_object_unref(G_OBJECT(ui_info));
+	}
 }
 
 gboolean
