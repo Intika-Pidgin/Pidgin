@@ -7818,9 +7818,9 @@ static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gp
 		return FALSE; /* carry on normally */
 	}
 
-	gtk_window_get_position(GTK_WINDOW(w), &window_get.x, &window_get.y);
-	window_get.width = event->width;
-	window_get.height = event->height;
+	gtk_window_get_position(GTK_WINDOW(w), &window_geo.x, &window_geo.y);
+	window_geo.width = event->width;
+	window_geo.height = event->height;
 
 	/* Workaround for GTK+ bug # 169811 - "configure_event" is fired
 	* when the window is being maximized */
@@ -7842,14 +7842,15 @@ static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gp
 	}
 
 	/* store the position */
-	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/x", x);
-	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/y", y);
-	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/width",  event->width);
-	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/height", event->height);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/x", window_geo.x);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/y", window_geo.y);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/width",
+	                     window_geo.width);
+	purple_prefs_set_int(PIDGIN_PREFS_ROOT "/conversations/im/height",
+	                     window_geo.height);
 
 	/* continue to handle event normally */
 	return FALSE;
-
 }
 
 static void
