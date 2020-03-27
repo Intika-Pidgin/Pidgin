@@ -7812,13 +7812,15 @@ plugin_changed_cb(PurplePlugin *p, gpointer data)
 
 static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gpointer data) {
 	GdkMonitor *monitor = NULL;
-	GdkRectangle geo;
-	int x, y;
+	GdkRectangle geo, window_geo, intersect_geo;
 
-	if (gtk_widget_get_visible(w))
-		gtk_window_get_position(GTK_WINDOW(w), &x, &y);
-	else
+	if(!gtk_widget_get_visible(w)) {
 		return FALSE; /* carry on normally */
+	}
+
+	gtk_window_get_position(GTK_WINDOW(w), &window_get.x, &window_get.y);
+	window_get.width = event->width;
+	window_get.height = event->height;
 
 	/* Workaround for GTK+ bug # 169811 - "configure_event" is fired
 	* when the window is being maximized */
@@ -7829,11 +7831,13 @@ static gboolean gtk_conv_configure_cb(GtkWidget *w, GdkEventConfigure *event, gp
 	                                            event->window);
 	gdk_monitor_get_geometry(monitor, &geo);
 
-	/* don't save a window that's spanning monitoring */
-	if (x + event->width < geo.x ||
-	    y + event->height < geo.y ||
-	    x > geo.width ||
-	    y > geo.height) {
+	/* now make sure that the window is entirely within the monitor.  We do
+	 * this by finding the intersection of the window on the monitor, if that
+	 * is equal to the window's geometry, then the window is fully contained on
+	 * the given monitor.
+	 */
+	gdk_rectangle_intersect(&geo, &window_geo, &intersect_geo);
+	if(!gdk_rectangle_equal(&window_geo, &intersect_geo)) {
 		return FALSE; /* carry on normally */
 	}
 
