@@ -3931,7 +3931,9 @@ jabber_do_init(void)
 
 	jabber_auth_init();
 
-	g_object_unref(G_OBJECT(ui_info));
+	if(PURPLE_IS_UI_INFO(ui_info)) {
+		g_object_unref(G_OBJECT(ui_info));
+	}
 }
 
 static void
