@@ -803,8 +803,8 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 {
 	GtkWidget *widget;
 	GtkRequisition requisition;
-	GdkMonitor *m = NULL;
-	GdkRectangle monitor;
+	GdkMonitor *monitor = NULL;
+	GdkRectangle geo;
 	gint space_left, space_right, space_above, space_below;
 	gboolean rtl;
 
@@ -821,7 +821,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	 */
 	gtk_widget_get_preferred_size(widget, NULL, &requisition);
 
-	m = gdk_display_get_monitor_at_point(gdk_display_get_default(), *x, *y);
+	monitor = gdk_display_get_monitor_at_point(gdk_display_get_default(), *x, *y);
 
 	*push_in = FALSE;
 
@@ -844,12 +844,12 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	 * Positioning in the vertical direction is similar: first try below
 	 * mouse cursor, then above.
 	 */
-	gdk_monitor_get_geometry(m, &monitor);
+	gdk_monitor_get_geometry(monitor, &geo);
 
-	space_left = *x - monitor.x;
-	space_right = monitor.x + monitor.width - *x - 1;
-	space_above = *y - monitor.y;
-	space_below = monitor.y + monitor.height - *y - 1;
+	space_left = *x - geo.x;
+	space_right = geo.x + geo.width - *x - 1;
+	space_above = *y - geo.y;
+	space_below = geo.y + geo.height - *y - 1;
 
 	/* position horizontally */
 
@@ -865,7 +865,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 		/* x is clamped on-screen further down */
 	}
-	else if (requisition.width <= monitor.width)
+	else if (requisition.width <= geo.width)
 	{
 		/* the menu is too big to fit on either side of the mouse
 		 * cursor, but smaller than the monitor. Position it on
@@ -874,12 +874,12 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 		if (space_left > space_right)
 		{
 			/* left justify */
-			*x = monitor.x;
+			*x = geo.x;
 		}
 		else
 		{
 			/* right justify */
-			*x = monitor.x + monitor.width - requisition.width;
+			*x = geo.x + geo.width - requisition.width;
 		}
 	}
 	else /* menu is simply too big for the monitor */
@@ -887,12 +887,12 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 		if (rtl)
 		{
 			/* right justify */
-			*x = monitor.x + monitor.width - requisition.width;
+			*x = geo.x + geo.width - requisition.width;
 		}
 		else
 		{
 			/* left justify */
-			*x = monitor.x;
+			*x = geo.x;
 		}
 	}
 
@@ -907,13 +907,13 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 			*y = *y - requisition.height + 1;
 		}
 
-		*y = CLAMP (*y, monitor.y,
-			   monitor.y + monitor.height - requisition.height);
+		*y = CLAMP (*y, geo.y,
+			   geo.y + geo.height - requisition.height);
 	} else {
 		if (space_below >= space_above)
-			*y = monitor.y + monitor.height - requisition.height;
+			*y = geo.y + geo.height - requisition.height;
 		else
-			*y = monitor.y;
+			*y = geo.y;
 	}
 }
 
