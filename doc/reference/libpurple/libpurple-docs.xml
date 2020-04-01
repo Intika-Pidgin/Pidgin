@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
                "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
 
 <!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
@@ -66,6 +66,7 @@
       <xi:include href="xml/purple-gio.xml" />
       <xi:include href="xml/purpleaccountoption.xml" />
       <xi:include href="xml/purpleaccountusersplit.xml" />
+      <xi:include href="xml/purpleuiinfo.xml" />
       <xi:include href="xml/queuedoutputstream.xml" />
       <xi:include href="xml/signals.xml" />
       <xi:include href="xml/request.xml" />
@@ -93,7 +94,7 @@
   </part>
 
   <part id="Submodules">
-	  <title>Submodules</title>
+    <title>Submodules</title>
     <chapter id="messages">
       <title>Messaging</title>
 

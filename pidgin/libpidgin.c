@@ -248,7 +248,7 @@ pidgin_ui_init(void)
 	pidgin_notify_init();
 }
 
-static GHashTable *ui_info = NULL;
+static PurpleUiInfo *ui_info = NULL;
 
 static void
 pidgin_quit(void)
@@ -269,46 +269,17 @@ pidgin_quit(void)
 	purple_debug_set_ui(NULL);
 	g_object_unref(ui);
 
-	if(NULL != ui_info)
-		g_hash_table_destroy(ui_info);
+	g_clear_object(&ui_info);
 
 	/* and end it all... */
 	g_application_quit(g_application_get_default());
 }
 
-static GHashTable *pidgin_ui_get_info(void)
+static PurpleUiInfo *pidgin_ui_get_info(void)
 {
 	if(NULL == ui_info) {
-		ui_info = g_hash_table_new(g_str_hash, g_str_equal);
-
-		g_hash_table_insert(ui_info, "name", (char*)PIDGIN_NAME);
-		g_hash_table_insert(ui_info, "version", VERSION);
-		g_hash_table_insert(ui_info, "website", "https://pidgin.im");
-		g_hash_table_insert(ui_info, "dev_website", "https://developer.pidgin.im");
-		g_hash_table_insert(ui_info, "client_type", "pc");
-
-		/*
-		 * prpl-aim-clientkey is a DevID (or "client key") for Pidgin, given to
-		 * us by AOL in September 2016.  prpl-icq-clientkey is also a client key
-		 * for Pidgin, owned by the AIM account "markdoliner."  Please don't use 
-		 * either for other applications.  Instead, you can either not specify a 
-		 * client key, in which case the default "libpurple" key will be used,
-		 * or you can try to register your own at the AIM or ICQ web sites
-		 * (although this functionality was removed at some point, it's possible 
-		 * it has been re-added).
-		 */
-		g_hash_table_insert(ui_info, "prpl-aim-clientkey", "do1UCeb5gNqxB1S1");
-		g_hash_table_insert(ui_info, "prpl-icq-clientkey", "ma1cSASNCKFtrdv9");
-
-		/*
-		 * prpl-aim-distid is a distID for Pidgin, given to us by AOL in
-		 * September 2016.  prpl-icq-distid is also a distID for Pidgin, given
-		 * to us by AOL.  Please don't use either for other applications.
-		 * Instead, you can just not specify a distID and libpurple will use a
-		 * default.
-		 */
-		g_hash_table_insert(ui_info, "prpl-aim-distid", GINT_TO_POINTER(1715));
-		g_hash_table_insert(ui_info, "prpl-icq-distid", GINT_TO_POINTER(1550));
+		ui_info = purple_ui_info_new(PIDGIN_NAME, VERSION, "https://pidgin.im",
+		                             "https://developer.pidgin.im", "pc");
 	}
 
 	return ui_info;
@@ -321,10 +292,6 @@ static PurpleCoreUiOps core_ops =
 	pidgin_ui_init,
 	pidgin_quit,
 	pidgin_ui_get_info,
-	NULL,
-	NULL,
-	NULL,
-	NULL
 };
 
 static PurpleCoreUiOps *
