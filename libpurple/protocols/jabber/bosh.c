@@ -64,21 +64,26 @@ jabber_bosh_connection_send_now(PurpleJabberBOSHConnection *conn);
 void
 jabber_bosh_init(void)
 {
-	GHashTable *ui_info = purple_core_get_ui_info();
+	PurpleUiInfo *ui_info = purple_core_get_ui_info();
 	const gchar *ui_name = NULL;
 	const gchar *ui_version = NULL;
 
-	if (ui_info) {
-		ui_name = g_hash_table_lookup(ui_info, "name");
-		ui_version = g_hash_table_lookup(ui_info, "version");
+	if(ui_info) {
+		ui_name = purple_ui_info_get_name(ui_info);
+		ui_version = purple_ui_info_get_version(ui_info);
 	}
 
-	if (ui_name) {
+	if(ui_name) {
 		jabber_bosh_useragent = g_strdup_printf(
 			"%s%s%s (libpurple " VERSION ")", ui_name,
 			ui_version ? " " : "", ui_version ? ui_version : "");
-	} else
+	} else {
 		jabber_bosh_useragent = g_strdup("libpurple " VERSION);
+	}
+
+	if(ui_info) {
+		g_object_unref(G_OBJECT(ui_info));
+	}
 }
 
 void jabber_bosh_uninit(void)
