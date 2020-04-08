@@ -176,6 +176,8 @@ version 3.0.0 (??/??/????):
 		  details.
 		* purple_account_get_alias renamed to purple_account_get_private_alias
 		* purple_account_set_alias renamed to purple_account_set_private_alias
+		* purple_account_set_status_list renamed to
+		  purple_account_set_status_attrs
 		* purple_account_option_get_type renamed to
 		  purple_account_option_get_pref_type
 		* PurplePrivacyType renamed to PurpleAccountPrivacyType
@@ -312,6 +314,8 @@ version 3.0.0 (??/??/????):
 		* PurpleStatus is now a GObject. Please see the documentation for
 		  details.
 		* purple_status_attr_* functions are now purple_status_attribute_*
+		* purple_status_set_active_with_attrs_list renamed to
+		  purple_status_set_active_with_attrs_dict
 		* PurpleStatusAttr renamed to PurpleStatusAttribute
 		* PurplePresence is now an abstract type, and is a GObject. Please see
 		  the documentation for details.

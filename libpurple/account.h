@@ -452,8 +452,10 @@ void purple_account_set_status(PurpleAccount *account, const char *status_id,
  * You can only deactivate an exclusive status by activating another exclusive
  * status.  So, if @a status_id is an exclusive status and @a active is @c
  * FALSE, this function does nothing.
+ *
+ * Since: 3.0.0
  */
-void purple_account_set_status_list(PurpleAccount *account,
+void purple_account_set_status_attrs(PurpleAccount *account,
 	const char *status_id, gboolean active, GHashTable *attrs);
 
 /**

@@ -502,8 +502,10 @@ void purple_status_set_active_with_attrs(PurpleStatus *status, gboolean active,
  * Sets whether or not a status is active.
  *
  * This should only be called by the account, conversation, and buddy APIs.
+ *
+ * Since: 3.0.0
  */
-void purple_status_set_active_with_attrs_list(PurpleStatus *status, gboolean active,
+void purple_status_set_active_with_attrs_dict(PurpleStatus *status, gboolean active,
 											GHashTable *attrs);
 
 /**
