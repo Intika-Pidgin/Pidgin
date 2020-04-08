@@ -1797,13 +1797,13 @@ purple_account_set_status(PurpleAccount *account, const char *status_id,
 
 	va_start(args, active);
 	attrs = purple_attrs_from_vargs(args);
-	purple_account_set_status_list(account, status_id, active, attrs);
+	purple_account_set_status_attrs(account, status_id, active, attrs);
 	g_hash_table_destroy(attrs);
 	va_end(args);
 }
 
 void
-purple_account_set_status_list(PurpleAccount *account, const char *status_id,
+purple_account_set_status_attrs(PurpleAccount *account, const char *status_id,
 							 gboolean active, GHashTable *attrs)
 {
 	PurpleStatus *status;
@@ -1822,7 +1822,7 @@ purple_account_set_status_list(PurpleAccount *account, const char *status_id,
 	}
 
 	if (active || purple_status_is_independent(status))
-		purple_status_set_active_with_attrs_list(status, active, attrs);
+		purple_status_set_active_with_attrs_dict(status, active, attrs);
 
 	/*
 	 * Our current statuses are saved to accounts.xml (so that when we

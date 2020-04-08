@@ -275,7 +275,7 @@ parse_status(PurpleXmlNode *node, PurpleAccount *account)
 						purple_account_get_status(account, type));
 	}
 
-	purple_account_set_status_list(account, type, active, attrs);
+	purple_account_set_status_attrs(account, type, active, attrs);
 
 	g_hash_table_destroy(attrs);
 }
