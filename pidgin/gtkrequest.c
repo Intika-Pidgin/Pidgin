@@ -37,8 +37,6 @@
 
 #include <gdk/gdkkeysyms.h>
 
-#include "gtk3compat.h"
-
 typedef struct
 {
 	PurpleRequestType type;
@@ -1511,9 +1509,6 @@ _pidgin_datasheet_stock_icon_get(const gchar *stock_name)
 			image = pidgin_create_protocol_icon(account,
 				PIDGIN_PROTOCOL_ICON_SMALL);
 		}
-	} else if (purple_strequal(domain, "e2ee")) {
-		image = pidgin_pixbuf_from_image(
-			_pidgin_e2ee_stock_icon_get(id));
 	} else {
 		purple_debug_error("gtkrequest", "Unknown domain: %s", domain);
 		g_free(domain);
@@ -2476,7 +2471,7 @@ pidgin_window_detach_children(GtkWindow* win)
 
 	par = gtk_window_get_transient_for(win);
 	it = gtk_window_list_toplevels();
-	for (it = g_list_first(it); it != NULL; it = g_list_next(it)) {
+	for (it = g_list_first(it); it != NULL; it = g_list_delete_link(it, it)) {
 		GtkWindow *child = GTK_WINDOW(it->data);
 		if (gtk_window_get_transient_for(child) != win)
 			continue;

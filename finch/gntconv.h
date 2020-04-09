@@ -113,15 +113,12 @@ struct _FinchConvChat
  * FinchConvIm:
  * @sendto: The sendto widget which allows the user to select who they're
  *          messaging.
- * @e2ee_menu: The end-to-end-encryption widget which lets the user configure
- *             the encryption.
  *
  * The instant message implementation for a conversation.
  */
 struct _FinchConvIm
 {
 	GntMenuItem *sendto;
-	GntMenuItem *e2ee_menu;
 
 	/*< private >*/
 	void *finch_reserved1;

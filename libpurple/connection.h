@@ -306,6 +306,8 @@ void purple_connection_set_state(PurpleConnection *gc, PurpleConnectionState sta
  * @flags: The flags.
  *
  * Sets the connection flags.
+ *
+ * Since: 3.0.0
  */
 void purple_connection_set_flags(PurpleConnection *gc, PurpleConnectionFlags flags);
 
@@ -344,6 +346,8 @@ PurpleConnectionState purple_connection_get_state(PurpleConnection *gc);
  * Returns the connection flags.
  *
  * Returns: The connection flags.
+ *
+ * Since: 3.0.0
  */
 PurpleConnectionFlags purple_connection_get_flags(PurpleConnection *gc);
 
@@ -359,7 +363,7 @@ PurpleConnectionFlags purple_connection_get_flags(PurpleConnection *gc);
 
 /**
  * purple_connection_is_disconnecting:
- * @param gc The connection.
+ * @gc: The connection.
  *
  * Checks, if connection is in disconnecting state.
  *
@@ -406,6 +410,8 @@ const char *purple_connection_get_password(PurpleConnection *gc);
  *
  * Returns: (element-type PurpleChatConversation) (transfer none): The active
  *          chats on the connection.
+ *
+ * Since: 3.0.0
  */
 GSList *purple_connection_get_active_chats(PurpleConnection *gc);
 
@@ -472,13 +478,17 @@ purple_connection_error(PurpleConnection *gc,
  * error exists.
  *
  * Returns: The #PurpleConnectionErrorInfo instance of the connection if an
- *         error exists, %NULL otherwise.
+ *          error exists, %NULL otherwise.
+ *
+ * Since: 3.0.0
  */
 PurpleConnectionErrorInfo *
 purple_connection_get_error_info(PurpleConnection *gc);
 
 /**
  * purple_connection_ssl_error:
+ * @gc: The connection.
+ * @ssl_error: The SSL error type.
  *
  * Closes a connection due to an SSL error; this is basically a shortcut to
  * turning the #PurpleSslErrorType into a #PurpleConnectionError and a
@@ -523,18 +533,22 @@ purple_connection_take_error(PurpleConnection *pc,
 
 /**
  * purple_connection_error_is_fatal:
+ * @reason: The connection error to check.
  *
  * Reports whether a disconnection reason is fatal (in which case the account
  * should probably not be automatically reconnected) or transient (so
  * auto-reconnection is a good idea).
+ *
  * For instance, #PURPLE_CONNECTION_ERROR_NETWORK_ERROR is a temporary error,
- * which might be caused by losing the network connection, so <literal>
- * purple_connection_error_is_fatal (PURPLE_CONNECTION_ERROR_NETWORK_ERROR)</literal>
- * is %FALSE.  On the other hand,
- * #PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED probably indicates a
- * misconfiguration of the account which needs the user to go fix it up, so
- * <literal> purple_connection_error_is_fatal
- * (PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED)</literal> is %TRUE.
+ * which might be caused by losing the network connection, so <code>
+ * purple_connection_error_is_fatal(PURPLE_CONNECTION_ERROR_NETWORK_ERROR)
+ * </code> is %FALSE.
+ *
+ * On the other hand, #PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED probably
+ * indicates a misconfiguration of the account which needs the user to go fix
+ * it up, so <code>
+ * purple_connection_error_is_fatal(PURPLE_CONNECTION_ERROR_AUTHENTICATION_FAILED)
+ * </code> is %TRUE.
  *
  * Returns: %TRUE if the account should not be automatically reconnected, and
  *         %FALSE otherwise.
@@ -548,6 +562,8 @@ purple_connection_error_is_fatal (PurpleConnectionError reason);
  *
  * Indicate that a packet was received on the connection.
  * Set by the protocol to avoid sending unneeded keepalives.
+ *
+ * Since: 3.0.0
  */
 void purple_connection_update_last_received(PurpleConnection *gc);
 

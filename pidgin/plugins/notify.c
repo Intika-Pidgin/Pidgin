@@ -93,7 +93,6 @@
 #include "version.h"
 #include "debug.h"
 
-#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
 

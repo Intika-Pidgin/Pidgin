@@ -87,9 +87,12 @@ jingle_rtp_candidates_to_transport(JingleSession *session, const gchar *type, gu
 
 	for (; candidates; candidates = g_list_next(candidates)) {
 		PurpleMediaCandidate *candidate = candidates->data;
-		gchar *id = jabber_get_next_id(jingle_session_get_js(session));
-		jingle_transport_add_local_candidate(transport, id, generation, candidate);
-		g_free(id);
+		if (purple_media_candidate_get_protocol(candidate) ==
+				PURPLE_MEDIA_NETWORK_PROTOCOL_UDP) {
+			gchar *id = jabber_get_next_id(jingle_session_get_js(session));
+			jingle_transport_add_local_candidate(transport, id, generation, candidate);
+			g_free(id);
+		}
 	}
 
 	return transport;
@@ -121,7 +124,7 @@ jingle_rtp_candidates_prepared_cb(PurpleMedia *media,
 			session, jingle_transport_get_transport_type(oldtransport),
 			0, candidates);
 
-	g_list_free(candidates);
+	purple_media_candidate_list_free(candidates);
 	g_object_unref(oldtransport);
 
 	jingle_content_set_pending_transport(content, transport);
@@ -217,8 +220,15 @@ jingle_rtp_stream_info_cb(PurpleMedia *media, PurpleMediaInfoType type,
 				session);
 
 		g_object_unref(session);
-	} else if (type == PURPLE_MEDIA_INFO_ACCEPT &&
+	/* The same signal is emited *four* times in case of acceptance
+	 * by purple_media_stream_info() (stream acceptance, session
+	 * acceptance, participant acceptance, and conference acceptance).
+	 * We only react to the first one, where sid and name are given
+	 * non-null values.
+	 */
+	} else if (type == PURPLE_MEDIA_INFO_ACCEPT && sid && name &&
 			jingle_session_is_initiator(session) == FALSE) {
+
 		jingle_rtp_ready(session);
 	}
 }
@@ -578,6 +588,9 @@ jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlNode *xmlcont
 			g_free(remote_jid);
 			g_free(name);
 			g_object_unref(session);
+			g_object_unref(transport);
+			purple_media_candidate_list_free(candidates);
+			purple_media_codec_list_free(codecs);
 			break;
 		}
 		case JINGLE_SESSION_TERMINATE: {
@@ -607,6 +620,8 @@ jingle_rtp_handle_action_internal(JingleContent *content, PurpleXmlNode *xmlcont
 			g_free(remote_jid);
 			g_free(name);
 			g_object_unref(session);
+			g_object_unref(transport);
+			purple_media_candidate_list_free(candidates);
 			break;
 		}
 		case JINGLE_DESCRIPTION_INFO: {

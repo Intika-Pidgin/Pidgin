@@ -22,6 +22,7 @@
 
 #ifndef PURPLE_VERSION_H
 #define PURPLE_VERSION_H
+
 /**
  * SECTION:version
  * @section_id: libpurple-version
@@ -50,9 +51,36 @@
  */
 #define PURPLE_MICRO_VERSION (@PURPLE_MICRO_VERSION@)
 
-#define PURPLE_VERSION_CHECK(x,y,z) ((x) == PURPLE_MAJOR_VERSION && \
-									 ((y) < PURPLE_MINOR_VERSION || \
-									  ((y) == PURPLE_MINOR_VERSION && (z) <= PURPLE_MICRO_VERSION)))
+/**
+ * PURPLE_EXTRA_VERSION:
+ *
+ * The "extra" part of the version number if anything.  Typical values are
+ * "devel", "beta1", "rc2", etc.
+ */
+#define PURPLE_EXTRA_VERSION ("@PURPLE_EXTRA_VERSION@")
+
+/**
+ * PURPLE_VERSION
+ *
+ * The entire version as a string.
+ */
+#define PURPLE_VERSION ("@PURPLE_VERSION@")
+
+/**
+ * PURPLE_VERSION_CHECK:
+ * @major: The major version to check for.
+ * @minor: The minor version to check for.
+ * @micro: The micro version to check for.
+ *
+ * Checks the version of libpurple being compiled against.  See
+ * #purple_version_check for a runtime check.
+ *
+ * Returns: %TRUE if the version of libpurple is the same or newer than the
+ *          passed-in version.
+ */
+#define PURPLE_VERSION_CHECK(major, minor, micro) ((major) == PURPLE_MAJOR_VERSION && \
+                                                   ((minor) < PURPLE_MINOR_VERSION || \
+                                                    ((minor) == PURPLE_MINOR_VERSION && (micro) <= PURPLE_MICRO_VERSION)))
 
 G_BEGIN_DECLS
 

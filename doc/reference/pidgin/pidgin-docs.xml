@@ -29,15 +29,12 @@
       <xi:include href="xml/gtkconvwin.xml" />
       <xi:include href="xml/gtkdialogs.xml" />
       <xi:include href="xml/gtkdnd-hints.xml" />
-      <xi:include href="xml/gtkdocklet.xml" />
       <xi:include href="xml/gtkicon-theme-loader.xml" />
       <xi:include href="xml/gtkicon-theme.xml" />
       <xi:include href="xml/gtkidle.xml" />
       <xi:include href="xml/gtkmedia.xml" />
-      <xi:include href="xml/gtkmenutray.xml" />
       <xi:include href="xml/gtknickcolors.xml" />
       <xi:include href="xml/gtknotify.xml" />
-      <xi:include href="xml/gtkplugin.xml" />
       <xi:include href="xml/gtkpluginpref.xml" />
       <xi:include href="xml/gtkpounce.xml" />
       <xi:include href="xml/gtkprefs.xml" />
@@ -58,10 +55,17 @@
       <xi:include href="xml/minidialog.xml" />
       <xi:include href="xml/pidgin.xml" />
       <xi:include href="xml/pidginabout.xml" />
+      <xi:include href="xml/pidginaccountchooser.xml" />
+      <xi:include href="xml/pidgincontactcompletion.xml" />
       <xi:include href="xml/pidgindebug.xml" />
       <xi:include href="xml/pidgingdkpixbuf.xml" />
+      <xi:include href="xml/pidginicon.xml" />
+      <xi:include href="xml/pidgininvitedialog.xml" />
       <xi:include href="xml/pidginlog.xml" />
+      <xi:include href="xml/pidginmenutray.xml" />
       <xi:include href="xml/pidginmessage.xml" />
+      <xi:include href="xml/pidginplugininfo.xml" />
+      <xi:include href="xml/pidginpluginsdialog.xml" />
       <xi:include href="xml/pidginstock.xml" />
       <xi:include href="xml/pidgintalkatu.xml" />
       <xi:include href="xml/pidgintooltip.xml" />
@@ -76,14 +80,28 @@
       <xi:include href="signals_gtklog.xml" />
   </part>
 
-  <index id="api-index-full">
-    <title>Index</title>
-    <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
-  </index>
-  <index id="api-index-deprecated" role="deprecated">
-    <title>Index of deprecated symbols</title>
-    <xi:include href="xml/api-index-deprecated.xml"><xi:fallback /></xi:include>
-  </index>
+  <part>
+    <title>Appendices</title>
 
-  <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+    <index id="api-index-full">
+      <title>API Index</title>
+      <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <index id="api-deprecated">
+      <title>Index of deprecated symbols</title>
+      <xi:include href="xml/api-index-deprecated.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <index id="api-3.0.0">
+      <title>Index of new symbols in 3.0.0</title>
+      <xi:include href="xml/api-index-3.0.0.xml"><xi:fallback /></xi:include>
+    </index>
+    <index id="api-2.10.0">
+      <title>Index of new symbols in 2.10.0</title>
+      <xi:include href="xml/api-index-2.10.0.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+  </part>
 </book>

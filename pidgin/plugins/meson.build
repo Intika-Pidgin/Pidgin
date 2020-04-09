@@ -85,4 +85,5 @@ if PLUGINS
 		    name_prefix : '',
 		    install : true, install_dir : PIDGIN_PLUGINDIR)
 	endif
+
 endif # PLUGINS

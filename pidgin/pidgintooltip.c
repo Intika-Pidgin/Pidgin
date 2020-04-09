@@ -130,20 +130,20 @@ setup_tooltip_window_position(gpointer data, int w, int h)
 {
 	int scr_w, scr_h, x, y, dy;
 	int preserved_x, preserved_y;
-	int mon_num;
-	GdkScreen *screen = NULL;
+	GdkDisplay *display = NULL;
+	GdkSeat *seat = NULL;
+	GdkMonitor *monitor = NULL;
+	GdkDevice *dev = NULL;
 	GdkRectangle mon_size;
 	GtkWidget *tipwindow = pidgin_tooltip.tipwindow;
 
-	GdkSeat *seat;
-	GdkDevice *dev;
-
-	seat = gdk_display_get_default_seat(gdk_display_get_default());
+	display = gdk_display_get_default();
+	seat = gdk_display_get_default_seat(display);
 	dev = gdk_seat_get_pointer(seat);
-	gdk_device_get_position(dev, &screen, &x, &y);
+	gdk_device_get_position(dev, NULL, &x, &y);
 
-	mon_num = gdk_screen_get_monitor_at_point(screen, x, y);
-	gdk_screen_get_monitor_geometry(screen, mon_num, &mon_size);
+	monitor = gdk_display_get_monitor_at_point(display, x, y);
+	gdk_monitor_get_geometry(monitor, &mon_size);
 
 	scr_w = mon_size.width + mon_size.x;
 	scr_h = mon_size.height + mon_size.y;

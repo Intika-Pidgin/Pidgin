@@ -110,7 +110,7 @@ GList *purple_media_get_session_ids(PurpleMedia *media);
  *
  * Gets the PurpleAccount this media session is on.
  *
- * Returns: (transfer none): The account retrieved.
+ * Returns: (transfer full): The account retrieved.
  */
 PurpleAccount *purple_media_get_account(PurpleMedia *media);
 
@@ -383,6 +383,8 @@ gboolean purple_media_set_send_codec(PurpleMedia *media, const gchar *sess_id, P
  * @key_len: Byte length of the encryption key.
  *
  * Sets the encryption parameters of our media in the session.
+ *
+ * Since: 2.11.0
  */
 gboolean purple_media_set_encryption_parameters(PurpleMedia *media,
 		const gchar *sess_id, const gchar *cipher,
@@ -401,11 +403,28 @@ gboolean purple_media_set_encryption_parameters(PurpleMedia *media,
  * @key_len: Byte length of the decryption key.
  *
  * Sets the decryption parameters for a session participant's media.
+ *
+ * Since: 2.11.0
  */
 gboolean purple_media_set_decryption_parameters(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant,
 		const gchar *cipher, const gchar *auth,
 		const gchar *key, gsize key_len);
+
+/**
+ * purple_media_set_require_encryption:
+ * @media: The media object to find the session in.
+ * @sess_id: The id of the session to set parameters of.
+ * @participant: The participant of the session to set parameters of.
+ * @require_encryption: TRUE if the media requires encryption.
+ *
+ * Sets whether a session participant's media requires encryption.
+ *
+ * Since: 2.14.0
+ */
+gboolean purple_media_set_require_encryption(PurpleMedia *media,
+		const gchar *sess_id, const gchar *participant,
+		gboolean require_encryption);
 
 /**
  * purple_media_codecs_ready:
@@ -429,7 +448,7 @@ gboolean purple_media_codecs_ready(PurpleMedia *media, const gchar *sess_id);
  *
  * Returns: %TRUE RTCP-Mux was set successfully, or %FALSE otherwise.
  *
- * @since 2.11.0
+ * Since: 2.11.0
  */
 gboolean purple_media_set_send_rtcp_mux(PurpleMedia *media,
 		const gchar *sess_id, const gchar *participant, gboolean send_rtcp_mux);

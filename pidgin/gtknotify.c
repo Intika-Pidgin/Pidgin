@@ -32,7 +32,6 @@
 #include "pidginstock.h"
 #include "util.h"
 
-#include "gtk3compat.h"
 #include "gtkblist.h"
 #include "gtknotify.h"
 #include "gtkpounce.h"

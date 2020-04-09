@@ -32,6 +32,8 @@
 #include <glib.h>
 #include <glib-object.h>
 
+#include <libpurple/purpleuiinfo.h>
+
 #define PURPLE_TYPE_CORE_UI_OPS (purple_core_ui_ops_get_type())
 
 typedef struct PurpleCore PurpleCore;
@@ -44,7 +46,7 @@ typedef struct _PurpleCoreUiOps PurpleCoreUiOps;
  *                 needs to be in place when other subsystems are initialized.
  * @debug_ui_init: Called just after the debug subsystem is initialized, but
  *                 before just about every other component's initialization. The
- *                 UI should use this hook to call purple_debug_set_ui_ops() so
+ *                 UI should use this hook to call purple_debug_set_ui() so
  *                 that debugging information for other components can be logged
  *                 during their initialization.
  * @ui_init:       Called after all of libpurple has been initialized. The UI
@@ -66,13 +68,10 @@ struct _PurpleCoreUiOps
 
 	void (*quit)(void);
 
-	GHashTable* (*get_ui_info)(void);
+	PurpleUiInfo *(*get_ui_info)(void);
 
 	/*< private >*/
-	void (*_purple_reserved1)(void);
-	void (*_purple_reserved2)(void);
-	void (*_purple_reserved3)(void);
-	void (*_purple_reserved4)(void);
+	gpointer reserved[4];
 };
 
 G_BEGIN_DECLS
@@ -107,22 +106,22 @@ void purple_core_quit(void);
 
 /**
  * purple_core_quit_cb:
+ * @unused: This argument is for consistency with a timeout callback. It is
+ *          otherwise unused.
  *
- * Calls purple_core_quit().  This can be used as the function
- * passed to g_timeout_add() when you want to shutdown Purple
- * in a specified amount of time.  When shutting down Purple
- * from a plugin, you must use this instead of purple_core_quit();
- * for an immediate exit, use a timeout value of 0:
+ * Calls purple_core_quit().  This can be used as the function passed to
+ * g_timeout_add() when you want to shutdown Purple in a specified amount of
+ * time.  When shutting down Purple from a plugin, you must use this instead of
+ * purple_core_quit(); for an immediate exit, use a timeout value of 0:
  *
  * <programlisting>
- * g_timeout_add(0, purple_core_quitcb, NULL)
+ * g_timeout_add(0, purple_core_quit_cb, NULL)
  * </programlisting>
  *
- * This is ensures that code from your plugin is not being
- * executed when purple_core_quit() is called.  If the plugin
- * called purple_core_quit() directly, you would get a core dump
- * after purple_core_quit() executes and control returns to your
- * plugin because purple_core_quit() frees all plugins.
+ * This ensures that code from your plugin is not being executed when
+ * purple_core_quit() is called.  If the plugin called purple_core_quit()
+ * directly, you would get a core dump after purple_core_quit() executes and
+ * control returns to your plugin because purple_core_quit() frees all plugins.
  */
 gboolean purple_core_quit_cb(gpointer unused);
 
@@ -175,52 +174,20 @@ PurpleCoreUiOps *purple_core_get_ui_ops(void);
 /**
  * purple_core_get_ui_info:
  *
- * Returns a hash table containing various information about the UI.  The
- * following well-known entries may be in the table (along with any others the
- * UI might choose to include):
+ * Returns a #PurpleUiInfo that contains information about the user interface.
  *
- * <informaltable frame='none'>
- *   <tgroup cols='2'><tbody>
- *   <row>
- *     <entry><literal>name</literal></entry>
- *     <entry>the user-readable name for the UI.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>version</literal></entry>
- *     <entry>a user-readable description of the current version of the UI.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>website</literal></entry>
- *     <entry>the UI's website, such as https://pidgin.im.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>dev_website</literal></entry>
- *     <entry>the UI's development/support website, such as
- *       https://developer.pidgin.im.</entry>
- *   </row>
- *   <row>
- *     <entry><literal>client_type</literal></entry>
- *     <entry>the type of UI. Possible values include 'pc', 'console', 'phone',
- *       'handheld', 'web', and 'bot'. These values are compared
- *       programmatically and should not be localized.</entry>
- *   </row>
- *   </tbody></tgroup>
- * </informaltable>
- *
- * Returns: (transfer none): A GHashTable with strings for keys and values.
- *          This hash table should not be modified.
- *
+ * Returns: (transfer full): A #PurpleUiInfo instance.
  */
-GHashTable* purple_core_get_ui_info(void);
+PurpleUiInfo* purple_core_get_ui_info(void);
 
 /**
  * purple_core_migrate_to_xdg_base_dirs:
- * 
- * Migrates from legacy directory for libpurple to location following 
+ *
+ * Migrates from legacy directory for libpurple to location following
  * XDG base dir spec. https://developer.pidgin.im/ticket/10029
  * NOTE This is not finished yet. Need to decide where other profile files
  * should be moved. Search for usages of purple_user_dir().
- * 
+ *
  * Returns: TRUE if migrated successfully, FALSE otherwise. On failure,
  *         the application must display an error to the user and then exit.
  */

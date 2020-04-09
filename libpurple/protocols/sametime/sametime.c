@@ -2174,8 +2174,6 @@ static void ft_outgoing_init(PurpleXfer *xfer) {
   filesize = purple_xfer_get_size(xfer);
   idb.user = remote_user;
 
-  purple_xfer_update_progress(xfer);
-
   /* test that we can actually send the file */
   fp = g_fopen(filename, "rb");
   if(! fp) {
@@ -2277,7 +2275,6 @@ static void ft_send(struct mwFileTransfer *ft) {
 
     /* calculate progress and display it */
     purple_xfer_set_bytes_sent(xfer, purple_xfer_get_bytes_sent(xfer) + o.len);
-    purple_xfer_update_progress(xfer);
 
     mwFileTransfer_send(ft, &o);
 
@@ -2371,7 +2368,6 @@ static void mw_ft_recv(struct mwFileTransfer *ft,
 
   /* update the progress */
   purple_xfer_set_bytes_sent(xfer, purple_xfer_get_bytes_sent(xfer) + data->len);
-  purple_xfer_update_progress(xfer);
 
   /* let the other side know we got it, and to send some more */
   mwFileTransfer_ack(ft);

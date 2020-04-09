@@ -9,14 +9,11 @@ libpidgin_SOURCES = [
 	'gtkconv.c',
 	'gtkdialogs.c',
 	'gtkdnd-hints.c',
-	'gtkdocklet.c',
 	'gtkicon-theme.c',
 	'gtkicon-theme-loader.c',
 	'gtkidle.c',
 	'gtkmedia.c',
-	'gtkmenutray.c',
 	'gtknotify.c',
-	'gtkplugin.c',
 	'gtkpluginpref.c',
 	'gtkpounce.c',
 	'gtkprefs.c',
@@ -40,11 +37,15 @@ libpidgin_SOURCES = [
 	'pidginaccountchooser.c',
 	'pidgincontactcompletion.c',
 	'pidgindebug.c',
-	'pidgindebugplugininfo.c',
 	'pidgingdkpixbuf.c',
 	'pidgininvitedialog.c',
 	'pidginlog.c',
+	'pidginmenutray.c',
 	'pidginmessage.c',
+	'pidginplugininfo.c',
+	'pidginpluginsdialog.c',
+	'pidginprotocolchooser.c',
+	'pidginprotocolstore.c',
 	'pidgintalkatu.c',
 	'pidgintooltip.c',
 ]
@@ -60,15 +61,12 @@ libpidgin_headers = [
 	'gtkconvwin.h',
 	'gtkdialogs.h',
 	'gtkdnd-hints.h',
-	'gtkdocklet.h',
 	'gtkicon-theme.h',
 	'gtkicon-theme-loader.h',
 	'gtkidle.h',
 	'gtkmedia.h',
-	'gtkmenutray.h',
 	'gtknickcolors.h',
 	'gtknotify.h',
-	'gtkplugin.h',
 	'gtkpluginpref.h',
 	'gtkprefs.h',
 	'gtkprivacy.h',
@@ -92,12 +90,16 @@ libpidgin_headers = [
 	'pidginaccountchooser.h',
 	'pidgincontactcompletion.h',
 	'pidgindebug.h',
-	'pidgindebugplugininfo.h',
 	'pidgingdkpixbuf.h',
 	'pidginicon.h',
 	'pidgininvitedialog.h',
 	'pidginlog.h',
+	'pidginmenutray.h',
 	'pidginmessage.h',
+	'pidginplugininfo.h',
+	'pidginpluginsdialog.h',
+	'pidginprotocolchooser.h',
+	'pidginprotocolstore.h',
 	'pidgintalkatu.h',
 	'pidgintooltip.h',
 	'pidgin.h',
@@ -119,11 +121,6 @@ if IS_WIN32
 		'win32/gtkwin32dep.c',
 		'win32/untar.c'
 	]
-
-	# Files that looks like obsolete (were used in Pidgin2):
-	#	win32/gtkdocklet-win32.c
-	#	win32/MinimizeToTray.c
-	#	win32/MinimizeToTray.h
 
 	pidgin_exe_rc = configure_file(
 	    input : 'win32/pidgin_exe_rc.rc.in',
@@ -157,15 +154,16 @@ if ENABLE_GTK
 	install_headers(libpidgin_headers, subdir : 'pidgin-3')
 
 	_libpidgin_dependencies = [
-	    	glib,
-	    	gstreamer_video,
-	    	gtk,
-	    	IOKIT,
-	    	json,
-	    	math,
+		glib,
+		gplugin_gtk_dep,
+		gstreamer_video,
+		gtk,
+		IOKIT,
+		json,
+		math,
 		libsoup,
-	        talkatu_dep,
-	    	libpurple_dep,
+		talkatu_dep,
+		libpurple_dep,
 	]
 	if x11.found()
 		_libpidgin_dependencies += x11
@@ -202,7 +200,7 @@ if ENABLE_GTK
 	    filebase : 'pidgin-3',
 	    subdirs : 'pidgin-3',
 	    libraries : [libpidgin],
-	    requires : ['gtk+-3.0', 'purple-3', 'talkatu'],
+	    requires : ['gtk+-3.0', 'purple-3', 'talkatu', 'gplugin-gtk'],
 	    variables : ['plugindir=${libdir}/pidgin-@0@'.format(purple_major_version)])
 
 	if INSTALL_I18N
@@ -231,20 +229,21 @@ if ENABLE_GTK
 		introspection_sources = libpidgin_headers
 
 		gnome.generate_gir(libpidgin,
-		    sources : introspection_sources,
-		    includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], talkatu_gir, gplugin_gir],
-		    namespace : 'Pidgin',
-		    symbol_prefix : 'pidgin',
-		    identifier_prefix : 'Pidgin',
-		    export_packages : 'pidgin-@0@'.format(purple_major_version),
-		    nsversion : '@0@.@1@'.format(purple_major_version,
-		                                 purple_minor_version),
-		    include_directories : [
-		        gplugin_include_directories,
-			talkatu_include_directories,
-		    ],
-		    install : true,
-		    extra_args : ['--quiet'])
+			sources : introspection_sources,
+			includes : ['GObject-2.0', 'Gtk-3.0', libpurple_gir[0], talkatu_gir, gplugin_gir, gplugin_gtk_gir],
+			namespace : 'Pidgin',
+			symbol_prefix : 'pidgin',
+			identifier_prefix : 'Pidgin',
+			export_packages : 'pidgin-@0@'.format(purple_major_version),
+			nsversion : '@0@.@1@'.format(purple_major_version,
+			                             purple_minor_version),
+			include_directories : [
+				gplugin_include_directories,
+				gplugin_gtk_include_directories,
+				talkatu_include_directories,
+			],
+			install : true,
+			extra_args : ['--quiet'])
 	endif
 
 	subdir('data')

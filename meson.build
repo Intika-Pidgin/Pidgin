@@ -1,7 +1,7 @@
 # UPDATING VERSION NUMBERS FOR RELEASES
 #
 # The version number is:
-#   <major>.<minor>.<micro><suffix>
+#   <major>.<minor>.<micro><extra>
 #
 # micro += 1
 #
@@ -15,7 +15,7 @@
 #   major += 1
 #   purple_soversion += 1
 #
-# suffix should be similar to one of the following:
+# extra should be similar to one of the following:
 #   For beta releases:          '-beta2'
 #   For code under development: '-devel'
 #   For production releases:    ''
@@ -27,9 +27,9 @@ purple_soversion = 20
 
 parts = meson.project_version().split('-')
 if parts.length() > 1
-  purple_version_suffix = parts[1]
+  purple_extra_version = parts[1]
 else
-  purple_version_suffix = ''
+  purple_extra_version = ''
 endif
 
 parts = parts[0].split('.')
@@ -46,10 +46,12 @@ conf.set_quoted('GETTEXT_PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE', meson.project_name())
 conf.set_quoted('PACKAGE_NAME', meson.project_name())
 conf.set_quoted('VERSION', meson.project_version())
+conf.set_quoted('DISPLAY_VERSION', meson.project_version())
 
 version_conf.set('PURPLE_MAJOR_VERSION', purple_major_version)
 version_conf.set('PURPLE_MINOR_VERSION', purple_minor_version)
 version_conf.set('PURPLE_MICRO_VERSION', purple_micro_version)
+version_conf.set('PURPLE_EXTRA_VERSION', purple_extra_version)
 version_conf.set('PURPLE_VERSION', meson.project_version())
 version_conf.set('PURPLE_API_VERSION', purple_soversion)
 
@@ -280,14 +282,6 @@ gobject = dependency('gobject-2.0')
 gthread = dependency('gthread-2.0')
 gnome = import('gnome')
 
-if get_option('extraversion') != ''
-	DISPLAY_VERSION = '@0@-@1@'.format(meson.project_version(),
-	                                   get_option('extraversion'))
-else
-	DISPLAY_VERSION = meson.project_version()
-endif
-conf.set_quoted('DISPLAY_VERSION', DISPLAY_VERSION)
-
 #######################################################################
 # Check for GObject Introspection
 #######################################################################
@@ -296,14 +290,11 @@ enable_introspection = dependency('gobject-introspection-1.0', version : '>= 1.3
                                   required : get_option('introspection')).found()
 conf.set('ENABLE_INTROSPECTION', enable_introspection)
 
-# #######################################################################
-# # Check for GTK+ 2.18 and other things used by the GTK UI
-# #######################################################################
-# #######################################################################
+#######################################################################
 # Check Pidgin dependencies
-# #######################################################################
+#######################################################################
 if get_option('gtkui')
-	gtk = dependency('gtk+-3.0', version : '>= 3.20.0')
+	gtk = dependency('gtk+-3.0', version : '>= 3.22.0')
 
 	talkatu_dep = dependency('talkatu', version: '>=0.1.0', required : false)
 	if talkatu_dep.found()
@@ -626,9 +617,9 @@ else
 endif
 
 #######################################################################
-# Check for GPlugin 0.28.0
+# Check for GPlugin
 #######################################################################
-gplugin_dep = dependency('gplugin', version : '>= 0.28.0', required : false)
+gplugin_dep = dependency('gplugin', version : '>= 0.29.0', required : false)
 if gplugin_dep.found()
 	if enable_introspection
 		gplugin_gir = 'GPlugin-0.0'
@@ -638,19 +629,43 @@ if gplugin_dep.found()
 	else
 		gplugin_include_directories = []
 	endif
+
+	if get_option('gtkui')
+		gplugin_gtk_dep = dependency('gplugin-gtk', required : true)
+
+		if enable_introspection
+			gplugin_gtk_gir = 'GPluginGtk-0.0'
+			gplugin_gtk_include_directories = include_directories(
+				join_paths(gplugin_gtk_dep.get_pkgconfig_variable('prefix'),
+				           'share/gir-1.0'))
+		else
+			gplugin_gtk_include_directories = []
+		endif
+	endif
 else
 	gplugin_proj = subproject('gplugin',
 	    default_options : [
 	        'doc=' + get_option('doc').to_string(),
 	        'gobject-introspection=' + enable_introspection.to_string(),
 	        'nls=' + get_option('nls').to_string(),
+	        'gtk3=' + get_option('gtkui').to_string(),
 	    ]
 	)
+
 	gplugin_dep = gplugin_proj.get_variable('gplugin_dep')
 	if enable_introspection
 		gplugin_gir = gplugin_proj.get_variable('gplugin_gir')[0]
 	endif
 	gplugin_include_directories = []
+
+	if get_option('gtkui')
+		gplugin_gtk_dep = gplugin_proj.get_variable('gplugin_gtk_dep')
+
+		if enable_introspection
+			gplugin_gtk_gir = gplugin_proj.get_variable('gplugin_gtk_gir')[0]
+		endif
+		gplugin_gtk_include_directories = []
+	endif
 endif
 
 PLUGINS = get_option('plugins')
@@ -781,7 +796,6 @@ message('Protocols to build dynamically : @0@'.format(DYNAMIC_PRPLS))
 message('')
 message('Build with GStreamer support.. : ' + gstreamer.found().to_string())
 message('Build with voice and video.... : ' + enable_vv.to_string())
-message('Build with GNU Libidn......... : ' + idn.found().to_string())
 message('Build with Nettle support..... : ' + nettle.found().to_string())
 message('Build with Cyrus SASL support. : ' + sasl.found().to_string())
 message('Use external libzephyr........ : ' + EXTERNAL_LIBZEPHYR.to_string())

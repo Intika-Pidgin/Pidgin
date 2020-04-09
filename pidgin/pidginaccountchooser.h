@@ -22,9 +22,9 @@
 #ifndef PIDGIN_ACCOUNT_CHOOSER_H
 #define PIDGIN_ACCOUNT_CHOOSER_H
 /**
- * SECTION:pidgin-account-chooser
+ * SECTION:pidginaccountchooser
  * @section_id: pidgin-account-chooser
- * @short_description: <filename>pidginaccountchooser.h</filename>
+ * @short_description: A #GtkComboBox for choosing accounts
  * @title: Pidgin Account Chooser Combo Box Widget
  */
 
@@ -92,6 +92,18 @@ PurpleAccount *pidgin_account_chooser_get_selected(GtkWidget *chooser);
  */
 void pidgin_account_chooser_set_selected(GtkWidget *chooser,
                                          PurpleAccount *account);
+
+/**
+ * pidgin_account_chooser_get_show_all:
+ * @chooser: The chooser created by pidgin_account_chooser_new().
+ *
+ * Returns whether to show all accounts.
+ *
+ * Returns: Whether or not to show all accounts, or just active accounts.
+ *
+ * Since: 3.0.0
+ */
+gboolean pidgin_account_chooser_get_show_all(GtkWidget *chooser);
 
 G_END_DECLS
 

@@ -37,6 +37,13 @@ G_BEGIN_DECLS
 
 /* Functions in gtkdialogs.c (these should actually stay in this file) */
 void pidgin_dialogs_destroy_all(void);
+/**
+ * pidgin_dialogs_plugins_info:
+ *
+ * This should not be used by anything but Pidgin.
+ *
+ * Since: 2.10.0
+ */
 void pidgin_dialogs_plugins_info(void);
 void pidgin_dialogs_im(void);
 void pidgin_dialogs_im_with_user(PurpleAccount *account, const char *username);
