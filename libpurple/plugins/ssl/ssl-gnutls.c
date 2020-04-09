@@ -451,9 +451,10 @@ static size_t
 ssl_gnutls_read(PurpleSslConnection *gsc, void *data, size_t len)
 {
 	PurpleSslGnutlsData *gnutls_data = PURPLE_SSL_GNUTLS_DATA(gsc);
-	ssize_t s;
+	ssize_t s = 0;
 
-	s = gnutls_record_recv(gnutls_data->session, data, len);
+	if(gnutls_data)
+		s = gnutls_record_recv(gnutls_data->session, data, len);
 
 	if(s == GNUTLS_E_AGAIN || s == GNUTLS_E_INTERRUPTED) {
 		s = -1;
