@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN" 
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.1.2//EN"
                "http://www.oasis-open.org/docbook/xml/4.1.2/docbookx.dtd" [
 
 <!ENTITY % local.common.attrib "xmlns:xi  CDATA  #FIXED 'http://www.w3.org/2003/XInclude'">
@@ -30,6 +30,8 @@
 
       <xi:include href="xml/account.xml" />
       <xi:include href="xml/accounts.xml" />
+      <xi:include href="xml/action.xml" />
+      <xi:include href="xml/attention.xml" />
       <xi:include href="xml/blistnode.xml" />
       <xi:include href="xml/buddy.xml" />
       <xi:include href="xml/buddylist.xml" />
@@ -44,7 +46,6 @@
       <xi:include href="xml/conversations.xml" />
       <xi:include href="xml/countingnode.xml" />
       <xi:include href="xml/debug.xml" />
-      <xi:include href="xml/e2ee.xml" />
       <xi:include href="xml/eventloop.xml" />
       <xi:include href="xml/group.xml" />
       <xi:include href="xml/xfer.xml" />
@@ -65,9 +66,9 @@
       <xi:include href="xml/purple-gio.xml" />
       <xi:include href="xml/purpleaccountoption.xml" />
       <xi:include href="xml/purpleaccountusersplit.xml" />
+      <xi:include href="xml/purpleuiinfo.xml" />
       <xi:include href="xml/queuedoutputstream.xml" />
       <xi:include href="xml/signals.xml" />
-      <xi:include href="xml/stringref.xml" />
       <xi:include href="xml/request.xml" />
       <xi:include href="xml/request-datasheet.xml" />
       <xi:include href="xml/roomlist.xml" />
@@ -78,6 +79,7 @@
       <xi:include href="xml/core.xml" />
       <xi:include href="xml/status.xml" />
       <xi:include href="xml/stun.xml" />
+      <xi:include href="xml/tests.xml" />
       <xi:include href="xml/theme.xml" />
       <xi:include href="xml/theme-loader.xml" />
       <xi:include href="xml/theme-manager.xml" />
@@ -92,7 +94,7 @@
   </part>
 
   <part id="Submodules">
-	  <title>Submodules</title>
+    <title>Submodules</title>
     <chapter id="messages">
       <title>Messaging</title>
 
@@ -156,22 +158,32 @@
   <xi:include href="plugin_i18n.xml" />
   <xi:include href="ui_ops.xml" />
 
-  <index id="api-index-full">
-    <title>Index</title>
-    <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
-  </index>
-  <index id="api-index-deprecated" role="deprecated">
-    <title>Index of deprecated symbols</title>
-    <xi:include href="xml/api-index-deprecated.xml"><xi:fallback /></xi:include>
-  </index>
-  <index id="api-index-2-11-0" role="2.11.0">
-    <title>Index of new symbols in 2.11.0</title>
-    <xi:include href="xml/api-index-2.11.0.xml"><xi:fallback /></xi:include>
-  </index>
-  <index id="api-index-3-0-0" role="3.0.0">
-    <title>Index of new symbols in 3.0.0</title>
-    <xi:include href="xml/api-index-3.0.0.xml"><xi:fallback /></xi:include>
-  </index>
+  <part>
+    <title>Appendices</title>
 
-  <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+    <index id="api-index-full">
+      <title>API Index</title>
+      <xi:include href="xml/api-index-full.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <index id="api-deprecated">
+      <title>Index of deprecated symbols</title>
+      <xi:include href="xml/api-index-deprecated.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <index id="api-3.0.0">
+      <title>Index of new symbols in 3.0.0</title>
+      <xi:include href="xml/api-index-3.0.0.xml"><xi:fallback /></xi:include>
+    </index>
+    <index id="api-2.13.0">
+      <title>Index of new symbols in 2.13.0</title>
+      <xi:include href="xml/api-index-2.13.0.xml"><xi:fallback /></xi:include>
+    </index>
+    <index id="api-2.11.0">
+      <title>Index of new symbols in 2.11.0</title>
+      <xi:include href="xml/api-index-2.11.0.xml"><xi:fallback /></xi:include>
+    </index>
+
+    <xi:include href="xml/annotation-glossary.xml"><xi:fallback /></xi:include>
+  </part>
 </book>

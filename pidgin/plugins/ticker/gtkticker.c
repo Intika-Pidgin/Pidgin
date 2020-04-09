@@ -24,8 +24,6 @@
 #include "gtkticker.h"
 #include <gtk/gtk.h>
 
-#include "gtk3compat.h"
-
 struct _GtkTicker
 {
 	GtkContainer container;

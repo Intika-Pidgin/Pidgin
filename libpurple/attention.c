@@ -25,10 +25,15 @@
  * PurpleAttentionType API
  *****************************************************************************/
 struct _PurpleAttentionType {
+	/* The name to show in GUI elements. */
 	const gchar *name;
+	/* Shown when received. */
 	const gchar *incoming_description;
+	/* Shown when sent. */
 	const gchar *outgoing_description;
+	/* Optional name of the icon to display. */
 	const gchar *icon_name;
+	/* An unlocalized name for UIs that would rather use that. */
 	const gchar *unlocalized_name;
 };
 

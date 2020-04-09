@@ -44,9 +44,7 @@
 #include "gtkconv.h"
 #include "gtkdialogs.h"
 #include "gtkxfer.h"
-#include "gtkmenutray.h"
 #include "gtkpounce.h"
-#include "gtkplugin.h"
 #include "gtkprefs.h"
 #include "gtkprivacy.h"
 #include "gtkroomlist.h"
@@ -61,16 +59,16 @@
 #include "pidgin/pidginabout.h"
 #include "pidgin/pidginaccountchooser.h"
 #include "pidgin/pidgindebug.h"
-#include "pidgin/pidgindebugplugininfo.h"
 #include "pidgin/pidgingdkpixbuf.h"
 #include "pidgin/pidginlog.h"
+#include "pidgin/pidginplugininfo.h"
+#include "pidgin/pidginpluginsdialog.h"
 #include "pidgin/pidgintooltip.h"
+#include "pidginmenutray.h"
 
 #include <gdk/gdkkeysyms.h>
 #include <gtk/gtk.h>
 #include <gdk/gdk.h>
-
-#include "gtk3compat.h"
 
 typedef struct
 {
@@ -3619,6 +3617,15 @@ set_mood_show(void)
  *            Crap                                 *
  ***************************************************/
 static void
+pidgin_blist_plugins_dialog_cb(GtkAction *action, GtkWidget *window) {
+	GtkWidget *dialog = pidgin_plugins_dialog_new();
+
+	gtk_window_set_transient_for(GTK_WINDOW(dialog), GTK_WINDOW(window));
+
+	gtk_widget_show_all(dialog);
+}
+
+static void
 _pidgin_about_cb(GtkAction *action, GtkWidget *window) {
 	GtkWidget *about = pidgin_about_dialog_new();
 
@@ -3652,7 +3659,7 @@ static const GtkActionEntry blist_menu_entries[] = {
 	{ "ToolsMenu", NULL, N_("_Tools"), NULL, NULL, NULL },
 	{ "BuddyPounces", NULL, N_("Buddy _Pounces"), NULL, NULL, pidgin_pounces_manager_show },
 	{ "CustomSmileys", PIDGIN_STOCK_TOOLBAR_SMILEY, N_("Custom Smile_ys"), "<control>Y", NULL, pidgin_smiley_manager_show },
-	{ "Plugins", PIDGIN_STOCK_TOOLBAR_PLUGINS, N_("Plu_gins"), "<control>U", NULL, pidgin_plugin_dialog_show },
+	{ "Plugins", PIDGIN_STOCK_TOOLBAR_PLUGINS, N_("Plu_gins"), "<control>U", NULL, pidgin_blist_plugins_dialog_cb },
 	{ "Preferences", GTK_STOCK_PREFERENCES, N_("Pr_eferences"), "<control>P", NULL, pidgin_prefs_show },
 	{ "Privacy", NULL, N_("Pr_ivacy"), NULL, NULL, pidgin_privacy_dialog_show },
 	{ "SetMood", NULL, N_("Set _Mood"), "<control>D", NULL, set_mood_show },
@@ -3664,7 +3671,6 @@ static const GtkActionEntry blist_menu_entries[] = {
 	{ "HelpMenu", NULL, N_("_Help"), NULL, NULL, NULL },
 	{ "OnlineHelp", GTK_STOCK_HELP, N_("Online _Help"), "F1", NULL, gtk_blist_show_onlinehelp_cb },
 	{ "DebugWindow", NULL, N_("_Debug Window"), NULL, NULL, toggle_debug },
-	{ "PluginInformation", NULL, N_("_Plugin Information"), NULL, NULL, pidgin_debug_plugin_info_show },
 	{ "About", GTK_STOCK_ABOUT, N_("_About"), NULL, NULL, G_CALLBACK(_pidgin_about_cb) },
 };
 
@@ -3727,7 +3733,6 @@ static const char *blist_menu =
 			"<menuitem action='OnlineHelp'/>"
 			"<separator/>"
 			"<menuitem action='DebugWindow'/>"
-			"<menuitem action='PluginInformation'/>"
 			"<separator/>"
 			"<menuitem action='About'/>"
 		"</menu>"
@@ -7369,7 +7374,6 @@ static gboolean buddy_signonoff_timeout_cb(PurpleBuddy *buddy)
 
 	pidgin_blist_update(NULL, PURPLE_BLIST_NODE(buddy));
 
-	g_object_unref(buddy);
 	return FALSE;
 }
 
@@ -7390,8 +7394,10 @@ static void buddy_signonoff_cb(PurpleBuddy *buddy)
 		g_source_remove(gtknode->recent_signonoff_timer);
 
 	g_object_ref(buddy);
-	gtknode->recent_signonoff_timer = g_timeout_add_seconds(10,
-			(GSourceFunc)buddy_signonoff_timeout_cb, buddy);
+	gtknode->recent_signonoff_timer = g_timeout_add_seconds_full(
+			G_PRIORITY_DEFAULT, 10,
+			(GSourceFunc)buddy_signonoff_timeout_cb,
+			buddy, g_object_unref);
 }
 
 void

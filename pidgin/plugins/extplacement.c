@@ -24,7 +24,7 @@
 #include "pidgin.h"
 #include "conversation.h"
 #include "version.h"
-#include "gtkplugin.h"
+#include "pidginplugininfo.h"
 #include "gtkconv.h"
 #include "gtkconvwin.h"
 

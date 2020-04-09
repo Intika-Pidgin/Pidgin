@@ -17,45 +17,39 @@
  * You should have received a copy of the GNU General Public License
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111-1301  USA
+ *
  */
 
-#ifndef _PIDGINGTK3COMPAT_H_
-#define _PIDGINGTK3COMPAT_H_
-/*
- * SECTION:gtk3compat
- * @section_id: pidgin-gtk3compat
- * @short_description: <filename>gtk3compat.h</filename>
- * @title: GTK3 version-dependent definitions
- *
- * This file is internal to Pidgin. Do not use!
- * Also, any public API should not depend on this file.
+#ifndef PIDGIN_PLUGINS_DIALOG_H
+#define PIDGIN_PLUGINS_DIALOG_H
+
+/**
+ * SECTION:pidginpluginsdialog
+ * @section_id: pidgin-plugins-dialog
+ * @short_description: A widget to display available plugins
+ * @title: Plugins Dialog
  */
 
 #include <gtk/gtk.h>
 
-#if !GTK_CHECK_VERSION(3,22,0)
+G_BEGIN_DECLS
 
-static inline void
-gtk_menu_popup_at_pointer(GtkMenu *menu, const GdkEvent *trigger_event)
-{
-	const GdkEventButton *event = (const GdkEventButton *)trigger_event;
-	gtk_menu_popup(menu, NULL, NULL, NULL, NULL,
-	               event ? event->button : 0, gdk_event_get_time(event));
-}
+#define PIDGIN_TYPE_PLUGINS_DIALOG (pidgin_plugins_dialog_get_type())
+G_DECLARE_FINAL_TYPE(PidginPluginsDialog, pidgin_plugins_dialog, PIDGIN,
+		PLUGINS_DIALOG, GtkDialog)
 
-static inline void
-gtk_popover_popup(GtkPopover *popover)
-{
-	gtk_widget_show(GTK_WIDGET(popover));
-}
+/**
+ * pidgin_plugins_dialog_new:
+ *
+ * Creates a new instance of #PidginPluginsDialog.
+ *
+ * Returns: (transfer full): The new #PidginPluginsDialog.
+ *
+ * Since: 3.0.0
+ */
+GtkWidget *pidgin_plugins_dialog_new(void);
 
-static inline void
-gtk_popover_popdown(GtkPopover *popover)
-{
-	gtk_widget_hide(GTK_WIDGET(popover));
-}
+G_END_DECLS
 
-#endif /* 3.22.0 */
-
-#endif /* _PIDGINGTK3COMPAT_H_ */
+#endif /* PIDGIN_PLUGINS_DIALOG_H */
 

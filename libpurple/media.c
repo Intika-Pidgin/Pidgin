@@ -289,6 +289,11 @@ purple_media_dispose(GObject *media)
 		priv->manager = NULL;
 	}
 
+	if (priv->conference_type) {
+		g_free(priv->conference_type);
+		priv->conference_type = NULL;
+	}
+
 	G_OBJECT_CLASS(purple_media_parent_class)->dispose(media);
 }
 
@@ -945,20 +950,16 @@ purple_media_candidate_pair_established_cb(PurpleMediaBackend *backend,
 		PurpleMediaCandidate *c = iter->data;
 		if (id == purple_media_candidate_get_component_id(c)) {
 			g_object_unref(c);
-			stream->active_local_candidates =
-					g_list_delete_link(iter, iter);
-			stream->active_local_candidates = g_list_prepend(
+			stream->active_local_candidates = g_list_delete_link(
 					stream->active_local_candidates,
-					purple_media_candidate_copy(
-					local_candidate));
+					iter);
 			break;
 		}
 	}
-	if (iter == NULL)
-		stream->active_local_candidates = g_list_prepend(
-				stream->active_local_candidates,
-				purple_media_candidate_copy(
-				local_candidate));
+	stream->active_local_candidates = g_list_prepend(
+			stream->active_local_candidates,
+			purple_media_candidate_copy(
+			local_candidate));
 
 	id = purple_media_candidate_get_component_id(local_candidate);
 
@@ -967,20 +968,16 @@ purple_media_candidate_pair_established_cb(PurpleMediaBackend *backend,
 		PurpleMediaCandidate *c = iter->data;
 		if (id == purple_media_candidate_get_component_id(c)) {
 			g_object_unref(c);
-			stream->active_remote_candidates =
-					g_list_delete_link(iter, iter);
-			stream->active_remote_candidates = g_list_prepend(
+			stream->active_remote_candidates = g_list_delete_link(
 					stream->active_remote_candidates,
-					purple_media_candidate_copy(
-					remote_candidate));
+					iter);
 			break;
 		}
 	}
-	if (iter == NULL)
-		stream->active_remote_candidates = g_list_prepend(
-				stream->active_remote_candidates,
-				purple_media_candidate_copy(
-				remote_candidate));
+	stream->active_remote_candidates = g_list_prepend(
+			stream->active_remote_candidates,
+			purple_media_candidate_copy(
+			remote_candidate));
 
 	g_signal_emit(media, purple_media_signals[CANDIDATE_PAIR_ESTABLISHED],
 		0, sess_id, name, local_candidate, remote_candidate);
@@ -1234,6 +1231,19 @@ purple_media_set_decryption_parameters(PurpleMedia *media, const gchar *sess_id,
 	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
 	return purple_media_backend_set_decryption_parameters(media->priv->backend,
 			sess_id, participant, cipher, auth, key, key_len);
+#else
+	return FALSE;
+#endif
+}
+
+gboolean
+purple_media_set_require_encryption(PurpleMedia *media, const gchar *sess_id,
+                const gchar *participant, gboolean require_encryption)
+{
+#ifdef USE_VV
+	g_return_val_if_fail(PURPLE_IS_MEDIA(media), FALSE);
+	return purple_media_backend_set_require_encryption(media->priv->backend,
+			sess_id, participant, require_encryption);
 #else
 	return FALSE;
 #endif

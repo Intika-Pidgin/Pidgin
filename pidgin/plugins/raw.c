@@ -29,7 +29,6 @@
 #include "protocol.h"
 #include "version.h"
 
-#include "gtk3compat.h"
 #include "gtkplugin.h"
 #include "gtkutils.h"
 #include "pidginaccountchooser.h"

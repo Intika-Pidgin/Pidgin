@@ -28,6 +28,10 @@
  * @title: Internal definitions and includes
  */
 
+#ifndef GLIB_VERSION_MIN_REQUIRED
+#define GLIB_VERSION_MIN_REQUIRED (GLIB_VERSION_2_28)
+#endif
+
 #ifdef HAVE_CONFIG_H
 # include <config.h>
 #endif

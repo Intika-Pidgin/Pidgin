@@ -789,12 +789,15 @@ remove_pref(struct purple_pref *pref)
 	}
 
 	child = pref->first_child;
+	pref->first_child = NULL;
 	while (child) {
 		struct purple_pref *next;
 		if (child->first_child) {
 			next = child->first_child;
+			child->first_child = NULL;
 		} else if (child->sibling) {
 			next = child->sibling;
+			child->sibling = NULL;
 			free_pref(child);
 		} else {
 			if (child->parent != pref) {

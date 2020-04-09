@@ -52,9 +52,6 @@
 #include "gtkutils.h"
 #include "pidgin/minidialog.h"
 
-#include "gtk3compat.h"
-
-
 /******************************************************************************
  * Enums
  *****************************************************************************/
@@ -443,25 +440,7 @@ aop_option_menu_get_selected(GtkWidget *optmenu)
 	return data;
 }
 
-static void
-aop_menu_cb(GtkWidget *optmenu, GCallback cb)
-{
-	if (cb != NULL) {
-		((void (*)(GtkWidget *, gpointer, gpointer))cb)(optmenu,
-			aop_option_menu_get_selected(optmenu),
-			g_object_get_data(G_OBJECT(optmenu), "user_data"));
-	}
-}
-
-static void
-aop_option_menu_replace_menu(GtkWidget *optmenu, AopMenu *new_aop_menu)
-{
-	gtk_combo_box_set_model(GTK_COMBO_BOX(optmenu), new_aop_menu->model);
-	gtk_combo_box_set_active(GTK_COMBO_BOX(optmenu), new_aop_menu->default_item);
-	g_free(new_aop_menu);
-}
-
-static GdkPixbuf *
+GdkPixbuf *
 pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSize size, PurpleAccount *account)
 {
 	const char *protoname = NULL;
@@ -493,27 +472,6 @@ pidgin_create_icon_from_protocol(PurpleProtocol *protocol, PidginProtocolIconSiz
 	return pixbuf;
 }
 
-static GtkWidget *
-aop_option_menu_new(AopMenu *aop_menu, GCallback cb, gpointer user_data)
-{
-	GtkWidget *optmenu = NULL;
-	GtkCellRenderer *cr = NULL;
-
-	optmenu = gtk_combo_box_new();
-	gtk_widget_show(optmenu);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu), cr = gtk_cell_renderer_pixbuf_new(), FALSE);
-	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "pixbuf", AOP_ICON_COLUMN);
-	gtk_cell_layout_pack_start(GTK_CELL_LAYOUT(optmenu), cr = gtk_cell_renderer_text_new(), TRUE);
-	gtk_cell_layout_add_attribute(GTK_CELL_LAYOUT(optmenu), cr, "text", AOP_NAME_COLUMN);
-
-	aop_option_menu_replace_menu(optmenu, aop_menu);
-	g_object_set_data(G_OBJECT(optmenu), "user_data", user_data);
-
-	g_signal_connect(G_OBJECT(optmenu), "changed", G_CALLBACK(aop_menu_cb), cb);
-
-	return optmenu;
-}
-
 static void
 aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 {
@@ -530,58 +488,6 @@ aop_option_menu_select_by_data(GtkWidget *optmenu, gpointer data)
 			}
 		} while (gtk_tree_model_iter_next(model, &iter));
 	}
-}
-
-static AopMenu *
-create_protocols_menu(const char *default_proto_id)
-{
-	AopMenu *aop_menu = NULL;
-	PurpleProtocol *protocol;
-	GdkPixbuf *pixbuf = NULL;
-	GtkTreeIter iter;
-	GtkListStore *ls;
-	GList *list, *p;
-	int i;
-
-	ls = gtk_list_store_new(AOP_COLUMN_COUNT, GDK_TYPE_PIXBUF, G_TYPE_STRING, G_TYPE_POINTER);
-
-	aop_menu = g_malloc0(sizeof(AopMenu));
-	aop_menu->default_item = 0;
-	aop_menu->model = GTK_TREE_MODEL(ls);
-
-	list = purple_protocols_get_all();
-
-	for (p = list, i = 0;
-		 p != NULL;
-		 p = p->next, i++) {
-
-		protocol = PURPLE_PROTOCOL(p->data);
-
-		pixbuf = pidgin_create_icon_from_protocol(protocol, PIDGIN_PROTOCOL_ICON_SMALL, NULL);
-
-		gtk_list_store_append(ls, &iter);
-		gtk_list_store_set(ls, &iter,
-		                   AOP_ICON_COLUMN, pixbuf,
-		                   AOP_NAME_COLUMN, purple_protocol_get_name(protocol),
-		                   AOP_DATA_COLUMN, purple_protocol_get_id(protocol),
-		                   -1);
-
-		if (pixbuf)
-			g_object_unref(pixbuf);
-
-		if (default_proto_id != NULL && purple_strequal(purple_protocol_get_id(protocol), default_proto_id))
-			aop_menu->default_item = i;
-	}
-	g_list_free(list);
-
-	return aop_menu;
-}
-
-GtkWidget *
-pidgin_protocol_option_menu_new(const char *id, GCallback cb,
-								  gpointer user_data)
-{
-	return aop_option_menu_new(create_protocols_menu(id), cb, user_data);
 }
 
 const char *
@@ -897,16 +803,14 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 {
 	GtkWidget *widget;
 	GtkRequisition requisition;
-	GdkScreen *screen;
-	GdkRectangle monitor;
-	gint monitor_num;
+	GdkMonitor *monitor = NULL;
+	GdkRectangle geo;
 	gint space_left, space_right, space_above, space_below;
 	gboolean rtl;
 
 	g_return_if_fail(GTK_IS_MENU(menu));
 
 	widget     = GTK_WIDGET(menu);
-	screen     = gtk_widget_get_screen(widget);
 	rtl        = (gtk_widget_get_direction(widget) == GTK_TEXT_DIR_RTL);
 
 	/*
@@ -917,7 +821,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	 */
 	gtk_widget_get_preferred_size(widget, NULL, &requisition);
 
-	monitor_num = gdk_screen_get_monitor_at_point (screen, *x, *y);
+	monitor = gdk_display_get_monitor_at_point(gdk_display_get_default(), *x, *y);
 
 	*push_in = FALSE;
 
@@ -940,12 +844,12 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 	 * Positioning in the vertical direction is similar: first try below
 	 * mouse cursor, then above.
 	 */
-	gdk_screen_get_monitor_geometry (screen, monitor_num, &monitor);
+	gdk_monitor_get_geometry(monitor, &geo);
 
-	space_left = *x - monitor.x;
-	space_right = monitor.x + monitor.width - *x - 1;
-	space_above = *y - monitor.y;
-	space_below = monitor.y + monitor.height - *y - 1;
+	space_left = *x - geo.x;
+	space_right = geo.x + geo.width - *x - 1;
+	space_above = *y - geo.y;
+	space_below = geo.y + geo.height - *y - 1;
 
 	/* position horizontally */
 
@@ -961,7 +865,7 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 
 		/* x is clamped on-screen further down */
 	}
-	else if (requisition.width <= monitor.width)
+	else if (requisition.width <= geo.width)
 	{
 		/* the menu is too big to fit on either side of the mouse
 		 * cursor, but smaller than the monitor. Position it on
@@ -970,12 +874,12 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 		if (space_left > space_right)
 		{
 			/* left justify */
-			*x = monitor.x;
+			*x = geo.x;
 		}
 		else
 		{
 			/* right justify */
-			*x = monitor.x + monitor.width - requisition.width;
+			*x = geo.x + geo.width - requisition.width;
 		}
 	}
 	else /* menu is simply too big for the monitor */
@@ -983,12 +887,12 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 		if (rtl)
 		{
 			/* right justify */
-			*x = monitor.x + monitor.width - requisition.width;
+			*x = geo.x + geo.width - requisition.width;
 		}
 		else
 		{
 			/* left justify */
-			*x = monitor.x;
+			*x = geo.x;
 		}
 	}
 
@@ -1003,46 +907,19 @@ pidgin_menu_position_func_helper(GtkMenu *menu,
 			*y = *y - requisition.height + 1;
 		}
 
-		*y = CLAMP (*y, monitor.y,
-			   monitor.y + monitor.height - requisition.height);
+		*y = CLAMP (*y, geo.y,
+			   geo.y + geo.height - requisition.height);
 	} else {
 		if (space_below >= space_above)
-			*y = monitor.y + monitor.height - requisition.height;
+			*y = geo.y + geo.height - requisition.height;
 		else
-			*y = monitor.y;
+			*y = geo.y;
 	}
 }
-
-
-#if !GTK_CHECK_VERSION(3,22,0)
-static void
-pidgin_treeview_popup_menu_position_func(GtkMenu *menu,
-										   gint *x,
-										   gint *y,
-										   gboolean *push_in,
-										   gpointer data)
-{
-	GtkWidget *widget = GTK_WIDGET(data);
-	GtkTreeView *tv = GTK_TREE_VIEW(data);
-	GtkTreePath *path;
-	GtkTreeViewColumn *col;
-	GdkRectangle rect;
-
-	gdk_window_get_origin (gtk_widget_get_window(widget), x, y);
-	gtk_tree_view_get_cursor (tv, &path, &col);
-	gtk_tree_view_get_cell_area (tv, path, col, &rect);
-
-	*x += rect.x+rect.width;
-	*y += rect.y + rect.height;
-	pidgin_menu_position_func_helper(menu, x, y, push_in, data);
-}
-#endif
-
 
 void
 pidgin_menu_popup_at_treeview_selection(GtkWidget *menu, GtkWidget *treeview)
 {
-#if GTK_CHECK_VERSION(3,22,0)
 	GtkTreePath *path;
 	GtkTreeViewColumn *column;
 	GdkWindow *bin_window;
@@ -1059,11 +936,6 @@ pidgin_menu_popup_at_treeview_selection(GtkWidget *menu, GtkWidget *treeview)
 	                       NULL);
 
 	gtk_tree_path_free(path);
-#else
-	gtk_menu_popup(GTK_MENU(menu), NULL, NULL,
-	               pidgin_treeview_popup_menu_position_func, treeview,
-	               0, GDK_CURRENT_TIME);
-#endif
 }
 
 
@@ -1498,9 +1370,9 @@ menu_action_cb(GtkMenuItem *item, gpointer object)
 		callback(object, data);
 }
 
-GtkWidget *
-pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
-                            gpointer object)
+static GtkWidget *
+do_pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
+				    gpointer object)
 {
 	GtkWidget *menuitem;
 	GList *list;
@@ -1557,11 +1429,17 @@ pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
 		for (l = list; l; l = l->next) {
 			PurpleActionMenu *act = (PurpleActionMenu *)l->data;
 
-			pidgin_append_menu_action(submenu, act, object);
+			do_pidgin_append_menu_action(submenu, act, object);
 		}
-		g_list_free(list);
-		purple_action_menu_set_children(act, NULL);
 	}
+	return menuitem;
+}
+
+GtkWidget *
+pidgin_append_menu_action(GtkWidget *menu, PurpleActionMenu *act,
+                            gpointer object)
+{
+	GtkWidget *menuitem = do_pidgin_append_menu_action(menu, act, object);
 	purple_action_menu_free(act);
 	return menuitem;
 }

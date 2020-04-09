@@ -206,6 +206,7 @@ gplugin_query(GError **error) {
 		"abi-version", PURPLE_ABI_VERSION,
 		"name", "Purple Toast",
 		"version", "0.0.1",
+		"summary", "Toast notifications",
 		"authors", authors,
 		NULL
 	);

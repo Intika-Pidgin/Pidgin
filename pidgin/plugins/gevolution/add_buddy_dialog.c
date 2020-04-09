@@ -22,7 +22,6 @@
 #include "gtkblist.h"
 #include "pidgin.h"
 
-#include "gtk3compat.h"
 #include "gtkutils.h"
 
 #include "debug.h"

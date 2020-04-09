@@ -345,11 +345,11 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 	name = (*packet)->name;
 	xmlns = purple_xmlnode_get_namespace(*packet);
 
-	if(purple_strequal((*packet)->name, "iq")) {
+	if (purple_strequal(name, "iq")) {
 		jabber_iq_parse(js, *packet);
-	} else if(purple_strequal((*packet)->name, "presence")) {
+	} else if (purple_strequal(name, "presence")) {
 		jabber_presence_parse(js, *packet);
-	} else if(purple_strequal((*packet)->name, "message")) {
+	} else if (purple_strequal(name, "message")) {
 		jabber_message_parse(js, *packet);
 	} else if (purple_strequal(xmlns, NS_XMPP_STREAMS)) {
 		if (purple_strequal(name, "features"))
@@ -377,7 +377,7 @@ void jabber_process_packet(JabberStream *js, PurpleXmlNode **packet)
 			/* TODO: Handle <failure/>, I guess? */
 		}
 	} else {
-		purple_debug_warning("jabber", "Unknown packet: %s\n", (*packet)->name);
+		purple_debug_warning("jabber", "Unknown packet: %s\n", name);
 	}
 }
 
@@ -1599,8 +1599,18 @@ void jabber_close(PurpleConnection *gc)
 		jabber_bosh_connection_destroy(js->bosh);
 		js->bosh = NULL;
 	} else if (js->output != NULL) {
-		jabber_send_raw(js, "</stream:stream>", -1);
-
+		/* We should emit the stream termination message here
+		 * normally, but since we destroy the jabber stream just
+		 * after, it has no way to effectively go out on the
+		 * wire. Moreover, it causes a connection lost error in
+		 * the output queued stream that triggers an
+		 * heap-use-after-free error in jabber_push_bytes_cb().
+		 *
+		 * This case happens when disabling the jabber account
+		 * from the dialog box.
+		 *
+		 * jabber_send_raw(js, "</stream:stream>", -1);
+		 */
 		if(js->inpa) {
 			g_source_remove(js->inpa);
 			js->inpa = 0;
@@ -2564,7 +2574,7 @@ GList *jabber_get_actions(PurpleConnection *gc)
 	                             jabber_user_search_begin);
 	m = g_list_append(m, act);
 
-	purple_debug_info("jabber", "jabber_get_actions: have pep: %s\n", js->pep?"YES":"NO");
+	purple_debug_info("jabber", "jabber_get_actions: have pep: %s\n", js->pep ? "YES" : "NO");
 
 	if(js->pep)
 		jabber_pep_init_actions(&m);
@@ -3696,7 +3706,7 @@ jabber_register_commands(PurpleProtocol *protocol)
 	id = purple_cmd_register("buzz", "w", PURPLE_CMD_P_PROTOCOL,
 		PURPLE_CMD_FLAG_IM | PURPLE_CMD_FLAG_PROTOCOL_ONLY |
 		PURPLE_CMD_FLAG_ALLOW_WRONG_ARGS, proto_id, jabber_cmd_buzz,
-		_("buzz: Buzz a user to get their attention"), NULL);
+		_("buzz: Buzz a user to get their attention."), NULL);
 	commands = g_slist_prepend(commands, GUINT_TO_POINTER(id));
 
 	id = purple_cmd_register("mood", "ws", PURPLE_CMD_P_PROTOCOL,
@@ -3805,7 +3815,7 @@ xmpp_uri_handler(const char *proto, const char *user, GHashTable *params,
 static void
 jabber_do_init(void)
 {
-	GHashTable *ui_info = purple_core_get_ui_info();
+	PurpleUiInfo *ui_info = purple_core_get_ui_info();
 	const gchar *ui_type;
 	const gchar *type = "pc"; /* default client type, if unknown or
 								unspecified */
@@ -3843,7 +3853,7 @@ jabber_do_init(void)
 
 	jabber_cmds = g_hash_table_new_full(g_direct_hash, g_direct_equal, NULL, cmds_free_func);
 
-	ui_type = ui_info ? g_hash_table_lookup(ui_info, "client_type") : NULL;
+	ui_type = ui_info ? purple_ui_info_get_client_type(ui_info) : NULL;
 	if (ui_type) {
 		if (purple_strequal(ui_type, "pc") ||
 			purple_strequal(ui_type, "console") ||
@@ -3856,7 +3866,7 @@ jabber_do_init(void)
 	}
 
 	if (ui_info)
-		ui_name = g_hash_table_lookup(ui_info, "name");
+		ui_name = purple_ui_info_get_name(ui_info);
 	if (ui_name == NULL)
 		ui_name = PACKAGE;
 
@@ -3920,6 +3930,10 @@ jabber_do_init(void)
 	jabber_si_init();
 
 	jabber_auth_init();
+
+	if(PURPLE_IS_UI_INFO(ui_info)) {
+		g_object_unref(G_OBJECT(ui_info));
+	}
 }
 
 static void

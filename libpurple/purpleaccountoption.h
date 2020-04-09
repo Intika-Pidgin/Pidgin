@@ -26,9 +26,9 @@
 #include <glib-object.h>
 
 /**
- * SECTION:accountopt
- * @section_id: libpurple-accountopt
- * @short_description: <filename>accountopt.h</filename>
+ * SECTION:purpleaccountoption
+ * @section_id: libpurple-account-option
+ * @short_description: <filename>purpleaccountoption.h</filename>
  * @title: Account Options API
  */
 

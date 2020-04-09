@@ -55,8 +55,6 @@
 #include "gtkutils.h"
 #include "pidgingdkpixbuf.h"
 
-#include "gtk3compat.h"
-
 /* Timeout for typing notifications in seconds */
 #define TYPING_TIMEOUT 4
 
@@ -498,6 +496,7 @@ pidgin_status_box_dispose(GObject *obj)
 	PidginStatusBox *statusbox = PIDGIN_STATUS_BOX(obj);
 
 	destroy_icon_box(statusbox);
+	G_OBJECT_CLASS(parent_class)->dispose(obj);
 }
 
 static void
@@ -1169,8 +1168,8 @@ saved_status_updated_cb(PurpleSavedStatus *status, PidginStatusBox *status_box)
 static void
 pidgin_status_box_list_position (PidginStatusBox *status_box, int *x, int *y, int *width, int *height)
 {
-	GdkScreen *screen;
 	gint monitor_num;
+	GdkMonitor *m = NULL;
 	GdkRectangle monitor;
 	GtkRequisition popup_req;
 	GtkPolicyType hpolicy, vpolicy;
@@ -1202,10 +1201,9 @@ pidgin_status_box_list_position (PidginStatusBox *status_box, int *x, int *y, in
 
 	*height = popup_req.height;
 
-	screen = gtk_widget_get_screen(GTK_WIDGET(status_box));
-	monitor_num = gdk_screen_get_monitor_at_window(screen,
+	m = gdk_display_get_monitor_at_window(gdk_display_get_default(),
 							gtk_widget_get_window(GTK_WIDGET(status_box)));
-	gdk_screen_get_monitor_geometry(screen, monitor_num, &monitor);
+	gdk_monitor_get_geometry(m, &monitor);
 
 	if (*x < monitor.x)
 		*x = monitor.x;

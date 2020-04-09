@@ -10,8 +10,12 @@
     <file compressed="true">Debug/debug.ui</file>
     <file compressed="true">Debug/plugininfo.ui</file>
     <file compressed="true">Log/log-viewer.ui</file>
+    <file compressed="true">Plugins/dialog.ui</file>
     <file compressed="true">Prefs/prefs.ui</file>
     <file compressed="true">Prefs/vv.ui</file>
+    <file compressed="true">Privacy/dialog.ui</file>
+    <file compressed="true">Protocols/chooser.ui</file>
+    <file compressed="true">Roomlist/roomlist.ui</file>
     <file compressed="true">Whiteboard/whiteboard.ui</file>
     <file compressed="true">Xfer/xfer.ui</file>
   </gresource>

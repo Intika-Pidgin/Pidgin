@@ -22,7 +22,7 @@
  */
 
 #include "internal.h"
-#include "gtkplugin.h"
+#include "pidginplugininfo.h"
 #include "version.h"
 #include "protocol.h"
 #include "xmlnode.h"
@@ -30,8 +30,6 @@
 #include "gtkutils.h"
 
 #include <gdk/gdkkeysyms.h>
-
-#include "gtk3compat.h"
 
 #define PLUGIN_ID      "gtk-xmpp"
 #define PLUGIN_DOMAIN  (g_quark_from_static_string(PLUGIN_ID))

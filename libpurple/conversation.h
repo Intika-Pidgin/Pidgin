@@ -65,8 +65,6 @@ typedef struct _PurpleConversationUiOps      PurpleConversationUiOps;
  * @PURPLE_CONVERSATION_UPDATE_LOGGING:  Logging for this conversation was
  *                                       enabled or disabled.
  * @PURPLE_CONVERSATION_UPDATE_TOPIC:    The topic for a chat was updated.
- * @PURPLE_CONVERSATION_UPDATE_E2EE:     The End-to-end encryption state was
- *                                       updated.
  * @PURPLE_CONVERSATION_ACCOUNT_ONLINE:  One of the user's accounts went online.
  * @PURPLE_CONVERSATION_ACCOUNT_OFFLINE: One of the user's accounts went
  *                                       offline.
@@ -88,7 +86,6 @@ typedef enum
 	PURPLE_CONVERSATION_UPDATE_UNSEEN,
 	PURPLE_CONVERSATION_UPDATE_LOGGING,
 	PURPLE_CONVERSATION_UPDATE_TOPIC,
-	PURPLE_CONVERSATION_UPDATE_E2EE,
 
 	/*
 	 * XXX These need to go when we implement a more generic core/UI event
@@ -127,26 +124,27 @@ typedef enum
  * @PURPLE_MESSAGE_INVISIBLE:   Message should not be displayed
  * @PURPLE_MESSAGE_REMOTE_SEND: Message sent from another location,
  *                              not an echo of a local one
+ *                              Since: 2.12.0
  *
  * Flags applicable to a message. Most will have send, recv or system.
  */
 typedef enum /*< flags >*/
 {
-	PURPLE_MESSAGE_SEND        = 0x0001,
-	PURPLE_MESSAGE_RECV        = 0x0002,
-	PURPLE_MESSAGE_SYSTEM      = 0x0004,
-	PURPLE_MESSAGE_AUTO_RESP   = 0x0008,
-	PURPLE_MESSAGE_ACTIVE_ONLY = 0x0010,
-	PURPLE_MESSAGE_NICK        = 0x0020,
-	PURPLE_MESSAGE_NO_LOG      = 0x0040,
-	PURPLE_MESSAGE_ERROR       = 0x0200,
-	PURPLE_MESSAGE_DELAYED     = 0x0400,
-	PURPLE_MESSAGE_RAW         = 0x0800,
-	PURPLE_MESSAGE_IMAGES      = 0x1000,
-	PURPLE_MESSAGE_NOTIFY      = 0x2000,
-	PURPLE_MESSAGE_NO_LINKIFY  = 0x4000,
-	PURPLE_MESSAGE_INVISIBLE   = 0x8000,
-	PURPLE_MESSAGE_REMOTE_SEND = 0x10000
+	PURPLE_MESSAGE_SEND         = 1 << 0,
+	PURPLE_MESSAGE_RECV         = 1 << 1,
+	PURPLE_MESSAGE_SYSTEM       = 1 << 2,
+	PURPLE_MESSAGE_AUTO_RESP    = 1 << 3,
+	PURPLE_MESSAGE_ACTIVE_ONLY  = 1 << 4,
+	PURPLE_MESSAGE_NICK         = 1 << 5,
+	PURPLE_MESSAGE_NO_LOG       = 1 << 6,
+	PURPLE_MESSAGE_ERROR        = 1 << 7,
+	PURPLE_MESSAGE_DELAYED      = 1 << 8,
+	PURPLE_MESSAGE_RAW          = 1 << 9,
+	PURPLE_MESSAGE_IMAGES       = 1 << 10,
+	PURPLE_MESSAGE_NOTIFY       = 1 << 11,
+	PURPLE_MESSAGE_NO_LINKIFY   = 1 << 12,
+	PURPLE_MESSAGE_INVISIBLE    = 1 << 13,
+	PURPLE_MESSAGE_REMOTE_SEND  = 1 << 14,
 } PurpleMessageFlags;
 
 #include <glib.h>
@@ -200,7 +198,6 @@ struct _PurpleConversationClass {
 
 #include "account.h"
 #include "buddyicon.h"
-#include "e2ee.h"
 #include "log.h"
 #include "smiley-list.h"
 
@@ -422,28 +419,6 @@ void purple_conversation_set_name(PurpleConversation *conv, const char *name);
 const char *purple_conversation_get_name(PurpleConversation *conv);
 
 /**
- * purple_conversation_set_e2ee_state:
- * @conv:  The conversation.
- * @state: The E2EE state.
- *
- * Sets current E2EE state for the conversation.
- */
-void
-purple_conversation_set_e2ee_state(PurpleConversation *conv,
-	PurpleE2eeState *state);
-
-/**
- * purple_conversation_get_e2ee_state:
- * @conv: The conversation.
- *
- * Gets current conversation's E2EE state.
- *
- * Returns: (transfer none): Current E2EE state for conversation.
- */
-PurpleE2eeState *
-purple_conversation_get_e2ee_state(PurpleConversation *conv);
-
-/**
  * purple_conversation_set_logging:
  * @conv: The conversation.
  * @log:  %TRUE if logging should be enabled, or %FALSE otherwise.
@@ -583,6 +558,8 @@ void purple_conversation_clear_message_history(PurpleConversation *conv);
  * @ui_data:		A pointer to associate with this conversation.
  *
  * Set the UI data associated with this conversation.
+ *
+ * Since: 3.0.0
  */
 void purple_conversation_set_ui_data(PurpleConversation *conv, gpointer ui_data);
 
@@ -595,6 +572,8 @@ void purple_conversation_set_ui_data(PurpleConversation *conv, gpointer ui_data)
  * Returns: (transfer none): The UI data associated with this conversation.
  *         This is a convenience field provided to the UIs--it is not
  *         used by the libpurple core.
+ *
+ * Since: 3.0.0
  */
 gpointer purple_conversation_get_ui_data(const PurpleConversation *conv);
 

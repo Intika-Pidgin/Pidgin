@@ -26,8 +26,6 @@
 #include <gdk/gdk.h>
 #include <gdk-pixbuf/gdk-pixbuf.h>
 
-#include "gtk3compat.h"
-
 typedef struct
 {
 	GtkWidget *widget;

@@ -58,9 +58,6 @@ option('avahi', type : 'feature',
 option('cyrus-sasl', type : 'feature',
        description : 'enable Cyrus SASL support for XMPP/IRC')
 
-option('idn', type : 'feature',
-       description : 'compile with IDN support')
-
 option('krb4', type : 'boolean', value : false,
        description : 'compile Zephyr plugin with Kerberos 4 support')
 
