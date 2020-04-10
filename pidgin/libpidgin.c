@@ -248,8 +248,6 @@ pidgin_ui_init(void)
 	pidgin_notify_init();
 }
 
-static PurpleUiInfo *ui_info = NULL;
-
 static void
 pidgin_quit(void)
 {
@@ -269,20 +267,14 @@ pidgin_quit(void)
 	purple_debug_set_ui(NULL);
 	g_object_unref(ui);
 
-	g_clear_object(&ui_info);
-
 	/* and end it all... */
 	g_application_quit(g_application_get_default());
 }
 
-static PurpleUiInfo *pidgin_ui_get_info(void)
-{
-	if(NULL == ui_info) {
-		ui_info = purple_ui_info_new(PIDGIN_NAME, VERSION, "https://pidgin.im",
-		                             "https://developer.pidgin.im", "pc");
-	}
-
-	return ui_info;
+static PurpleUiInfo *
+pidgin_ui_get_info(void) {
+	return purple_ui_info_new(PIDGIN_NAME, VERSION, "https://pidgin.im",
+	                          "https://developer.pidgin.im", "pc");
 }
 
 static PurpleCoreUiOps core_ops =

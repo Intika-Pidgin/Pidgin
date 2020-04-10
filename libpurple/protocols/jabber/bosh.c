@@ -68,7 +68,7 @@ jabber_bosh_init(void)
 	const gchar *ui_name = NULL;
 	const gchar *ui_version = NULL;
 
-	if(ui_info) {
+	if(PURPLE_IS_UI_INFO(ui_info)) {
 		ui_name = purple_ui_info_get_name(ui_info);
 		ui_version = purple_ui_info_get_version(ui_info);
 	}
