@@ -1429,10 +1429,10 @@ do_transfer(PurpleXfer *xfer)
 			 */
 			purple_xfer_increase_buffer_size(xfer);
 		} else {
-			gboolean result;
+			gboolean handler_result = FALSE;
 			g_signal_emit(xfer, signals[SIG_DATA_NOT_SENT], 0, buffer + r,
-			              result - r, &result);
-			if (!result) {
+			              result - r, &handler_result);
+			if (!handler_result) {
 				purple_xfer_cancel_local(xfer);
 			}
 		}

@@ -3485,12 +3485,9 @@ generate_send_to_items(PidginConvWindow *win)
 				{
 					PurpleBuddy *buddy = (PurpleBuddy *)node;
 					PurpleAccount *account;
-					PurpleIMConversation *im;
 
 					if (!PURPLE_IS_BUDDY(node))
 						continue;
-
-					im = purple_conversations_find_im_with_account(purple_buddy_get_name(buddy), purple_buddy_get_account(buddy));
 
 					account = purple_buddy_get_account(buddy);
 					/* TODO WEBKIT: (I'm not actually sure if this is webkit-related --Mark Doliner) */
