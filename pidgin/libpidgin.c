@@ -274,7 +274,7 @@ pidgin_quit(void)
 static PurpleUiInfo *
 pidgin_ui_get_info(void) {
 	return purple_ui_info_new(PIDGIN_NAME, VERSION, "https://pidgin.im",
-		                      "https://developer.pidgin.im", "pc");
+	                          "https://developer.pidgin.im", "pc");
 }
 
 static PurpleCoreUiOps core_ops =

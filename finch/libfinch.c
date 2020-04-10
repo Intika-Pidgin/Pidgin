@@ -66,7 +66,6 @@ static void
 finch_quit(void)
 {
 	finch_ui_uninit();
-	g_clear_object(&ui_info);
 }
 
 static PurpleCoreUiOps core_ops =
