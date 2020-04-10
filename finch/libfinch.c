@@ -56,16 +56,10 @@ debug_init(void)
 	purple_debug_set_ui(PURPLE_DEBUG_UI(ui));
 }
 
-static PurpleUiInfo *ui_info = NULL;
 static PurpleUiInfo *
-finch_ui_get_info(void)
-{
-	if(!PURPLE_IS_UI_INFO(ui_info)) {
-		ui_info = purple_ui_info_new(_("Finch"), VERSION, "https://pidgin.im",
-		                             "https://developer.pidgin.im", "console");
-	}
-
-	return ui_info;
+finch_ui_get_info(void) {
+	return purple_ui_info_new(_("Finch"), VERSION, "https://pidgin.im",
+	                          "https://developer.pidgin.im", "console");
 }
 
 static void
