@@ -977,8 +977,6 @@ static void dnd_image_ok_callback(_DndData *data, int choice)
 		purple_serv_send_file(purple_account_get_connection(data->account), data->who, data->filename);
 		break;
 	case DND_IM_IMAGE:
-		conv = PURPLE_CONVERSATION(purple_im_conversation_new(data->account, data->who));
-
 		if (!g_file_get_contents(data->filename, &filedata, &size,
 					 &err)) {
 			char *str;
