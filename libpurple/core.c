@@ -62,8 +62,8 @@ static void
 purple_core_print_version(void)
 {
 	PurpleUiInfo *ui_info = purple_core_get_ui_info();
-	const gchar *ui_name;
-	const gchar *ui_version;
+	const gchar *ui_name = NULL;
+	const gchar *ui_version = NULL;
 	gchar *ui_full_name = NULL;
 
 	if(PURPLE_IS_UI_INFO(ui_info)) {
