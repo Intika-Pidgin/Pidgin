@@ -30,6 +30,7 @@
 #include "notify.h"
 #include "prefs.h"
 #include "proxy.h"
+#include "purpleprotocolfactory.h"
 #include "request.h"
 #include "server.h"
 #include "signals.h"
@@ -986,15 +987,16 @@ _purple_connection_new(PurpleAccount *account, gboolean regist, const char *pass
 		}
 	}
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, connection_new))
-		gc = purple_protocol_factory_iface_connection_new(protocol, account,
-				password);
-	else
+	if(PURPLE_IS_PROTOCOL_FACTORY(protocol)) {
+		gc = purple_protocol_factory_connection_new(
+			PURPLE_PROTOCOL_FACTORY(protocol), account, password);
+	} else {
 		gc = g_object_new(PURPLE_TYPE_CONNECTION,
 				"protocol",  protocol,
 				"account",   account,
 				"password",  password,
 				NULL);
+	}
 
 	g_return_if_fail(gc != NULL);
 
@@ -1055,15 +1057,16 @@ _purple_connection_new_unregister(PurpleAccount *account, const char *password,
 		return;
 	}
 
-	if (PURPLE_PROTOCOL_IMPLEMENTS(protocol, FACTORY, connection_new))
-		gc = purple_protocol_factory_iface_connection_new(protocol, account,
-				password);
-	else
+	if(PURPLE_IS_PROTOCOL_FACTORY(protocol)) {
+		gc = purple_protocol_factory_connection_new(
+			PURPLE_PROTOCOL_FACTORY(protocol), account, password);
+	} else {
 		gc = g_object_new(PURPLE_TYPE_CONNECTION,
 				"protocol",  protocol,
 				"account",   account,
 				"password",  password,
 				NULL);
+	}
 
 	g_return_if_fail(gc != NULL);
 
